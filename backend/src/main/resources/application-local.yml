@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:serviceops}
+    username: ${POSTGRES_USER:serviceops}
+    password: ${POSTGRES_PASSWORD:serviceops}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.serviceops: INFO
+    org.springframework.security: INFO
