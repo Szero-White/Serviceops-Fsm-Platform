@@ -1,10 +1,13 @@
 package com.serviceops.customer.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.servicerequest.domain.ServiceRequestRepository;
+import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.customer.web.CustomerDtos.CustomerRequest;
 import com.serviceops.customer.web.CustomerDtos.CustomerResponse;
 import com.serviceops.security.CurrentUser;
@@ -21,6 +24,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CustomerService {
     private final CustomerRepository repository;
+    private final AssetRepository assetRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -59,6 +65,20 @@ public class CustomerService {
         apply(customer, request, code);
         auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + customer.getCode());
         return toResponse(customer);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        Customer customer = require(id);
+        UUID tenantId = CurrentUser.tenantId();
+        long assetCount = assetRepository.countByTenantIdAndCustomerId(tenantId, id);
+        long requestCount = serviceRequestRepository.countByTenantIdAndCustomerId(tenantId, id);
+        long workOrderCount = workOrderRepository.countByTenantIdAndCustomerId(tenantId, id);
+        if (assetCount > 0 || requestCount > 0 || workOrderCount > 0) {
+            throw BusinessException.conflict("CUSTOMER_IN_USE", "Không thể xóa khách hàng đang được sử dụng");
+        }
+        repository.delete(customer);
+        auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + customer.getCode());
     }
 
     private Customer require(UUID id) {

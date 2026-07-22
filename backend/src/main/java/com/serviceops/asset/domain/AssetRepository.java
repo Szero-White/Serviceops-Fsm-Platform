@@ -25,4 +25,5 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     boolean existsByTenantIdAndSerialNumberIgnoreCase(UUID tenantId, String serialNumber);
     long countByTenantId(UUID tenantId);
+    long countByTenantIdAndCustomerId(UUID tenantId, UUID customerId);
 }

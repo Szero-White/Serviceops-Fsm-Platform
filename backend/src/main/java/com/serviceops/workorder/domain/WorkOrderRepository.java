@@ -92,4 +92,6 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
 
     long countByTenantIdAndStatus(UUID tenantId, WorkOrderStatus status);
     long countByTenantIdAndTechnicianUserIdAndStatus(UUID tenantId, UUID userId, WorkOrderStatus status);
+        long countByTenantIdAndCustomerId(UUID tenantId, UUID customerId);
+        long countByTenantIdAndAssetId(UUID tenantId, UUID assetId);
 }

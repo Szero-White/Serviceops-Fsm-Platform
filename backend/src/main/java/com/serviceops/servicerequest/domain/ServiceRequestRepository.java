@@ -29,4 +29,6 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     Optional<ServiceRequest> findDetailed(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     long countByTenantIdAndStatus(UUID tenantId, ServiceRequestStatus status);
+    long countByTenantIdAndCustomerId(UUID tenantId, UUID customerId);
+    long countByTenantIdAndAssetId(UUID tenantId, UUID assetId);
 }

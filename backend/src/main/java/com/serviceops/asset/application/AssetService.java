@@ -10,6 +10,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.servicerequest.domain.ServiceRequestRepository;
+import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +28,8 @@ import java.util.UUID;
 public class AssetService {
     private final AssetRepository repository;
     private final CustomerRepository customerRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -70,6 +74,19 @@ public class AssetService {
         apply(asset, request, serial);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị serial " + serial);
         return toResponse(asset);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        Asset asset = require(id);
+        UUID tenantId = CurrentUser.tenantId();
+        long serviceRequestCount = serviceRequestRepository.countByTenantIdAndAssetId(tenantId, id);
+        long workOrderCount = workOrderRepository.countByTenantIdAndAssetId(tenantId, id);
+        if (serviceRequestCount > 0 || workOrderCount > 0) {
+            throw BusinessException.conflict("ASSET_IN_USE", "Không thể xóa thiết bị đang được sử dụng");
+        }
+        repository.delete(asset);
+        auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị serial " + asset.getSerialNumber());
     }
 
     private Asset require(UUID id) {
