@@ -154,9 +154,6 @@
   align-items: center;
 }
 
-.lp-integrations-copy {
-}
-
 .lp-integrations-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -310,13 +307,6 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
-}
-
-.lp-footer-brand-name {
-  font-size: 17px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.3px;
 }
 
 .lp-footer-tagline {

@@ -1,0 +1,33 @@
+/* Base browser reset and app-wide background. Keep this file free of page-specific classes. */
+:root {
+  color: #0f172a;
+  background: #eef3f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.08), transparent 30%),
+    linear-gradient(180deg, #eef3f9 0%, #f8fafc 48%, #eef3f9 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

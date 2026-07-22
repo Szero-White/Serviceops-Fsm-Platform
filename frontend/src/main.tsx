@@ -8,7 +8,12 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
 import { AuthProvider } from './auth/AuthContext'
 import { AppRouter } from './router/AppRouter'
-import './styles/global.css'
+import './styles/app/base.css'
+import './styles/app/layout.css'
+import './styles/app/components.css'
+import './styles/app/dashboard.css'
+import './styles/app/login.css'
+import './styles/app/responsive.css'
 
 dayjs.locale('vi')
 
@@ -29,20 +34,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#2563eb',
-          colorInfo: '#2563eb',
+          colorPrimary: '#1d4ed8',
+          colorInfo: '#1d4ed8',
           colorSuccess: '#059669',
           colorWarning: '#d97706',
           colorError: '#dc2626',
-          borderRadius: 10,
+          colorBgLayout: '#eef3f9',
+          borderRadius: 12,
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         },
         components: {
-          Layout: { bodyBg: '#f4f7fb', headerBg: '#ffffff', siderBg: '#0f172a' },
-          Card: { borderRadiusLG: 16 },
-          Button: { borderRadius: 10, controlHeight: 40 },
-          Input: { controlHeight: 40 },
-          Select: { controlHeight: 40 },
+          Layout: { bodyBg: '#eef3f9', headerBg: 'rgba(255,255,255,0.74)', siderBg: '#0f172a' },
+          Card: { borderRadiusLG: 20 },
+          Button: { borderRadius: 12, controlHeight: 42 },
+          Input: { controlHeight: 42 },
+          Select: { controlHeight: 42 },
         },
       }}
     >

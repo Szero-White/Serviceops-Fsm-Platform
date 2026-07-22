@@ -1,11 +1,13 @@
 import dayjs from 'dayjs'
 
+export const EMPTY_VALUE = '—'
+
 export function formatDateTime(value?: string) {
-  return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—'
+  return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : EMPTY_VALUE
 }
 
 export function formatDate(value?: string) {
-  return value ? dayjs(value).format('DD/MM/YYYY') : '—'
+  return value ? dayjs(value).format('DD/MM/YYYY') : EMPTY_VALUE
 }
 
 export function formatCurrency(value?: number) {

@@ -67,7 +67,6 @@ export function AppLayout() {
   }, [user?.role])
 
   const selectedKey = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
-
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -75,13 +74,13 @@ export function AppLayout() {
 
   return (
     <Layout className="app-shell">
-      <Sider trigger={null} collapsible collapsed={collapsed} width={258} className="app-sider">
+      <Sider trigger={null} collapsible collapsed={collapsed} width={268} className="app-sider">
         <div className="brand">
           <div className="brand-mark"><SettingOutlined /></div>
           {!collapsed && (
             <div>
               <strong>ServiceOps</strong>
-              <span>Field Service SaaS</span>
+              <span>Field Service Platform</span>
             </div>
           )}
         </div>
@@ -98,12 +97,13 @@ export function AppLayout() {
         )}
       </Sider>
 
-      <Layout>
+      <Layout className="app-main">
         <Header className="app-header">
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed((value) => !value)}
+            className="header-toggle"
           />
 
           <div className="header-spacer" />
@@ -117,19 +117,13 @@ export function AppLayout() {
               items: [
                 { key: 'profile', icon: <SettingOutlined />, label: 'Thông tin tài khoản', disabled: true },
                 { type: 'divider' },
-                {
-                  key: 'logout',
-                  icon: <LogoutOutlined />,
-                  label: 'Đăng xuất',
-                  danger: true,
-                  onClick: handleLogout,
-                },
+                { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true, onClick: handleLogout },
               ],
             }}
             trigger={['click']}
           >
             <button className="user-menu">
-              <Avatar>{user?.displayName?.charAt(0) ?? 'U'}</Avatar>
+              <Avatar className="user-avatar">{user?.displayName?.charAt(0) ?? 'U'}</Avatar>
               <span className="user-menu-copy">
                 <strong>{user?.displayName}</strong>
                 <small>{roleLabels[user?.role ?? ''] ?? user?.role}</small>

@@ -1,0 +1,80 @@
+/* Responsive overrides for the authenticated app and login page. */
+@media (max-width: 1180px) {
+  .dashboard-hero .ant-card-body {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-hero-highlights {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1000px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-hero {
+    display: none;
+  }
+
+  .login-panel {
+    min-height: 100vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: 20px 14px 30px;
+  }
+
+  .app-header {
+    padding: 0 12px !important;
+  }
+
+  .user-menu-copy {
+    display: none;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .page-header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-header-actions .ant-btn {
+    width: 100%;
+  }
+
+  .form-grid.two-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-row {
+    flex-direction: column;
+  }
+
+  .toolbar-row .ant-input-affix-wrapper,
+  .toolbar-row .ant-select,
+  .table-toolbar {
+    width: 100%;
+    max-width: none;
+  }
+
+  .dashboard-hero-highlights,
+  .dashboard-empty-hints,
+  .login-proof-grid,
+  .login-benefits,
+  .login-panel-badges {
+    grid-template-columns: 1fr;
+  }
+
+  .login-panel {
+    padding: 20px;
+  }
+}

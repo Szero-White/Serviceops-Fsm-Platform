@@ -1,5 +1,7 @@
 import {
   ArrowRightOutlined,
+  BarChartOutlined,
+  ClockCircleOutlined,
   LockOutlined,
   SafetyCertificateOutlined,
   ToolOutlined,
@@ -40,14 +42,23 @@ const LOGIN_BENEFITS: LoginBenefit[] = [
     title: 'Đúng nghiệp vụ hiện trường',
     description: 'Lịch, trạng thái và lịch sử thiết bị',
   },
+  {
+    icon: <BarChartOutlined />,
+    title: 'Dashboard theo thời gian thực',
+    description: 'Cập nhật ngay khi work order thay đổi',
+  },
+]
+
+const LOGIN_METRICS = [
+  { value: '5', label: 'vai trò vận hành' },
+  { value: '1', label: 'luồng dữ liệu local-first' },
+  { value: '24/7', label: 'sẵn sàng demo' },
 ]
 
 function BrandMark() {
   return (
     <div className="login-brand">
-      <div className="brand-mark">
-        <ToolOutlined />
-      </div>
+      <div className="brand-mark"><ToolOutlined /></div>
       <strong>ServiceOps</strong>
     </div>
   )
@@ -66,9 +77,17 @@ function LoginHero() {
           rõ ràng, đúng hẹn.
         </h1>
         <p>
-          Quản lý khách hàng, thiết bị, work order, lịch kỹ thuật viên và phụ tùng trên một luồng
-          vận hành thống nhất.
+          Quản lý khách hàng, thiết bị, work order, lịch kỹ thuật viên và phụ tùng trên một luồng vận hành thống nhất.
         </p>
+
+        <div className="login-proof-grid">
+          {LOGIN_METRICS.map((metric) => (
+            <div key={metric.label}>
+              <strong>{metric.value}</strong>
+              <span>{metric.label}</span>
+            </div>
+          ))}
+        </div>
 
         <div className="login-benefits">
           {LOGIN_BENEFITS.map((benefit) => (
@@ -85,7 +104,7 @@ function LoginHero() {
 
       <div className="login-hero-footer">
         <Link to="/landing" className="login-hero-landing-link">
-          <ArrowRightOutlined /> Khám phá tính năng &amp; bảng giá
+          <ArrowRightOutlined /> Khám phá tính năng và bảng giá
         </Link>
         <span className="login-hero-footer-sep">·</span>
         Local-first MVP · Dữ liệu demo được tạo tự động
@@ -119,41 +138,66 @@ function LoginPanel({
 }) {
   return (
     <section className="login-panel">
-      <Card className="login-card" variant="borderless">
-        <div className="login-card-heading">
-          <Typography.Title level={2}>Chào mừng trở lại</Typography.Title>
-          <Typography.Text type="secondary">
-            Đăng nhập để tiếp tục quản lý vận hành dịch vụ.
-          </Typography.Text>
+      <div className="login-panel-shell">
+        <div className="login-panel-badges">
+          <TagLine icon={<ClockCircleOutlined />} label="Local demo" value="Ready in a few minutes" />
+          <TagLine icon={<SafetyCertificateOutlined />} label="Secure access" value="JWT + role based" />
         </div>
 
-        {error && <Alert type="error" showIcon title={error} className="login-alert" />}
+        <Card className="login-card" variant="borderless">
+          <div className="login-card-heading">
+            <Typography.Title level={2}>Chào mừng trở lại</Typography.Title>
+            <Typography.Text type="secondary">
+              Đăng nhập để tiếp tục quản lý vận hành dịch vụ.
+            </Typography.Text>
+          </div>
 
-        <Form layout="vertical" onFinish={onSubmit} initialValues={DEMO_CREDENTIALS} requiredMark={false}>
-          <Form.Item
-            label="Tên đăng nhập"
-            name="username"
-            rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}
-          >
-            <Input prefix={<UserOutlined />} placeholder={DEMO_CREDENTIALS.username} autoComplete="username" />
-          </Form.Item>
+          {error && <Alert type="error" showIcon message={error} className="login-alert" />}
 
-          <Form.Item
-            label="Mật khẩu"
-            name="password"
-            rules={[{ required: true, message: 'Nhập mật khẩu' }]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="123456" autoComplete="current-password" />
-          </Form.Item>
+          <div className="login-card-stats">
+            <div><strong>Live ops</strong><span>Dashboard, notifications, audit log</span></div>
+            <div><strong>Field-ready</strong><span>Dispatch, technician, warehouse</span></div>
+            <div><strong>Local-first</strong><span>Postgres, Flyway, seeded demo data</span></div>
+          </div>
 
-          <Button type="primary" htmlType="submit" block loading={loading} size="large">
-            Đăng nhập
-          </Button>
-        </Form>
+          <Form layout="vertical" onFinish={onSubmit} initialValues={DEMO_CREDENTIALS} requiredMark={false}>
+            <Form.Item
+              label="Tên đăng nhập"
+              name="username"
+              rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}
+            >
+              <Input prefix={<UserOutlined />} placeholder={DEMO_CREDENTIALS.username} autoComplete="username" />
+            </Form.Item>
 
-        <DemoAccounts />
-      </Card>
+            <Form.Item
+              label="Mật khẩu"
+              name="password"
+              rules={[{ required: true, message: 'Nhập mật khẩu' }]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="123456" autoComplete="current-password" />
+            </Form.Item>
+
+            <Button type="primary" htmlType="submit" block loading={loading} size="large">
+              Đăng nhập
+            </Button>
+          </Form>
+
+          <DemoAccounts />
+        </Card>
+      </div>
     </section>
+  )
+}
+
+function TagLine({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="login-badge">
+      <span className="login-badge-icon">{icon}</span>
+      <span>
+        <strong>{label}</strong>
+        <small>{value}</small>
+      </span>
+    </div>
   )
 }
 

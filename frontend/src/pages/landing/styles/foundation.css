@@ -141,10 +141,3 @@
   margin: 0 !important;
 }
 
-.lp-gradient-text {
-  background: linear-gradient(135deg, var(--lp-primary) 0%, var(--lp-accent) 50%, var(--lp-accent-2) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-

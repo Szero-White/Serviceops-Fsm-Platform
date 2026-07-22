@@ -1,5 +1,5 @@
 import { Tag } from 'antd'
-import type { Priority, ServiceRequestStatus, WorkOrderStatus } from '../types'
+import type { AssetStatus, Priority, RequestChannel, ServiceRequestStatus, WorkOrderStatus } from '../types'
 
 const statusLabels: Record<string, string> = {
   DRAFT: 'Nháp',
@@ -10,11 +10,15 @@ const statusLabels: Record<string, string> = {
   IN_PROGRESS: 'Đang thực hiện',
   WAITING_FOR_PARTS: 'Chờ phụ tùng',
   COMPLETED: 'Đã hoàn thành',
-  CUSTOMER_ACCEPTED: 'Khách đã xác nhận',
+  CUSTOMER_ACCEPTED: 'Khách xác nhận',
   CLOSED: 'Đã đóng',
-  CANCELLED: 'Đã hủy',
+  CANCELLED: 'Đã huỷ',
   REOPENED: 'Mở lại',
   CONVERTED: 'Đã tạo phiếu',
+  ACTIVE: 'Hoạt động',
+  IN_SERVICE: 'Đang sửa chữa',
+  OUT_OF_SERVICE: 'Tạm ngưng',
+  RETIRED: 'Thanh lý',
 }
 
 const statusColors: Record<string, string> = {
@@ -31,6 +35,10 @@ const statusColors: Record<string, string> = {
   CANCELLED: 'red',
   REOPENED: 'magenta',
   CONVERTED: 'green',
+  ACTIVE: 'blue',
+  IN_SERVICE: 'purple',
+  OUT_OF_SERVICE: 'orange',
+  RETIRED: 'default',
 }
 
 const priorityLabels: Record<Priority, string> = {
@@ -47,10 +55,23 @@ const priorityColors: Record<Priority, string> = {
   URGENT: 'red',
 }
 
-export function StatusTag({ status }: { status: WorkOrderStatus | ServiceRequestStatus }) {
-  return <Tag color={statusColors[status] ?? 'default'}>{statusLabels[status] ?? status}</Tag>
+const channelLabels: Record<RequestChannel, string> = {
+  PHONE: 'Điện thoại',
+  EMAIL: 'Email',
+  WEBSITE: 'Website',
+  ZALO: 'Zalo',
+  WALK_IN: 'Trực tiếp',
+  INTERNAL: 'Nội bộ',
+}
+
+export function StatusTag({ status }: { status: WorkOrderStatus | ServiceRequestStatus | AssetStatus }) {
+  return <Tag className="status-tag" color={statusColors[status] ?? 'default'}>{statusLabels[status] ?? status}</Tag>
 }
 
 export function PriorityTag({ priority }: { priority: Priority }) {
-  return <Tag color={priorityColors[priority]}>{priorityLabels[priority]}</Tag>
+  return <Tag className="status-tag" color={priorityColors[priority]}>{priorityLabels[priority]}</Tag>
+}
+
+export function ChannelTag({ channel }: { channel: RequestChannel }) {
+  return <Tag className="status-tag">{channelLabels[channel] ?? channel}</Tag>
 }

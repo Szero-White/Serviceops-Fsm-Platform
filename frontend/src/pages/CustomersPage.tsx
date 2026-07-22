@@ -1,12 +1,12 @@
-import { EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
-import { App, Button, Form, Input, Modal, Space, Switch, Table, Tag, Typography } from 'antd'
+import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd'
+import { useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../api/http'
 import { customersApi } from '../api/services'
 import { PageHeader } from '../components/PageHeader'
 import type { Customer } from '../types'
-import { formatDate } from '../utils/format'
+import { EMPTY_VALUE, formatDate } from '../utils/format'
 
 export function CustomersPage() {
   const [search, setSearch] = useState('')
@@ -21,7 +21,19 @@ export function CustomersPage() {
     mutationFn: (values: Record<string, unknown>) => editing ? customersApi.update(editing.id, values) : customersApi.create(values),
     onSuccess: () => {
       message.success(editing ? 'Đã cập nhật khách hàng' : 'Đã tạo khách hàng')
-      setOpen(false); setEditing(undefined); form.resetFields()
+      setOpen(false)
+      setEditing(undefined)
+      form.resetFields()
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => customersApi.delete(id),
+    onSuccess: () => {
+      message.success('Đã xoá khách hàng')
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
@@ -30,6 +42,7 @@ export function CustomersPage() {
 
   const showCreate = () => {
     setEditing(undefined)
+    form.resetFields()
     form.setFieldsValue({ code: `KH-${Date.now().toString().slice(-5)}`, active: true })
     setOpen(true)
   }
@@ -41,35 +54,88 @@ export function CustomersPage() {
   }
 
   return (
-    <div>
-      <PageHeader title="Khách hàng" description="Quản lý thông tin liên hệ và địa chỉ phục vụ." actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm khách hàng</Button>} />
-      <div className="table-toolbar"><Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên, mã hoặc số điện thoại" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Customer operations"
+        title="Khách hàng"
+        description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm khách hàng</Button>}
+        meta={<Tag color="blue">{data?.totalElements ?? 0} hồ sơ</Tag>}
+      />
+
+      <CardlessTableToolbar>
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder="Tìm tên, mã, số điện thoại hoặc email"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </CardlessTableToolbar>
+
       <Table
         rowKey="id"
         loading={isLoading}
         dataSource={data?.content ?? []}
         className="content-table"
-        scroll={{ x: 950 }}
+        scroll={{ x: 980 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
+        locale={{ emptyText: <Empty description="Chưa có khách hàng phù hợp" /> }}
         columns={[
-          { title: 'Mã', dataIndex: 'code', width: 120, render: (value: string) => <Typography.Text code>{value}</Typography.Text> },
-          { title: 'Tên khách hàng', dataIndex: 'name', width: 220, render: (value: string) => <Typography.Text strong>{value}</Typography.Text> },
-          { title: 'Điện thoại', dataIndex: 'phone', width: 140, render: (v) => v || '—' },
-          { title: 'Email', dataIndex: 'email', width: 220, render: (v) => v || '—' },
-          { title: 'Địa chỉ', dataIndex: 'address', ellipsis: true },
-          { title: 'Trạng thái', dataIndex: 'active', width: 120, render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Hoạt động' : 'Ngừng'}</Tag> },
-          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 120, render: formatDate },
-          { title: '', width: 60, fixed: 'right', render: (_, record) => <Button type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} /> },
+          {
+            title: 'Khách hàng',
+            dataIndex: 'name',
+            width: 280,
+            render: (value: string, record) => (
+              <div className="table-primary-cell">
+                <Typography.Text strong>{value}</Typography.Text>
+                <Typography.Text type="secondary" code>{record.code}</Typography.Text>
+              </div>
+            ),
+          },
+          {
+            title: 'Liên hệ',
+            width: 240,
+            render: (_, record) => (
+              <div className="table-secondary-stack">
+                <span>{record.phone || EMPTY_VALUE}</span>
+                <Typography.Text type="secondary">{record.email || EMPTY_VALUE}</Typography.Text>
+              </div>
+            ),
+          },
+          { title: 'Địa chỉ', dataIndex: 'address', ellipsis: true, render: (value) => value || EMPTY_VALUE },
+          { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? 'Hoạt động' : 'Ngừng'}</Tag> },
+          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 130, render: formatDate },
+          {
+            title: '',
+            width: 92,
+            fixed: 'right',
+            render: (_, record) => (
+              <Space size={4}>
+                <Button aria-label="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                <Popconfirm
+                  title="Xoá khách hàng này?"
+                  description="Chỉ xoá được khi khách hàng chưa được dùng trong dữ liệu nghiệp vụ."
+                  okText="Xoá"
+                  cancelText="Huỷ"
+                  okButtonProps={{ danger: true, loading: remove.isPending }}
+                  onConfirm={() => remove.mutate(record.id)}
+                >
+                  <Button aria-label="Xoá khách hàng" type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </Space>
+            ),
+          },
         ]}
       />
 
       <Modal title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={680} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
-            <Form.Item label="Mã khách hàng" name="code" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item label="Tên khách hàng" name="name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item label="Mã khách hàng" name="code" rules={[{ required: true, message: 'Nhập mã khách hàng' }]}><Input /></Form.Item>
+            <Form.Item label="Tên khách hàng" name="name" rules={[{ required: true, message: 'Nhập tên khách hàng' }]}><Input /></Form.Item>
             <Form.Item label="Số điện thoại" name="phone"><Input /></Form.Item>
-            <Form.Item label="Email" name="email" rules={[{ type: 'email' }]}><Input /></Form.Item>
+            <Form.Item label="Email" name="email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}><Input /></Form.Item>
           </div>
           <Form.Item label="Địa chỉ" name="address"><Input /></Form.Item>
           <Form.Item label="Ghi chú" name="notes"><Input.TextArea rows={3} /></Form.Item>
@@ -78,4 +144,8 @@ export function CustomersPage() {
       </Modal>
     </div>
   )
+}
+
+function CardlessTableToolbar({ children }: { children: ReactNode }) {
+  return <div className="table-toolbar">{children}</div>
 }

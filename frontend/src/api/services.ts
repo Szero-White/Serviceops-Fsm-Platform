@@ -27,12 +27,14 @@ export const customersApi = {
   list: (search = '', page = 0, size = 100) => http.get<PageResponse<Customer>>('/customers', { params: { search, page, size } }).then((r) => r.data),
   create: (payload: Record<string, unknown>) => http.post<Customer>('/customers', payload).then((r) => r.data),
   update: (id: string, payload: Record<string, unknown>) => http.put<Customer>(`/customers/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/customers/${id}`).then((r) => r.data),
 }
 
 export const assetsApi = {
   list: (search = '', page = 0, size = 100) => http.get<PageResponse<Asset>>('/assets', { params: { search, page, size } }).then((r) => r.data),
   create: (payload: Record<string, unknown>) => http.post<Asset>('/assets', payload).then((r) => r.data),
   update: (id: string, payload: Record<string, unknown>) => http.put<Asset>(`/assets/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/assets/${id}`).then((r) => r.data),
 }
 
 export const serviceRequestsApi = {

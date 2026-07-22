@@ -1,11 +1,11 @@
 import { InboxOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
-import { App, Button, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd'
 import { useState } from 'react'
 import { apiErrorMessage } from '../api/http'
 import { inventoryApi } from '../api/services'
-import { PageHeader } from '../components/PageHeader'
 import { useAuth } from '../auth/AuthContext'
+import { PageHeader } from '../components/PageHeader'
 import type { SparePart } from '../types'
 import { formatCurrency, formatDateTime, formatNumber } from '../utils/format'
 
@@ -28,20 +28,40 @@ export function InventoryPage() {
 
   const create = useMutation({
     mutationFn: (values: Record<string, unknown>) => inventoryApi.create(values),
-    onSuccess: () => { message.success('Đã tạo phụ tùng'); setCreateOpen(false); createForm.resetFields(); refresh() },
+    onSuccess: () => {
+      message.success('Đã tạo phụ tùng')
+      setCreateOpen(false)
+      createForm.resetFields()
+      refresh()
+    },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
   const importStock = useMutation({
     mutationFn: (values: { quantity: number; note: string }) => inventoryApi.importStock(importing!.id, values),
-    onSuccess: () => { message.success('Đã nhập kho'); setImporting(undefined); importForm.resetFields(); refresh() },
+    onSuccess: () => {
+      message.success('Đã nhập kho')
+      setImporting(undefined)
+      importForm.resetFields()
+      refresh()
+    },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
   return (
-    <div>
-      <PageHeader title="Kho phụ tùng" description="Theo dõi tồn kho và nhập phụ tùng phục vụ work order." actions={canManageStock ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ unit: 'cái', initialStock: 0, reorderLevel: 3, unitPrice: 0, active: true }); setCreateOpen(true) }}>Thêm phụ tùng</Button> : undefined} />
-      <div className="table-toolbar"><Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo SKU hoặc tên phụ tùng" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Inventory control"
+        title="Kho phụ tùng"
+        description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ work order."
+        actions={canManageStock ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ unit: 'cái', initialStock: 0, reorderLevel: 3, unitPrice: 0, active: true }); setCreateOpen(true) }}>Thêm phụ tùng</Button> : undefined}
+        meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} SKU</Tag><Tag color="red">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</Tag></Space>}
+      />
+
+      <div className="table-toolbar">
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo SKU hoặc tên phụ tùng" value={search} onChange={(event) => setSearch(event.target.value)} />
+      </div>
+
       <Table
         rowKey="id"
         loading={isLoading}
@@ -50,34 +70,62 @@ export function InventoryPage() {
         scroll={{ x: 980 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         rowClassName={(record) => record.lowStock ? 'low-stock-row' : ''}
+        locale={{ emptyText: <Empty description="Chưa có phụ tùng phù hợp" /> }}
         columns={[
-          { title: 'SKU', dataIndex: 'sku', width: 160, render: (v: string) => <Typography.Text code>{v}</Typography.Text> },
-          { title: 'Tên phụ tùng', dataIndex: 'name', width: 250, render: (v: string) => <Typography.Text strong>{v}</Typography.Text> },
-          { title: 'Tồn hiện tại', width: 150, render: (_, r) => <Space><strong>{formatNumber(r.stockQuantity)}</strong><span>{r.unit}</span>{r.lowStock && <Tag color="red">Sắp hết</Tag>}</Space> },
-          { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 130, render: (v, r) => `${formatNumber(v)} ${r.unit}` },
+          {
+            title: 'Phụ tùng',
+            width: 320,
+            render: (_, record) => (
+              <div className="table-primary-cell">
+                <Typography.Text strong>{record.name}</Typography.Text>
+                <Typography.Text type="secondary" code>{record.sku}</Typography.Text>
+              </div>
+            ),
+          },
+          {
+            title: 'Tồn kho',
+            width: 180,
+            render: (_, record) => (
+              <Space size={8} wrap>
+                <strong>{formatNumber(record.stockQuantity)}</strong>
+                <span>{record.unit}</span>
+                {record.lowStock && <Tag color="red">Sắp hết</Tag>}
+              </Space>
+            ),
+          },
+          { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
           { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, render: formatCurrency },
-          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 160, render: formatDateTime },
-          ...(canManageStock ? [{ title: '', fixed: 'right' as const, width: 110, render: (_: unknown, r: SparePart) => <Button icon={<InboxOutlined />} onClick={() => { setImporting(r); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}>Nhập kho</Button> }] : []),
+          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
+          ...(canManageStock ? [{
+            title: '',
+            fixed: 'right' as const,
+            width: 120,
+            render: (_: unknown, record: SparePart) => (
+              <Button icon={<InboxOutlined />} onClick={() => { setImporting(record); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}>
+                Nhập kho
+              </Button>
+            ),
+          }] : []),
         ]}
       />
 
       <Modal title="Thêm phụ tùng" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} confirmLoading={create.isPending} width={680} destroyOnHidden>
         <Form form={createForm} layout="vertical" onFinish={(values) => create.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
-            <Form.Item label="SKU" name="sku" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item label="Đơn vị" name="unit" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item label="Mức đặt hàng lại" name="reorderLevel" rules={[{ required: true }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item label="Đơn giá" name="unitPrice" rules={[{ required: true }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} addonAfter="₫" /></Form.Item>
+            <Form.Item label="SKU" name="sku" rules={[{ required: true, message: 'Nhập SKU' }]}><Input /></Form.Item>
+            <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true, message: 'Nhập tên phụ tùng' }]}><Input /></Form.Item>
+            <Form.Item label="Đơn vị" name="unit" rules={[{ required: true, message: 'Nhập đơn vị' }]}><Input /></Form.Item>
+            <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Mức đặt hàng lại" name="reorderLevel" rules={[{ required: true, message: 'Nhập mức đặt hàng' }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Đơn giá" name="unitPrice" rules={[{ required: true, message: 'Nhập đơn giá' }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} addonAfter="VND" /></Form.Item>
           </div>
         </Form>
       </Modal>
 
       <Modal title={`Nhập kho · ${importing?.sku ?? ''}`} open={Boolean(importing)} onCancel={() => setImporting(undefined)} onOk={() => importForm.submit()} confirmLoading={importStock.isPending} destroyOnHidden>
         <Form form={importForm} layout="vertical" onFinish={(values) => importStock.mutate(values)} requiredMark={false}>
-          <Form.Item label="Số lượng" name="quantity" rules={[{ required: true }]}><InputNumber min={0.001} precision={3} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
-          <Form.Item label="Ghi chú" name="note" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
+          <Form.Item label="Ghi chú" name="note" rules={[{ required: true, message: 'Nhập ghi chú' }]}><Input /></Form.Item>
         </Form>
       </Modal>
     </div>

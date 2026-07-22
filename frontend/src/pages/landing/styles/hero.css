@@ -31,14 +31,6 @@
   filter: blur(64px);
   animation: lp-float 12s ease-in-out infinite reverse;
 }
-.lp-orb--3 {
-  width: 280px; height: 280px;
-  background: radial-gradient(circle, rgba(5, 150, 105, 0.07), transparent 68%);
-  bottom: 8%; left: 28%;
-  filter: blur(56px);
-  animation: lp-float 14s ease-in-out infinite;
-}
-
 @keyframes lp-float {
   0%, 100% { transform: translateY(0px) scale(1); }
   50%       { transform: translateY(-28px) scale(1.04); }
@@ -70,20 +62,6 @@
   margin-bottom: 22px;
 }
 
-.lp-eyebrow-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--lp-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28);
-  animation: lp-pulse 2.2s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-@keyframes lp-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28); }
-  50%       { box-shadow: 0 0 0 7px rgba(37, 99, 235, 0.08); }
-}
-
 .lp-hero-heading {
   font-size: clamp(34px, 4.2vw, 60px) !important;
   line-height: 1.08 !important;
@@ -106,37 +84,6 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 36px;
-}
-
-.lp-btn-hero-primary {
-  height: 52px !important;
-  padding-inline: 28px !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  background: linear-gradient(135deg, var(--lp-primary), var(--lp-primary-dark)) !important;
-  border: none !important;
-  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.38) !important;
-  transition: transform var(--lp-transition), box-shadow var(--lp-transition) !important;
-}
-.lp-btn-hero-primary:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.48) !important;
-}
-
-.lp-btn-hero-ghost {
-  height: 52px !important;
-  padding-inline: 24px !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-  border: 1.5px solid var(--lp-border) !important;
-  color: var(--lp-ink-3) !important;
-  background: rgba(255,255,255,0.82) !important;
-  backdrop-filter: blur(8px) !important;
-  transition: border-color var(--lp-transition), color var(--lp-transition) !important;
-}
-.lp-btn-hero-ghost:hover {
-  border-color: var(--lp-primary) !important;
-  color: var(--lp-primary) !important;
 }
 
 .lp-hero-social-proof {
