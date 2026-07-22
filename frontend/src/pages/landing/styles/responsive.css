@@ -1,0 +1,94 @@
+﻿
+@media (max-width: 1024px) {
+  :root { --lp-section-py: 80px; }
+
+  .lp-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding-block: 48px 72px;
+    text-align: center;
+  }
+  .lp-hero-actions        { justify-content: center; }
+  .lp-hero-social-proof   { justify-content: center; }
+  .lp-hero-eyebrow        { justify-content: center; }
+  .lp-hero-sub            { margin-inline: auto; }
+
+  .lp-hero-visual {
+    max-width: 620px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .lp-mockup {
+    transform: perspective(1100px) rotateY(0deg) rotateX(2deg);
+  }
+  .lp-mockup:hover {
+    transform: perspective(1100px) rotateY(0deg) rotateX(0deg);
+  }
+
+  .lp-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-stat-item {
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .lp-stat-item:nth-child(even)  { border-right: none; }
+  .lp-stat-item:nth-last-child(-n+2) { border-bottom: none; }
+
+  .lp-how-steps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+  }
+  .lp-how-steps::before { display: none; }
+
+  .lp-integrations-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .lp-integrations-copy { max-width: 100%; }
+  .lp-section-header--left {
+    text-align: center;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  .lp-footer-body {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+  .lp-footer-brand { grid-column: 1 / -1; }
+}
+
+@media (max-width: 768px) {
+  :root { --lp-section-py: 64px; }
+
+  .lp-nav-links,
+  .lp-nav-cta     { display: none; }
+  .lp-nav-burger  { display: block; }
+
+  .lp-hero { min-height: auto; padding-block-start: 80px; }
+  .lp-hero-heading { font-size: clamp(28px, 9vw, 42px) !important; }
+
+  .lp-mockup-shell   { height: 260px; }
+  .lp-mockup-sidebar { width: 100px; }
+  .lp-mockup-metrics { grid-template-columns: repeat(2, 1fr); }
+
+  .lp-price-card--highlight { transform: scale(1); }
+  .lp-price-card--highlight:hover { transform: translateY(-5px); }
+
+  .lp-footer-body {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lp-footer-bottom { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  :root { --lp-section-py: 52px; }
+
+  .lp-hero-actions    { flex-direction: column; }
+  .lp-cta-actions     { flex-direction: column; align-items: center; }
+  .lp-how-steps       { grid-template-columns: 1fr; max-width: 340px; margin-inline: auto; }
+  .lp-footer-body     { grid-template-columns: 1fr; }
+  .lp-integrations-cards { grid-template-columns: 1fr; }
+}
+

@@ -60,7 +60,6 @@ Mở PowerShell mới:
 
 ```powershell
 cd backend
-.\mvnw.cmd clean test
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 

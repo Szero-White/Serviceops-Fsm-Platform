@@ -1,40 +1,57 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
 import { Spin } from 'antd'
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
 import { AppLayout } from '../layouts/AppLayout'
 
-const LoginPage = lazy(() => import('../pages/LoginPage').then((m) => ({ default: m.LoginPage })))
-const DashboardPage = lazy(() => import('../pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
-const CustomersPage = lazy(() => import('../pages/CustomersPage').then((m) => ({ default: m.CustomersPage })))
-const AssetsPage = lazy(() => import('../pages/AssetsPage').then((m) => ({ default: m.AssetsPage })))
-const ServiceRequestsPage = lazy(() => import('../pages/ServiceRequestsPage').then((m) => ({ default: m.ServiceRequestsPage })))
-const WorkOrdersPage = lazy(() => import('../pages/WorkOrdersPage').then((m) => ({ default: m.WorkOrdersPage })))
-const TechniciansPage = lazy(() => import('../pages/TechniciansPage').then((m) => ({ default: m.TechniciansPage })))
-const InventoryPage = lazy(() => import('../pages/InventoryPage').then((m) => ({ default: m.InventoryPage })))
-const AuditPage = lazy(() => import('../pages/AuditPage').then((m) => ({ default: m.AuditPage })))
+type LazyPage = LazyExoticComponent<ComponentType>
+type AppRoute = { path?: string; index?: true; Page: LazyPage }
+
+const page = <TModule, TExport extends keyof TModule>(
+  importer: () => Promise<TModule>,
+  exportName: TExport,
+) =>
+  lazy(async () => ({
+    default: (await importer())[exportName] as ComponentType,
+  }))
+
+const LoginPage = page(() => import('../pages/LoginPage'), 'LoginPage')
+const LandingPage = page(() => import('../pages/LandingPage'), 'LandingPage')
+
+const protectedRoutes: AppRoute[] = [
+  { index: true, Page: page(() => import('../pages/DashboardPage'), 'DashboardPage') },
+  { path: 'customers', Page: page(() => import('../pages/CustomersPage'), 'CustomersPage') },
+  { path: 'assets', Page: page(() => import('../pages/AssetsPage'), 'AssetsPage') },
+  { path: 'service-requests', Page: page(() => import('../pages/ServiceRequestsPage'), 'ServiceRequestsPage') },
+  { path: 'work-orders', Page: page(() => import('../pages/WorkOrdersPage'), 'WorkOrdersPage') },
+  { path: 'technicians', Page: page(() => import('../pages/TechniciansPage'), 'TechniciansPage') },
+  { path: 'inventory', Page: page(() => import('../pages/InventoryPage'), 'InventoryPage') },
+  { path: 'audit', Page: page(() => import('../pages/AuditPage'), 'AuditPage') },
+]
 
 function RouteFallback() {
-  return <div className="route-fallback"><Spin size="large" tip="Đang tải dữ liệu..." /></div>
+  return (
+    <div className="route-fallback">
+      <Spin size="large" description="Đang tải dữ liệu..." />
+    </div>
+  )
 }
 
 export function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="customers" element={<CustomersPage />} />
-            <Route path="assets" element={<AssetsPage />} />
-            <Route path="service-requests" element={<ServiceRequestsPage />} />
-            <Route path="work-orders" element={<WorkOrdersPage />} />
-            <Route path="technicians" element={<TechniciansPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="audit" element={<AuditPage />} />
+            {protectedRoutes.map(({ path, index, Page }) => (
+              <Route key={path ?? 'dashboard'} path={path} index={index} element={<Page />} />
+            ))}
           </Route>
         </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,0 +1,100 @@
+﻿.lp-nav {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: 0 2px 16px rgba(15, 23, 42, 0.05);
+}
+
+.lp-nav-inner {
+  max-width: var(--lp-container-max);
+  margin-inline: auto;
+  padding-inline: var(--lp-container-px);
+  height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.lp-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.lp-brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--lp-ink);
+  letter-spacing: -0.3px;
+}
+
+.lp-brand-tag {
+  font-size: 10px !important;
+  letter-spacing: 0.4px;
+  border-radius: 5px !important;
+  line-height: 18px !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+}
+
+.lp-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.lp-nav-link {
+  padding: 6px 14px;
+  border-radius: var(--lp-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lp-ink-3);
+  text-decoration: none;
+  transition: background var(--lp-transition), color var(--lp-transition);
+}
+.lp-nav-link:hover {
+  background: var(--lp-surface-2);
+  color: var(--lp-ink);
+}
+
+.lp-nav-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.lp-nav-burger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--lp-ink);
+  padding: 6px;
+  border-radius: var(--lp-radius-sm);
+  transition: background var(--lp-transition);
+  margin-left: auto;
+}
+.lp-nav-burger:hover { background: var(--lp-surface-2); }
+
+.lp-drawer-link {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--lp-ink);
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lp-border-2);
+  transition: color var(--lp-transition);
+}
+.lp-drawer-link:hover { color: var(--lp-primary); }
+
