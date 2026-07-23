@@ -20,7 +20,8 @@ import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.scheduling.domain.AppointmentStatus;
-import com.serviceops.servicerequest.domain.RequestChannel;
+import com.serviceops.servicerequest.domain.ServiceChannel;
+import com.serviceops.servicerequest.domain.ServiceChannelRepository;
 import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
@@ -58,6 +59,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
     private final TechnicianRepository technicianRepository;
+    private final ServiceChannelRepository serviceChannelRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderStatusHistoryRepository historyRepository;
@@ -80,6 +82,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         tenant.setName("ServiceOps Demo Company");
         tenant.setActive(true);
         tenantRepository.save(tenant);
+        seedServiceChannels(tenant);
 
         UserAccount owner = user(tenant, "owner", "Nguyễn Minh Quản", UserRole.OWNER);
         UserAccount dispatcher = user(tenant, "dispatcher", "Lê Thu Điều phối", UserRole.DISPATCHER);
@@ -104,10 +107,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         Asset asset4 = asset(tenant, customers.get(3), "Máy lạnh", "Mitsubishi", "MSY-GR35", "MT-MSYGR35-0004", LocalDate.now().plusYears(2));
         Asset asset5 = asset(tenant, customers.get(4), "Tủ đông", "Sanaky", "VH-8699HY", "SK-VH8699-0005", LocalDate.now().plusMonths(4));
 
-        ServiceRequest sr1 = serviceRequest(tenant, customers.get(0), asset1, "Máy lạnh không đủ lạnh", "Máy chạy nhưng nhiệt độ phòng không giảm, có tiếng ồn nhẹ.", Priority.HIGH, RequestChannel.PHONE, customerService.getUsername());
-        ServiceRequest sr2 = serviceRequest(tenant, customers.get(1), asset2, "Bảo trì định kỳ 6 tháng", "Vệ sinh dàn nóng, dàn lạnh và kiểm tra gas.", Priority.NORMAL, RequestChannel.ZALO, customerService.getUsername());
-        ServiceRequest sr3 = serviceRequest(tenant, customers.get(2), asset3, "Tủ lạnh đóng tuyết", "Ngăn đông đóng tuyết dày, ngăn mát yếu.", Priority.URGENT, RequestChannel.WEBSITE, customerService.getUsername());
-        serviceRequest(tenant, customers.get(4), asset5, "Tủ đông phát tiếng kêu", "Tiếng kêu lớn khi máy nén khởi động.", Priority.NORMAL, RequestChannel.PHONE, customerService.getUsername());
+        ServiceRequest sr1 = serviceRequest(tenant, customers.get(0), asset1, "Máy lạnh không đủ lạnh", "Máy chạy nhưng nhiệt độ phòng không giảm, có tiếng ồn nhẹ.", Priority.HIGH, "PHONE", customerService.getUsername());
+        ServiceRequest sr2 = serviceRequest(tenant, customers.get(1), asset2, "Bảo trì định kỳ 6 tháng", "Vệ sinh dàn nóng, dàn lạnh và kiểm tra gas.", Priority.NORMAL, "ZALO", customerService.getUsername());
+        ServiceRequest sr3 = serviceRequest(tenant, customers.get(2), asset3, "Tủ lạnh đóng tuyết", "Ngăn đông đóng tuyết dày, ngăn mát yếu.", Priority.URGENT, "WEBSITE", customerService.getUsername());
+        serviceRequest(tenant, customers.get(4), asset5, "Tủ đông phát tiếng kêu", "Tiếng kêu lớn khi máy nén khởi động.", Priority.NORMAL, "PHONE", customerService.getUsername());
 
         WorkOrder wo1 = workOrder(tenant, sr1, customers.get(0), asset1, technician, "Kiểm tra hệ thống lạnh", Priority.HIGH,
                 WorkOrderStatus.ASSIGNED, Instant.now().plus(2, ChronoUnit.HOURS), Instant.now().plus(4, ChronoUnit.HOURS));
@@ -162,6 +165,28 @@ public class DemoDataSeeder implements ApplicationRunner {
         return userRepository.save(user);
     }
 
+    private void seedServiceChannels(Tenant tenant) {
+        serviceChannel(tenant, "PHONE", "Điện thoại", "Cuộc gọi hotline hoặc số chăm sóc khách hàng", "green", 10);
+        serviceChannel(tenant, "EMAIL", "Email", "Yêu cầu gửi qua hộp thư hỗ trợ", "blue", 20);
+        serviceChannel(tenant, "WEBSITE", "Website", "Biểu mẫu tiếp nhận trên website hoặc portal", "geekblue", 30);
+        serviceChannel(tenant, "ZALO", "Zalo", "Tin nhắn từ Zalo OA hoặc nhân viên CSKH", "cyan", 40);
+        serviceChannel(tenant, "WALK_IN", "Trực tiếp", "Khách đến trực tiếp quầy hoặc văn phòng", "orange", 50);
+        serviceChannel(tenant, "INTERNAL", "Nội bộ", "Yêu cầu được tạo bởi đội vận hành nội bộ", "purple", 60);
+    }
+
+    private void serviceChannel(Tenant tenant, String code, String name, String description, String color, int sortOrder) {
+        ServiceChannel channel = new ServiceChannel();
+        channel.setTenantId(tenant.getId());
+        channel.setCode(code);
+        channel.setName(name);
+        channel.setDescription(description);
+        channel.setColor(color);
+        channel.setSortOrder(sortOrder);
+        channel.setActive(true);
+        channel.setSystemDefined(true);
+        serviceChannelRepository.save(channel);
+    }
+
     private TechnicianProfile technician(Tenant tenant, UserAccount user, String phone, String skills) {
         TechnicianProfile t = new TechnicianProfile();
         t.setTenantId(tenant.getId());
@@ -199,7 +224,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     }
 
     private ServiceRequest serviceRequest(Tenant tenant, Customer customer, Asset asset, String title, String description,
-                                          Priority priority, RequestChannel channel, String createdBy) {
+                                          Priority priority, String channel, String createdBy) {
         ServiceRequest sr = new ServiceRequest();
         sr.setTenantId(tenant.getId());
         sr.setCustomer(customer);

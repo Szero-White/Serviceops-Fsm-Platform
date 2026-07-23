@@ -40,9 +40,8 @@ public class ServiceRequest extends TenantScopedEntity {
     @Column(nullable = false, length = 20)
     private Priority priority;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private RequestChannel channel;
+    private String channel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

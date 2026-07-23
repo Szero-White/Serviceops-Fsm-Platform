@@ -11,6 +11,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface TechnicianRepository extends JpaRepository<TechnicianProfile, UUID> {
+    @Query("select t from TechnicianProfile t join fetch t.user where t.tenantId = :tenantId order by t.user.displayName")
+    List<TechnicianProfile> findAllDetailed(@Param("tenantId") UUID tenantId);
+
     @Query("select t from TechnicianProfile t join fetch t.user where t.tenantId = :tenantId and t.active = true order by t.user.displayName")
     List<TechnicianProfile> findActive(@Param("tenantId") UUID tenantId);
 
@@ -22,4 +25,5 @@ public interface TechnicianRepository extends JpaRepository<TechnicianProfile, U
     Optional<TechnicianProfile> findForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     long countByTenantIdAndActiveTrue(UUID tenantId);
+    boolean existsByTenantIdAndUserId(UUID tenantId, UUID userId);
 }

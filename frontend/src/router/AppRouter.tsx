@@ -23,6 +23,7 @@ const protectedRoutes: AppRoute[] = [
   { path: 'customers', Page: page(() => import('../pages/CustomersPage'), 'CustomersPage') },
   { path: 'assets', Page: page(() => import('../pages/AssetsPage'), 'AssetsPage') },
   { path: 'service-requests', Page: page(() => import('../pages/ServiceRequestsPage'), 'ServiceRequestsPage') },
+  { path: 'service-channels', Page: page(() => import('../pages/ServiceChannelsPage'), 'ServiceChannelsPage') },
   { path: 'work-orders', Page: page(() => import('../pages/WorkOrdersPage'), 'WorkOrdersPage') },
   { path: 'technicians', Page: page(() => import('../pages/TechniciansPage'), 'TechniciansPage') },
   { path: 'inventory', Page: page(() => import('../pages/InventoryPage'), 'InventoryPage') },

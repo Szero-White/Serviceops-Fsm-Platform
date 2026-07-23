@@ -1,12 +1,11 @@
 import { PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../api/http'
-import { assetsApi, customersApi, serviceRequestsApi } from '../api/services'
+import { assetsApi, customersApi, serviceChannelsApi, serviceRequestsApi } from '../api/services'
 import { PageHeader } from '../components/PageHeader'
 import { ChannelTag, PriorityTag, StatusTag } from '../components/StatusTag'
-import type { RequestChannel } from '../types'
 import { EMPTY_VALUE, formatDateTime } from '../utils/format'
 
 const priorityOptions = [
@@ -14,15 +13,6 @@ const priorityOptions = [
   { value: 'NORMAL', label: 'Bình thường' },
   { value: 'HIGH', label: 'Cao' },
   { value: 'URGENT', label: 'Khẩn cấp' },
-]
-
-const channelOptions: Array<{ value: RequestChannel; label: string }> = [
-  { value: 'PHONE', label: 'Điện thoại' },
-  { value: 'EMAIL', label: 'Email' },
-  { value: 'WEBSITE', label: 'Website' },
-  { value: 'ZALO', label: 'Zalo' },
-  { value: 'WALK_IN', label: 'Trực tiếp' },
-  { value: 'INTERNAL', label: 'Nội bộ' },
 ]
 
 const requestStatusOptions = [
@@ -38,9 +28,20 @@ export function ServiceRequestsPage() {
   const [form] = Form.useForm()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({ queryKey: ['service-requests', search, status], queryFn: () => serviceRequestsApi.list(search, status) })
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['service-requests', search, status],
+    queryFn: () => serviceRequestsApi.list(search, status),
+  })
   const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 200) })
   const { data: assets } = useQuery({ queryKey: ['assets', 'all'], queryFn: () => assetsApi.list('', 0, 300) })
+  const { data: channels = [] } = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
+
+  const channelOptions = useMemo(
+    () => channels.filter((channel) => channel.active).map((channel) => ({ value: channel.code, label: channel.name })),
+    [channels],
+  )
+  const channelMap = useMemo(() => new Map(channels.map((channel) => [channel.code, channel])), [channels])
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['service-requests'] })
@@ -77,13 +78,18 @@ export function ServiceRequestsPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const showCreate = () => {
+    form.setFieldsValue({ priority: 'NORMAL', channel: channelOptions[0]?.value ?? 'PHONE' })
+    setOpen(true)
+  }
+
   return (
     <div className="page-shell">
       <PageHeader
         eyebrow="Intake queue"
         title="Yêu cầu dịch vụ"
         description="Tiếp nhận sự cố, nhu cầu bảo trì và chuyển thành work order khi đủ thông tin."
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { form.setFieldsValue({ priority: 'NORMAL', channel: 'PHONE' }); setOpen(true) }}>Tiếp nhận yêu cầu</Button>}
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} yêu cầu</Tag><Tag color="orange">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</Tag></Space>}
       />
 
@@ -114,7 +120,15 @@ export function ServiceRequestsPage() {
           { title: 'Khách hàng', dataIndex: 'customerName', width: 210, ellipsis: true },
           { title: 'Thiết bị', dataIndex: 'assetLabel', width: 220, ellipsis: true, render: (value) => value || EMPTY_VALUE },
           { title: 'Ưu tiên', dataIndex: 'priority', width: 120, render: (value) => <PriorityTag priority={value} /> },
-          { title: 'Kênh', dataIndex: 'channel', width: 120, render: (value) => <ChannelTag channel={value} /> },
+          {
+            title: 'Kênh',
+            dataIndex: 'channel',
+            width: 130,
+            render: (value) => {
+              const channel = channelMap.get(value)
+              return <ChannelTag channel={value} label={channel?.name} color={channel?.color} />
+            },
+          },
           { title: 'Trạng thái', dataIndex: 'status', width: 140, render: (value) => <StatusTag status={value} /> },
           { title: 'Tiếp nhận', dataIndex: 'createdAt', width: 170, render: formatDateTime },
           {
@@ -143,7 +157,9 @@ export function ServiceRequestsPage() {
               <Select allowClear showSearch optionFilterProp="label" options={assets?.content.map((asset) => ({ value: asset.id, label: `${asset.serialNumber} · ${asset.customerName}` }))} />
             </Form.Item>
             <Form.Item label="Mức độ ưu tiên" name="priority" rules={[{ required: true, message: 'Chọn mức ưu tiên' }]}><Select options={priorityOptions} /></Form.Item>
-            <Form.Item label="Kênh tiếp nhận" name="channel" rules={[{ required: true, message: 'Chọn kênh tiếp nhận' }]}><Select options={channelOptions} /></Form.Item>
+            <Form.Item label="Kênh tiếp nhận" name="channel" rules={[{ required: true, message: 'Chọn kênh tiếp nhận' }]}>
+              <Select options={channelOptions} placeholder="Chọn kênh tiếp nhận" />
+            </Form.Item>
           </div>
           <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề yêu cầu' }]}><Input placeholder="Ví dụ: Máy lạnh không đủ lạnh" /></Form.Item>
           <Form.Item label="Mô tả chi tiết" name="description" rules={[{ required: true, message: 'Nhập mô tả chi tiết' }]}><Input.TextArea rows={5} placeholder="Triệu chứng, thời điểm xảy ra, yêu cầu của khách hàng..." /></Form.Item>

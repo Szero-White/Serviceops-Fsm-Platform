@@ -112,7 +112,7 @@ export function WorkOrdersPage() {
   const { data: detail, isLoading: detailLoading } = useQuery({ queryKey: ['work-order', selectedId], queryFn: () => workOrdersApi.get(selectedId!), enabled: Boolean(selectedId) })
   const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 200) })
   const { data: assets } = useQuery({ queryKey: ['assets', 'all'], queryFn: () => assetsApi.list('', 0, 300) })
-  const { data: technicians } = useQuery({ queryKey: ['technicians'], queryFn: techniciansApi.list })
+  const { data: technicians } = useQuery({ queryKey: ['technicians'], queryFn: () => techniciansApi.list() })
   const { data: parts } = useQuery({ queryKey: ['spare-parts', 'all'], queryFn: () => inventoryApi.list('', 0, 300) })
   const { data: attachments } = useQuery({
     queryKey: ['attachments', selectedId],

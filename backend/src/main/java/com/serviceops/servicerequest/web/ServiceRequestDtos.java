@@ -1,7 +1,6 @@
 package com.serviceops.servicerequest.web;
 
 import com.serviceops.common.domain.Priority;
-import com.serviceops.servicerequest.domain.RequestChannel;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,7 +19,7 @@ public final class ServiceRequestDtos {
             @NotBlank @Size(max = 200) String title,
             @NotBlank @Size(max = 5000) String description,
             @NotNull Priority priority,
-            @NotNull RequestChannel channel
+            @NotBlank @Size(max = 30) String channel
     ) {
     }
 
@@ -33,7 +32,7 @@ public final class ServiceRequestDtos {
             String title,
             String description,
             Priority priority,
-            RequestChannel channel,
+            String channel,
             ServiceRequestStatus status,
             String createdBy,
             Instant createdAt

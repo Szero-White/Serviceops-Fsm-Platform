@@ -27,6 +27,7 @@ public class ServiceRequestService {
     private final ServiceRequestRepository repository;
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
+    private final ServiceChannelService serviceChannelService;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -54,13 +55,14 @@ public class ServiceRequestService {
             }
         }
         ServiceRequest entity = new ServiceRequest();
+        String channelCode = serviceChannelService.requireActive(tenantId, request.channel()).getCode();
         entity.setTenantId(tenantId);
         entity.setCustomer(customer);
         entity.setAsset(asset);
         entity.setTitle(request.title().trim());
         entity.setDescription(request.description().trim());
         entity.setPriority(request.priority());
-        entity.setChannel(request.channel());
+        entity.setChannel(channelCode);
         entity.setStatus(ServiceRequestStatus.OPEN);
         entity.setCreatedBy(CurrentUser.username());
         repository.save(entity);

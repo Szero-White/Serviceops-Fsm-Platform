@@ -27,4 +27,5 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
                           @Param("excludeWorkOrderId") UUID excludeWorkOrderId);
 
     Optional<Appointment> findByTenantIdAndWorkOrderId(UUID tenantId, UUID workOrderId);
+    long countByTenantIdAndTechnicianId(UUID tenantId, UUID technicianId);
 }

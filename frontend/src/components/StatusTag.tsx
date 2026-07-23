@@ -55,7 +55,7 @@ const priorityColors: Record<Priority, string> = {
   URGENT: 'red',
 }
 
-const channelLabels: Record<RequestChannel, string> = {
+const fallbackChannelLabels: Record<string, string> = {
   PHONE: 'Điện thoại',
   EMAIL: 'Email',
   WEBSITE: 'Website',
@@ -72,6 +72,6 @@ export function PriorityTag({ priority }: { priority: Priority }) {
   return <Tag className="status-tag" color={priorityColors[priority]}>{priorityLabels[priority]}</Tag>
 }
 
-export function ChannelTag({ channel }: { channel: RequestChannel }) {
-  return <Tag className="status-tag">{channelLabels[channel] ?? channel}</Tag>
+export function ChannelTag({ channel, label, color }: { channel: RequestChannel; label?: string; color?: string }) {
+  return <Tag className="status-tag" color={color}>{label ?? fallbackChannelLabels[channel] ?? channel}</Tag>
 }

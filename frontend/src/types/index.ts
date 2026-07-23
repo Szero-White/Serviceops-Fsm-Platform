@@ -15,7 +15,7 @@ export type WorkOrderStatus =
   | 'REOPENED'
 
 export type ServiceRequestStatus = 'OPEN' | 'CONVERTED' | 'CANCELLED'
-export type RequestChannel = 'PHONE' | 'EMAIL' | 'WEBSITE' | 'ZALO' | 'WALK_IN' | 'INTERNAL'
+export type RequestChannel = string
 export type AssetStatus = 'ACTIVE' | 'IN_SERVICE' | 'OUT_OF_SERVICE' | 'RETIRED'
 
 export interface PageResponse<T> {
@@ -87,6 +87,19 @@ export interface ServiceRequest {
   createdAt: string
 }
 
+export interface ServiceChannel {
+  id: string
+  code: string
+  name: string
+  description?: string
+  color: string
+  sortOrder: number
+  active: boolean
+  systemDefined: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface WorkOrderHistory {
   id: string
   fromStatus?: WorkOrderStatus
@@ -127,6 +140,7 @@ export interface Technician {
   phone?: string
   skills?: string
   active: boolean
+  accountActive: boolean
 }
 
 export interface SparePart {

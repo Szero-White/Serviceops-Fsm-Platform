@@ -8,6 +8,7 @@ import type {
   Dashboard,
   NotificationItem,
   PageResponse,
+  ServiceChannel,
   ServiceRequest,
   SparePart,
   Technician,
@@ -45,6 +46,13 @@ export const serviceRequestsApi = {
   convert: (id: string) => http.post<WorkOrder>(`/work-orders/from-service-request/${id}`).then((r) => r.data),
 }
 
+export const serviceChannelsApi = {
+  list: (activeOnly = false) => http.get<ServiceChannel[]>('/service-channels', { params: { activeOnly } }).then((r) => r.data),
+  create: (payload: Record<string, unknown>) => http.post<ServiceChannel>('/service-channels', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) => http.put<ServiceChannel>(`/service-channels/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/service-channels/${id}`).then((r) => r.data),
+}
+
 export const workOrdersApi = {
   list: (search = '', status?: WorkOrderStatus, page = 0, size = 100) =>
     http.get<PageResponse<WorkOrder>>('/work-orders', { params: { search, status, page, size } }).then((r) => r.data),
@@ -59,7 +67,10 @@ export const workOrdersApi = {
 }
 
 export const techniciansApi = {
-  list: () => http.get<Technician[]>('/technicians').then((r) => r.data),
+  list: (activeOnly = true) => http.get<Technician[]>('/technicians', { params: { activeOnly } }).then((r) => r.data),
+  create: (payload: Record<string, unknown>) => http.post<Technician>('/technicians', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) => http.put<Technician>(`/technicians/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/technicians/${id}`).then((r) => r.data),
 }
 
 export const inventoryApi = {
