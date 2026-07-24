@@ -12,6 +12,7 @@ import type {
   ServiceRequest,
   SparePart,
   Technician,
+  UserAccount,
   WorkOrder,
   WorkOrderStatus,
 } from '../types'
@@ -22,6 +23,13 @@ export const authApi = {
 
 export const dashboardApi = {
   get: () => http.get<Dashboard>('/dashboard').then((r) => r.data),
+}
+
+export const usersApi = {
+  list: () => http.get<UserAccount[]>('/users').then((r) => r.data),
+  create: (payload: Record<string, unknown>) => http.post<UserAccount>('/users', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) => http.put<UserAccount>(`/users/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/users/${id}`).then((r) => r.data),
 }
 
 export const customersApi = {
@@ -42,6 +50,8 @@ export const serviceRequestsApi = {
   list: (search = '', status?: string, page = 0, size = 100) =>
     http.get<PageResponse<ServiceRequest>>('/service-requests', { params: { search, status, page, size } }).then((r) => r.data),
   create: (payload: Record<string, unknown>) => http.post<ServiceRequest>('/service-requests', payload).then((r) => r.data),
+  update: (id: string, payload: Record<string, unknown>) => http.put<ServiceRequest>(`/service-requests/${id}`, payload).then((r) => r.data),
+  delete: (id: string) => http.delete<void>(`/service-requests/${id}`).then((r) => r.data),
   cancel: (id: string) => http.post<ServiceRequest>(`/service-requests/${id}/cancel`).then((r) => r.data),
   convert: (id: string) => http.post<WorkOrder>(`/work-orders/from-service-request/${id}`).then((r) => r.data),
 }

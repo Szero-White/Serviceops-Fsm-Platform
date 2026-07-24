@@ -13,6 +13,7 @@ import {
   SettingOutlined,
   TeamOutlined,
   ToolOutlined,
+  UserSwitchOutlined,
 } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Avatar, Badge, Button, Drawer, Dropdown, Empty, Layout, List, Menu, Space, Typography } from 'antd'
@@ -54,7 +55,6 @@ export function AppLayout() {
 
   const items = useMemo(() => {
     const role = user?.role ?? ''
-
     return [
       { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
       { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
@@ -65,6 +65,7 @@ export function AppLayout() {
       { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link>, roles: ['OWNER', 'DISPATCHER'] },
       { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link>, roles: ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'] },
       { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link>, roles: ['OWNER', 'DISPATCHER'] },
+      { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link>, roles: ['OWNER'] },
     ].filter((item) => item.roles.includes(role)).map(({ roles: _roles, ...item }) => item)
   }, [user?.role])
 

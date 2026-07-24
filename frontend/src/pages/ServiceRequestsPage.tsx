@@ -1,11 +1,12 @@
-import { PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../api/http'
 import { assetsApi, customersApi, serviceChannelsApi, serviceRequestsApi } from '../api/services'
 import { PageHeader } from '../components/PageHeader'
 import { ChannelTag, PriorityTag, StatusTag } from '../components/StatusTag'
+import type { ServiceRequest } from '../types'
 import { EMPTY_VALUE, formatDateTime } from '../utils/format'
 
 const priorityOptions = [
@@ -25,6 +26,7 @@ export function ServiceRequestsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<string>()
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<ServiceRequest>()
   const [form] = Form.useForm()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -49,12 +51,22 @@ export function ServiceRequestsPage() {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
 
-  const create = useMutation({
-    mutationFn: (values: Record<string, unknown>) => serviceRequestsApi.create(values),
+  const save = useMutation({
+    mutationFn: (values: Record<string, unknown>) => editing ? serviceRequestsApi.update(editing.id, values) : serviceRequestsApi.create(values),
     onSuccess: () => {
-      message.success('Đã tiếp nhận yêu cầu dịch vụ')
+      message.success(editing ? 'Đã cập nhật yêu cầu dịch vụ' : 'Đã tiếp nhận yêu cầu dịch vụ')
       setOpen(false)
+      setEditing(undefined)
       form.resetFields()
+      refresh()
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => serviceRequestsApi.delete(id),
+    onSuccess: () => {
+      message.success('Đã xoá yêu cầu dịch vụ')
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -79,7 +91,22 @@ export function ServiceRequestsPage() {
   })
 
   const showCreate = () => {
+    setEditing(undefined)
+    form.resetFields()
     form.setFieldsValue({ priority: 'NORMAL', channel: channelOptions[0]?.value ?? 'PHONE' })
+    setOpen(true)
+  }
+
+  const showEdit = (record: ServiceRequest) => {
+    setEditing(record)
+    form.setFieldsValue({
+      customerId: record.customerId,
+      assetId: record.assetId,
+      priority: record.priority,
+      channel: record.channel,
+      title: record.title,
+      description: record.description,
+    })
     setOpen(true)
   }
 
@@ -88,7 +115,7 @@ export function ServiceRequestsPage() {
       <PageHeader
         eyebrow="Intake queue"
         title="Yêu cầu dịch vụ"
-        description="Tiếp nhận sự cố, nhu cầu bảo trì và chuyển thành work order khi đủ thông tin."
+        description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành work order khi đủ thông tin."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} yêu cầu</Tag><Tag color="orange">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</Tag></Space>}
       />
@@ -103,7 +130,7 @@ export function ServiceRequestsPage() {
         loading={isLoading}
         dataSource={data?.content ?? []}
         className="content-table"
-        scroll={{ x: 1120 }}
+        scroll={{ x: 1260 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         locale={{ emptyText: <Empty description="Chưa có yêu cầu phù hợp" /> }}
         columns={[
@@ -132,23 +159,49 @@ export function ServiceRequestsPage() {
           { title: 'Trạng thái', dataIndex: 'status', width: 140, render: (value) => <StatusTag status={value} /> },
           { title: 'Tiếp nhận', dataIndex: 'createdAt', width: 170, render: formatDateTime },
           {
-            title: '',
+            title: 'Thao tác',
             fixed: 'right',
-            width: 170,
-            render: (_, record) => record.status === 'OPEN' ? (
-              <Space size={4}>
-                <Button type="link" icon={<SwapOutlined />} loading={convert.isPending} onClick={() => convert.mutate(record.id)}>Tạo phiếu</Button>
-                <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
-                  <Button type="link" danger>Huỷ</Button>
-                </Popconfirm>
-              </Space>
-            ) : EMPTY_VALUE,
+            width: 220,
+            render: (_, record) => {
+              const isOpen = record.status === 'OPEN'
+              const isConverted = record.status === 'CONVERTED'
+              return (
+                <Space size={4}>
+                  <Tooltip title={isOpen ? 'Sửa yêu cầu' : 'Chỉ sửa được yêu cầu đang mở'}>
+                    <Button aria-label="Sửa yêu cầu" type="text" disabled={!isOpen} icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                  </Tooltip>
+
+                  {isOpen && (
+                    <>
+                      <Button type="link" icon={<SwapOutlined />} loading={convert.isPending} onClick={() => convert.mutate(record.id)}>Tạo phiếu</Button>
+                      <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
+                        <Button type="link" danger>Huỷ</Button>
+                      </Popconfirm>
+                    </>
+                  )}
+
+                  <Tooltip title={isConverted ? 'Không thể xoá yêu cầu đã tạo work order' : 'Xoá yêu cầu'}>
+                    <Popconfirm
+                      disabled={isConverted}
+                      title="Xoá yêu cầu này?"
+                      description="Không thể xoá yêu cầu đã chuyển thành work order."
+                      okText="Xoá"
+                      cancelText="Huỷ"
+                      okButtonProps={{ danger: true, loading: remove.isPending }}
+                      onConfirm={() => remove.mutate(record.id)}
+                    >
+                      <Button aria-label="Xoá yêu cầu" type="text" danger disabled={isConverted} icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </Tooltip>
+                </Space>
+              )
+            },
           },
         ]}
       />
 
-      <Modal title="Tiếp nhận yêu cầu dịch vụ" open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={create.isPending} width={760} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => create.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật yêu cầu dịch vụ' : 'Tiếp nhận yêu cầu dịch vụ'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={760} destroyOnHidden>
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
               <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />

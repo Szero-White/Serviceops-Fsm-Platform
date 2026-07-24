@@ -43,6 +43,19 @@ export interface AuthResponse {
   user: CurrentUser
 }
 
+export interface UserAccount {
+  id: string
+  username: string
+  displayName: string
+  role: UserRole
+  active: boolean
+  technicianProfileId?: string
+  phone?: string
+  skills?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Customer {
   id: string
   code: string

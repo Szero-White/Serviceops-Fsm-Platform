@@ -13,6 +13,7 @@ import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.CreateServiceRequest;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.ServiceRequestResponse;
+import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -28,12 +29,14 @@ public class ServiceRequestService {
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
     private final ServiceChannelService serviceChannelService;
+    private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
         var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), status, search == null ? "" : search.trim(), pageable).map(ServiceRequestService::toResponse));
+        String keyword = search == null ? "" : search.trim();
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), status, keyword, pageable).map(ServiceRequestService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -44,29 +47,24 @@ public class ServiceRequestService {
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request) {
         UUID tenantId = CurrentUser.tenantId();
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
-        Asset asset = null;
-        if (request.assetId() != null) {
-            asset = assetRepository.findDetailed(request.assetId(), tenantId)
-                    .orElseThrow(() -> BusinessException.notFound("ASSET_NOT_FOUND", "Không tìm thấy thiết bị"));
-            if (!asset.getCustomer().getId().equals(customer.getId())) {
-                throw BusinessException.badRequest("ASSET_CUSTOMER_MISMATCH", "Thiết bị không thuộc khách hàng đã chọn");
-            }
-        }
         ServiceRequest entity = new ServiceRequest();
-        String channelCode = serviceChannelService.requireActive(tenantId, request.channel()).getCode();
+        applyEditableFields(entity, request, tenantId);
         entity.setTenantId(tenantId);
-        entity.setCustomer(customer);
-        entity.setAsset(asset);
-        entity.setTitle(request.title().trim());
-        entity.setDescription(request.description().trim());
-        entity.setPriority(request.priority());
-        entity.setChannel(channelCode);
         entity.setStatus(ServiceRequestStatus.OPEN);
         entity.setCreatedBy(CurrentUser.username());
         repository.save(entity);
         auditService.record("CREATE", "SERVICE_REQUEST", entity.getId(), "Tiếp nhận yêu cầu: " + entity.getTitle());
+        return toResponse(entity);
+    }
+
+    @Transactional
+    public ServiceRequestResponse update(UUID id, CreateServiceRequest request) {
+        ServiceRequest entity = require(id);
+        if (entity.getStatus() != ServiceRequestStatus.OPEN) {
+            throw BusinessException.conflict("SERVICE_REQUEST_LOCKED", "Chỉ có thể chỉnh sửa yêu cầu đang mở");
+        }
+        applyEditableFields(entity, request, CurrentUser.tenantId());
+        auditService.record("UPDATE", "SERVICE_REQUEST", entity.getId(), "Cập nhật yêu cầu dịch vụ: " + entity.getTitle());
         return toResponse(entity);
     }
 
@@ -82,18 +80,70 @@ public class ServiceRequestService {
         return toResponse(entity);
     }
 
+    @Transactional
+    public void delete(UUID id) {
+        ServiceRequest entity = require(id);
+        long workOrderCount = workOrderRepository.countByTenantIdAndServiceRequestId(CurrentUser.tenantId(), id);
+        if (workOrderCount > 0 || entity.getStatus() == ServiceRequestStatus.CONVERTED) {
+            throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo work order");
+        }
+        repository.delete(entity);
+        auditService.record("DELETE", "SERVICE_REQUEST", entity.getId(), "Xóa yêu cầu dịch vụ: " + entity.getTitle());
+    }
+
     public ServiceRequest require(UUID id) {
         return repository.findDetailed(id, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("SERVICE_REQUEST_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
     }
 
-    public static ServiceRequestResponse toResponse(ServiceRequest r) {
-        String assetLabel = r.getAsset() == null ? null : String.join(" ",
-                r.getAsset().getBrand() == null ? "" : r.getAsset().getBrand(),
-                r.getAsset().getModel() == null ? "" : r.getAsset().getModel(),
-                "(" + r.getAsset().getSerialNumber() + ")").trim();
-        return new ServiceRequestResponse(r.getId(), r.getCustomer().getId(), r.getCustomer().getName(),
-                r.getAsset() == null ? null : r.getAsset().getId(), assetLabel, r.getTitle(), r.getDescription(),
-                r.getPriority(), r.getChannel(), r.getStatus(), r.getCreatedBy(), r.getCreatedAt());
+    private void applyEditableFields(ServiceRequest entity, CreateServiceRequest request, UUID tenantId) {
+        Customer customer = resolveCustomer(request.customerId(), tenantId);
+        Asset asset = resolveAsset(request.assetId(), customer, tenantId);
+        String channelCode = serviceChannelService.requireActive(tenantId, request.channel()).getCode();
+
+        entity.setCustomer(customer);
+        entity.setAsset(asset);
+        entity.setTitle(request.title().trim());
+        entity.setDescription(request.description().trim());
+        entity.setPriority(request.priority());
+        entity.setChannel(channelCode);
+    }
+
+    private Customer resolveCustomer(UUID customerId, UUID tenantId) {
+        return customerRepository.findByIdAndTenantId(customerId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+    }
+
+    private Asset resolveAsset(UUID assetId, Customer customer, UUID tenantId) {
+        if (assetId == null) {
+            return null;
+        }
+        Asset asset = assetRepository.findDetailed(assetId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("ASSET_NOT_FOUND", "Không tìm thấy thiết bị"));
+        if (!asset.getCustomer().getId().equals(customer.getId())) {
+            throw BusinessException.badRequest("ASSET_CUSTOMER_MISMATCH", "Thiết bị không thuộc khách hàng đã chọn");
+        }
+        return asset;
+    }
+
+    public static ServiceRequestResponse toResponse(ServiceRequest request) {
+        String assetLabel = request.getAsset() == null ? null : String.join(" ",
+                request.getAsset().getBrand() == null ? "" : request.getAsset().getBrand(),
+                request.getAsset().getModel() == null ? "" : request.getAsset().getModel(),
+                "(" + request.getAsset().getSerialNumber() + ")").trim();
+        return new ServiceRequestResponse(
+                request.getId(),
+                request.getCustomer().getId(),
+                request.getCustomer().getName(),
+                request.getAsset() == null ? null : request.getAsset().getId(),
+                assetLabel,
+                request.getTitle(),
+                request.getDescription(),
+                request.getPriority(),
+                request.getChannel(),
+                request.getStatus(),
+                request.getCreatedBy(),
+                request.getCreatedAt()
+        );
     }
 }

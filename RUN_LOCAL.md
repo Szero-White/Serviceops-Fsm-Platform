@@ -61,7 +61,6 @@ Mở PowerShell mới:
 ```powershell
 cd backend
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
-```
 
 Khi log có dòng `Started ServiceOpsApplication`, mở:
 

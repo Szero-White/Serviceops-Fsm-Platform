@@ -20,6 +20,7 @@ const LandingPage = page(() => import('../pages/LandingPage'), 'LandingPage')
 
 const protectedRoutes: AppRoute[] = [
   { index: true, Page: page(() => import('../pages/DashboardPage'), 'DashboardPage') },
+  { path: 'users', Page: page(() => import('../pages/UsersPage'), 'UsersPage') },
   { path: 'customers', Page: page(() => import('../pages/CustomersPage'), 'CustomersPage') },
   { path: 'assets', Page: page(() => import('../pages/AssetsPage'), 'AssetsPage') },
   { path: 'service-requests', Page: page(() => import('../pages/ServiceRequestsPage'), 'ServiceRequestsPage') },

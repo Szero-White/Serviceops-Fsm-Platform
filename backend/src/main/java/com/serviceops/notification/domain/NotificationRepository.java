@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     Page<Notification> findByTenantIdAndRecipientId(UUID tenantId, UUID recipientId, Pageable pageable);
+    long countByTenantIdAndRecipientId(UUID tenantId, UUID recipientId);
     long countByTenantIdAndRecipientIdAndReadAtIsNull(UUID tenantId, UUID recipientId);
     Optional<Notification> findByIdAndTenantIdAndRecipientId(UUID id, UUID tenantId, UUID recipientId);
 }
