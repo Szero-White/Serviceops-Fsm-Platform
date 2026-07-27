@@ -19,7 +19,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Avatar, Badge, Button, Drawer, Dropdown, Empty, Layout, List, Menu, Space, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { notificationsApi } from '../api/services'
+import { notificationsApi } from '../features/notifications/api'
 import { useAuth } from '../auth/AuthContext'
 import { formatDateTime } from '../utils/format'
 

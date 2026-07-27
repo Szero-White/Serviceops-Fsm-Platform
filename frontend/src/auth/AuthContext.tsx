@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
-import { authApi } from '../api/services'
+import { authApi } from '../features/auth/api'
 import type { CurrentUser } from '../types'
 
 interface AuthContextValue {

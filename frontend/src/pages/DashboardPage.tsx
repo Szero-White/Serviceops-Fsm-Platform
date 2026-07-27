@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Space, Table, Tag, Typography } from 'antd'
-import { dashboardApi } from '../api/services'
+import { dashboardApi } from '../features/dashboard/api'
 import { useAuth } from '../auth/AuthContext'
 import { MetricCard } from '../components/MetricCard'
 import { PageHeader } from '../components/PageHeader'

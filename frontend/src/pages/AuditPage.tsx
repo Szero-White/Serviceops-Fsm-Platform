@@ -1,7 +1,7 @@
 import { AuditOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { Empty, Table, Tag, Typography } from 'antd'
-import { auditApi } from '../api/services'
+import { auditApi } from '../features/audit/api'
 import { PageHeader } from '../components/PageHeader'
 import { EMPTY_VALUE, formatDateTime } from '../utils/format'
 

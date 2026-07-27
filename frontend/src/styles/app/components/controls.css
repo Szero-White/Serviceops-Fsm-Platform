@@ -1,0 +1,98 @@
+/* Global button styling - professional and clean */
+.ant-btn-primary {
+  background: #3b82f6 !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+.ant-btn-primary:hover {
+  background: #2563eb !important;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+.ant-btn-default {
+  background: #ffffff !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+.ant-btn-default:hover {
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+
+/* Input styling - minimal single line for clean appearance */
+.ant-input,
+.ant-input-affix-wrapper {
+  border: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3)) !important;
+  box-shadow: none !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(4px);
+  padding: 12px 0 !important;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(248, 250, 252, 0.4)) !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper-focused {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(239, 246, 255, 0.6)) !important;
+  box-shadow: none !important;
+}
+
+.ant-select-selector {
+  border: none !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3)) !important;
+  box-shadow: none !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(4px);
+  padding: 8px 0 !important;
+}
+
+.ant-select:hover .ant-select-selector {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(248, 250, 252, 0.4)) !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(239, 246, 255, 0.6)) !important;
+  box-shadow: none !important;
+}
+
+/* Form label styling for elegant appearance */
+.ant-form-item-label > label {
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+  margin-bottom: 8px !important;
+}
+
+.ant-form-item-label > label::before {
+  display: none !important;
+}
+
+.ant-form-item-required .ant-form-item-label > label::after {
+  content: '*' !important;
+  color: #ef4444 !important;
+  margin-left: 4px !important;
+}
+
+.ant-form-item {
+  margin-bottom: 24px !important;
+}
+
+.ant-form-item-explain-error {
+  font-size: 12px !important;
+  color: #ef4444 !important;
+  margin-top: 6px !important;
+}

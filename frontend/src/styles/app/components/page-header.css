@@ -1,0 +1,95 @@
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  position: relative;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 150px;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  border-radius: 2px;
+  animation: border-pulse 3s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% { width: 150px; opacity: 1; }
+  50% { width: 200px; opacity: 0.8; }
+}
+
+.page-header-copy {
+  min-width: 0;
+}
+
+.page-header-eyebrow {
+  display: inline-flex;
+  margin-bottom: 16px;
+  color: #3b82f6;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05));
+  padding: 8px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }
+  50% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2), 0 0 30px rgba(139, 92, 246, 0.1); }
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 36px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  background: linear-gradient(135deg, #0f172a 0%, #3b82f6 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 200%;
+  animation: gradient-shift 5s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.page-header p {
+  max-width: 760px;
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.75;
+  font-weight: 400;
+}
+
+.page-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.page-header-meta {
+  display: inline-flex;
+  align-items: center;
+}

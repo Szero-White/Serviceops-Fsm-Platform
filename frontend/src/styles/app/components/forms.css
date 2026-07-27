@@ -1,0 +1,95 @@
+.form-grid {
+  display: grid;
+  gap: 24px 32px;
+}
+
+.form-grid.two-cols {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 32px;
+}
+
+.form-grid.three-cols {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px 32px;
+}
+
+.form-section {
+  margin-bottom: 36px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  backdrop-filter: none;
+  position: relative;
+  overflow: visible;
+}
+
+.form-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+}
+
+.form-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 24px;
+  margin-left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: -0.2px;
+}
+
+.form-section-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.work-order-actions {
+  padding: 0 0 24px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.technician-card {
+  height: 100%;
+  border-radius: 20px;
+  padding: 24px;
+}
+
+.technician-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.technician-heading > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.technician-heading h4 {
+  margin: 0 !important;
+}
+
+.technician-details {
+  width: 100%;
+  margin-top: 20px;
+  color: #475569;
+}
+
+.technician-details span {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}

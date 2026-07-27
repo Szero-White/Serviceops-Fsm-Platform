@@ -19,7 +19,6 @@ import {
   Form,
   Input,
   InputNumber,
-  List,
   Modal,
   Popconfirm,
   Select,
@@ -34,10 +33,16 @@ import {
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../api/http'
-import { assetsApi, attachmentsApi, customersApi, inventoryApi, techniciansApi, workOrdersApi } from '../api/services'
+import { assetsApi } from '../features/assets/api'
+import { attachmentsApi } from '../features/attachments/api'
+import { customersApi } from '../features/customers/api'
+import { inventoryApi } from '../features/inventory/api'
+import { techniciansApi } from '../features/technicians/api'
+import { workOrdersApi } from '../features/work-orders/api'
 import { useAuth } from '../auth/AuthContext'
 import { PageHeader } from '../components/PageHeader'
 import { PriorityTag, StatusTag } from '../components/StatusTag'
+import { AttachmentList } from '../features/attachments/components/AttachmentList'
 import type { WorkOrder, WorkOrderStatus } from '../types'
 import { EMPTY_VALUE, formatCurrency, formatDateTime, formatNumber } from '../utils/format'
 
@@ -314,9 +319,7 @@ export function WorkOrdersPage() {
                 {
                   key: 'attachments',
                   label: `Tệp đính kèm (${attachments?.length ?? 0})`,
-                  children: attachments?.length ? (
-                    <List dataSource={attachments} renderItem={(item) => <List.Item><List.Item.Meta avatar={<CloudUploadOutlined />} title={item.originalFilename} description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}`} /></List.Item>} />
-                  ) : <Empty description="Chưa có ảnh hoặc tài liệu" />,
+                  children: <AttachmentList attachments={attachments} />,
                 },
               ]}
             />

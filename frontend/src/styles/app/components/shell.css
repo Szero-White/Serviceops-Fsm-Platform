@@ -1,0 +1,6 @@
+/* Shared internal-app primitives: page headers, cards, metrics, tables, forms, and technician cards. */
+.page-shell {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
