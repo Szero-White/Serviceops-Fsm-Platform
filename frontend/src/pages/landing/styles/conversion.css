@@ -6,45 +6,48 @@
 .lp-price-card {
   position: relative;
   height: 100%;
-  padding: 36px 30px 30px;
-  border-radius: var(--lp-radius-xl);
-  border: 1.5px solid var(--lp-border);
-  background: #fff;
+  padding: 40px 32px 32px;
+  border-radius: var(--lp-radius-2xl);
+  border: 1px solid var(--lp-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
   display: flex;
   flex-direction: column;
-  transition: transform var(--lp-transition), box-shadow var(--lp-transition);
+  transition: transform var(--lp-transition), box-shadow var(--lp-transition), border-color var(--lp-transition);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.03);
 }
 .lp-price-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--lp-shadow-card-hover);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1), 0 24px 48px rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.2);
 }
 
 .lp-price-card--highlight {
-  background: linear-gradient(148deg, var(--lp-primary-deep), var(--lp-primary-dark), var(--lp-primary));
+  background: linear-gradient(135deg, var(--lp-primary-deep), var(--lp-primary-dark), var(--lp-primary));
   border-color: transparent;
-  box-shadow: 0 24px 64px rgba(37, 99, 235, 0.38);
-  transform: scale(1.04);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
   color: #fff;
 }
 .lp-price-card--highlight:hover {
-  transform: scale(1.04) translateY(-5px);
-  box-shadow: 0 32px 72px rgba(37, 99, 235, 0.46);
+  transform: scale(1.05) translateY(-8px);
+  box-shadow: 0 16px 48px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .lp-price-badge {
   position: absolute;
-  top: -14px;
+  top: -16px;
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 5px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 18px;
   border-radius: var(--lp-radius-full);
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(217,119,6,0.38);
-  letter-spacing: 0.4px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(8px);
 }
 
 .lp-price-tier-name {
@@ -74,10 +77,11 @@
 .lp-price-card--highlight .lp-price-currency { color: rgba(255,255,255,0.88); }
 
 .lp-price-value {
-  font-size: 40px;
-  font-weight: 800;
+  font-size: 44px;
+  font-weight: 700;
   color: var(--lp-ink);
-  letter-spacing: -2px;
+  letter-spacing: -1.5px;
+  line-height: 1;
 }
 .lp-price-card--highlight .lp-price-value { color: #fff; }
 .lp-price-value--contact { font-size: 32px; }
@@ -164,28 +168,34 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 24px 16px;
-  border-radius: var(--lp-radius-lg);
-  border: 1.5px solid var(--lp-border-2);
-  background: #fff;
+  gap: 10px;
+  padding: 28px 20px;
+  border-radius: var(--lp-radius-xl);
+  border: 1px solid var(--lp-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
   text-align: center;
   transition: transform var(--lp-transition), box-shadow var(--lp-transition), border-color var(--lp-transition);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .lp-integration-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--lp-shadow-card);
-  border-color: rgba(37, 99, 235, 0.22);
+  transform: translateY(-6px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), 0 16px 32px rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
 .lp-integration-icon {
-  width: 46px; height: 46px;
+  width: 52px; height: 52px;
   display: grid;
   place-items: center;
-  border-radius: var(--lp-radius);
-  background: #eff6ff;
+  border-radius: var(--lp-radius-lg);
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
   color: var(--lp-primary);
-  font-size: 20px;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transition: transform var(--lp-transition);
+}
+.lp-integration-card:hover .lp-integration-icon {
+  transform: scale(1.1);
 }
 
 .lp-integration-name { font-size: 13px !important; color: var(--lp-ink) !important; }

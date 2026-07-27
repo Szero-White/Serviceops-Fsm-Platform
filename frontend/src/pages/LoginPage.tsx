@@ -34,25 +34,25 @@ const DEMO_ROLES = ['dispatcher', 'technician', 'warehouse', 'customer-service']
 const LOGIN_BENEFITS: LoginBenefit[] = [
   {
     icon: <SafetyCertificateOutlined />,
-    title: 'Phân quyền rõ ràng',
-    description: 'JWT, vai trò và tenant isolation',
+    title: 'Bảo mật tuyệt đối',
+    description: 'Xác thực JWT, phân quyền theo vai trò',
   },
   {
     icon: <ToolOutlined />,
-    title: 'Đúng nghiệp vụ hiện trường',
-    description: 'Lịch, trạng thái và lịch sử thiết bị',
+    title: 'Quản lý thông minh',
+    description: 'Lịch kỹ thuật, theo dõi thiết bị, nhật ký hoạt động',
   },
   {
     icon: <BarChartOutlined />,
-    title: 'Dashboard theo thời gian thực',
-    description: 'Cập nhật ngay khi work order thay đổi',
+    title: 'Báo cáo thời gian thực',
+    description: 'Cập nhật tức thì khi đơn hàng thay đổi',
   },
 ]
 
 const LOGIN_METRICS = [
-  { value: '5', label: 'vai trò vận hành' },
-  { value: '1', label: 'luồng dữ liệu local-first' },
-  { value: '24/7', label: 'sẵn sàng demo' },
+  { value: '5+', label: 'Vai trò vận hành' },
+  { value: '100%', label: 'Dữ liệu nội bộ' },
+  { value: '24/7', label: 'Hỗ trợ demo' },
 ]
 
 function BrandMark() {
@@ -67,17 +67,19 @@ function BrandMark() {
 function LoginHero() {
   return (
     <section className="login-hero">
+      <div className="login-hero-orb-1" aria-hidden="true" />
+      <div className="login-hero-orb-2" aria-hidden="true" />
       <BrandMark />
 
       <div className="login-copy">
-        <span className="eyebrow">FIELD SERVICE MANAGEMENT</span>
+        <span className="eyebrow">QUẢN LÝ DỊCH VỤ HIỆN TRƯỜNG</span>
         <h1>
           Điều phối dịch vụ
           <br />
-          rõ ràng, đúng hẹn.
+          chuyên nghiệp, hiệu quả.
         </h1>
         <p>
-          Quản lý khách hàng, thiết bị, work order, lịch kỹ thuật viên và phụ tùng trên một luồng vận hành thống nhất.
+          Giải pháp toàn diện quản lý khách hàng, thiết bị, đơn hàng, lịch kỹ thuật và kho phụ tùng - mọi thứ trong một nền tảng thống nhất.
         </p>
 
         <div className="login-proof-grid">
@@ -104,10 +106,10 @@ function LoginHero() {
 
       <div className="login-hero-footer">
         <Link to="/landing" className="login-hero-landing-link">
-          <ArrowRightOutlined /> Khám phá tính năng và bảng giá
+          <ArrowRightOutlined /> Xem tính năng và bảng giá
         </Link>
         <span className="login-hero-footer-sep">·</span>
-        Local-first MVP · Dữ liệu demo được tạo tự động
+        Phiên bản demo · Dữ liệu mẫu sẵn sàng
       </div>
     </section>
   )
@@ -116,7 +118,7 @@ function LoginHero() {
 function DemoAccounts() {
   return (
     <div className="demo-accounts">
-      <strong>Tài khoản demo</strong>
+      <strong>Tài khoản dùng thử</strong>
       <Space orientation="vertical" size={3}>
         <Typography.Text code>
           {DEMO_CREDENTIALS.username} / {DEMO_CREDENTIALS.password}
@@ -140,31 +142,31 @@ function LoginPanel({
     <section className="login-panel">
       <div className="login-panel-shell">
         <div className="login-panel-badges">
-          <TagLine icon={<ClockCircleOutlined />} label="Local demo" value="Ready in a few minutes" />
-          <TagLine icon={<SafetyCertificateOutlined />} label="Secure access" value="JWT + role based" />
+          <TagLine icon={<ClockCircleOutlined />} label="Demo nhanh" value="Sẵn sàng trong vài phút" />
+          <TagLine icon={<SafetyCertificateOutlined />} label="Bảo mật" value="JWT + Phân quyền" />
         </div>
 
         <Card className="login-card" variant="borderless">
           <div className="login-card-heading">
             <Typography.Title level={2}>Chào mừng trở lại</Typography.Title>
             <Typography.Text type="secondary">
-              Đăng nhập để tiếp tục quản lý vận hành dịch vụ.
+              Đăng nhập để bắt đầu quản lý dịch vụ của bạn.
             </Typography.Text>
           </div>
 
           {error && <Alert type="error" showIcon message={error} className="login-alert" />}
 
           <div className="login-card-stats">
-            <div><strong>Live ops</strong><span>Dashboard, notifications, audit log</span></div>
-            <div><strong>Field-ready</strong><span>Dispatch, technician, warehouse</span></div>
-            <div><strong>Local-first</strong><span>Postgres, Flyway, seeded demo data</span></div>
+            <div><strong>Vận hành trực tiếp</strong><span>Bảng điều khiển, thông báo, nhật ký</span></div>
+            <div><strong>Sẵn sàng hiện trường</strong><span>Điều phối, kỹ thuật, kho hàng</span></div>
+            <div><strong>Dữ liệu nội bộ</strong><span>Postgres, Flyway, dữ liệu mẫu</span></div>
           </div>
 
           <Form layout="vertical" onFinish={onSubmit} initialValues={DEMO_CREDENTIALS} requiredMark={false}>
             <Form.Item
               label="Tên đăng nhập"
               name="username"
-              rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
             >
               <Input prefix={<UserOutlined />} placeholder={DEMO_CREDENTIALS.username} autoComplete="username" />
             </Form.Item>
@@ -172,7 +174,7 @@ function LoginPanel({
             <Form.Item
               label="Mật khẩu"
               name="password"
-              rules={[{ required: true, message: 'Nhập mật khẩu' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
             >
               <Input.Password prefix={<LockOutlined />} placeholder="123456" autoComplete="current-password" />
             </Form.Item>

@@ -1,43 +1,52 @@
 ﻿
 :root {
-  --lp-primary:        #2563eb;
-  --lp-primary-dark:   #1d4ed8;
-  --lp-primary-deep:   #1e3a8a;
-  --lp-accent:         #7c3aed;
-  --lp-accent-2:       #0891b2;
+  --lp-primary:        #3b82f6;
+  --lp-primary-dark:   #2563eb;
+  --lp-primary-deep:   #1d4ed8;
+  --lp-accent:         #8b5cf6;
+  --lp-accent-2:       #06b6d4;
+  --lp-success:        #10b981;
+  --lp-warning:        #f59e0b;
+  --lp-danger:         #ef4444;
 
   --lp-ink:            #0f172a;
-  --lp-ink-2:          #334155;
-  --lp-ink-3:          #475569;
+  --lp-ink-2:          #1e293b;
+  --lp-ink-3:          #334155;
   --lp-muted:          #64748b;
   --lp-muted-2:        #94a3b8;
   --lp-border:         #e2e8f0;
-  --lp-border-2:       #e8edf5;
-  --lp-surface:        #f8fafc;
-  --lp-surface-2:      #f1f5f9;
+  --lp-border-2:       #f1f5f9;
+  --lp-surface:        #ffffff;
+  --lp-surface-2:      #f8fafc;
+  --lp-surface-3:      #f1f5f9;
 
-  --lp-dark:           #0a0f1e;
-  --lp-dark-2:         #0f172a;
-  --lp-dark-3:         #111827;
+  --lp-dark:           #0f172a;
+  --lp-dark-2:         #1e293b;
+  --lp-dark-3:         #334155;
   --lp-dark-mid:       #1e1b4b;
 
-  --lp-font:           'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --lp-font:           'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  --lp-section-py:     100px;
-  --lp-container-px:   24px;
-  --lp-container-max:  1200px;
+  --lp-section-py:     140px;
+  --lp-container-px:   32px;
+  --lp-container-max:  1320px;
 
   --lp-radius-sm:      8px;
   --lp-radius:         12px;
-  --lp-radius-lg:      18px;
-  --lp-radius-xl:      20px;
+  --lp-radius-lg:      16px;
+  --lp-radius-xl:      24px;
+  --lp-radius-2xl:     32px;
   --lp-radius-full:    9999px;
 
-  --lp-shadow-card:    0 8px 32px rgba(15, 23, 42, 0.08);
-  --lp-shadow-card-hover: 0 20px 52px rgba(15, 23, 42, 0.12);
-  --lp-shadow-blue:    0 8px 24px rgba(37, 99, 235, 0.35);
+  --lp-shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.05);
+  --lp-shadow-md:      0 4px 6px rgba(0, 0, 0, 0.07);
+  --lp-shadow-card:    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --lp-shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --lp-shadow-blue:    0 10px 40px rgba(59, 130, 246, 0.4);
+  --lp-shadow-glow:    0 0 60px rgba(59, 130, 246, 0.3);
 
-  --lp-transition:     0.22s ease;
+  --lp-transition:     0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --lp-transition-fast: 0.15s ease;
 }
 
 .lp-root {
@@ -64,22 +73,26 @@
 }
 
 .lp-brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  border-radius: var(--lp-radius);
-  background: linear-gradient(145deg, #3b82f6, var(--lp-primary-dark));
+  border-radius: var(--lp-radius-lg);
+  background: linear-gradient(135deg, var(--lp-primary), var(--lp-accent));
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
   box-shadow: var(--lp-shadow-blue);
+  transition: transform var(--lp-transition-fast);
+}
+.lp-brand-icon:hover {
+  transform: scale(1.05);
 }
 .lp-brand-icon--sm {
-  width: 30px;
-  height: 30px;
-  font-size: 13px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  border-radius: var(--lp-radius);
 }
 
 .lp-brand-lockup {
@@ -114,30 +127,31 @@
 .lp-section-tag {
   display: inline-block;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--lp-primary);
-  background: rgba(37, 99, 235, 0.08);
-  padding: 5px 14px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.08));
+  padding: 6px 16px;
   border-radius: var(--lp-radius-full);
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  margin-bottom: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-bottom: 20px;
+  backdrop-filter: blur(8px);
 }
 
 .lp-section-title {
-  font-size: clamp(26px, 3vw, 40px) !important;
-  font-weight: 800 !important;
-  line-height: 1.18 !important;
-  letter-spacing: -1px !important;
+  font-size: clamp(28px, 3.2vw, 44px) !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.5px !important;
   color: var(--lp-ink) !important;
-  margin: 0 0 14px !important;
+  margin: 0 0 16px !important;
 }
 
 .lp-section-sub {
-  font-size: 16px !important;
+  font-size: 17px !important;
   color: var(--lp-muted) !important;
-  line-height: 1.72 !important;
+  line-height: 1.7 !important;
   margin: 0 !important;
 }
 

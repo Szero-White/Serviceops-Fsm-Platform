@@ -78,6 +78,7 @@ export function HeroSection() {
       <div className="lp-hero-orbs" aria-hidden="true">
         <span className="lp-orb lp-orb--1" />
         <span className="lp-orb lp-orb--2" />
+        <span className="lp-orb lp-orb--3" />
       </div>
 
       <div className="lp-container">

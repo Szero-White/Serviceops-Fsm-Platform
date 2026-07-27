@@ -58,40 +58,46 @@
 
 .lp-feature-card {
   height: 100%;
-  padding: 28px;
-  border-radius: var(--lp-radius-lg);
-  border: 1.5px solid var(--lp-border-2);
-  background: #fff;
+  padding: 32px 28px;
+  border-radius: var(--lp-radius-xl);
+  border: 1px solid var(--lp-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
   transition: transform var(--lp-transition), box-shadow var(--lp-transition), border-color var(--lp-transition);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.03);
 }
 .lp-feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--lp-shadow-card-hover);
-  border-color: rgba(37, 99, 235, 0.22);
+  transform: translateY(-6px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
 }
 
 .lp-feature-icon {
-  width: 50px; height: 50px;
+  width: 56px; height: 56px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  font-size: 21px;
-  margin-bottom: 18px;
-  transition: transform var(--lp-transition);
+  border-radius: var(--lp-radius-lg);
+  font-size: 24px;
+  margin-bottom: 20px;
+  transition: transform var(--lp-transition), box-shadow var(--lp-transition);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-.lp-feature-card:hover .lp-feature-icon { transform: scale(1.08); }
+.lp-feature-card:hover .lp-feature-icon { 
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+}
 
 .lp-feature-title {
-  font-size: 15px !important;
-  font-weight: 700 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
   color: var(--lp-ink) !important;
-  margin: 0 0 10px !important;
+  margin: 0 0 12px !important;
+  line-height: 1.4 !important;
 }
 
 .lp-feature-desc {
   font-size: 14px !important;
   color: var(--lp-muted) !important;
-  line-height: 1.68 !important;
+  line-height: 1.7 !important;
 }
 
 .lp-how {
@@ -162,17 +168,19 @@
 .lp-testi-card {
   height: 100%;
   margin: 0;
-  padding: 32px;
-  border-radius: var(--lp-radius-xl);
-  background: #fff;
-  border: 1.5px solid var(--lp-border-2);
+  padding: 36px 32px;
+  border-radius: var(--lp-radius-2xl);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border: 1px solid var(--lp-border);
   display: flex;
   flex-direction: column;
-  transition: transform var(--lp-transition), box-shadow var(--lp-transition);
+  transition: transform var(--lp-transition), box-shadow var(--lp-transition), border-color var(--lp-transition);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.03);
 }
 .lp-testi-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--lp-shadow-card-hover);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(162, 163, 184, 0.15), 0 24px 40px rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.2);
 }
 
 .lp-testi-stars {
