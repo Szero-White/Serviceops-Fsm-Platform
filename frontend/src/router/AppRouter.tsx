@@ -1,7 +1,7 @@
 import { Spin } from 'antd'
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { ProtectedRoute } from '../auth/ProtectedRoute'
+import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { AppLayout } from '../layouts/AppLayout'
 
 type LazyPage = LazyExoticComponent<ComponentType>
@@ -15,20 +15,20 @@ const page = <TModule, TExport extends keyof TModule>(
     default: (await importer())[exportName] as ComponentType,
   }))
 
-const LoginPage = page(() => import('../pages/LoginPage'), 'LoginPage')
+const LoginPage = page(() => import('../features/auth/pages/LoginPage'), 'LoginPage')
 const LandingPage = page(() => import('../pages/LandingPage'), 'LandingPage')
 
 const protectedRoutes: AppRoute[] = [
-  { index: true, Page: page(() => import('../pages/DashboardPage'), 'DashboardPage') },
-  { path: 'users', Page: page(() => import('../pages/UsersPage'), 'UsersPage') },
-  { path: 'customers', Page: page(() => import('../pages/CustomersPage'), 'CustomersPage') },
-  { path: 'assets', Page: page(() => import('../pages/AssetsPage'), 'AssetsPage') },
-  { path: 'service-requests', Page: page(() => import('../pages/ServiceRequestsPage'), 'ServiceRequestsPage') },
-  { path: 'service-channels', Page: page(() => import('../pages/ServiceChannelsPage'), 'ServiceChannelsPage') },
-  { path: 'work-orders', Page: page(() => import('../pages/WorkOrdersPage'), 'WorkOrdersPage') },
-  { path: 'technicians', Page: page(() => import('../pages/TechniciansPage'), 'TechniciansPage') },
-  { path: 'inventory', Page: page(() => import('../pages/InventoryPage'), 'InventoryPage') },
-  { path: 'audit', Page: page(() => import('../pages/AuditPage'), 'AuditPage') },
+  { index: true, Page: page(() => import('../features/dashboard/pages/DashboardPage'), 'DashboardPage') },
+  { path: 'users', Page: page(() => import('../features/users/pages/UsersPage'), 'UsersPage') },
+  { path: 'customers', Page: page(() => import('../features/customers/pages/CustomersPage'), 'CustomersPage') },
+  { path: 'assets', Page: page(() => import('../features/assets/pages/AssetsPage'), 'AssetsPage') },
+  { path: 'service-requests', Page: page(() => import('../features/service-requests/pages/ServiceRequestsPage'), 'ServiceRequestsPage') },
+  { path: 'service-channels', Page: page(() => import('../features/service-channels/pages/ServiceChannelsPage'), 'ServiceChannelsPage') },
+  { path: 'work-orders', Page: page(() => import('../features/work-orders/pages/WorkOrdersPage'), 'WorkOrdersPage') },
+  { path: 'technicians', Page: page(() => import('../features/technicians/pages/TechniciansPage'), 'TechniciansPage') },
+  { path: 'inventory', Page: page(() => import('../features/inventory/pages/InventoryPage'), 'InventoryPage') },
+  { path: 'audit', Page: page(() => import('../features/audit/pages/AuditPage'), 'AuditPage') },
 ]
 
 function RouteFallback() {

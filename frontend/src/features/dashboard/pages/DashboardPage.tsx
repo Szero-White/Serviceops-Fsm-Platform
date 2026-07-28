@@ -11,12 +11,12 @@ import {
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Space, Table, Tag, Typography } from 'antd'
-import { dashboardApi } from '../features/dashboard/api'
-import { useAuth } from '../auth/AuthContext'
-import { MetricCard } from '../components/MetricCard'
-import { PageHeader } from '../components/PageHeader'
-import { PriorityTag, StatusTag } from '../components/StatusTag'
-import { formatDateTime } from '../utils/format'
+import { dashboardApi } from '../api'
+import { useAuth } from '../../auth/AuthContext'
+import { MetricCard } from '../../../components/MetricCard'
+import { PageHeader } from '../../../components/PageHeader'
+import { PriorityTag, StatusTag } from '../../../components/StatusTag'
+import { formatDateTime } from '../../../utils/format'
 
 export function DashboardPage() {
   const { user } = useAuth()

@@ -2,12 +2,12 @@ import { InboxOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd'
 import { useState } from 'react'
-import { apiErrorMessage } from '../api/http'
-import { inventoryApi } from '../features/inventory/api'
-import { useAuth } from '../auth/AuthContext'
-import { PageHeader } from '../components/PageHeader'
-import type { SparePart } from '../types'
-import { formatCurrency, formatDateTime, formatNumber } from '../utils/format'
+import { apiErrorMessage } from '../../../api/http'
+import { inventoryApi } from '../../inventory/api'
+import { useAuth } from '../../auth/AuthContext'
+import { PageHeader } from '../../../components/PageHeader'
+import type { SparePart } from '../../../types'
+import { formatCurrency, formatDateTime, formatNumber } from '../../../utils/format'
 
 export function InventoryPage() {
   const { user } = useAuth()

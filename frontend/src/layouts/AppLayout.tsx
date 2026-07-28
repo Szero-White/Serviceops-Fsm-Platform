@@ -20,7 +20,7 @@ import { Avatar, Badge, Button, Drawer, Dropdown, Empty, Layout, List, Menu, Spa
 import { useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { notificationsApi } from '../features/notifications/api'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../features/auth/AuthContext'
 import { formatDateTime } from '../utils/format'
 
 const { Header, Sider, Content } = Layout

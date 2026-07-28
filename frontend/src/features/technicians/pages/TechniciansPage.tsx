@@ -2,12 +2,12 @@ import { DeleteOutlined, EditOutlined, PhoneOutlined, PlusOutlined, SearchOutlin
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Avatar, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
-import { apiErrorMessage } from '../api/http'
-import { techniciansApi } from '../features/technicians/api'
-import { MetricCard } from '../components/MetricCard'
-import { PageHeader } from '../components/PageHeader'
-import type { Technician } from '../types'
-import { EMPTY_VALUE } from '../utils/format'
+import { apiErrorMessage } from '../../../api/http'
+import { techniciansApi } from '../../technicians/api'
+import { MetricCard } from '../../../components/MetricCard'
+import { PageHeader } from '../../../components/PageHeader'
+import type { Technician } from '../../../types'
+import { EMPTY_VALUE } from '../../../utils/format'
 
 function usernameFromName(value: string) {
   const slug = value

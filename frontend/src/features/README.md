@@ -2,7 +2,7 @@
 
 The frontend follows the same business boundaries as the backend modules.
 
-- `auth`: login and current session API.
+- `auth`: login page, current session API, auth provider, and route guard.
 - `dashboard`: operational overview API.
 - `users`: account and role management API.
 - `customers`: customer CRUD API.
@@ -19,6 +19,7 @@ The frontend follows the same business boundaries as the backend modules.
 Rules:
 
 - Put domain API calls in `features/<domain>/api.ts`.
+- Put domain route pages in `features/<domain>/pages/`.
 - Keep transport concerns in `api/http.ts`.
 - Keep domain UI under `features/<domain>/components/`.
 - Keep only truly shared UI in `components/`.

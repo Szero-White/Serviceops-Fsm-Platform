@@ -10,8 +10,8 @@ import {
 import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { apiErrorMessage } from '../api/http'
-import { useAuth } from '../auth/AuthContext'
+import { apiErrorMessage } from '../../../api/http'
+import { useAuth } from '../AuthContext'
 
 type LoginFormValues = {
   username: string

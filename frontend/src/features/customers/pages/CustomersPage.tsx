@@ -2,11 +2,11 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd'
 import { useState, type ReactNode } from 'react'
-import { apiErrorMessage } from '../api/http'
-import { customersApi } from '../features/customers/api'
-import { PageHeader } from '../components/PageHeader'
-import type { Customer } from '../types'
-import { EMPTY_VALUE, formatDate } from '../utils/format'
+import { apiErrorMessage } from '../../../api/http'
+import { customersApi } from '../../customers/api'
+import { PageHeader } from '../../../components/PageHeader'
+import type { Customer } from '../../../types'
+import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 
 export function CustomersPage() {
   const [search, setSearch] = useState('')

@@ -2,12 +2,12 @@ import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Typography } from 'antd'
 import { useMemo, useState } from 'react'
-import { apiErrorMessage } from '../api/http'
-import { serviceChannelsApi } from '../features/service-channels/api'
-import { MetricCard } from '../components/MetricCard'
-import { PageHeader } from '../components/PageHeader'
-import type { ServiceChannel } from '../types'
-import { EMPTY_VALUE, formatDateTime } from '../utils/format'
+import { apiErrorMessage } from '../../../api/http'
+import { serviceChannelsApi } from '../../service-channels/api'
+import { MetricCard } from '../../../components/MetricCard'
+import { PageHeader } from '../../../components/PageHeader'
+import type { ServiceChannel } from '../../../types'
+import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 
 const colorOptions = [
   { value: 'blue', label: 'Blue' },
