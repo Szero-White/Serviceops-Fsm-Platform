@@ -9,7 +9,7 @@ import { customersApi } from '../../customers/api'
 import { PageHeader } from '../../../components/PageHeader'
 import { StatusTag } from '../../../components/StatusTag'
 import type { Asset } from '../../../types'
-import { EMPTY_VALUE, formatDate } from '../../../utils/format'
+import { formatDate } from '../../../utils/format'
 
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
@@ -94,7 +94,7 @@ export function AssetsPage() {
         loading={isLoading}
         dataSource={data?.content ?? []}
         className="content-table"
-        scroll={{ x: 1080 }}
+        scroll={{ x: 1320 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         locale={{ emptyText: <Empty description="Chưa có thiết bị phù hợp" /> }}
         columns={[
@@ -122,9 +122,15 @@ export function AssetsPage() {
           },
           { title: 'Trạng thái', dataIndex: 'status', width: 150, render: (value) => <StatusTag status={value} /> },
           { title: 'Ngày lắp', dataIndex: 'installedAt', width: 130, render: formatDate },
-          { title: 'Ghi chú', dataIndex: 'notes', ellipsis: true, render: (value) => value || EMPTY_VALUE },
           {
-            title: '',
+            title: 'Ghi chú',
+            dataIndex: 'notes',
+            width: 240,
+            ellipsis: true,
+            render: (value) => value ? <Typography.Text>{value}</Typography.Text> : <Typography.Text type="secondary">Chưa có ghi chú</Typography.Text>,
+          },
+          {
+            title: 'Thao tác',
             width: 92,
             fixed: 'right',
             render: (_, record) => (

@@ -31,7 +31,7 @@
   transform: translateY(-2px) !important;
 }
 
-/* Form controls must stay visibly bounded inside modals and dense CRUD forms. */
+/* Form controls use one visible input frame; nested Ant input nodes stay frameless. */
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
@@ -69,6 +69,44 @@
 .ant-input,
 .ant-input-affix-wrapper {
   padding: 9px 12px !important;
+}
+
+.ant-input-affix-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.ant-input-affix-wrapper .ant-input {
+  height: auto !important;
+  min-height: 24px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-input-affix-wrapper .ant-input:hover,
+.ant-input-affix-wrapper .ant-input:focus,
+.ant-input-affix-wrapper .ant-input-focused {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-input-prefix,
+.ant-input-suffix {
+  color: #64748b !important;
+}
+
+.ant-input-clear-icon,
+.ant-input-password-icon {
+  color: #94a3b8 !important;
+}
+
+.ant-input-password-icon:hover {
+  color: #3b82f6 !important;
 }
 
 .ant-input::placeholder,

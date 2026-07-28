@@ -56,29 +56,34 @@
 }
 
 .metric-card-blue .metric-icon {
-  color: #ffffff;
-  background: #3b82f6;
-  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  background: #ffffff;
+  border: 2px solid #60a5fa;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.15);
 }
 .metric-card-green .metric-icon {
-  color: #ffffff;
-  background: #10b981;
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+  color: #34d399;
+  background: #ffffff;
+  border: 2px solid #34d399;
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.15);
 }
 .metric-card-orange .metric-icon {
-  color: #ffffff;
-  background: #f59e0b;
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+  background: #ffffff;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
 }
 .metric-card-purple .metric-icon {
-  color: #ffffff;
-  background: #8b5cf6;
-  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+  color: #a78bfa;
+  background: #ffffff;
+  border: 2px solid #a78bfa;
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.15);
 }
 .metric-card-red .metric-icon {
-  color: #ffffff;
-  background: #ef4444;
-  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.3);
+  color: #f87171;
+  background: #ffffff;
+  border: 2px solid #f87171;
+  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.15);
 }
 
 .metric-label {
