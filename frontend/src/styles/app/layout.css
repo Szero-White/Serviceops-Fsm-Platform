@@ -8,8 +8,8 @@
   inset-block-start: 0;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-  box-shadow: 2px 0 8px rgba(15, 23, 42, 0.1);
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+  box-shadow: 4px 0 16px rgba(15, 23, 42, 0.15);
 }
 
 .brand {
@@ -33,7 +33,7 @@
   border-radius: 12px;
   color: #fff;
   font-size: 20px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #3b82f6);
   box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -104,7 +104,7 @@
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
-  color: #dbeafe;
+  color: #eff6ff;
   cursor: pointer;
   font-weight: 650;
   line-height: 1;
@@ -131,10 +131,10 @@
   align-items: center;
   gap: 8px;
   padding: 0 28px !important;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
   backdrop-filter: blur(24px);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 4px rgba(15, 23, 42, 0.04);
   line-height: 1;
 }
 
@@ -231,7 +231,7 @@
 
 .notification-unread {
   border-radius: 12px;
-  background: #eff6ff;
+  background: #dbeafe;
   cursor: pointer;
   padding-inline: 10px !important;
 }

@@ -1,9 +1,16 @@
 .content-card,
 .technician-card {
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
   position: relative;
+  transition: all 0.3s ease;
+}
+
+.content-card:hover,
+.technician-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
 }
 
 .content-card {
@@ -16,10 +23,16 @@
   align-items: center;
   gap: 20px;
   padding: 24px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-4px);
 }
 
 .metric-icon {
@@ -28,20 +41,45 @@
   flex: 0 0 56px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 14px;
   font-size: 26px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover .metric-icon {
+  transform: scale(1.1);
 }
 
 .metric-body {
   min-width: 0;
 }
 
-.metric-card-blue .metric-icon { color: #3b82f6; background: #eff6ff; }
-.metric-card-green .metric-icon { color: #10b981; background: #ecfdf5; }
-.metric-card-orange .metric-icon { color: #f59e0b; background: #fff7ed; }
-.metric-card-purple .metric-icon { color: #8b5cf6; background: #f5f3ff; }
-.metric-card-red .metric-icon { color: #ef4444; background: #fef2f2; }
+.metric-card-blue .metric-icon {
+  color: #ffffff;
+  background: #3b82f6;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+.metric-card-green .metric-icon {
+  color: #ffffff;
+  background: #10b981;
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+}
+.metric-card-orange .metric-icon {
+  color: #ffffff;
+  background: #f59e0b;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+.metric-card-purple .metric-icon {
+  color: #ffffff;
+  background: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
+}
+.metric-card-red .metric-icon {
+  color: #ffffff;
+  background: #ef4444;
+  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.3);
+}
 
 .metric-label {
   display: block;
@@ -61,6 +99,12 @@
   font-weight: 700;
   letter-spacing: -1px;
 }
+
+.metric-card-blue .metric-value { color: #3b82f6; }
+.metric-card-green .metric-value { color: #10b981; }
+.metric-card-orange .metric-value { color: #f59e0b; }
+.metric-card-purple .metric-value { color: #8b5cf6; }
+.metric-card-red .metric-value { color: #ef4444; }
 
 .metric-card small {
   display: block;

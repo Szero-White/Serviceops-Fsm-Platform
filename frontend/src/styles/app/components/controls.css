@@ -1,27 +1,34 @@
 /* Global button styling - professional and clean */
 .ant-btn-primary {
-  background: #3b82f6 !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
   border: none !important;
   color: #ffffff !important;
-  font-weight: 500 !important;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3) !important;
+  transition: all 0.3s ease !important;
 }
 
 .ant-btn-primary:hover {
-  background: #2563eb !important;
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  box-shadow: 0 6px 20px rgba(96, 165, 250, 0.4) !important;
+  transform: translateY(-2px) !important;
 }
 
 .ant-btn-default {
-  background: #ffffff !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
   border: 1px solid rgba(226, 232, 240, 0.8) !important;
   color: #1e293b !important;
   font-weight: 500 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.3s ease !important;
 }
 
 .ant-btn-default:hover {
   border-color: #3b82f6 !important;
   color: #3b82f6 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #f5f3ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
+  transform: translateY(-2px) !important;
 }
 
 /* Form controls must stay visibly bounded inside modals and dense CRUD forms. */
@@ -32,9 +39,9 @@
 .ant-select-selector {
   border: 1px solid #cbd5e1 !important;
   border-radius: 10px !important;
-  background: #ffffff !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+  transition: all 0.3s ease !important;
 }
 
 .ant-input:hover,
@@ -43,7 +50,8 @@
 .ant-picker:hover,
 .ant-select:hover .ant-select-selector {
   border-color: #94a3b8 !important;
-  background: #ffffff !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
 }
 
 .ant-input:focus,
@@ -54,8 +62,8 @@
 .ant-picker-focused,
 .ant-select-focused .ant-select-selector {
   border-color: #3b82f6 !important;
-  background: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(59, 130, 246, 0.1) !important;
 }
 
 .ant-input,

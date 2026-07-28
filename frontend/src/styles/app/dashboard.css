@@ -4,10 +4,10 @@
   overflow: hidden;
   border: 0;
   color: #fff;
-  background: linear-gradient(135deg, #1e293b 0%, #1e3a8a 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #8b5cf6 100%);
   position: relative;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15), 0 2px 8px rgba(96, 165, 250, 0.1);
 }
 
 .dashboard-hero .ant-card-body {
@@ -54,7 +54,7 @@
 .dashboard-hero-text {
   max-width: 700px;
   margin: 0 !important;
-  color: #dbeafe;
+  color: #f5f3ff;
   font-size: 16px;
   line-height: 1.7;
 }
@@ -155,19 +155,19 @@
   position: absolute;
   inset: 20px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #dbeafe, #ccfbf1);
+  background: linear-gradient(135deg, #f5f3ff, #ccfbf1);
 }
 
 .dashboard-empty-orb-secondary {
   inset: 40px 10px 10px 38px;
-  background: linear-gradient(135deg, #ccfbf1, #dbeafe);
+  background: linear-gradient(135deg, #ccfbf1, #f5f3ff);
 }
 
 .dashboard-empty-icon {
   position: relative;
   z-index: 1;
   margin-top: 44px;
-  color: #3b82f6;
+  color: #8b5cf6;
   font-size: 48px;
 }
 
@@ -187,7 +187,7 @@
 }
 
 .dashboard-empty-hints > div:hover {
-  background: #eff6ff;
+  background: #ede9fe;
   border-color: rgba(59, 130, 246, 0.2);
 }
 
@@ -210,7 +210,7 @@
 }
 
 .dashboard-url-pill {
-  color: #3b82f6;
+  color: #8b5cf6;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   background: rgba(59, 130, 246, 0.1);
   padding: 2px 6px;

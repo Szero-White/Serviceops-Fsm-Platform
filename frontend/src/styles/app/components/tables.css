@@ -40,14 +40,14 @@
 
 .content-table {
   overflow: hidden;
-  border-radius: 8px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.6);
   margin-bottom: 24px;
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .content-table .ant-table-container {
-  border-radius: 8px;
+  border-radius: 16px;
 }
 
 .content-table .ant-table-thead > tr > th {
