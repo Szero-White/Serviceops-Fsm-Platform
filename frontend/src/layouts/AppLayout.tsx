@@ -61,7 +61,7 @@ export function AppLayout() {
       { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
       { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
       { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-      { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Work order</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
+      { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
       { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link>, roles: ['OWNER', 'DISPATCHER'] },
       { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link>, roles: ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'] },
       { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link>, roles: ['OWNER', 'DISPATCHER'] },
@@ -83,7 +83,7 @@ export function AppLayout() {
           {!collapsed && (
             <div>
               <strong>ServiceOps</strong>
-              <span>Field Service Platform</span>
+              <span>Nền tảng dịch vụ hiện trường</span>
             </div>
           )}
         </div>

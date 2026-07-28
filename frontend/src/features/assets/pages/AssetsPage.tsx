@@ -132,7 +132,7 @@ export function AssetsPage() {
                 <Button aria-label="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
                   title="Xoá thiết bị này?"
-                  description="Chỉ xoá được khi thiết bị chưa được dùng trong yêu cầu dịch vụ hoặc work order."
+                  description="Chỉ xoá được khi thiết bị chưa được dùng trong yêu cầu dịch vụ hoặc phiếu công việc."
                   okText="Xoá"
                   cancelText="Huỷ"
                   okButtonProps={{ danger: true, loading: remove.isPending }}

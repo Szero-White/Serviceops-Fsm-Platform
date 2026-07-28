@@ -209,10 +209,10 @@ export function WorkOrdersPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Dispatch board"
-        title="Work order"
+        eyebrow="Bảng điều phối"
+        title="Phiếu công việc"
         description="Điều phối, theo dõi trạng thái, lịch kỹ thuật viên, phụ tùng và bằng chứng hoàn thành."
-        actions={canCreate ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ priority: 'NORMAL' }); setCreateOpen(true) }}>Tạo work order</Button> : undefined}
+        actions={canCreate ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ priority: 'NORMAL' }); setCreateOpen(true) }}>Tạo phiếu công việc</Button> : undefined}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} phiếu</Tag><Tag color="purple">{status ? 'Đang lọc' : 'Tất cả trạng thái'}</Tag></Space>}
       />
 
@@ -229,15 +229,18 @@ export function WorkOrdersPage() {
         scroll={{ x: 1260 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         onRow={(record) => ({ onDoubleClick: () => setSelectedId(record.id) })}
-        locale={{ emptyText: <Empty description="Chưa có work order phù hợp" /> }}
+        locale={{ emptyText: <Empty description="Chưa có phiếu công việc phù hợp" /> }}
         columns={[
           {
             title: 'Phiếu',
             width: 330,
             render: (_, record) => (
-              <div className="table-primary-cell">
-                <Space size={8} wrap><Typography.Text strong code>{record.code}</Typography.Text><PriorityTag priority={record.priority} /></Space>
-                <Typography.Text strong>{record.summary}</Typography.Text>
+              <div className="work-order-ticket-cell">
+                <div className="work-order-ticket-meta">
+                  <span className="work-order-ticket-code">{record.code}</span>
+                  <PriorityTag priority={record.priority} />
+                </div>
+                <Typography.Text className="work-order-ticket-title">{record.summary}</Typography.Text>
               </div>
             ),
           },
@@ -260,7 +263,7 @@ export function WorkOrdersPage() {
       />
 
       <Drawer
-        title={detail ? `${detail.code} · ${detail.summary}` : 'Chi tiết work order'}
+        title={detail ? `${detail.code} · ${detail.summary}` : 'Chi tiết phiếu công việc'}
         open={Boolean(selectedId)}
         onClose={() => setSelectedId(undefined)}
         width={760}
@@ -274,7 +277,7 @@ export function WorkOrdersPage() {
                 {canTransition && transitionButtons.map((target) => target === 'COMPLETED' ? (
                   <Button key={target} type="primary" icon={<CheckCircleOutlined />} onClick={() => setCompleteOpen(true)}>{transitionLabels[target]}</Button>
                 ) : target === 'CANCELLED' ? (
-                  <Popconfirm key={target} title="Huỷ work order này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => transition.mutate({ targetStatus: target, note: 'Huỷ từ giao diện vận hành' })}>
+                  <Popconfirm key={target} title="Huỷ phiếu công việc này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => transition.mutate({ targetStatus: target, note: 'Huỷ từ giao diện vận hành' })}>
                     <Button danger>{transitionLabels[target]}</Button>
                   </Popconfirm>
                 ) : (
@@ -327,7 +330,7 @@ export function WorkOrdersPage() {
         ) : null}
       </Drawer>
 
-      <Modal title="Tạo work order" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} confirmLoading={create.isPending} width={760} destroyOnHidden>
+      <Modal title="Tạo phiếu công việc" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} confirmLoading={create.isPending} width={760} destroyOnHidden>
         <Form form={createForm} layout="vertical" onFinish={(values) => create.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}><Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} /></Form.Item>

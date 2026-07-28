@@ -10,6 +10,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.security.CurrentUser;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -31,6 +34,7 @@ public class AssetService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<AssetResponse> search(String search, int page, int size) {
@@ -58,6 +62,7 @@ public class AssetService {
         apply(asset, request, serial);
         repository.save(asset);
         auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị serial " + serial);
+        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị mới: " + serial, customer.getName());
         return toResponse(asset);
     }
 
@@ -73,6 +78,7 @@ public class AssetService {
         asset.setCustomer(customer);
         apply(asset, request, serial);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị serial " + serial);
+        notificationService.notifyRoles(CurrentUser.tenantId(), assetRoles(), "Thiết bị được cập nhật: " + serial, customer.getName());
         return toResponse(asset);
     }
 
@@ -87,6 +93,7 @@ public class AssetService {
         }
         repository.delete(asset);
         auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị serial " + asset.getSerialNumber());
+        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + asset.getSerialNumber(), asset.getCustomer().getName());
     }
 
     private Asset require(UUID id) {
@@ -107,6 +114,10 @@ public class AssetService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static List<UserRole> assetRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static AssetResponse toResponse(Asset a) {

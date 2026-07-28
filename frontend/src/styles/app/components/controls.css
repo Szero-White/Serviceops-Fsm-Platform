@@ -24,48 +24,57 @@
   color: #3b82f6 !important;
 }
 
-/* Input styling - minimal single line for clean appearance */
+/* Form controls must stay visibly bounded inside modals and dense CRUD forms. */
 .ant-input,
-.ant-input-affix-wrapper {
-  border: none !important;
-  border-radius: 0 !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3)) !important;
-  box-shadow: none !important;
-  transition: all 0.3s ease !important;
-  backdrop-filter: blur(4px);
-  padding: 12px 0 !important;
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-picker,
+.ant-select-selector {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
 }
 
 .ant-input:hover,
-.ant-input-affix-wrapper:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(248, 250, 252, 0.4)) !important;
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-picker:hover,
+.ant-select:hover .ant-select-selector {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
 }
 
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
 .ant-input-focused,
-.ant-input-affix-wrapper-focused {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(239, 246, 255, 0.6)) !important;
-  box-shadow: none !important;
-}
-
-.ant-select-selector {
-  border: none !important;
-  border-radius: 0 !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3)) !important;
-  box-shadow: none !important;
-  transition: all 0.3s ease !important;
-  backdrop-filter: blur(4px);
-  padding: 8px 0 !important;
-}
-
-.ant-select:hover .ant-select-selector {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(248, 250, 252, 0.4)) !important;
-}
-
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-picker-focused,
 .ant-select-focused .ant-select-selector {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(239, 246, 255, 0.6)) !important;
-  box-shadow: none !important;
+  border-color: #3b82f6 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper {
+  padding: 9px 12px !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-picker-input input::placeholder,
+.ant-select-selection-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+textarea.ant-input {
+  min-height: 104px;
+  padding: 12px !important;
+  resize: vertical;
 }
 
 /* Form label styling for elegant appearance */

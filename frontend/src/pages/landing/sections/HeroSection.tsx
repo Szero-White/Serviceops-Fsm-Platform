@@ -94,7 +94,7 @@ export function HeroSection() {
             </Title>
 
             <Paragraph className="lp-hero-sub">
-              ServiceOps gom khách hàng, thiết bị, work order, lịch kỹ thuật viên, phụ tùng và audit log vào một
+              ServiceOps gom khách hàng, thiết bị, phiếu công việc, lịch kỹ thuật viên, phụ tùng và audit log vào một
               luồng vận hành local-first để demo, học tập và mở rộng.
             </Paragraph>
 

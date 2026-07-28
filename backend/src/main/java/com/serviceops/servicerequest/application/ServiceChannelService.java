@@ -2,6 +2,8 @@ package com.serviceops.servicerequest.application;
 
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.servicerequest.domain.ServiceChannel;
 import com.serviceops.servicerequest.domain.ServiceChannelRepository;
@@ -23,6 +25,7 @@ public class ServiceChannelService {
     private final ServiceChannelRepository repository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<ServiceChannelResponse> list(boolean activeOnly) {
@@ -47,6 +50,7 @@ public class ServiceChannelService {
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         repository.save(channel);
         auditService.record("CREATE", "SERVICE_CHANNEL", channel.getId(), "Tạo kênh tiếp nhận " + channel.getCode());
+        notificationService.notifyRoles(tenantId, channelRoles(), "Kênh tiếp nhận mới: " + channel.getCode(), channel.getName());
         return toResponse(channel);
     }
 
@@ -55,6 +59,7 @@ public class ServiceChannelService {
         ServiceChannel channel = require(id);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getCode());
+        notificationService.notifyRoles(CurrentUser.tenantId(), channelRoles(), "Kênh tiếp nhận được cập nhật: " + channel.getCode(), channel.getName());
         return toResponse(channel);
     }
 
@@ -67,6 +72,7 @@ public class ServiceChannelService {
         }
         repository.delete(channel);
         auditService.record("DELETE", "SERVICE_CHANNEL", channel.getId(), "Xóa kênh tiếp nhận " + channel.getCode());
+        notificationService.notifyRoles(CurrentUser.tenantId(), channelRoles(), "Kênh tiếp nhận đã xoá: " + channel.getCode(), channel.getName());
     }
 
     public ServiceChannel requireActive(UUID tenantId, String code) {
@@ -90,6 +96,10 @@ public class ServiceChannelService {
 
     private static String normalizeCode(String code) {
         return code.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static List<UserRole> channelRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     private static ServiceChannelResponse toResponse(ServiceChannel channel) {

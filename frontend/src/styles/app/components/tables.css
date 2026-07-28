@@ -126,3 +126,43 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.work-order-ticket-cell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.work-order-ticket-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.work-order-ticket-code {
+  display: inline-flex;
+  align-items: center;
+  max-width: 172px;
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #31598f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.work-order-ticket-title {
+  color: #27364a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+}

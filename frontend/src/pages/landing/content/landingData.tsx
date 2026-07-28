@@ -81,7 +81,7 @@ export const FEATURES: Feature[] = [
     icon: <DatabaseOutlined />,
     colorKey: 'orange',
     title: 'Kho phụ tùng thông minh',
-    desc: 'Quản lý tồn kho, cảnh báo ngưỡng tối thiểu và gắn giao dịch phụ tùng trực tiếp với work order.',
+    desc: 'Quản lý tồn kho, cảnh báo ngưỡng tối thiểu và gắn giao dịch phụ tùng trực tiếp với phiếu công việc.',
   },
   {
     icon: <BarChartOutlined />,
@@ -108,7 +108,7 @@ export const FEATURE_COLORS: Record<FeatureColor, { bg: string; fg: string }> = 
 
 export const HOW_IT_WORKS: Step[] = [
   { step: '01', title: 'Tiếp nhận yêu cầu', desc: 'Khách hàng gửi yêu cầu, hệ thống tạo ticket và phân loại ưu tiên.' },
-  { step: '02', title: 'Điều phối kỹ thuật viên', desc: 'Dispatcher chỉ định kỹ thuật viên phù hợp và tạo work order.' },
+  { step: '02', title: 'Điều phối kỹ thuật viên', desc: 'Điều phối viên chỉ định kỹ thuật viên phù hợp và tạo phiếu công việc.' },
   { step: '03', title: 'Thực hiện và cập nhật', desc: 'Kỹ thuật viên cập nhật tiến độ, phụ tùng và bằng chứng tại hiện trường.' },
   { step: '04', title: 'Hoàn thành và báo cáo', desc: 'Đóng việc, cập nhật kho, ghi audit log và tổng hợp KPI lên dashboard.' },
 ]
@@ -151,7 +151,7 @@ export const PRICING: PricingTier[] = [
     badge: null,
     highlight: false,
     desc: 'Cho doanh nghiệp mới bắt đầu số hóa vận hành dịch vụ',
-    features: ['Tối đa 10 kỹ thuật viên', 'Khách hàng và thiết bị', 'Work order và lịch làm việc', 'Kho phụ tùng cơ bản', 'Báo cáo tháng', 'Email support'],
+    features: ['Tối đa 10 kỹ thuật viên', 'Khách hàng và thiết bị', 'Phiếu công việc và lịch làm việc', 'Kho phụ tùng cơ bản', 'Báo cáo tháng', 'Hỗ trợ qua email'],
     cta: 'Dùng thử miễn phí 14 ngày',
   },
   {

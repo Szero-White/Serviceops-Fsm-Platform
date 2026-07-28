@@ -7,6 +7,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,6 +34,7 @@ public class ServiceRequestService {
     private final ServiceChannelService serviceChannelService;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
@@ -54,6 +58,7 @@ public class ServiceRequestService {
         entity.setCreatedBy(CurrentUser.username());
         repository.save(entity);
         auditService.record("CREATE", "SERVICE_REQUEST", entity.getId(), "Tiếp nhận yêu cầu: " + entity.getTitle());
+        notificationService.notifyRoles(tenantId, intakeRoles(), "Yêu cầu dịch vụ mới", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -65,6 +70,7 @@ public class ServiceRequestService {
         }
         applyEditableFields(entity, request, CurrentUser.tenantId());
         auditService.record("UPDATE", "SERVICE_REQUEST", entity.getId(), "Cập nhật yêu cầu dịch vụ: " + entity.getTitle());
+        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ được cập nhật", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -77,6 +83,7 @@ public class ServiceRequestService {
             throw BusinessException.conflict("SERVICE_REQUEST_INVALID_STATE", ex.getMessage());
         }
         auditService.record("CANCEL", "SERVICE_REQUEST", entity.getId(), "Hủy yêu cầu dịch vụ");
+        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ đã huỷ", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -85,10 +92,11 @@ public class ServiceRequestService {
         ServiceRequest entity = require(id);
         long workOrderCount = workOrderRepository.countByTenantIdAndServiceRequestId(CurrentUser.tenantId(), id);
         if (workOrderCount > 0 || entity.getStatus() == ServiceRequestStatus.CONVERTED) {
-            throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo work order");
+            throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo phiếu công việc");
         }
         repository.delete(entity);
         auditService.record("DELETE", "SERVICE_REQUEST", entity.getId(), "Xóa yêu cầu dịch vụ: " + entity.getTitle());
+        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ đã xoá", entity.getTitle());
     }
 
     public ServiceRequest require(UUID id) {
@@ -124,6 +132,10 @@ public class ServiceRequestService {
             throw BusinessException.badRequest("ASSET_CUSTOMER_MISMATCH", "Thiết bị không thuộc khách hàng đã chọn");
         }
         return asset;
+    }
+
+    private static List<UserRole> intakeRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static ServiceRequestResponse toResponse(ServiceRequest request) {

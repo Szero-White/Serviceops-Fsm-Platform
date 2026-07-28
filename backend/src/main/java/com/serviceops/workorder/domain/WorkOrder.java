@@ -115,7 +115,7 @@ public class WorkOrder extends TenantScopedEntity {
         if (status == WorkOrderStatus.OPEN) {
             transitionTo(WorkOrderStatus.SCHEDULED);
         } else if (status != WorkOrderStatus.SCHEDULED && status != WorkOrderStatus.ASSIGNED) {
-            throw new IllegalStateException("Chỉ work order mở, đã lên lịch hoặc đã phân công mới được xếp lịch");
+            throw new IllegalStateException("Chỉ phiếu công việc mở, đã lên lịch hoặc đã phân công mới được xếp lịch");
         }
         this.technician = technician;
         this.scheduledStart = start;

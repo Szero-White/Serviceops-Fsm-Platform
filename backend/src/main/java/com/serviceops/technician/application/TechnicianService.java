@@ -5,6 +5,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.technician.domain.TechnicianProfile;
@@ -29,6 +30,7 @@ public class TechnicianService {
     private final AppointmentRepository appointmentRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<TechnicianResponse> list(boolean activeOnly) {
@@ -65,6 +67,7 @@ public class TechnicianService {
         applyProfile(technician, request.phone(), request.skills(), request.active());
         repository.save(technician);
         auditService.record("CREATE", "TECHNICIAN", technician.getId(), "Tạo kỹ thuật viên " + user.getUsername());
+        notificationService.notifyRoles(tenantId, workforceRoles(), "Kỹ thuật viên mới", user.getDisplayName());
         return toResponse(technician);
     }
 
@@ -85,6 +88,7 @@ public class TechnicianService {
         user.setActive(request.active() == null || request.active());
         applyProfile(technician, request.phone(), request.skills(), request.active());
         auditService.record("UPDATE", "TECHNICIAN", technician.getId(), "Cập nhật kỹ thuật viên " + user.getUsername());
+        notificationService.notifyRoles(CurrentUser.tenantId(), workforceRoles(), "Kỹ thuật viên được cập nhật", user.getDisplayName());
         return toResponse(technician);
     }
 
@@ -95,13 +99,14 @@ public class TechnicianService {
         long workOrderCount = workOrderRepository.countByTenantIdAndTechnicianId(tenantId, id);
         long appointmentCount = appointmentRepository.countByTenantIdAndTechnicianId(tenantId, id);
         if (workOrderCount > 0 || appointmentCount > 0) {
-            throw BusinessException.conflict("TECHNICIAN_IN_USE", "Không thể xóa kỹ thuật viên đã có lịch hoặc work order");
+            throw BusinessException.conflict("TECHNICIAN_IN_USE", "Không thể xóa kỹ thuật viên đã có lịch hoặc phiếu công việc");
         }
 
         UserAccount user = technician.getUser();
         repository.delete(technician);
         userRepository.delete(user);
         auditService.record("DELETE", "TECHNICIAN", id, "Xóa kỹ thuật viên " + user.getUsername());
+        notificationService.notifyRoles(tenantId, workforceRoles(), "Kỹ thuật viên đã xoá", user.getDisplayName());
     }
 
     private TechnicianProfile require(UUID id) {
@@ -117,6 +122,10 @@ public class TechnicianService {
 
     private static String normalizeUsername(String username) {
         return username.trim().toLowerCase();
+    }
+
+    private static List<UserRole> workforceRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER);
     }
 
     private static TechnicianResponse toResponse(TechnicianProfile technician) {

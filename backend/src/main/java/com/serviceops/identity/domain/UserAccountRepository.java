@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
     List<UserAccount> findByTenantIdOrderByDisplayNameAsc(UUID tenantId);
+    List<UserAccount> findByTenantIdAndRoleInAndActiveTrue(UUID tenantId, List<UserRole> roles);
     Optional<UserAccount> findByUsernameIgnoreCase(String username);
     Optional<UserAccount> findByIdAndTenantId(UUID id, UUID tenantId);
     boolean existsByUsernameIgnoreCase(String username);

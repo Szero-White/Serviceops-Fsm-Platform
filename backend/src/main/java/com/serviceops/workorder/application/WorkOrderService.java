@@ -7,6 +7,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.identity.domain.UserRole;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -103,8 +104,9 @@ public class WorkOrderService {
         entity.setPriority(request.priority());
         entity.setStatus(WorkOrderStatus.OPEN);
         repository.save(entity);
-        addHistory(entity, null, WorkOrderStatus.OPEN, "Tạo work order");
+        addHistory(entity, null, WorkOrderStatus.OPEN, "Tạo phiếu công việc");
         auditService.record("CREATE", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode());
+        notificationService.notifyRoles(tenantId, dispatchRoles(), "Phiếu công việc mới: " + entity.getCode(), entity.getSummary());
         return toResponse(entity, List.of());
     }
 
@@ -155,6 +157,7 @@ public class WorkOrderService {
         addHistory(workOrder, previous, workOrder.getStatus(), "Phân công cho " + technician.getUser().getDisplayName());
         auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technician.getUser().getDisplayName());
         notificationService.create(tenantId, technician.getUser(), "Công việc mới: " + workOrder.getCode(), "Bạn được phân công: " + workOrder.getSummary());
+        notificationService.notifyRoles(tenantId, dispatchRoles(), "Đã phân công " + workOrder.getCode(), technician.getUser().getDisplayName() + " phụ trách: " + workOrder.getSummary());
         return get(id);
     }
 
@@ -181,6 +184,7 @@ public class WorkOrderService {
         }
         addHistory(workOrder, previous, workOrder.getStatus(), blankToNull(request.note()));
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
+        notifyStatusChange(workOrder, previous);
         return get(id);
     }
 
@@ -199,7 +203,7 @@ public class WorkOrderService {
         var workOrder = CurrentUser.hasRole("TECHNICIAN")
                 ? repository.findDetailedAssigned(id, CurrentUser.tenantId(), CurrentUser.userId())
                 : repository.findDetailed(id, CurrentUser.tenantId());
-        return workOrder.orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy work order"));
+        return workOrder.orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
     }
 
     private String nextCode() {
@@ -221,6 +225,18 @@ public class WorkOrderService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private void notifyStatusChange(WorkOrder workOrder, WorkOrderStatus previous) {
+        String title = "Cập nhật " + workOrder.getCode() + ": " + previous + " → " + workOrder.getStatus();
+        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), title, workOrder.getSummary());
+        if (workOrder.getTechnician() != null && !CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
+            notificationService.create(workOrder.getTenantId(), workOrder.getTechnician().getUser(), title, workOrder.getSummary());
+        }
+    }
+
+    private static List<UserRole> dispatchRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER);
     }
 
     private static WorkOrderHistoryResponse toHistory(WorkOrderStatusHistory h) {

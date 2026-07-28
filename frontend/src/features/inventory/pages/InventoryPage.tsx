@@ -53,7 +53,7 @@ export function InventoryPage() {
       <PageHeader
         eyebrow="Inventory control"
         title="Kho phụ tùng"
-        description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ work order."
+        description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
         actions={canManageStock ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ unit: 'cái', initialStock: 0, reorderLevel: 3, unitPrice: 0, active: true }); setCreateOpen(true) }}>Thêm phụ tùng</Button> : undefined}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} SKU</Tag><Tag color="red">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</Tag></Space>}
       />

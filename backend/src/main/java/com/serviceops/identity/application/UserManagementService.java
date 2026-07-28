@@ -7,6 +7,7 @@ import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.identity.web.UserManagementController.UserAccountRequest;
 import com.serviceops.identity.web.UserManagementController.UserAccountResponse;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
@@ -32,6 +33,7 @@ public class UserManagementService {
     private final NotificationRepository notificationRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<UserAccountResponse> list() {
@@ -60,6 +62,7 @@ public class UserManagementService {
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
         auditService.record("CREATE", "USER_ACCOUNT", user.getId(), "Tạo người dùng " + user.getUsername() + " với vai trò " + user.getRole());
+        notificationService.notifyCurrentUser("Người dùng mới: " + user.getUsername(), user.getDisplayName());
         return toResponse(user, technician);
     }
 
@@ -81,6 +84,7 @@ public class UserManagementService {
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
         auditService.record("UPDATE", "USER_ACCOUNT", user.getId(), "Cập nhật người dùng " + user.getUsername());
+        notificationService.notifyCurrentUser("Người dùng được cập nhật: " + user.getUsername(), user.getDisplayName());
         return toResponse(user, technician);
     }
 
@@ -98,7 +102,7 @@ public class UserManagementService {
             long workOrderCount = workOrderRepository.countByTenantIdAndTechnicianId(tenantId, technician.getId());
             long appointmentCount = appointmentRepository.countByTenantIdAndTechnicianId(tenantId, technician.getId());
             if (workOrderCount > 0 || appointmentCount > 0) {
-                throw BusinessException.conflict("USER_TECHNICIAN_IN_USE", "Không thể xóa người dùng kỹ thuật viên đã có lịch hoặc work order");
+                throw BusinessException.conflict("USER_TECHNICIAN_IN_USE", "Không thể xóa người dùng kỹ thuật viên đã có lịch hoặc phiếu công việc");
             }
             technicianRepository.delete(technician);
         }
@@ -110,6 +114,7 @@ public class UserManagementService {
 
         repository.delete(user);
         auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + user.getUsername());
+        notificationService.notifyCurrentUser("Người dùng đã xoá: " + user.getUsername(), user.getDisplayName());
     }
 
     private UserAccount require(UUID id) {

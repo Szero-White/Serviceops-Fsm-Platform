@@ -118,7 +118,7 @@ export function ServiceRequestsPage() {
       <PageHeader
         eyebrow="Intake queue"
         title="Yêu cầu dịch vụ"
-        description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành work order khi đủ thông tin."
+        description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành phiếu công việc khi đủ thông tin."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} yêu cầu</Tag><Tag color="orange">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</Tag></Space>}
       />
@@ -183,11 +183,11 @@ export function ServiceRequestsPage() {
                     </>
                   )}
 
-                  <Tooltip title={isConverted ? 'Không thể xoá yêu cầu đã tạo work order' : 'Xoá yêu cầu'}>
+                  <Tooltip title={isConverted ? 'Không thể xoá yêu cầu đã tạo phiếu công việc' : 'Xoá yêu cầu'}>
                     <Popconfirm
                       disabled={isConverted}
                       title="Xoá yêu cầu này?"
-                      description="Không thể xoá yêu cầu đã chuyển thành work order."
+                      description="Không thể xoá yêu cầu đã chuyển thành phiếu công việc."
                       okText="Xoá"
                       cancelText="Huỷ"
                       okButtonProps={{ danger: true, loading: remove.isPending }}

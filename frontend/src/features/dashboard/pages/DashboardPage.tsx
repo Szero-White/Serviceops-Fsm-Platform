@@ -27,7 +27,7 @@ export function DashboardPage() {
     return (
       <div className="page-shell">
         <PageHeader
-          eyebrow="Operations cockpit"
+          eyebrow="Trung tâm vận hành"
           title="Tổng quan vận hành"
           description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
           meta={<Tag color="blue">Đang tải dữ liệu</Tag>}
@@ -46,11 +46,11 @@ export function DashboardPage() {
     return (
       <div className="page-shell">
         <PageHeader
-          eyebrow="Operations cockpit"
+          eyebrow="Trung tâm vận hành"
           title="Tổng quan vận hành"
           description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
           actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Tải lại</Button>}
-          meta={<Space size={[8, 8]} wrap><Tag color="red">Backend offline</Tag><Tag>Local-first</Tag></Space>}
+          meta={<Space size={[8, 8]} wrap><Tag color="red">Backend chưa kết nối</Tag><Tag>Chạy nội bộ</Tag></Space>}
         />
 
         <Card className="content-card dashboard-empty-shell" bordered={false}>
@@ -66,9 +66,9 @@ export function DashboardPage() {
             extra={<Button type="primary" icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Thử lại</Button>}
           />
           <div className="dashboard-empty-hints">
-            <div><strong>Start backend</strong><span>Chạy Spring Boot với profile local để mở dữ liệu seed.</span></div>
-            <div><strong>Check API URL</strong><span>Frontend cần trỏ về <span className="dashboard-url-pill">http://localhost:8080/api/v1</span>.</span></div>
-            <div><strong>Retry</strong><span>Tải lại sau khi backend sẵn sàng.</span></div>
+            <div><strong>Khởi động backend</strong><span>Chạy Spring Boot với profile local để mở dữ liệu seed.</span></div>
+            <div><strong>Kiểm tra API URL</strong><span>Frontend cần trỏ về <span className="dashboard-url-pill">http://localhost:8080/api/v1</span>.</span></div>
+            <div><strong>Thử lại</strong><span>Tải lại sau khi backend sẵn sàng.</span></div>
           </div>
         </Card>
       </div>
@@ -93,16 +93,16 @@ export function DashboardPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Operations cockpit"
+        eyebrow="Trung tâm vận hành"
         title="Tổng quan vận hành"
-        description="Một màn hình điều phối tập trung cho yêu cầu dịch vụ, work order, kỹ thuật viên và tồn kho."
+        description="Một màn hình điều phối tập trung cho yêu cầu dịch vụ, phiếu công việc, kỹ thuật viên và tồn kho."
         actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>}
-        meta={<Space size={[8, 8]} wrap>{isTechnician ? <Tag color="blue">Technician view</Tag> : <Tag color="cyan">Control view</Tag>}<Tag color="green">Local-first</Tag></Space>}
+        meta={<Space size={[8, 8]} wrap>{isTechnician ? <Tag color="blue">Góc kỹ thuật viên</Tag> : <Tag color="cyan">Góc điều phối</Tag>}<Tag color="green">Chạy nội bộ</Tag></Space>}
       />
 
       <Card className="content-card dashboard-hero" bordered={false}>
         <div className="dashboard-hero-copy">
-          <Typography.Text className="dashboard-kicker">Live service board</Typography.Text>
+          <Typography.Text className="dashboard-kicker">Bảng dịch vụ trực tiếp</Typography.Text>
           <Typography.Title level={3} className="dashboard-hero-title">
             {isTechnician ? 'Tập trung vào những phiếu đang chờ bạn xử lý.' : 'Nhìn nhanh điểm nóng vận hành trong ngày.'}
           </Typography.Title>
@@ -154,14 +154,14 @@ export function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} xl={17}>
-          <Card title="Work order gần đây" className="content-card" bordered={false}>
+          <Card title="Phiếu công việc gần đây" className="content-card" bordered={false}>
             <Table
               rowKey="id"
               dataSource={data.recentWorkOrders}
               pagination={false}
               className="content-table"
               scroll={{ x: 840 }}
-              locale={{ emptyText: <Empty description="Chưa có work order gần đây" /> }}
+              locale={{ emptyText: <Empty description="Chưa có phiếu công việc gần đây" /> }}
               columns={[
                 { title: 'Phiếu', dataIndex: 'code', width: 165, render: (value: string) => <Typography.Text strong code>{value}</Typography.Text> },
                 { title: 'Nội dung', dataIndex: 'summary', width: 280, ellipsis: true },

@@ -1,6 +1,8 @@
 package com.serviceops.notification.application;
 
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.identity.domain.UserAccountRepository;
+import com.serviceops.identity.domain.UserRole;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.notification.domain.Notification;
@@ -15,15 +17,41 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
     private final NotificationRepository repository;
+    private final UserAccountRepository userAccountRepository;
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void create(UUID tenantId, UserAccount recipient, String title, String message) {
+        save(tenantId, recipient, title, message);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void notifyRoles(UUID tenantId, List<UserRole> roles, String title, String message) {
+        Set<UUID> notifiedUserIds = new HashSet<>();
+        userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(tenantId, roles).forEach(recipient -> {
+            if (notifiedUserIds.add(recipient.getId())) {
+                save(tenantId, recipient, title, message);
+            }
+        });
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void notifyCurrentUser(String title, String message) {
+        UUID tenantId = CurrentUser.tenantId();
+        UserAccount recipient = userAccountRepository.findByIdAndTenantId(CurrentUser.userId(), tenantId)
+                .orElseThrow(() -> BusinessException.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng hiện tại"));
+        save(tenantId, recipient, title, message);
+    }
+
+    private void save(UUID tenantId, UserAccount recipient, String title, String message) {
         Notification notification = new Notification();
         notification.setTenantId(tenantId);
         notification.setRecipient(recipient);

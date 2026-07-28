@@ -152,7 +152,7 @@ export function TechniciansPage() {
                 <Button aria-label="Sửa kỹ thuật viên" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
                   title="Xoá kỹ thuật viên này?"
-                  description="Chỉ xoá được khi kỹ thuật viên chưa có lịch hoặc work order."
+                  description="Chỉ xoá được khi kỹ thuật viên chưa có lịch hoặc phiếu công việc."
                   okText="Xoá"
                   cancelText="Huỷ"
                   okButtonProps={{ danger: true, loading: remove.isPending }}

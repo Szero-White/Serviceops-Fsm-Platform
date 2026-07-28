@@ -3,6 +3,7 @@ package com.serviceops.inventory.application;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
+import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
@@ -12,6 +13,7 @@ import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartResponse;
 import com.serviceops.inventory.web.InventoryDtos.StockAdjustmentRequest;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -33,6 +36,7 @@ public class InventoryService {
     private final InventoryTransactionRepository transactionRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<SparePartResponse> search(String search, int page, int size) {
@@ -62,6 +66,7 @@ public class InventoryService {
             saveTransaction(part, null, InventoryTransactionType.IMPORT, request.initialStock(), "Tồn đầu kỳ");
         }
         auditService.record("CREATE", "SPARE_PART", part.getId(), "Tạo phụ tùng " + sku);
+        notificationService.notifyRoles(tenantId, warehouseRoles(), "Phụ tùng mới: " + part.getSku(), part.getName());
         return toResponse(part);
     }
 
@@ -71,6 +76,7 @@ public class InventoryService {
         part.addStock(request.quantity());
         saveTransaction(part, null, InventoryTransactionType.IMPORT, request.quantity(), request.note());
         auditService.record("IMPORT_STOCK", "SPARE_PART", part.getId(), "Nhập " + request.quantity() + " " + part.getUnit());
+        notificationService.notifyRoles(part.getTenantId(), warehouseRoles(), "Đã nhập kho " + part.getSku(), request.quantity() + " " + part.getUnit() + " - " + part.getName());
         return toResponse(part);
     }
 
@@ -78,14 +84,14 @@ public class InventoryService {
     public SparePartResponse consume(UUID workOrderId, ConsumePartRequest request) {
         UUID tenantId = CurrentUser.tenantId();
         WorkOrder workOrder = workOrderRepository.findDetailed(workOrderId, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy work order"));
+                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
         if (CurrentUser.hasRole("TECHNICIAN")
                 && (workOrder.getTechnician() == null
                 || !workOrder.getTechnician().getUser().getId().equals(CurrentUser.userId()))) {
             throw BusinessException.forbidden("WORK_ORDER_NOT_ASSIGNED", "Bạn chỉ được dùng phụ tùng cho công việc được phân công cho mình");
         }
         if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
-            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể dùng phụ tùng cho work order đã đóng hoặc hủy");
+            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể dùng phụ tùng cho phiếu công việc đã đóng hoặc hủy");
         }
         SparePart part = requireLocked(request.sparePartId());
         try {
@@ -97,6 +103,9 @@ public class InventoryService {
         }
         saveTransaction(part, workOrder, InventoryTransactionType.CONSUME, request.quantity(), request.note());
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
+        if (part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0) {
+            notificationService.notifyRoles(tenantId, warehouseRoles(), "Phụ tùng sắp hết: " + part.getSku(), part.getName() + " còn " + part.getStockQuantity() + " " + part.getUnit());
+        }
         return toResponse(part);
     }
 
@@ -116,6 +125,10 @@ public class InventoryService {
         tx.setNote(note == null || note.isBlank() ? null : note.trim());
         tx.setCreatedBy(CurrentUser.username());
         transactionRepository.save(tx);
+    }
+
+    private static List<UserRole> warehouseRoles() {
+        return List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF);
     }
 
     public static SparePartResponse toResponse(SparePart p) {

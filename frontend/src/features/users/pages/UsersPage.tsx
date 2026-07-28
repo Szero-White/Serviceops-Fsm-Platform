@@ -20,7 +20,7 @@ const roleLabels: Record<UserRole, string> = {
 
 const roleDescriptions: Record<UserRole, string> = {
   OWNER: 'Quản trị hệ thống, người dùng, danh mục, báo cáo và audit.',
-  DISPATCHER: 'Điều phối work order, phân công và theo dõi lịch kỹ thuật viên.',
+  DISPATCHER: 'Điều phối phiếu công việc, phân công và theo dõi lịch kỹ thuật viên.',
   CUSTOMER_SERVICE: 'Tiếp nhận yêu cầu, quản lý khách hàng và thiết bị.',
   TECHNICIAN: 'Xem việc được giao, cập nhật tiến độ, ghi nhận vật tư và bằng chứng.',
   WAREHOUSE_STAFF: 'Quản lý phụ tùng, nhập kho và theo dõi tồn.',

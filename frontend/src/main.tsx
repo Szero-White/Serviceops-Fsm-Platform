@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App as AntApp, ConfigProvider, theme } from 'antd'
 import viVN from 'antd/locale/vi_VN'
 import dayjs from 'dayjs'
@@ -17,7 +17,15 @@ import './styles/app/responsive.css'
 
 dayjs.locale('vi')
 
-const queryClient = new QueryClient({
+let queryClient: QueryClient
+
+queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-count'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 20_000,

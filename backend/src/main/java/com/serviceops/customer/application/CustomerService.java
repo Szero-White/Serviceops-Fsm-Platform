@@ -6,6 +6,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.customer.web.CustomerDtos.CustomerRequest;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -28,6 +31,7 @@ public class CustomerService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<CustomerResponse> search(String search, int page, int size) {
@@ -52,6 +56,7 @@ public class CustomerService {
         apply(customer, request, code);
         repository.save(customer);
         auditService.record("CREATE", "CUSTOMER", customer.getId(), "Tạo khách hàng " + customer.getCode());
+        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng mới: " + customer.getCode(), customer.getName());
         return toResponse(customer);
     }
 
@@ -64,6 +69,7 @@ public class CustomerService {
         }
         apply(customer, request, code);
         auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + customer.getCode());
+        notificationService.notifyRoles(CurrentUser.tenantId(), customerRoles(), "Khách hàng được cập nhật: " + customer.getCode(), customer.getName());
         return toResponse(customer);
     }
 
@@ -79,6 +85,7 @@ public class CustomerService {
         }
         repository.delete(customer);
         auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + customer.getCode());
+        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng đã xoá: " + customer.getCode(), customer.getName());
     }
 
     private Customer require(UUID id) {
@@ -98,6 +105,10 @@ public class CustomerService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static List<UserRole> customerRoles() {
+        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static CustomerResponse toResponse(Customer c) {
