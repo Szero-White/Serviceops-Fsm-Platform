@@ -77,4 +77,17 @@ public class LocalFileStorageService implements FileStorageService {
             throw BusinessException.notFound("FILE_NOT_FOUND", "Không tìm thấy file");
         }
     }
+
+    @Override
+    public void delete(String storageKey) {
+        try {
+            Path path = root.resolve(storageKey).normalize();
+            if (!path.startsWith(root)) {
+                throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Duong dan file khong hop le");
+            }
+            Files.deleteIfExists(path);
+        } catch (IOException ex) {
+            throw new BusinessException("FILE_DELETE_ERROR", "Khong the xoa file dinh kem", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

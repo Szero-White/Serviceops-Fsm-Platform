@@ -1,11 +1,13 @@
 import {
   CloudUploadOutlined,
+  DeleteOutlined,
   DownloadOutlined,
+  EditOutlined,
   EyeOutlined,
   FileImageOutlined,
   FilePdfOutlined,
 } from '@ant-design/icons'
-import { App, Button, Empty, List, Modal, Spin } from 'antd'
+import { App, Button, Empty, Form, Input, List, Modal, Popconfirm, Spin } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import type { AttachmentItem } from '../../../types'
@@ -31,12 +33,25 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(objectUrl)
 }
 
-export function AttachmentList({ attachments }: { attachments?: AttachmentItem[] }) {
+function isFormValidationError(error: unknown) {
+  return typeof error === 'object' && error !== null && 'errorFields' in error
+}
+
+type AttachmentListProps = {
+  attachments?: AttachmentItem[]
+  onChanged?: () => void
+}
+
+export function AttachmentList({ attachments, onChanged }: AttachmentListProps) {
   const { message } = App.useApp()
+  const [renameForm] = Form.useForm<{ originalFilename: string }>()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewFile, setPreviewFile] = useState<AttachmentItem | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>()
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [renameFile, setRenameFile] = useState<AttachmentItem | null>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [deletingId, setDeletingId] = useState<string>()
   const previewRequestRef = useRef(0)
   const previewUrlRef = useRef<string | undefined>(undefined)
 
@@ -100,6 +115,49 @@ export function AttachmentList({ attachments }: { attachments?: AttachmentItem[]
     }
   }
 
+  const openRename = (file: AttachmentItem) => {
+    setRenameFile(file)
+    renameForm.setFieldsValue({ originalFilename: file.originalFilename })
+  }
+
+  const closeRename = () => {
+    setRenameFile(null)
+    renameForm.resetFields()
+  }
+
+  const handleRename = async () => {
+    if (!renameFile) return
+    try {
+      const values = await renameForm.validateFields()
+      setRenaming(true)
+      await attachmentsApi.rename(renameFile.id, values.originalFilename)
+      message.success('Đã đổi tên tệp đính kèm')
+      closeRename()
+      onChanged?.()
+    } catch (error) {
+      if (isFormValidationError(error)) return
+      message.error(apiErrorMessage(error))
+    } finally {
+      setRenaming(false)
+    }
+  }
+
+  const handleDelete = async (file: AttachmentItem) => {
+    try {
+      setDeletingId(file.id)
+      await attachmentsApi.delete(file.id)
+      if (previewFile?.id === file.id) {
+        closePreview()
+      }
+      message.success('Đã xoá tệp đính kèm')
+      onChanged?.()
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    } finally {
+      setDeletingId(undefined)
+    }
+  }
+
   if (!attachments?.length) {
     return <Empty description="Chưa có ảnh hoặc tài liệu" />
   }
@@ -123,6 +181,22 @@ export function AttachmentList({ attachments }: { attachments?: AttachmentItem[]
               <Button key="download" type="text" icon={<DownloadOutlined />} onClick={() => handleDownload(item)}>
                 Tải xuống
               </Button>,
+              <Button key="rename" type="text" icon={<EditOutlined />} onClick={() => openRename(item)}>
+                Đổi tên
+              </Button>,
+              <Popconfirm
+                key="delete"
+                title="Xoá tệp đính kèm này?"
+                description="File sẽ bị xoá khỏi phiếu công việc và không còn tải xuống được."
+                okText="Xoá"
+                cancelText="Giữ lại"
+                okButtonProps={{ danger: true, loading: deletingId === item.id }}
+                onConfirm={() => handleDelete(item)}
+              >
+                <Button type="text" danger icon={<DeleteOutlined />} loading={deletingId === item.id}>
+                  Xoá
+                </Button>
+              </Popconfirm>,
             ]}
           >
             <List.Item.Meta
@@ -178,6 +252,30 @@ export function AttachmentList({ attachments }: { attachments?: AttachmentItem[]
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title="Đổi tên tệp đính kèm"
+        open={Boolean(renameFile)}
+        onCancel={closeRename}
+        onOk={handleRename}
+        confirmLoading={renaming}
+        okText="Lưu"
+        cancelText="Huỷ"
+        destroyOnHidden
+      >
+        <Form form={renameForm} layout="vertical" requiredMark={false}>
+          <Form.Item
+            label="Tên file hiển thị"
+            name="originalFilename"
+            rules={[
+              { required: true, message: 'Nhập tên file' },
+              { max: 255, message: 'Tên file không được vượt quá 255 ký tự' },
+            ]}
+          >
+            <Input placeholder="Ví dụ: Bien-ban-nghiem-thu.pdf" />
+          </Form.Item>
+        </Form>
       </Modal>
     </>
   )

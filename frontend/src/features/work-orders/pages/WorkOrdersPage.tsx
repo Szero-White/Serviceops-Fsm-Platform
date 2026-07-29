@@ -132,6 +132,11 @@ export function WorkOrdersPage() {
     queryClient.invalidateQueries({ queryKey: ['audit'] })
   }
 
+  const refreshAttachments = () => {
+    queryClient.invalidateQueries({ queryKey: ['attachments', selectedId] })
+    queryClient.invalidateQueries({ queryKey: ['audit'] })
+  }
+
   const create = useMutation({
     mutationFn: (values: Record<string, unknown>) => workOrdersApi.create(values),
     onSuccess: (workOrder) => {
@@ -196,8 +201,7 @@ export function WorkOrdersPage() {
       await attachmentsApi.upload('WORK_ORDER', selectedId!, options.file as File)
       message.success('Đã tải file lên')
       options.onSuccess?.({})
-      queryClient.invalidateQueries({ queryKey: ['attachments', selectedId] })
-      queryClient.invalidateQueries({ queryKey: ['audit'] })
+      refreshAttachments()
     } catch (error) {
       message.error(apiErrorMessage(error))
       options.onError?.(error as Error)
@@ -322,7 +326,7 @@ export function WorkOrdersPage() {
                 {
                   key: 'attachments',
                   label: `Tệp đính kèm (${attachments?.length ?? 0})`,
-                  children: <AttachmentList attachments={attachments} />,
+                  children: <AttachmentList attachments={attachments} onChanged={refreshAttachments} />,
                 },
               ]}
             />

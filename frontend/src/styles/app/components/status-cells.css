@@ -17,6 +17,27 @@
   opacity: 1;
 }
 
+.content-table .ant-tag {
+  margin-inline-end: 0;
+  padding: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.content-table .ant-tag.status-tag {
+  border-radius: 0;
+  letter-spacing: 0;
+  opacity: 1;
+}
+
+.content-table .ant-tag .anticon {
+  margin-inline-end: 6px;
+}
+
 .channel-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

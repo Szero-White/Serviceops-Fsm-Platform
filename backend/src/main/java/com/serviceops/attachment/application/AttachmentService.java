@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -74,6 +75,34 @@ public class AttachmentService {
         return new DownloadedAttachment(attachment.getOriginalFilename(), attachment.getContentType(), storageService.load(attachment.getStorageKey()));
     }
 
+    @Transactional
+    public AttachmentResponse rename(UUID id, String originalFilename) {
+        UUID tenantId = CurrentUser.tenantId();
+        Attachment attachment = getAuthorizedAttachment(id, tenantId);
+        authorizeManage(attachment);
+        String sanitizedFilename = sanitizeFilename(originalFilename);
+        if (sanitizedFilename.equals(attachment.getOriginalFilename())) {
+            return toResponse(attachment);
+        }
+
+        String oldFilename = attachment.getOriginalFilename();
+        attachment.setOriginalFilename(sanitizedFilename);
+        auditService.record("RENAME_FILE", attachment.getReferenceType(), attachment.getReferenceId(),
+                "Đổi tên file " + oldFilename + " thành " + sanitizedFilename);
+        return toResponse(attachment);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        UUID tenantId = CurrentUser.tenantId();
+        Attachment attachment = getAuthorizedAttachment(id, tenantId);
+        authorizeManage(attachment);
+        repository.delete(attachment);
+        storageService.delete(attachment.getStorageKey());
+        auditService.record("DELETE_FILE", attachment.getReferenceType(), attachment.getReferenceId(),
+                "Xoá file " + attachment.getOriginalFilename());
+    }
+
 
     private void authorizeReference(String referenceType, UUID referenceId, UUID tenantId) {
         switch (referenceType) {
@@ -101,6 +130,41 @@ public class AttachmentService {
             }
             default -> throw BusinessException.badRequest("INVALID_REFERENCE_TYPE", "Loại đối tượng đính kèm không hợp lệ");
         }
+    }
+
+    private Attachment getAuthorizedAttachment(UUID id, UUID tenantId) {
+        Attachment attachment = repository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Khong tim thay file dinh kem"));
+        authorizeReference(attachment.getReferenceType(), attachment.getReferenceId(), tenantId);
+        return attachment;
+    }
+
+    private void authorizeManage(Attachment attachment) {
+        if (CurrentUser.username().equals(attachment.getUploadedBy()) || canManageReference(attachment.getReferenceType())) {
+            return;
+        }
+        throw BusinessException.forbidden("ATTACHMENT_MANAGE_DENIED", "Ban khong co quyen chinh sua file dinh kem nay");
+    }
+
+    private static boolean canManageReference(String referenceType) {
+        return switch (referenceType) {
+            case "WORK_ORDER" -> CurrentUser.hasRole("OWNER") || CurrentUser.hasRole("DISPATCHER");
+            case "SERVICE_REQUEST", "ASSET" ->
+                    CurrentUser.hasRole("OWNER") || CurrentUser.hasRole("DISPATCHER") || CurrentUser.hasRole("CUSTOMER_SERVICE");
+            default -> false;
+        };
+    }
+
+    private static String sanitizeFilename(String value) {
+        String raw = value == null ? "" : value.trim();
+        if (raw.isBlank()) {
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Ten file khong duoc de trong");
+        }
+        String normalized = Path.of(raw).getFileName().toString();
+        if (normalized.length() > 255) {
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Ten file khong duoc vuot qua 255 ky tu");
+        }
+        return normalized;
     }
 
     private static List<UserRole> notificationRoles(String referenceType) {
