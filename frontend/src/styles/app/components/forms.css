@@ -55,6 +55,39 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+.form-assist-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+}
+
+.form-assist-row > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-assist-row .ant-typography {
+  margin: 0;
+}
+
+.form-assist-row .ant-btn {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.form-assist-note {
+  font-size: 12px;
+}
+
 .work-order-actions {
   padding: 0 0 24px;
   margin-bottom: 8px;

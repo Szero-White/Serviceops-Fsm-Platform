@@ -100,6 +100,16 @@ export interface ServiceRequest {
   createdAt: string
 }
 
+export interface ServiceRequestDraftSuggestion {
+  title: string
+  description: string
+  priority: Priority
+  channel: RequestChannel
+  confidence: number
+  reason: string
+  provider: 'local' | 'gemini' | string
+}
+
 export interface ServiceChannel {
   id: string
   code: string

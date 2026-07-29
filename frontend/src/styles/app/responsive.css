@@ -61,6 +61,15 @@
     grid-template-columns: 1fr;
   }
 
+  .form-assist-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-assist-row .ant-btn {
+    width: 100%;
+  }
+
   .toolbar-row {
     flex-direction: column;
   }

@@ -3,6 +3,7 @@ package com.serviceops.common.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -36,6 +37,17 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
         detail.setProperty("code", "VALIDATION_ERROR");
         detail.setProperty("errors", errors);
+        detail.setProperty("timestamp", Instant.now());
+        detail.setProperty("path", request.getRequestURI());
+        return detail;
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ProblemDetail handleUnreadableBody(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Nội dung gửi lên không đúng định dạng JSON hoặc không dùng UTF-8");
+        detail.setTitle("REQUEST_BODY_INVALID");
+        detail.setType(URI.create("https://serviceops.local/problems/request_body_invalid"));
+        detail.setProperty("code", "REQUEST_BODY_INVALID");
         detail.setProperty("timestamp", Instant.now());
         detail.setProperty("path", request.getRequestURI());
         return detail;

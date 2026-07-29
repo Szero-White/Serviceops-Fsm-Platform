@@ -1,15 +1,16 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
+import { BulbOutlined, DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
+import { aiApi } from '../../ai/api'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { serviceRequestsApi } from '../api'
 import { PageHeader } from '../../../components/PageHeader'
 import { ChannelTag, PriorityTag, StatusTag } from '../../../components/StatusTag'
-import type { ServiceRequest } from '../../../types'
+import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 
 const priorityOptions = [
@@ -30,7 +31,10 @@ export function ServiceRequestsPage() {
   const [status, setStatus] = useState<string>()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceRequest>()
+  const [lastAiDraft, setLastAiDraft] = useState<ServiceRequestDraftSuggestion>()
   const [form] = Form.useForm()
+  const watchedTitle = Form.useWatch('title', form)
+  const watchedDescription = Form.useWatch('description', form)
   const { message } = App.useApp()
   const queryClient = useQueryClient()
 
@@ -93,8 +97,50 @@ export function ServiceRequestsPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const aiDraft = useMutation({
+    mutationFn: aiApi.draftServiceRequest,
+    onSuccess: (draft) => {
+      setLastAiDraft(draft)
+      form.setFieldsValue({
+        title: draft.title,
+        description: draft.description,
+        priority: draft.priority,
+        channel: draft.channel,
+      })
+      message.success(draft.provider === 'local' ? 'Đã tạo gợi ý nội bộ' : 'AI đã gợi ý nội dung tiếp nhận')
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const hasDraftInput = Boolean(`${watchedTitle ?? ''}${watchedDescription ?? ''}`.trim())
+  const hasTitleInput = Boolean(`${watchedTitle ?? ''}`.trim())
+  const hasDescriptionInput = Boolean(`${watchedDescription ?? ''}`.trim())
+  const aiAssistDescription = (() => {
+    if (hasTitleInput && hasDescriptionInput) {
+      return 'AI sẽ chuẩn hóa cả tiêu đề và mô tả, đồng thời gợi ý mức ưu tiên và kênh tiếp nhận.'
+    }
+    if (hasTitleInput) {
+      return 'Bạn đã nhập tiêu đề. Bấm AI gợi ý để hệ thống viết mô tả chi tiết và gợi ý ưu tiên/kênh.'
+    }
+    if (hasDescriptionInput) {
+      return 'Bạn đã nhập mô tả. Bấm AI gợi ý để hệ thống rút gọn tiêu đề và gợi ý ưu tiên/kênh.'
+    }
+    return 'Nhập ít nhất một ô: Tiêu đề hoặc Mô tả chi tiết. Ô còn lại sẽ được AI tạo gợi ý.'
+  })()
+
+  const suggestWithAi = () => {
+    const values = form.getFieldsValue(['title', 'description', 'channel'])
+    const rawText = [values.title, values.description].filter(Boolean).join('\n\n').trim()
+    if (!rawText) {
+      message.warning('Nhập nội dung khách báo trước khi dùng AI gợi ý')
+      return
+    }
+    aiDraft.mutate({ rawText, preferredChannel: values.channel })
+  }
+
   const showCreate = () => {
     setEditing(undefined)
+    setLastAiDraft(undefined)
     form.resetFields()
     form.setFieldsValue({ priority: 'NORMAL', channel: channelOptions[0]?.value ?? 'PHONE' })
     setOpen(true)
@@ -102,6 +148,7 @@ export function ServiceRequestsPage() {
 
   const showEdit = (record: ServiceRequest) => {
     setEditing(record)
+    setLastAiDraft(undefined)
     form.setFieldsValue({
       customerId: record.customerId,
       assetId: record.assetId,
@@ -216,6 +263,25 @@ export function ServiceRequestsPage() {
             <Form.Item label="Kênh tiếp nhận" name="channel" rules={[{ required: true, message: 'Chọn kênh tiếp nhận' }]}>
               <Select options={channelOptions} placeholder="Chọn kênh tiếp nhận" />
             </Form.Item>
+          </div>
+          <div className="form-assist-row">
+            <div>
+              <Space size={8} wrap>
+                <Typography.Text strong>AI tiếp nhận</Typography.Text>
+                <Tag color={lastAiDraft?.provider === 'gemini' ? 'geekblue' : 'blue'}>
+                  {lastAiDraft?.provider === 'gemini' ? 'Gemini' : 'Sẵn sàng'}
+                </Tag>
+              </Space>
+              <Typography.Text type="secondary">{aiAssistDescription}</Typography.Text>
+              {lastAiDraft && (
+                <Typography.Text type="secondary" className="form-assist-note">
+                  {lastAiDraft.reason} · Độ tin cậy {Math.round(lastAiDraft.confidence * 100)}%
+                </Typography.Text>
+              )}
+            </div>
+            <Button icon={<BulbOutlined />} loading={aiDraft.isPending} disabled={!hasDraftInput} onClick={suggestWithAi}>
+              AI gợi ý
+            </Button>
           </div>
           <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề yêu cầu' }]}><Input placeholder="Ví dụ: Máy lạnh không đủ lạnh" /></Form.Item>
           <Form.Item label="Mô tả chi tiết" name="description" rules={[{ required: true, message: 'Nhập mô tả chi tiết' }]}><Input.TextArea rows={5} placeholder="Triệu chứng, thời điểm xảy ra, yêu cầu của khách hàng..." /></Form.Item>

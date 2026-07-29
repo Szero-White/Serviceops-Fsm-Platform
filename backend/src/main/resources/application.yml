@@ -47,3 +47,10 @@ serviceops:
     root: ${FILE_STORAGE_ROOT:./data/uploads}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  ai:
+    enabled: ${AI_ENABLED:true}
+    provider: ${AI_PROVIDER:gemini}
+    gemini-api-key: ${GEMINI_API_KEY:}
+    gemini-base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    gemini-model: ${GEMINI_MODEL:gemini-3.6-flash}
+    timeout: ${AI_TIMEOUT:20s}
