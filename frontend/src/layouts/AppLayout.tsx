@@ -21,6 +21,7 @@ import { useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { notificationsApi } from '../features/notifications/api'
 import { useAuth } from '../features/auth/AuthContext'
+import { AiHelpAssistant } from '../features/ai/components/AiHelpAssistant'
 import { formatDateTime } from '../utils/format'
 
 const { Header, Sider, Content } = Layout
@@ -136,6 +137,7 @@ export function AppLayout() {
         </Header>
 
         <Content className="app-content"><Outlet /></Content>
+        <AiHelpAssistant />
       </Layout>
 
       <Drawer title="Thông báo" open={notificationsOpen} onClose={() => setNotificationsOpen(false)} size="default">

@@ -1,6 +1,9 @@
 package com.serviceops.ai.web;
 
+import com.serviceops.ai.application.AiHelpService;
 import com.serviceops.ai.application.AiSuggestionService;
+import com.serviceops.ai.web.AiDtos.HelpRequest;
+import com.serviceops.ai.web.AiDtos.HelpResponse;
 import com.serviceops.ai.web.AiDtos.ServiceRequestDraftRequest;
 import com.serviceops.ai.web.AiDtos.ServiceRequestDraftResponse;
 import jakarta.validation.Valid;
@@ -16,10 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
 public class AiController {
-    private final AiSuggestionService service;
+    private final AiSuggestionService suggestionService;
+    private final AiHelpService helpService;
 
     @PostMapping("/service-request-draft")
     public ServiceRequestDraftResponse draftServiceRequest(@Valid @RequestBody ServiceRequestDraftRequest request) {
-        return service.draftServiceRequest(request);
+        return suggestionService.draftServiceRequest(request);
+    }
+
+    @PostMapping("/help")
+    public HelpResponse help(@Valid @RequestBody HelpRequest request) {
+        return helpService.answer(request);
     }
 }

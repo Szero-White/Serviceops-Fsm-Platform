@@ -4,6 +4,8 @@ import com.serviceops.common.domain.Priority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 public final class AiDtos {
     private AiDtos() {
     }
@@ -21,6 +23,21 @@ public final class AiDtos {
             String channel,
             double confidence,
             String reason,
+            String provider
+    ) {
+    }
+
+    public record HelpRequest(
+            @NotBlank @Size(max = 1000) String question,
+            @Size(max = 120) String currentPath
+    ) {
+    }
+
+    public record HelpResponse(
+            String answer,
+            List<String> steps,
+            String relatedRoute,
+            String actionLabel,
             String provider
     ) {
     }

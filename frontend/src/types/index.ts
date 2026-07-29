@@ -110,6 +110,14 @@ export interface ServiceRequestDraftSuggestion {
   provider: 'local' | 'gemini' | string
 }
 
+export interface AiHelpResponse {
+  answer: string
+  steps: string[]
+  relatedRoute: string
+  actionLabel: string
+  provider: 'local' | 'gemini' | string
+}
+
 export interface ServiceChannel {
   id: string
   code: string

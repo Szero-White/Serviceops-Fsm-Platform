@@ -70,6 +70,17 @@
     width: 100%;
   }
 
+  .ai-help-launcher {
+    right: 14px;
+    bottom: 14px;
+    min-width: 58px;
+    padding: 8px;
+  }
+
+  .ai-help-launcher-copy {
+    display: none;
+  }
+
   .toolbar-row {
     flex-direction: column;
   }
