@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class InventoryDtos {
@@ -48,6 +49,25 @@ public final class InventoryDtos {
             boolean lowStock,
             boolean active,
             Instant updatedAt
+    ) {
+    }
+
+    public record SparePartImportResult(
+            int totalRows,
+            int validRows,
+            int errorRows,
+            int importedRows,
+            boolean committed,
+            List<SparePartImportRowResult> rows
+    ) {
+    }
+
+    public record SparePartImportRowResult(
+            int rowNumber,
+            String sku,
+            String name,
+            boolean valid,
+            String message
     ) {
     }
 }

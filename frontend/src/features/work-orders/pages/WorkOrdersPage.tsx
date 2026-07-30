@@ -2,6 +2,7 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloudUploadOutlined,
+  DownloadOutlined,
   EyeOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -44,6 +45,7 @@ import { PageHeader } from '../../../components/PageHeader'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { AttachmentList } from '../../attachments/components/AttachmentList'
 import type { WorkOrder, WorkOrderStatus } from '../../../types'
+import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatCurrency, formatDateTime, formatNumber } from '../../../utils/format'
 
 const { RangePicker } = DatePicker
@@ -208,6 +210,17 @@ export function WorkOrdersPage() {
     }
   }
 
+  const exportInvoice = async () => {
+    if (!detail) {
+      return
+    }
+    try {
+      downloadBlob(await workOrdersApi.invoice(detail.id), `serviceops-invoice-${detail.code}.html`)
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
   const transitionButtons = useMemo(() => detail ? availableTransitions(detail.status) : [], [detail])
 
   return (
@@ -288,6 +301,7 @@ export function WorkOrdersPage() {
                   <Button key={target} onClick={() => transition.mutate({ targetStatus: target })} loading={transition.isPending}>{transitionLabels[target]}</Button>
                 ))}
                 {canConsumePart && !['CLOSED', 'CANCELLED'].includes(detail.status) && <Button icon={<ToolOutlined />} onClick={() => setConsumeOpen(true)}>Dùng phụ tùng</Button>}
+                <Button icon={<DownloadOutlined />} onClick={exportInvoice}>Xuất hóa đơn</Button>
                 <Upload customRequest={uploadFile} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
                   <Button icon={<CloudUploadOutlined />}>Tải ảnh / PDF</Button>
                 </Upload>

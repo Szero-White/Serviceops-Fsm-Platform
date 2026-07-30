@@ -22,6 +22,7 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     Page<Customer> search(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
 
     Optional<Customer> findByIdAndTenantId(UUID id, UUID tenantId);
+    Optional<Customer> findByTenantIdAndCodeIgnoreCase(UUID tenantId, String code);
     boolean existsByTenantIdAndCodeIgnoreCase(UUID tenantId, String code);
     long countByTenantIdAndActiveTrue(UUID tenantId);
 

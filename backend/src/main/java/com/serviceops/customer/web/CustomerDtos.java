@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class CustomerDtos {
@@ -33,6 +34,25 @@ public final class CustomerDtos {
             boolean active,
             Instant createdAt,
             Instant updatedAt
+    ) {
+    }
+
+    public record CustomerImportResult(
+            int totalRows,
+            int validRows,
+            int errorRows,
+            int importedRows,
+            boolean committed,
+            List<CustomerImportRowResult> rows
+    ) {
+    }
+
+    public record CustomerImportRowResult(
+            int rowNumber,
+            String code,
+            String name,
+            boolean valid,
+            String message
     ) {
     }
 }

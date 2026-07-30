@@ -1,13 +1,24 @@
-import { InboxOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd'
+import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography, Upload } from 'antd'
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { inventoryApi } from '../../inventory/api'
 import { useAuth } from '../../auth/AuthContext'
 import { PageHeader } from '../../../components/PageHeader'
-import type { SparePart } from '../../../types'
+import type { SparePart, SparePartImportResult, SparePartImportRowResult } from '../../../types'
 import { formatCurrency, formatDateTime, formatNumber } from '../../../utils/format'
+
+function downloadBlob(blob: Blob, filename: string) {
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+}
 
 export function InventoryPage() {
   const { user } = useAuth()
@@ -15,6 +26,9 @@ export function InventoryPage() {
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [importing, setImporting] = useState<SparePart>()
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [bulkImportFile, setBulkImportFile] = useState<File>()
+  const [bulkImportResult, setBulkImportResult] = useState<SparePartImportResult>()
   const [createForm] = Form.useForm()
   const [importForm] = Form.useForm()
   const { message } = App.useApp()
@@ -48,13 +62,105 @@ export function InventoryPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const previewImport = useMutation({
+    mutationFn: (file: File) => inventoryApi.importCsv(file, false),
+    onSuccess: (result, file) => {
+      setBulkImportFile(file)
+      setBulkImportResult(result)
+      setBulkImportOpen(true)
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const commitImport = useMutation({
+    mutationFn: () => inventoryApi.importCsv(bulkImportFile!, true),
+    onSuccess: (result) => {
+      setBulkImportResult(result)
+      if (result.committed) {
+        message.success(`Đã import ${result.importedRows} phụ tùng`)
+        setBulkImportOpen(false)
+        setBulkImportFile(undefined)
+        setBulkImportResult(undefined)
+        refresh()
+      }
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const exportCsv = async () => {
+    try {
+      downloadBlob(await inventoryApi.exportCsv(search), 'serviceops-spare-parts.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      downloadBlob(await inventoryApi.importTemplate(), 'serviceops-spare-parts-template.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
+  const inventoryActions = (
+    <Space size={10} wrap>
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            {
+              key: 'export',
+              icon: <DownloadOutlined />,
+              label: 'Xuất CSV',
+              onClick: exportCsv,
+            },
+            ...(canManageStock ? [
+              {
+                key: 'template',
+                icon: <FileExcelOutlined />,
+                label: 'Tải mẫu import',
+                onClick: downloadTemplate,
+              },
+              {
+                key: 'import',
+                icon: <UploadOutlined />,
+                label: (
+                  <Upload
+                    accept=".csv,text/csv"
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                      previewImport.mutate(file)
+                      return Upload.LIST_IGNORE
+                    }}
+                  >
+                    <span>Nhập CSV</span>
+                  </Upload>
+                ),
+              },
+            ] : []),
+          ],
+        }}
+      >
+        <Button icon={<FileExcelOutlined />} loading={previewImport.isPending}>
+          Dữ liệu <DownOutlined />
+        </Button>
+      </Dropdown>
+      {canManageStock && (
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ unit: 'cái', initialStock: 0, reorderLevel: 3, unitPrice: 0, active: true }); setCreateOpen(true) }}>
+          Thêm phụ tùng
+        </Button>
+      )}
+    </Space>
+  )
+
   return (
     <div className="page-shell">
       <PageHeader
         eyebrow="Inventory control"
         title="Kho phụ tùng"
         description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
-        actions={canManageStock ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.setFieldsValue({ unit: 'cái', initialStock: 0, reorderLevel: 3, unitPrice: 0, active: true }); setCreateOpen(true) }}>Thêm phụ tùng</Button> : undefined}
+        actions={inventoryActions}
         meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} SKU</Tag><Tag color="red">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</Tag></Space>}
       />
 
@@ -127,6 +233,47 @@ export function InventoryPage() {
           <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
           <Form.Item label="Ghi chú" name="note" rules={[{ required: true, message: 'Nhập ghi chú' }]}><Input /></Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="Kiểm tra file nhập phụ tùng"
+        open={bulkImportOpen}
+        onCancel={() => setBulkImportOpen(false)}
+        onOk={() => commitImport.mutate()}
+        okText="Xác nhận nhập"
+        cancelText="Đóng"
+        confirmLoading={commitImport.isPending}
+        okButtonProps={{ disabled: !bulkImportResult || bulkImportResult.errorRows > 0 }}
+        width={820}
+        destroyOnHidden
+      >
+        {bulkImportResult && (
+          <Space direction="vertical" size={14} style={{ width: '100%' }}>
+            <Alert
+              type={bulkImportResult.errorRows > 0 ? 'warning' : 'success'}
+              showIcon
+              message={`${bulkImportResult.validRows}/${bulkImportResult.totalRows} dòng hợp lệ`}
+              description={bulkImportResult.errorRows > 0 ? 'File còn dòng lỗi, hệ thống chưa ghi dữ liệu vào kho.' : 'File hợp lệ, bạn có thể xác nhận để ghi dữ liệu vào kho.'}
+            />
+            <Table<SparePartImportRowResult>
+              rowKey="rowNumber"
+              size="small"
+              dataSource={bulkImportResult.rows}
+              pagination={{ pageSize: 8, showSizeChanger: false }}
+              columns={[
+                { title: 'Dòng', dataIndex: 'rowNumber', width: 80 },
+                { title: 'SKU', dataIndex: 'sku', width: 150 },
+                { title: 'Tên phụ tùng', dataIndex: 'name', ellipsis: true },
+                {
+                  title: 'Kết quả',
+                  dataIndex: 'valid',
+                  width: 130,
+                  render: (valid: boolean) => <Tag color={valid ? 'green' : 'red'}>{valid ? 'Hợp lệ' : 'Lỗi'}</Tag>,
+                },
+                { title: 'Ghi chú', dataIndex: 'message', ellipsis: true },
+              ]}
+            />
+          </Space>
+        )}
       </Modal>
     </div>
   )

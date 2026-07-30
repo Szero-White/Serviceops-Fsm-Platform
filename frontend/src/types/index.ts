@@ -69,6 +69,23 @@ export interface Customer {
   updatedAt: string
 }
 
+export interface CustomerImportRowResult {
+  rowNumber: number
+  code: string
+  name: string
+  valid: boolean
+  message: string
+}
+
+export interface CustomerImportResult {
+  totalRows: number
+  validRows: number
+  errorRows: number
+  importedRows: number
+  committed: boolean
+  rows: CustomerImportRowResult[]
+}
+
 export interface Asset {
   id: string
   customerId: string
@@ -98,6 +115,23 @@ export interface ServiceRequest {
   status: ServiceRequestStatus
   createdBy: string
   createdAt: string
+}
+
+export interface AssetImportRowResult {
+  rowNumber: number
+  serialNumber: string
+  customerCode: string
+  valid: boolean
+  message: string
+}
+
+export interface AssetImportResult {
+  totalRows: number
+  validRows: number
+  errorRows: number
+  importedRows: number
+  committed: boolean
+  rows: AssetImportRowResult[]
 }
 
 export interface ServiceRequestDraftSuggestion {
@@ -185,6 +219,23 @@ export interface SparePart {
   lowStock: boolean
   active: boolean
   updatedAt: string
+}
+
+export interface SparePartImportRowResult {
+  rowNumber: number
+  sku: string
+  name: string
+  valid: boolean
+  message: string
+}
+
+export interface SparePartImportResult {
+  totalRows: number
+  validRows: number
+  errorRows: number
+  importedRows: number
+  committed: boolean
+  rows: SparePartImportRowResult[]
 }
 
 export interface Dashboard {

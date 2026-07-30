@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public final class AssetDtos {
@@ -40,6 +41,25 @@ public final class AssetDtos {
             AssetStatus status,
             String notes,
             Instant createdAt
+    ) {
+    }
+
+    public record AssetImportResult(
+            int totalRows,
+            int validRows,
+            int errorRows,
+            int importedRows,
+            boolean committed,
+            List<AssetImportRowResult> rows
+    ) {
+    }
+
+    public record AssetImportRowResult(
+            int rowNumber,
+            String serialNumber,
+            String customerCode,
+            boolean valid,
+            String message
     ) {
     }
 }

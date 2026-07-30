@@ -1,17 +1,22 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd'
+import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography, Upload } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { customersApi } from '../../customers/api'
+import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
-import type { Customer } from '../../../types'
+import type { Customer, CustomerImportResult, CustomerImportRowResult } from '../../../types'
+import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 
 export function CustomersPage() {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Customer>()
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [bulkImportFile, setBulkImportFile] = useState<File>()
+  const [bulkImportResult, setBulkImportResult] = useState<CustomerImportResult>()
   const [form] = Form.useForm()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -40,6 +45,48 @@ export function CustomersPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const previewImport = useMutation({
+    mutationFn: (file: File) => customersApi.importCsv(file, false),
+    onSuccess: (result, file) => {
+      setBulkImportFile(file)
+      setBulkImportResult(result)
+      setBulkImportOpen(true)
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const commitImport = useMutation({
+    mutationFn: () => customersApi.importCsv(bulkImportFile!, true),
+    onSuccess: (result) => {
+      setBulkImportResult(result)
+      if (result.committed) {
+        message.success(`Đã import ${result.importedRows} khách hàng`)
+        setBulkImportOpen(false)
+        setBulkImportFile(undefined)
+        setBulkImportResult(undefined)
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      }
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const exportCsv = async () => {
+    try {
+      downloadBlob(await customersApi.exportCsv(search), 'serviceops-customers.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      downloadBlob(await customersApi.importTemplate(), 'serviceops-customers-template.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
   const showCreate = () => {
     setEditing(undefined)
     form.resetFields()
@@ -53,13 +100,58 @@ export function CustomersPage() {
     setOpen(true)
   }
 
+  const customerActions = (
+    <Space size={10} wrap>
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            {
+              key: 'export',
+              icon: <DownloadOutlined />,
+              label: 'Xuất CSV',
+              onClick: exportCsv,
+            },
+            {
+              key: 'template',
+              icon: <FileExcelOutlined />,
+              label: 'Tải mẫu import',
+              onClick: downloadTemplate,
+            },
+            {
+              key: 'import',
+              icon: <UploadOutlined />,
+              label: (
+                <Upload
+                  accept=".csv,text/csv"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    previewImport.mutate(file)
+                    return Upload.LIST_IGNORE
+                  }}
+                >
+                  <span>Nhập CSV</span>
+                </Upload>
+              ),
+            },
+          ],
+        }}
+      >
+        <Button icon={<FileExcelOutlined />} loading={previewImport.isPending}>
+          Dữ liệu <DownOutlined />
+        </Button>
+      </Dropdown>
+      <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm khách hàng</Button>
+    </Space>
+  )
+
   return (
     <div className="page-shell">
       <PageHeader
         eyebrow="Customer operations"
         title="Khách hàng"
         description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm khách hàng</Button>}
+        actions={customerActions}
         meta={<Tag color="blue">{data?.totalElements ?? 0} hồ sơ</Tag>}
       />
 
@@ -142,6 +234,19 @@ export function CustomersPage() {
           <Form.Item label="Đang hoạt động" name="active" valuePropName="checked"><Switch /></Form.Item>
         </Form>
       </Modal>
+
+      <CsvImportPreviewModal<CustomerImportRowResult>
+        title="Kiểm tra file nhập khách hàng"
+        open={bulkImportOpen}
+        result={bulkImportResult}
+        committing={commitImport.isPending}
+        onCancel={() => setBulkImportOpen(false)}
+        onCommit={() => commitImport.mutate()}
+        columns={[
+          { title: 'Mã', dataIndex: 'code', width: 140 },
+          { title: 'Tên khách hàng', dataIndex: 'name', ellipsis: true },
+        ]}
+      />
     </div>
   )
 }

@@ -1,14 +1,16 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, DatePicker, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd'
+import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, Upload } from 'antd'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
+import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
 import { StatusTag } from '../../../components/StatusTag'
-import type { Asset } from '../../../types'
+import type { Asset, AssetImportResult, AssetImportRowResult } from '../../../types'
+import { downloadBlob } from '../../../utils/download'
 import { formatDate } from '../../../utils/format'
 
 const assetStatusOptions = [
@@ -22,6 +24,9 @@ export function AssetsPage() {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Asset>()
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [bulkImportFile, setBulkImportFile] = useState<File>()
+  const [bulkImportResult, setBulkImportResult] = useState<AssetImportResult>()
   const [form] = Form.useForm()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -58,6 +63,48 @@ export function AssetsPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const previewImport = useMutation({
+    mutationFn: (file: File) => assetsApi.importCsv(file, false),
+    onSuccess: (result, file) => {
+      setBulkImportFile(file)
+      setBulkImportResult(result)
+      setBulkImportOpen(true)
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const commitImport = useMutation({
+    mutationFn: () => assetsApi.importCsv(bulkImportFile!, true),
+    onSuccess: (result) => {
+      setBulkImportResult(result)
+      if (result.committed) {
+        message.success(`Đã import ${result.importedRows} thiết bị`)
+        setBulkImportOpen(false)
+        setBulkImportFile(undefined)
+        setBulkImportResult(undefined)
+        queryClient.invalidateQueries({ queryKey: ['assets'] })
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      }
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const exportCsv = async () => {
+    try {
+      downloadBlob(await assetsApi.exportCsv(search), 'serviceops-assets.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      downloadBlob(await assetsApi.importTemplate(), 'serviceops-assets-template.csv')
+    } catch (error) {
+      message.error(apiErrorMessage(error))
+    }
+  }
+
   const showCreate = () => {
     setEditing(undefined)
     form.resetFields()
@@ -75,13 +122,58 @@ export function AssetsPage() {
     setOpen(true)
   }
 
+  const assetActions = (
+    <Space size={10} wrap>
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            {
+              key: 'export',
+              icon: <DownloadOutlined />,
+              label: 'Xuất CSV',
+              onClick: exportCsv,
+            },
+            {
+              key: 'template',
+              icon: <FileExcelOutlined />,
+              label: 'Tải mẫu import',
+              onClick: downloadTemplate,
+            },
+            {
+              key: 'import',
+              icon: <UploadOutlined />,
+              label: (
+                <Upload
+                  accept=".csv,text/csv"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    previewImport.mutate(file)
+                    return Upload.LIST_IGNORE
+                  }}
+                >
+                  <span>Nhập CSV</span>
+                </Upload>
+              ),
+            },
+          ],
+        }}
+      >
+        <Button icon={<FileExcelOutlined />} loading={previewImport.isPending}>
+          Dữ liệu <DownOutlined />
+        </Button>
+      </Dropdown>
+      <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm thiết bị</Button>
+    </Space>
+  )
+
   return (
     <div className="page-shell">
       <PageHeader
         eyebrow="Installed base"
         title="Thiết bị khách hàng"
         description="Theo dõi serial, bảo hành, vòng đời và tình trạng phục vụ của từng tài sản."
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm thiết bị</Button>}
+        actions={assetActions}
         meta={<Tag color="blue">{data?.totalElements ?? 0} thiết bị</Tag>}
       />
 
@@ -169,6 +261,19 @@ export function AssetsPage() {
           <Form.Item label="Ghi chú" name="notes"><Input.TextArea rows={3} /></Form.Item>
         </Form>
       </Modal>
+
+      <CsvImportPreviewModal<AssetImportRowResult>
+        title="Kiểm tra file nhập thiết bị"
+        open={bulkImportOpen}
+        result={bulkImportResult}
+        committing={commitImport.isPending}
+        onCancel={() => setBulkImportOpen(false)}
+        onCommit={() => commitImport.mutate()}
+        columns={[
+          { title: 'Serial', dataIndex: 'serialNumber', width: 180 },
+          { title: 'Mã khách hàng', dataIndex: 'customerCode', width: 160 },
+        ]}
+      />
     </div>
   )
 }

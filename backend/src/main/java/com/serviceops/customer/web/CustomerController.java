@@ -2,10 +2,15 @@ package com.serviceops.customer.web;
 
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.application.CustomerService;
+import com.serviceops.customer.web.CustomerDtos.CustomerImportResult;
 import com.serviceops.customer.web.CustomerDtos.CustomerRequest;
 import com.serviceops.customer.web.CustomerDtos.CustomerResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,7 +21,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +45,24 @@ public class CustomerController {
         return service.get(id);
     }
 
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam(defaultValue = "") String search) {
+        return csv("serviceops-customers.csv", service.exportCustomers(search));
+    }
+
+    @GetMapping("/import-template")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    public ResponseEntity<byte[]> importTemplate() {
+        return csv("serviceops-customers-template.csv", service.customerImportTemplate());
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    public CustomerImportResult importCsv(@RequestParam MultipartFile file,
+                                          @RequestParam(defaultValue = "false") boolean commit) {
+        return service.importCustomers(file, commit);
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
     public CustomerResponse create(@Valid @RequestBody CustomerRequest request) {
@@ -54,5 +79,12 @@ public class CustomerController {
     @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
+    }
+
+    private static ResponseEntity<byte[]> csv(String filename, byte[] content) {
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                .body(content);
     }
 }

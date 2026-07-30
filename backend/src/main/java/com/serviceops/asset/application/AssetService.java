@@ -3,6 +3,9 @@ package com.serviceops.asset.application;
 import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.asset.domain.AssetStatus;
+import com.serviceops.asset.application.AssetCsvService.AssetCsvRow;
+import com.serviceops.asset.web.AssetDtos.AssetImportResult;
+import com.serviceops.asset.web.AssetDtos.AssetImportRowResult;
 import com.serviceops.asset.web.AssetDtos.AssetRequest;
 import com.serviceops.asset.web.AssetDtos.AssetResponse;
 import com.serviceops.audit.application.AuditService;
@@ -20,10 +23,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -33,6 +41,7 @@ public class AssetService {
     private final CustomerRepository customerRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final AssetCsvService csvService;
     private final AuditService auditService;
     private final NotificationService notificationService;
 
@@ -96,6 +105,49 @@ public class AssetService {
         notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + asset.getSerialNumber(), asset.getCustomer().getName());
     }
 
+    @Transactional(readOnly = true)
+    public byte[] exportAssets(String search) {
+        var pageable = PageRequest.of(0, 5_000, Sort.by("serialNumber").ascending());
+        List<AssetResponse> assets = repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable)
+                .stream()
+                .map(AssetService::toResponse)
+                .toList();
+        return csvService.exportAssets(assets);
+    }
+
+    public byte[] assetImportTemplate() {
+        return csvService.assetTemplate();
+    }
+
+    @Transactional
+    public AssetImportResult importAssets(MultipartFile file, boolean commit) {
+        UUID tenantId = CurrentUser.tenantId();
+        List<AssetCsvRow> rows = csvService.parseAssets(file);
+        Set<String> seenSerials = new HashSet<>();
+        List<AssetImportCandidate> candidates = new ArrayList<>();
+        List<AssetImportRowResult> results = new ArrayList<>();
+
+        for (AssetCsvRow row : rows) {
+            AssetImportCandidate candidate = validateImportRow(row, seenSerials, tenantId);
+            candidates.add(candidate);
+            results.add(new AssetImportRowResult(row.rowNumber(), row.serialNumber(), row.customerCode(), candidate.valid(), candidate.message()));
+        }
+
+        int validRows = (int) results.stream().filter(AssetImportRowResult::valid).count();
+        int errorRows = results.size() - validRows;
+        if (!commit || errorRows > 0) {
+            return new AssetImportResult(rows.size(), validRows, errorRows, 0, false, results);
+        }
+
+        for (AssetImportCandidate candidate : candidates) {
+            createImportedAsset(tenantId, candidate);
+        }
+
+        auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiet bi tu CSV");
+        notificationService.notifyRoles(tenantId, assetRoles(), "Da import danh sach thiet bi", validRows + " thiet bi moi duoc them vao he thong");
+        return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
+    }
+
     private Asset require(UUID id) {
         return repository.findDetailed(id, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("ASSET_NOT_FOUND", "Không tìm thấy thiết bị"));
@@ -116,11 +168,89 @@ public class AssetService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private AssetImportCandidate validateImportRow(AssetCsvRow row, Set<String> seenSerials, UUID tenantId) {
+        String customerCode = row.customerCode().trim().toUpperCase(Locale.ROOT);
+        if (customerCode.isBlank()) {
+            return AssetImportCandidate.invalid(row, "Ma khach hang khong duoc de trong");
+        }
+        Customer customer = customerRepository.findByTenantIdAndCodeIgnoreCase(tenantId, customerCode).orElse(null);
+        if (customer == null) {
+            return AssetImportCandidate.invalid(row, "Khong tim thay khach hang theo ma " + customerCode);
+        }
+
+        String serial = row.serialNumber().trim().toUpperCase(Locale.ROOT);
+        if (serial.isBlank()) {
+            return AssetImportCandidate.invalid(row, "Serial khong duoc de trong");
+        }
+        if (serial.length() > 120) {
+            return AssetImportCandidate.invalid(row, "Serial toi da 120 ky tu");
+        }
+        if (!seenSerials.add(serial)) {
+            return AssetImportCandidate.invalid(row, "Serial bi trung trong file import");
+        }
+        if (repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
+            return AssetImportCandidate.invalid(row, "Serial da ton tai trong he thong");
+        }
+        if (row.category().isBlank() || row.category().length() > 80) {
+            return AssetImportCandidate.invalid(row, "Loai thiet bi bat buoc va toi da 80 ky tu");
+        }
+        if (row.brand().length() > 100 || row.model().length() > 100) {
+            return AssetImportCandidate.invalid(row, "Hang/model toi da 100 ky tu");
+        }
+        if (row.notes().length() > 2000) {
+            return AssetImportCandidate.invalid(row, "Ghi chu toi da 2000 ky tu");
+        }
+
+        try {
+            LocalDate installedAt = parseDate(row.installedAt());
+            LocalDate warrantyUntil = parseDate(row.warrantyUntil());
+            AssetStatus status = row.status().isBlank() ? AssetStatus.ACTIVE : AssetStatus.valueOf(row.status().trim().toUpperCase(Locale.ROOT));
+            return new AssetImportCandidate(row, customer, row.category().trim(), serial, installedAt, warrantyUntil, status, true, "Hop le");
+        } catch (IllegalArgumentException | DateTimeParseException ex) {
+            return AssetImportCandidate.invalid(row, "Ngay hoac trang thai khong hop le");
+        }
+    }
+
+    private void createImportedAsset(UUID tenantId, AssetImportCandidate candidate) {
+        Asset asset = new Asset();
+        asset.setTenantId(tenantId);
+        asset.setCustomer(candidate.customer());
+        asset.setCategory(candidate.category());
+        asset.setBrand(blankToNull(candidate.row().brand()));
+        asset.setModel(blankToNull(candidate.row().model()));
+        asset.setSerialNumber(candidate.serialNumber());
+        asset.setInstalledAt(candidate.installedAt());
+        asset.setWarrantyUntil(candidate.warrantyUntil());
+        asset.setStatus(candidate.status());
+        asset.setNotes(blankToNull(candidate.row().notes()));
+        repository.save(asset);
+    }
+
+    private static LocalDate parseDate(String value) {
+        return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
+    }
+
     private static List<UserRole> assetRoles() {
         return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static AssetResponse toResponse(Asset a) {
         return new AssetResponse(a.getId(), a.getCustomer().getId(), a.getCustomer().getName(), a.getCategory(), a.getBrand(), a.getModel(), a.getSerialNumber(), a.getInstalledAt(), a.getWarrantyUntil(), a.isUnderWarranty(LocalDate.now()), a.getStatus(), a.getNotes(), a.getCreatedAt());
+    }
+
+    private record AssetImportCandidate(
+            AssetCsvRow row,
+            Customer customer,
+            String category,
+            String serialNumber,
+            LocalDate installedAt,
+            LocalDate warrantyUntil,
+            AssetStatus status,
+            boolean valid,
+            String message
+    ) {
+        static AssetImportCandidate invalid(AssetCsvRow row, String message) {
+            return new AssetImportCandidate(row, null, row.category(), row.serialNumber(), null, null, AssetStatus.ACTIVE, false, message);
+        }
     }
 }

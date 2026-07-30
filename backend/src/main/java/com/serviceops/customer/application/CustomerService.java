@@ -6,6 +6,9 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
+import com.serviceops.customer.application.CustomerCsvService.CustomerCsvRow;
+import com.serviceops.customer.web.CustomerDtos.CustomerImportResult;
+import com.serviceops.customer.web.CustomerDtos.CustomerImportRowResult;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -18,9 +21,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -30,6 +37,7 @@ public class CustomerService {
     private final AssetRepository assetRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final CustomerCsvService csvService;
     private final AuditService auditService;
     private final NotificationService notificationService;
 
@@ -88,6 +96,49 @@ public class CustomerService {
         notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng đã xoá: " + customer.getCode(), customer.getName());
     }
 
+    @Transactional(readOnly = true)
+    public byte[] exportCustomers(String search) {
+        var pageable = PageRequest.of(0, 5_000, Sort.by("code").ascending());
+        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable)
+                .stream()
+                .map(CustomerService::toResponse)
+                .toList();
+        return csvService.exportCustomers(customers);
+    }
+
+    public byte[] customerImportTemplate() {
+        return csvService.customerTemplate();
+    }
+
+    @Transactional
+    public CustomerImportResult importCustomers(MultipartFile file, boolean commit) {
+        UUID tenantId = CurrentUser.tenantId();
+        List<CustomerCsvRow> rows = csvService.parseCustomers(file);
+        Set<String> seenCodes = new HashSet<>();
+        List<CustomerImportCandidate> candidates = new ArrayList<>();
+        List<CustomerImportRowResult> results = new ArrayList<>();
+
+        for (CustomerCsvRow row : rows) {
+            CustomerImportCandidate candidate = validateImportRow(row, seenCodes, tenantId);
+            candidates.add(candidate);
+            results.add(new CustomerImportRowResult(row.rowNumber(), row.code(), row.name(), candidate.valid(), candidate.message()));
+        }
+
+        int validRows = (int) results.stream().filter(CustomerImportRowResult::valid).count();
+        int errorRows = results.size() - validRows;
+        if (!commit || errorRows > 0) {
+            return new CustomerImportResult(rows.size(), validRows, errorRows, 0, false, results);
+        }
+
+        for (CustomerImportCandidate candidate : candidates) {
+            createImportedCustomer(tenantId, candidate);
+        }
+
+        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khach hang tu CSV");
+        notificationService.notifyRoles(tenantId, customerRoles(), "Da import danh sach khach hang", validRows + " ho so moi duoc them vao he thong");
+        return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
+    }
+
     private Customer require(UUID id) {
         return repository.findByIdAndTenantId(id, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
@@ -107,11 +158,89 @@ public class CustomerService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private CustomerImportCandidate validateImportRow(CustomerCsvRow row, Set<String> seenCodes, UUID tenantId) {
+        String code = row.code().trim().toUpperCase(Locale.ROOT);
+        if (code.isBlank()) {
+            return CustomerImportCandidate.invalid(row, "Ma khach hang khong duoc de trong");
+        }
+        if (code.length() > 40) {
+            return CustomerImportCandidate.invalid(row, "Ma khach hang toi da 40 ky tu");
+        }
+        if (!seenCodes.add(code)) {
+            return CustomerImportCandidate.invalid(row, "Ma khach hang bi trung trong file import");
+        }
+        if (repository.existsByTenantIdAndCodeIgnoreCase(tenantId, code)) {
+            return CustomerImportCandidate.invalid(row, "Ma khach hang da ton tai trong he thong");
+        }
+        if (row.name().isBlank() || row.name().length() > 180) {
+            return CustomerImportCandidate.invalid(row, "Ten khach hang bat buoc va toi da 180 ky tu");
+        }
+        if (row.phone().length() > 30) {
+            return CustomerImportCandidate.invalid(row, "So dien thoai toi da 30 ky tu");
+        }
+        if (row.email().length() > 150 || (!row.email().isBlank() && !row.email().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))) {
+            return CustomerImportCandidate.invalid(row, "Email khong hop le");
+        }
+        if (row.address().length() > 300) {
+            return CustomerImportCandidate.invalid(row, "Dia chi toi da 300 ky tu");
+        }
+        if (row.notes().length() > 2000) {
+            return CustomerImportCandidate.invalid(row, "Ghi chu toi da 2000 ky tu");
+        }
+
+        try {
+            boolean active = parseBoolean(row.active());
+            return new CustomerImportCandidate(row, code, row.name().trim(), active, true, "Hop le");
+        } catch (IllegalArgumentException ex) {
+            return CustomerImportCandidate.invalid(row, ex.getMessage());
+        }
+    }
+
+    private void createImportedCustomer(UUID tenantId, CustomerImportCandidate candidate) {
+        Customer customer = new Customer();
+        customer.setTenantId(tenantId);
+        customer.setCode(candidate.code());
+        customer.setName(candidate.name());
+        customer.setPhone(blankToNull(candidate.row().phone()));
+        customer.setEmail(blankToNull(candidate.row().email()));
+        customer.setAddress(blankToNull(candidate.row().address()));
+        customer.setNotes(blankToNull(candidate.row().notes()));
+        customer.setActive(candidate.active());
+        repository.save(customer);
+    }
+
+    private static boolean parseBoolean(String value) {
+        if (value == null || value.isBlank()) {
+            return true;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if ("true".equals(normalized)) {
+            return true;
+        }
+        if ("false".equals(normalized)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Cot active chi nhan true hoac false");
+    }
+
     private static List<UserRole> customerRoles() {
         return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static CustomerResponse toResponse(Customer c) {
         return new CustomerResponse(c.getId(), c.getCode(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), c.getNotes(), c.isActive(), c.getCreatedAt(), c.getUpdatedAt());
+    }
+
+    private record CustomerImportCandidate(
+            CustomerCsvRow row,
+            String code,
+            String name,
+            boolean active,
+            boolean valid,
+            String message
+    ) {
+        static CustomerImportCandidate invalid(CustomerCsvRow row, String message) {
+            return new CustomerImportCandidate(row, row.code(), row.name(), false, false, message);
+        }
     }
 }
