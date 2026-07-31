@@ -39,9 +39,9 @@ public class WorkOrder extends TenantScopedEntity {
             Map.entry(WorkOrderStatus.WAITING_FOR_PARTS, EnumSet.of(WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED)),
             Map.entry(WorkOrderStatus.COMPLETED, EnumSet.of(WorkOrderStatus.CUSTOMER_ACCEPTED, WorkOrderStatus.REOPENED)),
             Map.entry(WorkOrderStatus.CUSTOMER_ACCEPTED, EnumSet.of(WorkOrderStatus.CLOSED, WorkOrderStatus.REOPENED)),
-            Map.entry(WorkOrderStatus.REOPENED, EnumSet.of(WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED)),
+            Map.entry(WorkOrderStatus.REOPENED, EnumSet.of(WorkOrderStatus.SCHEDULED, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED)),
             Map.entry(WorkOrderStatus.CLOSED, EnumSet.noneOf(WorkOrderStatus.class)),
-            Map.entry(WorkOrderStatus.CANCELLED, EnumSet.noneOf(WorkOrderStatus.class))
+            Map.entry(WorkOrderStatus.CANCELLED, EnumSet.of(WorkOrderStatus.REOPENED))
     );
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -92,6 +92,20 @@ public class WorkOrder extends TenantScopedEntity {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
+
+    public void softDelete(String username) {
+        if (status != WorkOrderStatus.CLOSED && status != WorkOrderStatus.CANCELLED) {
+            throw new IllegalStateException("Chỉ phiếu đã đóng hoặc đã hủy mới được xóa khỏi lịch sử");
+        }
+        deletedAt = Instant.now();
+        deletedBy = username;
+    }
+
     public WorkOrderStatus transitionTo(WorkOrderStatus target) {
         Set<WorkOrderStatus> allowed = TRANSITIONS.getOrDefault(status, Set.of());
         if (!allowed.contains(target)) {
@@ -112,7 +126,7 @@ public class WorkOrder extends TenantScopedEntity {
         if (end == null || start == null || !end.isAfter(start)) {
             throw new IllegalArgumentException("Thời gian kết thúc phải sau thời gian bắt đầu");
         }
-        if (status == WorkOrderStatus.OPEN) {
+        if (status == WorkOrderStatus.OPEN || status == WorkOrderStatus.REOPENED) {
             transitionTo(WorkOrderStatus.SCHEDULED);
         } else if (status != WorkOrderStatus.SCHEDULED && status != WorkOrderStatus.ASSIGNED) {
             throw new IllegalStateException("Chỉ phiếu công việc mở, đã lên lịch hoặc đã phân công mới được xếp lịch");

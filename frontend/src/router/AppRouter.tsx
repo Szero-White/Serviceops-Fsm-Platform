@@ -26,6 +26,7 @@ const protectedRoutes: AppRoute[] = [
   { path: 'service-requests', Page: page(() => import('../features/service-requests/pages/ServiceRequestsPage'), 'ServiceRequestsPage') },
   { path: 'service-channels', Page: page(() => import('../features/service-channels/pages/ServiceChannelsPage'), 'ServiceChannelsPage') },
   { path: 'work-orders', Page: page(() => import('../features/work-orders/pages/WorkOrdersPage'), 'WorkOrdersPage') },
+  { path: 'work-order-history', Page: page(() => import('../features/work-orders/pages/WorkOrderHistoryPage'), 'WorkOrderHistoryPage') },
   { path: 'technicians', Page: page(() => import('../features/technicians/pages/TechniciansPage'), 'TechniciansPage') },
   { path: 'inventory', Page: page(() => import('../features/inventory/pages/InventoryPage'), 'InventoryPage') },
   { path: 'audit', Page: page(() => import('../features/audit/pages/AuditPage'), 'AuditPage') },

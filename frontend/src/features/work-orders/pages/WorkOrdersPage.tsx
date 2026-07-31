@@ -91,6 +91,7 @@ function availableTransitions(status: WorkOrderStatus): WorkOrderStatus[] {
     COMPLETED: ['CUSTOMER_ACCEPTED', 'REOPENED'],
     CUSTOMER_ACCEPTED: ['CLOSED', 'REOPENED'],
     REOPENED: ['IN_PROGRESS', 'CANCELLED'],
+    CANCELLED: ['REOPENED'],
   }
   return map[status] ?? []
 }
@@ -215,7 +216,7 @@ export function WorkOrdersPage() {
       return
     }
     try {
-      downloadBlob(await workOrdersApi.invoice(detail.id), `serviceops-invoice-${detail.code}.html`)
+      downloadBlob(await workOrdersApi.invoice(detail.id), `hoa-don-dich-vu-${detail.code}.html`)
     } catch (error) {
       message.error(apiErrorMessage(error))
     }
@@ -285,7 +286,7 @@ export function WorkOrdersPage() {
         onClose={() => setSelectedId(undefined)}
         width={760}
         loading={detailLoading}
-        extra={canSchedule && detail && ['OPEN', 'SCHEDULED', 'ASSIGNED'].includes(detail.status) ? <Button type="primary" icon={<CalendarOutlined />} onClick={() => { scheduleForm.setFieldsValue({ technicianId: detail.technicianId, period: detail.scheduledStart && detail.scheduledEnd ? [dayjs(detail.scheduledStart), dayjs(detail.scheduledEnd)] : undefined }); setScheduleOpen(true) }}>Phân công / xếp lịch</Button> : undefined}
+        extra={canSchedule && detail && ['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'].includes(detail.status) ? <Button type="primary" icon={<CalendarOutlined />} onClick={() => { scheduleForm.setFieldsValue({ technicianId: detail.technicianId, period: detail.scheduledStart && detail.scheduledEnd ? [dayjs(detail.scheduledStart), dayjs(detail.scheduledEnd)] : undefined }); setScheduleOpen(true) }}>Phân công / xếp lịch</Button> : undefined}
       >
         {detail ? (
           <>

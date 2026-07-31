@@ -4,6 +4,8 @@ import type { PageResponse, SparePart, WorkOrder, WorkOrderStatus } from '../../
 export const workOrdersApi = {
   list: (search = '', status?: WorkOrderStatus, page = 0, size = 100) =>
     http.get<PageResponse<WorkOrder>>('/work-orders', { params: { search, status, page, size } }).then((response) => response.data),
+  history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 100) =>
+    http.get<PageResponse<WorkOrder>>('/work-orders/history', { params: { search, status, page, size } }).then((response) => response.data),
   get: (id: string) => http.get<WorkOrder>(`/work-orders/${id}`).then((response) => response.data),
   create: (payload: Record<string, unknown>) => http.post<WorkOrder>('/work-orders', payload).then((response) => response.data),
   schedule: (id: string, payload: { technicianId: string; startTime: string; endTime: string }) =>
@@ -14,4 +16,5 @@ export const workOrdersApi = {
     http.get<Blob>(`/work-orders/${id}/invoice`, { responseType: 'blob' }).then((response) => response.data),
   consumePart: (id: string, payload: { sparePartId: string; quantity: number; note?: string }) =>
     http.post<SparePart>(`/work-orders/${id}/parts/consume`, payload).then((response) => response.data),
+  deleteFromHistory: (id: string) => http.delete<void>(`/work-orders/${id}`).then((response) => response.data),
 }

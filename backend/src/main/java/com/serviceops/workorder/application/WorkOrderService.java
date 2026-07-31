@@ -70,6 +70,19 @@ public class WorkOrderService {
         return toResponse(workOrder, history);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> history(String search, WorkOrderStatus status, int page, int size) {
+        if (status != null && status != WorkOrderStatus.CLOSED && status != WorkOrderStatus.CANCELLED) {
+            throw BusinessException.badRequest("INVALID_HISTORY_STATUS", "Lịch sử phiếu chỉ lọc trạng thái đã đóng hoặc đã hủy");
+        }
+        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
+        String normalizedSearch = search == null ? "" : search.trim();
+        var result = CurrentUser.hasRole("TECHNICIAN")
+                ? repository.searchAssignedHistory(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
+                : repository.searchHistory(CurrentUser.tenantId(), status, normalizedSearch, pageable);
+        return PageResponse.from(result.map(w -> toResponse(w, List.of())));
+    }
+
     @Transactional
     public WorkOrderResponse create(CreateWorkOrder request) {
         UUID tenantId = CurrentUser.tenantId();
@@ -186,6 +199,18 @@ public class WorkOrderService {
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
         notifyStatusChange(workOrder, previous);
         return get(id);
+    }
+
+    @Transactional
+    public void deleteFromHistory(UUID id) {
+        WorkOrder workOrder = require(id);
+        try {
+            workOrder.softDelete(CurrentUser.username());
+        } catch (IllegalStateException ex) {
+            throw BusinessException.conflict("WORK_ORDER_NOT_ARCHIVABLE", ex.getMessage());
+        }
+        auditService.record("DELETE_HISTORY", "WORK_ORDER", workOrder.getId(), "Xóa khỏi lịch sử " + workOrder.getCode());
+        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), "Đã xóa khỏi lịch sử: " + workOrder.getCode(), workOrder.getSummary());
     }
 
 

@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,6 +42,14 @@ public class WorkOrderController {
         return service.search(search, status, page, size);
     }
 
+    @GetMapping("/history")
+    public PageResponse<WorkOrderResponse> history(@RequestParam(defaultValue = "") String search,
+                                                   @RequestParam(required = false) WorkOrderStatus status,
+                                                   @RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "20") int size) {
+        return service.history(search, status, page, size);
+    }
+
     @GetMapping("/{id}")
     public WorkOrderResponse get(@PathVariable UUID id) {
         return service.get(id);
@@ -52,7 +61,7 @@ public class WorkOrderController {
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "html", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename("serviceops-invoice-" + workOrder.code() + ".html", StandardCharsets.UTF_8)
+                        .filename("hoa-don-dich-vu-" + workOrder.code() + ".html", StandardCharsets.UTF_8)
                         .build()
                         .toString())
                 .body(invoiceService.exportInvoice(workOrder));
@@ -80,5 +89,11 @@ public class WorkOrderController {
     @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','TECHNICIAN')")
     public WorkOrderResponse transition(@PathVariable UUID id, @Valid @RequestBody TransitionWorkOrder request) {
         return service.transition(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
+    public void deleteFromHistory(@PathVariable UUID id) {
+        service.deleteFromHistory(id);
     }
 }
