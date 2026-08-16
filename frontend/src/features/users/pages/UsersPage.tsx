@@ -219,8 +219,8 @@ export function UsersPage() {
             <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: 'Chọn vai trò' }]}>
               <Select options={roleOptions} disabled={editing?.id === currentUser?.id} />
             </Form.Item>
-            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }]}>
-              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 6 ký tự'} />
+            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
+              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
             </Form.Item>
             {selectedRole === 'TECHNICIAN' && (
               <>

@@ -81,7 +81,7 @@ export function TechniciansPage() {
   const showCreate = () => {
     setEditing(undefined)
     form.resetFields()
-    form.setFieldsValue({ active: true, password: '123456' })
+    form.setFieldsValue({ active: true })
     setOpen(true)
   }
 
@@ -178,8 +178,8 @@ export function TechniciansPage() {
             <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
               <Input placeholder="pham.quoc.ky.thuat" />
             </Form.Item>
-            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }]}>
-              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : '123456'} />
+            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
+              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
             </Form.Item>
             <Form.Item label="Điện thoại" name="phone">
               <Input placeholder="0909123456" />

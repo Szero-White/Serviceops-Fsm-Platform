@@ -19,6 +19,7 @@ import com.serviceops.notification.domain.Notification;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
+import com.serviceops.security.DemoProperties;
 import com.serviceops.scheduling.domain.AppointmentStatus;
 import com.serviceops.servicerequest.domain.ServiceChannel;
 import com.serviceops.servicerequest.domain.ServiceChannelRepository;
@@ -51,7 +52,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
-@Profile("local")
+@Profile({"local", "demo"})
 @RequiredArgsConstructor
 public class DemoDataSeeder implements ApplicationRunner {
     private final TenantRepository tenantRepository;
@@ -69,11 +70,15 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final NotificationRepository notificationRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
+    private final DemoProperties demoProperties;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         if (userRepository.existsByUsernameIgnoreCase("owner")) {
+            if (demoProperties.enabled()) {
+                refreshKnownDemoPasswords();
+            }
             return;
         }
 
@@ -154,15 +159,28 @@ public class DemoDataSeeder implements ApplicationRunner {
         auditService.recordAs(tenant.getId(), "system", "SEED", "SYSTEM", tenant.getId(), "Khởi tạo dữ liệu demo local-first");
     }
 
+    private void refreshKnownDemoPasswords() {
+        String encoded = passwordEncoder.encode(seedPassword());
+        List.of("owner", "dispatcher", "customer-service", "technician", "technician-2", "warehouse")
+                .forEach(username -> userRepository.findByUsernameIgnoreCase(username).ifPresent(user -> {
+                    user.setPasswordHash(encoded);
+                    userRepository.save(user);
+                }));
+    }
+
     private UserAccount user(Tenant tenant, String username, String displayName, UserRole role) {
         UserAccount user = new UserAccount();
         user.setTenantId(tenant.getId());
         user.setUsername(username);
         user.setDisplayName(displayName);
-        user.setPasswordHash(passwordEncoder.encode("123456"));
+        user.setPasswordHash(passwordEncoder.encode(seedPassword()));
         user.setRole(role);
         user.setActive(true);
         return userRepository.save(user);
+    }
+
+    private String seedPassword() {
+        return demoProperties.requireSeedPassword();
     }
 
     private void seedServiceChannels(Tenant tenant) {

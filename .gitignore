@@ -12,11 +12,13 @@ frontend/.vite/
 .env
 .env.*
 !.env.example
+!.env.production.example
 backend/src/main/resources/application-secret.yml
 
 # Runtime data
 data/
 backend/data/
+backups/
 
 # IDE / OS
 .agents/

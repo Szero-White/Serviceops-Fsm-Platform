@@ -4,6 +4,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.security.JwtProperties;
+import com.serviceops.security.LoginAttemptService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -34,14 +36,20 @@ public class AuthController {
     private final UserAccountRepository userAccountRepository;
     private final JwtEncoder jwtEncoder;
     private final JwtProperties jwtProperties;
+    private final LoginAttemptService loginAttemptService;
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        String remoteAddress = httpRequest.getRemoteAddr();
+        loginAttemptService.ensureAllowed(remoteAddress, request.username());
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.username(), request.password()));
         } catch (AuthenticationException ex) {
+            loginAttemptService.recordFailure(remoteAddress, request.username());
             throw new BusinessException("INVALID_CREDENTIALS", "Tên đăng nhập hoặc mật khẩu không đúng", HttpStatus.UNAUTHORIZED);
         }
+
+        loginAttemptService.recordSuccess(remoteAddress, request.username());
 
         UserAccount user = userAccountRepository.findByUsernameIgnoreCase(request.username())
                 .orElseThrow(() -> new BusinessException("INVALID_CREDENTIALS", "Tên đăng nhập hoặc mật khẩu không đúng", HttpStatus.UNAUTHORIZED));

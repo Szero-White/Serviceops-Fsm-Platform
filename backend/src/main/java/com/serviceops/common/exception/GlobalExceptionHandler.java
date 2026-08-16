@@ -1,10 +1,13 @@
 package com.serviceops.common.exception;
 
+import com.serviceops.common.web.RequestCorrelationFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
@@ -24,9 +28,7 @@ public class GlobalExceptionHandler {
         detail.setTitle(ex.getCode());
         detail.setType(URI.create("https://serviceops.local/problems/" + ex.getCode().toLowerCase()));
         detail.setProperty("code", ex.getCode());
-        detail.setProperty("timestamp", Instant.now());
-        detail.setProperty("path", request.getRequestURI());
-        return detail;
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -37,9 +39,7 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
         detail.setProperty("code", "VALIDATION_ERROR");
         detail.setProperty("errors", errors);
-        detail.setProperty("timestamp", Instant.now());
-        detail.setProperty("path", request.getRequestURI());
-        return detail;
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -48,9 +48,7 @@ public class GlobalExceptionHandler {
         detail.setTitle("REQUEST_BODY_INVALID");
         detail.setType(URI.create("https://serviceops.local/problems/request_body_invalid"));
         detail.setProperty("code", "REQUEST_BODY_INVALID");
-        detail.setProperty("timestamp", Instant.now());
-        detail.setProperty("path", request.getRequestURI());
-        return detail;
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -58,9 +56,18 @@ public class GlobalExceptionHandler {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc hệ thống");
         detail.setTitle("DATA_INTEGRITY_VIOLATION");
         detail.setProperty("code", "DATA_INTEGRITY_VIOLATION");
-        detail.setProperty("timestamp", Instant.now());
-        detail.setProperty("path", request.getRequestURI());
-        return detail;
+        return addRequestMetadata(detail, request);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ProblemDetail handleOptimisticLock(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Dữ liệu vừa được thay đổi bởi thao tác khác. Vui lòng tải lại và thử lại."
+        );
+        detail.setTitle("CONCURRENT_MODIFICATION");
+        detail.setProperty("code", "CONCURRENT_MODIFICATION");
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -68,18 +75,25 @@ public class GlobalExceptionHandler {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này");
         detail.setTitle("ACCESS_DENIED");
         detail.setProperty("code", "ACCESS_DENIED");
-        detail.setProperty("timestamp", Instant.now());
-        detail.setProperty("path", request.getRequestURI());
-        return detail;
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled request failure: {} {}", request.getMethod(), request.getRequestURI(), ex);
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Hệ thống gặp lỗi ngoài dự kiến");
         detail.setTitle("INTERNAL_SERVER_ERROR");
         detail.setProperty("code", "INTERNAL_SERVER_ERROR");
+        return addRequestMetadata(detail, request);
+    }
+
+    private static ProblemDetail addRequestMetadata(ProblemDetail detail, HttpServletRequest request) {
         detail.setProperty("timestamp", Instant.now());
         detail.setProperty("path", request.getRequestURI());
+        Object requestId = request.getAttribute(RequestCorrelationFilter.MDC_KEY);
+        if (requestId != null) {
+            detail.setProperty("requestId", requestId);
+        }
         return detail;
     }
 }

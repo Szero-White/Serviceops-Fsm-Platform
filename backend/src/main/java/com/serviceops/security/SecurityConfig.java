@@ -1,6 +1,7 @@
 package com.serviceops.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -48,7 +50,18 @@ public class SecurityConfig {
 
     @Bean
     SecretKey jwtSecretKey(JwtProperties properties) {
-        byte[] key = Base64.getDecoder().decode(properties.secret());
+        if (properties.secret() == null || properties.secret().isBlank()) {
+            throw new IllegalStateException("JWT secret must be configured");
+        }
+        final byte[] key;
+        try {
+            key = Base64.getDecoder().decode(properties.secret());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("JWT secret must be valid Base64", ex);
+        }
+        if (key.length < 32) {
+            throw new IllegalStateException("JWT secret must contain at least 256 bits after Base64 decoding");
+        }
         return new SecretKeySpec(key, "HmacSHA256");
     }
 
@@ -77,18 +90,27 @@ public class SecurityConfig {
     }
 
     @Bean
+    FilterRegistrationBean<DemoProtectionFilter> demoProtectionFilterRegistration(DemoProtectionFilter filter) {
+        FilterRegistrationBean<DemoProtectionFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             JwtAuthenticationConverter converter,
-                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
+                                            CorsConfigurationSource corsConfigurationSource,
+                                            DemoProtectionFilter demoProtectionFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/login", "/actuator/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login", "/actuator/health", "/actuator/health/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/attachments/*/download").authenticated()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
+                .addFilterAfter(demoProtectionFilter, AuthorizationFilter.class);
         return http.build();
     }
 
@@ -97,8 +119,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(properties.allowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setExposedHeaders(List.of("Content-Disposition"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Request-ID"));
+        configuration.setExposedHeaders(List.of("Content-Disposition", "X-Request-ID"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

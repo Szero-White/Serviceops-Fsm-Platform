@@ -134,7 +134,7 @@ public class InventoryService {
     @Transactional
     public SparePartResponse consume(UUID workOrderId, ConsumePartRequest request) {
         UUID tenantId = CurrentUser.tenantId();
-        WorkOrder workOrder = workOrderRepository.findDetailed(workOrderId, tenantId)
+        WorkOrder workOrder = workOrderRepository.findForUpdate(workOrderId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
         if (CurrentUser.hasRole("TECHNICIAN")
                 && (workOrder.getTechnician() == null

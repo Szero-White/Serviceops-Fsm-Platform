@@ -13,11 +13,17 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: maven
+      - name: Make Maven wrapper executable
+        working-directory: backend
+        run: chmod +x mvnw
       - name: Test backend
         working-directory: backend
         run: ./mvnw --batch-mode clean test
+      - name: Package backend
+        working-directory: backend
+        run: ./mvnw --batch-mode -DskipTests package
 
   frontend:
     runs-on: ubuntu-latest
@@ -36,4 +42,16 @@ jobs:
         run: npm run lint
       - name: Build
         working-directory: frontend
+        env:
+          VITE_API_URL: /api/v1
         run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t serviceops-backend:ci ./backend
+      - name: Build frontend image
+        run: docker build --build-arg VITE_API_URL=/api/v1 -t serviceops-frontend:ci ./frontend

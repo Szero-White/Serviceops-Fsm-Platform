@@ -17,6 +17,7 @@ import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { formatDateTime } from '../../../utils/format'
+import { API_URL } from '../../../api/http'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -50,7 +51,7 @@ export function DashboardPage() {
           title="Tổng quan vận hành"
           description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
           actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Tải lại</Button>}
-          meta={<Space size={[8, 8]} wrap><Tag color="red">Backend chưa kết nối</Tag><Tag>Chạy nội bộ</Tag></Space>}
+          meta={<Space size={[8, 8]} wrap><Tag color="red">Backend chưa kết nối</Tag><Tag>API chưa sẵn sàng</Tag></Space>}
         />
 
         <Card className="content-card dashboard-empty-shell" bordered={false}>
@@ -62,12 +63,12 @@ export function DashboardPage() {
           <Result
             status="warning"
             title="Chưa lấy được dữ liệu vận hành"
-            subTitle="Backend local chưa phản hồi hoặc API URL chưa đúng. Giao diện vẫn sẵn sàng, chỉ cần kết nối API là số liệu sẽ tự hiển thị."
+            subTitle="Backend chưa phản hồi hoặc API URL chưa đúng. Giao diện vẫn sẵn sàng; số liệu sẽ hiển thị khi API hoạt động trở lại."
             extra={<Button type="primary" icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Thử lại</Button>}
           />
           <div className="dashboard-empty-hints">
-            <div><strong>Khởi động backend</strong><span>Chạy Spring Boot với profile local để mở dữ liệu seed.</span></div>
-            <div><strong>Kiểm tra API URL</strong><span>Frontend cần trỏ về <span className="dashboard-url-pill">http://localhost:8080/api/v1</span>.</span></div>
+            <div><strong>Kiểm tra backend</strong><span>Đảm bảo Spring Boot hoặc backend container đang ở trạng thái healthy.</span></div>
+            <div><strong>Kiểm tra API URL</strong><span>Frontend cần trỏ về <span className="dashboard-url-pill">{API_URL}</span>.</span></div>
             <div><strong>Thử lại</strong><span>Tải lại sau khi backend sẵn sàng.</span></div>
           </div>
         </Card>
@@ -97,7 +98,7 @@ export function DashboardPage() {
         title="Tổng quan vận hành"
         description="Một màn hình điều phối tập trung cho yêu cầu dịch vụ, phiếu công việc, kỹ thuật viên và tồn kho."
         actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>}
-        meta={<Space size={[8, 8]} wrap>{isTechnician ? <Tag color="blue">Góc kỹ thuật viên</Tag> : <Tag color="cyan">Góc điều phối</Tag>}<Tag color="green">Chạy nội bộ</Tag></Space>}
+        meta={<Space size={[8, 8]} wrap>{isTechnician ? <Tag color="blue">Góc kỹ thuật viên</Tag> : <Tag color="cyan">Góc điều phối</Tag>}<Tag color="green">API đã kết nối</Tag></Space>}
       />
 
       <Card className="content-card dashboard-hero" bordered={false}>

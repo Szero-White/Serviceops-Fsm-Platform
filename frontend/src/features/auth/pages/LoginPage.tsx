@@ -24,17 +24,19 @@ type LoginBenefit = {
   description: string
 }
 
-const DEMO_CREDENTIALS: LoginFormValues = {
-  username: 'owner',
-  password: '123456',
-}
+const DEMO_USERNAME = 'owner'
+const LOCAL_DEMO_PASSWORD = '123456'
+
+const DEFAULT_LOGIN_VALUES: LoginFormValues = import.meta.env.DEV
+  ? { username: DEMO_USERNAME, password: LOCAL_DEMO_PASSWORD }
+  : { username: DEMO_USERNAME, password: '' }
 
 const DEMO_ROLES = ['dispatcher', 'technician', 'warehouse', 'customer-service']
 
 const LOGIN_BENEFITS: LoginBenefit[] = [
   {
     icon: <SafetyCertificateOutlined />,
-    title: 'Bảo mật tuyệt đối',
+    title: 'Kiểm soát truy cập',
     description: 'Xác thực JWT, phân quyền theo vai trò',
   },
   {
@@ -52,7 +54,7 @@ const LOGIN_BENEFITS: LoginBenefit[] = [
 const LOGIN_METRICS = [
   { value: '5+', label: 'Vai trò vận hành' },
   { value: '100%', label: 'Dữ liệu nội bộ' },
-  { value: '24/7', label: 'Hỗ trợ demo' },
+  { value: 'Demo', label: 'Sẵn sàng trình diễn' },
 ]
 
 function BrandMark() {
@@ -121,9 +123,11 @@ function DemoAccounts() {
       <strong>Tài khoản dùng thử</strong>
       <Space orientation="vertical" size={3}>
         <Typography.Text code>
-          {DEMO_CREDENTIALS.username} / {DEMO_CREDENTIALS.password}
+          {import.meta.env.DEV ? `${DEMO_USERNAME} / ${LOCAL_DEMO_PASSWORD}` : DEMO_USERNAME}
         </Typography.Text>
-        <Typography.Text type="secondary">{DEMO_ROLES.join(' · ')}</Typography.Text>
+        <Typography.Text type="secondary">
+          {import.meta.env.DEV ? DEMO_ROLES.join(' · ') : 'Mật khẩu public demo được cung cấp cùng link triển khai'}
+        </Typography.Text>
       </Space>
     </div>
   )
@@ -162,13 +166,13 @@ function LoginPanel({
             <div><strong>Dữ liệu nội bộ</strong><span>Postgres, Flyway, dữ liệu mẫu</span></div>
           </div>
 
-          <Form layout="vertical" onFinish={onSubmit} initialValues={DEMO_CREDENTIALS} requiredMark={false}>
+          <Form layout="vertical" onFinish={onSubmit} initialValues={DEFAULT_LOGIN_VALUES} requiredMark={false}>
             <Form.Item
               label="Tên đăng nhập"
               name="username"
               rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
             >
-              <Input prefix={<UserOutlined />} placeholder={DEMO_CREDENTIALS.username} autoComplete="username" />
+              <Input prefix={<UserOutlined />} placeholder={DEMO_USERNAME} autoComplete="username" />
             </Form.Item>
 
             <Form.Item
@@ -176,7 +180,7 @@ function LoginPanel({
               name="password"
               rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="123456" autoComplete="current-password" />
+              <Input.Password prefix={<LockOutlined />} placeholder={import.meta.env.DEV ? LOCAL_DEMO_PASSWORD : 'Nhập mật khẩu demo'} autoComplete="current-password" />
             </Form.Item>
 
             <Button type="primary" htmlType="submit" block loading={loading} size="large">

@@ -2,7 +2,7 @@
 
 ## 1. Yêu cầu môi trường
 
-- Java JDK 17
+- Java JDK 21
 - Maven 3.9+ (không bắt buộc nếu dùng Maven Wrapper đi kèm)
 - Node.js 22 LTS và npm
 - Docker Desktop
