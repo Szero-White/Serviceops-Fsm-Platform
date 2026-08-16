@@ -1,0 +1,6 @@
+serviceops:
+  demo:
+    enabled: ${DEMO_MODE:true}
+    seed-password: ${DEMO_PASSWORD}
+  storage:
+    max-tenant-bytes: ${MAX_TENANT_STORAGE_BYTES:104857600}

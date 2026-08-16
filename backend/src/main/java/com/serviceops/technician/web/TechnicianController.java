@@ -49,7 +49,7 @@ public class TechnicianController {
     public record TechnicianRequest(
             @NotBlank @Size(max = 150) String name,
             @NotBlank @Size(max = 100) String username,
-            @Size(min = 6, max = 100) String password,
+            @Size(min = 8, max = 100) String password,
             @Size(max = 30) String phone,
             @Size(max = 500) String skills,
             Boolean active

@@ -13,6 +13,7 @@ import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.technician.domain.TechnicianRepository;
+import com.serviceops.tenant.domain.TenantRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ import java.util.UUID;
 public class UserManagementService {
     private final UserAccountRepository repository;
     private final TechnicianRepository technicianRepository;
+    private final TenantRepository tenantRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AppointmentRepository appointmentRepository;
     private final NotificationRepository notificationRepository;
@@ -170,7 +172,10 @@ public class UserManagementService {
         if (remainsActiveOwner) {
             return;
         }
-        long activeOwnerCount = repository.countByTenantIdAndRoleAndActiveTrue(CurrentUser.tenantId(), UserRole.OWNER);
+        UUID tenantId = CurrentUser.tenantId();
+        tenantRepository.findForUpdate(tenantId)
+                .orElseThrow(() -> BusinessException.notFound("TENANT_NOT_FOUND", "Không tìm thấy doanh nghiệp hiện tại"));
+        long activeOwnerCount = repository.countByTenantIdAndRoleAndActiveTrue(tenantId, UserRole.OWNER);
         if (activeOwnerCount <= 1 && user.isActive()) {
             throw BusinessException.conflict("USER_LAST_OWNER_BLOCKED", "Doanh nghiệp phải còn ít nhất một chủ sở hữu đang hoạt động");
         }

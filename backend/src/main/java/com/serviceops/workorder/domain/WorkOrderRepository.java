@@ -1,8 +1,11 @@
 package com.serviceops.workorder.domain;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -92,6 +95,13 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
     Optional<WorkOrder> findDetailedAssigned(@Param("id") UUID id,
                                              @Param("tenantId") UUID tenantId,
                                              @Param("userId") UUID userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select w from WorkOrder w
+            where w.id = :id and w.tenantId = :tenantId and w.deletedAt is null
+            """)
+    Optional<WorkOrder> findForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     @Query(value = "select nextval('work_order_number_seq')", nativeQuery = true)
     long nextNumber();

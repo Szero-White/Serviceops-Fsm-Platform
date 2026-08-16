@@ -12,9 +12,12 @@ import com.serviceops.security.CurrentUser;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
@@ -24,6 +27,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AttachmentService {
     private final AttachmentRepository repository;
     private final FileStorageService storageService;
@@ -42,6 +46,8 @@ public class AttachmentService {
         UUID tenantId = CurrentUser.tenantId();
         authorizeReference(normalizedType, referenceId, tenantId);
         var stored = storageService.store(file, tenantId + "/" + normalizedType.toLowerCase(Locale.ROOT));
+        deleteStoredFileIfTransactionRollsBack(stored.storageKey());
+
         Attachment attachment = new Attachment();
         attachment.setTenantId(tenantId);
         attachment.setOriginalFilename(stored.originalFilename());
@@ -98,9 +104,45 @@ public class AttachmentService {
         Attachment attachment = getAuthorizedAttachment(id, tenantId);
         authorizeManage(attachment);
         repository.delete(attachment);
-        storageService.delete(attachment.getStorageKey());
+        deleteStoredFileAfterCommit(attachment.getStorageKey());
         auditService.record("DELETE_FILE", attachment.getReferenceType(), attachment.getReferenceId(),
                 "Xoá file " + attachment.getOriginalFilename());
+    }
+
+
+    private void deleteStoredFileIfTransactionRollsBack(String storageKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                    safeDeleteStoredFile(storageKey, "rollback cleanup");
+                }
+            }
+        });
+    }
+
+    private void deleteStoredFileAfterCommit(String storageKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            storageService.delete(storageKey);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                safeDeleteStoredFile(storageKey, "post-commit delete");
+            }
+        });
+    }
+
+    private void safeDeleteStoredFile(String storageKey, String operation) {
+        try {
+            storageService.delete(storageKey);
+        } catch (RuntimeException ex) {
+            log.error("Attachment storage {} failed for key {}", operation, storageKey, ex);
+        }
     }
 
 
@@ -160,9 +202,17 @@ public class AttachmentService {
         if (raw.isBlank()) {
             throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Ten file khong duoc de trong");
         }
-        String normalized = Path.of(raw).getFileName().toString();
+        final String normalized;
+        try {
+            normalized = Path.of(raw).getFileName().toString();
+        } catch (RuntimeException ex) {
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không hợp lệ");
+        }
         if (normalized.length() > 255) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Ten file khong duoc vuot qua 255 ky tu");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Tên file không được vượt quá 255 ký tự");
+        }
+        if (normalized.chars().anyMatch(Character::isISOControl)) {
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không được chứa ký tự điều khiển");
         }
         return normalized;
     }

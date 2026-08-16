@@ -52,7 +52,7 @@ public class UserManagementController {
             @NotBlank @Size(max = 100) String username,
             @NotBlank @Size(max = 150) String displayName,
             @NotNull UserRole role,
-            @Size(min = 6, max = 100) String password,
+            @Size(min = 8, max = 100) String password,
             Boolean active,
             @Size(max = 30) String phone,
             @Size(max = 500) String skills
