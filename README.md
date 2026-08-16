@@ -17,7 +17,7 @@ ServiceOps là hệ thống quản lý yêu cầu dịch vụ, thiết bị khá
 ## Công nghệ
 
 ### Backend
-- Java 17, Spring Boot 3.5
+- Java 21, Spring Boot 3.5
 - Spring Security JWT, Spring Data JPA, PostgreSQL
 - Flyway, Bean Validation, Problem Details, Swagger/OpenAPI
 - JUnit 5, Mockito, Testcontainers-ready
@@ -65,7 +65,7 @@ Mở:
 | Kỹ thuật viên | `technician` | `123456` |
 | Kho | `warehouse` | `123456` |
 
-> Mật khẩu trên chỉ dành cho profile local và dữ liệu seed.
+> Mật khẩu trên chỉ dành cho profile local và dữ liệu seed. Public demo dùng `DEMO_PASSWORD` riêng và không dùng `123456`.
 
 ## Luồng demo chính
 
@@ -82,6 +82,8 @@ Mở:
 ## Tài liệu
 
 - [Kiến trúc](docs/ARCHITECTURE.md)
+- [Production/public demo deployment](docs/PRODUCTION_DEPLOYMENT.md)
+- [Senior hardening report](docs/SENIOR_HARDENING_REPORT.md)
 - [Quy trình nghiệp vụ](docs/BUSINESS_FLOW.md)
 - [Bảo mật](docs/SECURITY.md)
 - [Thiết kế dữ liệu](docs/DATABASE.md)
