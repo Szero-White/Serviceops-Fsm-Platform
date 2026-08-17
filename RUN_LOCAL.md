@@ -117,13 +117,9 @@ $env:POSTGRES_PORT="5433"
 
 ### Frontend không gọi được backend
 
-Kiểm tra `frontend/.env`:
+Mặc định frontend dùng `VITE_API_URL=/api/v1` và Vite proxy `/api` sang `http://localhost:8080`, nên không cần hard-code backend URL vào bundle local.
 
-```env
-VITE_API_URL=http://localhost:8080/api/v1
-```
-
-Khởi động lại `npm run dev` sau khi sửa `.env`.
+Nếu bạn chủ động đổi backend host/port, cập nhật proxy trong `frontend/vite.config.ts` hoặc đặt `VITE_API_URL` phù hợp rồi khởi động lại `npm run dev`.
 
 ### Backend báo sai JWT secret
 

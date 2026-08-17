@@ -1,52 +1,37 @@
 # Verification Results
 
-## Verified production-hardening baseline
+## Verified merged baseline — Pull Request #2 (2026-08-17)
 
-The production-hardening baseline merged through Pull Request #1 was validated on the developer workstation and GitHub CI:
+The enterprise-refinement/design-system baseline currently on `main` was validated before and during Pull Request #2:
 
 - Java 21 runtime: PASS.
-- Backend automated suite: 59 tests, 0 failures, 0 errors, 0 skipped.
+- Backend automated suite: **59 tests, 0 failures, 0 errors, 0 skipped**.
 - Testcontainers PostgreSQL 17 + Flyway migrations: PASS.
-- Frontend TypeScript/lint: PASS.
+- Frontend TypeScript/UI policy lint: PASS.
 - Frontend production build: PASS.
 - `npm audit`: 0 known vulnerabilities.
 - `npm audit --omit=dev`: 0 known vulnerabilities.
-- Production backend/frontend Docker image builds: PASS.
-- Production-like Compose runtime: PostgreSQL/backend/frontend healthy.
-- Manual production-like browser smoke test: PASS.
+- Production-like Compose build: PASS.
+- Production-like runtime: PostgreSQL/backend/frontend healthy.
+- Frontend HTTP smoke check through Nginx: `200`.
 - GitHub PR checks: backend, frontend and Docker build PASS.
 
-## Enterprise-refinement validation performed on 2026-08-17
+This section records the **merged baseline only**. Future changes must be validated again; prior PASS results are not proof for modified source.
 
-After the maintainability/login/work-order/type/invoice refactor was applied, the developer workstation reran the automated gates:
+## Release acceptance gate
 
-- `mvnw clean test`: **59 tests, 0 failures, 0 errors, 0 skipped — PASS**.
-- Testcontainers connected to Docker Desktop and executed the PostgreSQL integration suite — PASS.
-- `npm ci`: PASS.
-- `npm run lint`: PASS.
-- `npm run build`: PASS.
-- `npm audit`: 0 known vulnerabilities.
-- `npm audit --omit=dev`: 0 known vulnerabilities.
-
-The later typography/layout refinement also passed `npm run lint` and `npm run build` before the final product-UI coherence pass.
-
-## Current final product-UI coherence pass
-
-This uncommitted pass further standardizes semantic tags, table density, application navigation, dashboard hierarchy and public landing-page truthfulness. It does **not** intentionally change backend business behavior or API contracts.
-
-Because these frontend/documentation changes were produced after the verified runs above, they must be revalidated before merge. Do not copy prior PASS results forward as proof for changed source.
-
-## Required acceptance gate before merge
+Run these checks before merging a change that affects application behavior, deployment, dependencies or shared UI infrastructure:
 
 ```powershell
-cd frontend
+cd backend
+.\mvnw.cmd clean test
+
+cd ../frontend
+npm ci
 npm run lint
 npm run build
 npm audit
 npm audit --omit=dev
-
-cd ../backend
-.\mvnw.cmd clean test
 
 cd ..
 docker compose --env-file .env.production -f docker-compose.prod.yml config
@@ -55,4 +40,26 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 docker compose --env-file .env.production -f docker-compose.prod.yml ps
 ```
 
-Manual smoke coverage must include login/demo roles, dashboard, service requests, work orders, scheduling, inventory/parts, attachments/invoice, customers/assets, audit/users, role restrictions and demo destructive-action protection.
+The production-like smoke check must verify at minimum:
+
+- PostgreSQL, backend and frontend containers become healthy.
+- `http://localhost:8088/` returns HTTP `200`.
+- readiness is reachable through the frontend proxy.
+- a configured demo account can authenticate.
+
+Manual browser smoke coverage should include login/demo roles, dashboard, service requests, work orders, scheduling, inventory/parts, attachments/invoice, customers/assets, audit/users, role restrictions and demo destructive-action protection.
+
+Use `docker compose ... down` after validation. Do **not** add `-v` unless persistent test data is intentionally being destroyed.
+
+## CI policy
+
+GitHub Actions is the independent clean-environment gate. It must continue to validate:
+
+- backend tests/package;
+- frontend type/UI policy lint and production build;
+- production-like Docker Compose build/start;
+- backend readiness through Nginx;
+- frontend HTTP response;
+- demo authentication.
+
+If a CI gate fails, fix the cause rather than weakening or skipping the check.
