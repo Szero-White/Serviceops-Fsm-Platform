@@ -1,58 +1,51 @@
-/* Global button styling - professional and clean */
-.ant-btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
-  border: none !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3) !important;
-  transition: all 0.3s ease !important;
-}
-
-.ant-btn-primary:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
-  box-shadow: 0 6px 20px rgba(96, 165, 250, 0.4) !important;
-  transform: translateY(-2px) !important;
-}
-
-.ant-btn-default {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  color: #1e293b !important;
+/* Productive enterprise controls: compact, predictable, and high-contrast. */
+.ant-btn {
+  box-shadow: none !important;
+  font-size: var(--app-type-body) !important;
   font-weight: 500 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
-  transition: all 0.3s ease !important;
 }
 
+.ant-btn-primary {
+  background: var(--app-primary) !important;
+  border-color: var(--app-primary) !important;
+  color: #fff !important;
+}
+.ant-btn-primary:hover {
+  background: var(--app-primary-hover) !important;
+  border-color: var(--app-primary-hover) !important;
+}
+.ant-btn-primary:active {
+  background: var(--app-primary-active) !important;
+  border-color: var(--app-primary-active) !important;
+}
+.ant-btn-default {
+  background: #fff !important;
+  border-color: var(--app-border-strong) !important;
+  color: var(--app-text) !important;
+}
 .ant-btn-default:hover {
-  border-color: #3b82f6 !important;
-  color: #3b82f6 !important;
-  background: linear-gradient(135deg, #dbeafe 0%, #f5f3ff 100%) !important;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
-  transform: translateY(-2px) !important;
+  border-color: #a9bbc8 !important;
+  color: var(--app-primary-active) !important;
+  background: #f9fbfc !important;
 }
 
-/* Form controls use one visible input frame; nested Ant input nodes stay frameless. */
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-picker,
 .ant-select-selector {
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 10px !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
-  transition: all 0.3s ease !important;
+  border: 1px solid var(--app-border-strong) !important;
+  border-radius: var(--app-radius) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transition: border-color .16s ease, box-shadow .16s ease !important;
 }
 
 .ant-input:hover,
 .ant-input-affix-wrapper:hover,
 .ant-input-number:hover,
 .ant-picker:hover,
-.ant-select:hover .ant-select-selector {
-  border-color: #94a3b8 !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
-}
+.ant-select:hover .ant-select-selector { border-color: #aebdc8 !important; }
 
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
@@ -61,93 +54,62 @@
 .ant-input-number-focused,
 .ant-picker-focused,
 .ant-select-focused .ant-select-selector {
-  border-color: #3b82f6 !important;
-  background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%) !important;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(59, 130, 246, 0.1) !important;
+  border-color: var(--app-primary) !important;
+  box-shadow: 0 0 0 3px var(--app-focus) !important;
 }
 
 .ant-input,
 .ant-input-affix-wrapper {
-  padding: 9px 12px !important;
+  padding: 6px 9px !important;
+  font-size: var(--app-type-body) !important;
 }
 
 .ant-input-affix-wrapper {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: 8px !important;
 }
-
 .ant-input-affix-wrapper .ant-input {
   height: auto !important;
-  min-height: 24px !important;
+  min-height: 20px !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
 }
-
-.ant-input-affix-wrapper .ant-input:hover,
-.ant-input-affix-wrapper .ant-input:focus,
-.ant-input-affix-wrapper .ant-input-focused {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
 .ant-input-prefix,
-.ant-input-suffix {
-  color: #64748b !important;
-}
-
+.ant-input-suffix { color: var(--app-text-muted) !important; }
 .ant-input-clear-icon,
-.ant-input-password-icon {
-  color: #94a3b8 !important;
-}
-
-.ant-input-password-icon:hover {
-  color: #3b82f6 !important;
-}
-
+.ant-input-password-icon { color: #8b99a5 !important; }
+.ant-input-password-icon:hover { color: var(--app-primary) !important; }
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder,
 .ant-picker-input input::placeholder,
 .ant-select-selection-placeholder {
-  color: #94a3b8 !important;
+  color: #8c99a5 !important;
   opacity: 1 !important;
 }
-
 textarea.ant-input {
-  min-height: 104px;
-  padding: 12px !important;
+  min-height: 92px;
+  padding: 10px !important;
   resize: vertical;
 }
 
-/* Form label styling for elegant appearance */
 .ant-form-item-label > label {
-  color: #64748b !important;
-  font-size: 13px !important;
+  color: var(--app-text-secondary) !important;
+  font-size: var(--app-type-label) !important;
   font-weight: 500 !important;
-  letter-spacing: 0.02em !important;
-  margin-bottom: 8px !important;
 }
-
-.ant-form-item-label > label::before {
-  display: none !important;
-}
-
-.ant-form-item-required .ant-form-item-label > label::after {
-  content: '*' !important;
-  color: #ef4444 !important;
-  margin-left: 4px !important;
-}
-
-.ant-form-item {
-  margin-bottom: 24px !important;
-}
-
+.ant-form-item { margin-bottom: 14px !important; }
 .ant-form-item-explain-error {
-  font-size: 12px !important;
-  color: #ef4444 !important;
-  margin-top: 6px !important;
+  margin-top: 4px !important;
+  color: #ad5252 !important;
+  font-size: var(--app-type-meta) !important;
+}
+
+.ant-tag {
+  font-size: var(--app-type-meta);
+  font-weight: 500;
+  line-height: 18px;
 }
