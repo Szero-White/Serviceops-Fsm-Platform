@@ -1,23 +1,28 @@
-import { ArrowRightOutlined, StarFilled } from '@ant-design/icons'
-import { Avatar, Button, Col, Row, Typography } from 'antd'
+import { ArrowRightOutlined } from '@ant-design/icons'
+import { Button, Col, Row, Typography } from 'antd'
 import { Link } from 'react-router-dom'
 import {
   FEATURE_COLORS,
   FEATURES,
   HOW_IT_WORKS,
   INTEGRATIONS,
+  OPERATIONAL_SCENARIOS,
   STATS,
-  TESTIMONIALS,
 } from '../content/landingData'
-import { backgroundStyle, featureIconStyle, SectionHeader } from '../shared/landingShared'
+import { featureIconStyle, SectionHeader } from '../shared/landingShared'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 export function StatsSection() {
   return (
     <section className="lp-stats" id="stats" aria-labelledby="stats-heading">
-      <h2 id="stats-heading" className="lp-visually-hidden">Số liệu nổi bật</h2>
       <div className="lp-container">
+        <SectionHeader
+          tag="Năng lực nền tảng"
+          title="Đủ chiều sâu kỹ thuật để review như một sản phẩm thật"
+          sub="Các con số dưới đây phản ánh chính repository và acceptance gate hiện tại, không phải số liệu marketing giả lập."
+        />
+        <h2 id="stats-heading" className="lp-visually-hidden">Năng lực nền tảng</h2>
         <dl className="lp-stats-grid">
           {STATS.map((stat) => (
             <div key={stat.label} className="lp-stat-item">
@@ -38,11 +43,11 @@ export function FeaturesSection() {
       <div className="lp-container">
         <SectionHeader
           tag="Tính năng"
-          title="Mọi thứ cần thiết để vận hành dịch vụ hiện trường"
-          sub="Từ tiếp nhận đến nghiệm thu, ServiceOps thay thế spreadsheet, chat và email rời rạc bằng một quy trình thống nhất."
+          title="Một luồng vận hành thống nhất thay vì các màn CRUD rời rạc"
+          sub="ServiceOps liên kết tiếp nhận, tài sản, phiếu công việc, lịch kỹ thuật viên, phụ tùng, audit và phân quyền trong cùng một domain flow."
         />
 
-        <Row gutter={[24, 24]}>
+        <Row gutter={[20, 20]}>
           {FEATURES.map((feature) => {
             const colors = FEATURE_COLORS[feature.colorKey]
             return (
@@ -69,8 +74,8 @@ export function HowItWorksSection() {
       <div className="lp-container">
         <SectionHeader
           tag="Quy trình"
-          title="Hoạt động như thế nào?"
-          sub="4 bước đơn giản từ lúc tiếp nhận đến khi hoàn thành, minh bạch và truy vết được."
+          title="Từ yêu cầu khách hàng đến đóng phiếu có truy vết"
+          sub="Mỗi bước có chủ thể rõ ràng, trạng thái rõ ràng và dữ liệu liên quan để tiếp tục mở rộng mà không phá vỡ luồng nghiệp vụ."
         />
 
         <ol className="lp-how-steps" aria-label="Các bước thực hiện">
@@ -89,36 +94,26 @@ export function HowItWorksSection() {
   )
 }
 
-export function TestimonialsSection() {
+export function OperationalScenariosSection() {
   return (
-    <section className="lp-testimonials" id="testimonials" aria-labelledby="testi-heading">
+    <section className="lp-testimonials" id="scenarios" aria-labelledby="scenarios-heading">
       <div className="lp-container">
-        <SectionHeader tag="Khách hàng nói gì" title="Kết quả thực tế, không phải lời hứa" />
+        <SectionHeader
+          tag="Kịch bản sử dụng"
+          title="Mỗi vai trò nhìn thấy đúng phần việc của mình"
+          sub="Thay vì dùng testimonial hoặc số liệu khách hàng chưa được kiểm chứng, landing page mô tả trực tiếp các kịch bản có thể chạy trong demo."
+        />
+        <h2 id="scenarios-heading" className="lp-visually-hidden">Kịch bản sử dụng</h2>
 
-        <Row gutter={[24, 24]}>
-          {TESTIMONIALS.map((testimonial) => (
-            <Col key={testimonial.name} xs={24} md={8}>
-              <figure className="lp-testi-card">
-                <div className="lp-testi-stars" aria-label={`${testimonial.rating} sao`}>
-                  {Array.from({ length: testimonial.rating }).map((_, index) => (
-                    <StarFilled key={index} className="lp-star" aria-hidden="true" />
-                  ))}
-                </div>
-                <blockquote className="lp-testi-quote">
-                  <Paragraph className="lp-testi-text">"{testimonial.text}"</Paragraph>
-                </blockquote>
-                <figcaption className="lp-testi-author">
-                  <Avatar size={44} className="lp-testi-avatar" style={backgroundStyle(testimonial.avatarColor)}>
-                    {testimonial.avatar}
-                  </Avatar>
-                  <div>
-                    <Text strong className="lp-testi-name">{testimonial.name}</Text>
-                    <Text className="lp-testi-role">
-                      {testimonial.role} . {testimonial.company}
-                    </Text>
-                  </div>
-                </figcaption>
-              </figure>
+        <Row gutter={[20, 20]}>
+          {OPERATIONAL_SCENARIOS.map((scenario) => (
+            <Col key={scenario.title} xs={24} md={8}>
+              <article className="lp-testi-card">
+                <div className="lp-scenario-icon" aria-hidden="true">{scenario.icon}</div>
+                <Text className="lp-scenario-audience">{scenario.audience}</Text>
+                <Title level={5} className="lp-testi-name">{scenario.title}</Title>
+                <Text className="lp-testi-text">{scenario.text}</Text>
+              </article>
             </Col>
           ))}
         </Row>
@@ -134,14 +129,14 @@ export function IntegrationsSection() {
         <div className="lp-integrations-grid">
           <div className="lp-integrations-copy">
             <SectionHeader
-              tag="Tích hợp"
-              title="Kết nối hệ thống hiện có của bạn"
-              sub="API mở giúp ServiceOps kết nối ERP, CRM và công cụ kế toán khi sản phẩm cần mở rộng."
+              tag="Nền tảng kỹ thuật"
+              title="Tích hợp những gì repository thực sự đang có"
+              sub="REST API, PostgreSQL, Docker/Nginx và observability được trình bày đúng phạm vi hiện tại; connector bên thứ ba chỉ nên thêm khi có use case thật."
               align="left"
             />
             <Link to="/login">
               <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-                Xem tài liệu API
+                Vào ứng dụng demo
               </Button>
             </Link>
           </div>

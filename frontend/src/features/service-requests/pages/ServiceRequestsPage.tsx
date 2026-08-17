@@ -1,6 +1,6 @@
-import { BulbOutlined, DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
+import { BulbOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tooltip, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { aiApi } from '../../ai/api'
@@ -9,6 +9,7 @@ import { customersApi } from '../../customers/api'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { serviceRequestsApi } from '../api'
 import { PageHeader } from '../../../components/PageHeader'
+import { MetaBadge } from '../../../components/PresentationBadge'
 import { ChannelTag, PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
@@ -163,11 +164,11 @@ export function ServiceRequestsPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Intake queue"
+        eyebrow="Tiếp nhận dịch vụ"
         title="Yêu cầu dịch vụ"
         description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành phiếu công việc khi đủ thông tin."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
-        meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} yêu cầu</Tag><Tag color="orange">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</Tag></Space>}
+        meta={<><MetaBadge>{data?.totalElements ?? 0} yêu cầu</MetaBadge><MetaBadge tone="warning">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
@@ -180,13 +181,13 @@ export function ServiceRequestsPage() {
         loading={isLoading}
         dataSource={data?.content ?? []}
         className="content-table"
-        scroll={{ x: 1260 }}
+        scroll={{ x: 1180 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         locale={{ emptyText: <Empty description="Chưa có yêu cầu phù hợp" /> }}
         columns={[
           {
             title: 'Yêu cầu',
-            width: 340,
+            width: 280,
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.title}</Typography.Text>
@@ -194,24 +195,23 @@ export function ServiceRequestsPage() {
               </div>
             ),
           },
-          { title: 'Khách hàng', dataIndex: 'customerName', width: 210, ellipsis: true },
-          { title: 'Thiết bị', dataIndex: 'assetLabel', width: 220, ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Ưu tiên', dataIndex: 'priority', width: 120, render: (value) => <PriorityTag priority={value} /> },
+          { title: 'Khách hàng', dataIndex: 'customerName', width: 175, ellipsis: true },
+          { title: 'Thiết bị', dataIndex: 'assetLabel', width: 180, ellipsis: true, render: (value) => value || EMPTY_VALUE },
+          { title: 'Ưu tiên', dataIndex: 'priority', width: 100, render: (value) => <PriorityTag priority={value} /> },
           {
             title: 'Kênh',
             dataIndex: 'channel',
-            width: 130,
+            width: 120,
             render: (value) => {
               const channel = channelMap.get(value)
               return <ChannelTag channel={value} label={channel?.name} color={channel?.color} />
             },
           },
-          { title: 'Trạng thái', dataIndex: 'status', width: 140, render: (value) => <StatusTag status={value} /> },
-          { title: 'Tiếp nhận', dataIndex: 'createdAt', width: 170, render: formatDateTime },
+          { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (value) => <StatusTag status={value} /> },
+          { title: 'Tiếp nhận', dataIndex: 'createdAt', width: 150, render: formatDateTime },
           {
             title: 'Thao tác',
-            fixed: 'right',
-            width: 220,
+            width: 128,
             render: (_, record) => {
               const isOpen = record.status === 'OPEN'
               const isConverted = record.status === 'CONVERTED'
@@ -223,9 +223,11 @@ export function ServiceRequestsPage() {
 
                   {isOpen && (
                     <>
-                      <Button type="link" icon={<SwapOutlined />} loading={convert.isPending} onClick={() => convert.mutate(record.id)}>Tạo phiếu</Button>
+                      <Tooltip title="Tạo phiếu công việc">
+                        <Button aria-label="Tạo phiếu công việc" type="text" icon={<SwapOutlined />} loading={convert.isPending} onClick={() => convert.mutate(record.id)} />
+                      </Tooltip>
                       <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
-                        <Button type="link" danger>Huỷ</Button>
+                        <Tooltip title="Huỷ yêu cầu"><Button aria-label="Huỷ yêu cầu" type="text" danger icon={<CloseCircleOutlined />} /></Tooltip>
                       </Popconfirm>
                     </>
                   )}
@@ -268,9 +270,7 @@ export function ServiceRequestsPage() {
             <div>
               <Space size={8} wrap>
                 <Typography.Text strong>AI tiếp nhận</Typography.Text>
-                <Tag color={lastAiDraft?.provider === 'gemini' ? 'geekblue' : 'blue'}>
-                  {lastAiDraft?.provider === 'gemini' ? 'Gemini' : 'Sẵn sàng'}
-                </Tag>
+                <MetaBadge tone="info">{lastAiDraft?.provider === 'gemini' ? 'Gemini' : 'Sẵn sàng'}</MetaBadge>
               </Space>
               <Typography.Text type="secondary">{aiAssistDescription}</Typography.Text>
               {lastAiDraft && (

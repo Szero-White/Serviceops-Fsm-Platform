@@ -8,9 +8,9 @@ import {
   HowItWorksSection,
   IntegrationsSection,
   StatsSection,
-  TestimonialsSection,
+  OperationalScenariosSection,
 } from './sections/MarketingSections'
-import { PricingSection } from './sections/PricingSection'
+import { DeploymentSection } from './sections/DeploymentSection'
 
 export function LandingPage() {
   return (
@@ -22,8 +22,8 @@ export function LandingPage() {
         <StatsSection />
         <FeaturesSection />
         <HowItWorksSection />
-        <TestimonialsSection />
-        <PricingSection />
+        <OperationalScenariosSection />
+        <DeploymentSection />
         <IntegrationsSection />
         <CtaBanner />
       </main>

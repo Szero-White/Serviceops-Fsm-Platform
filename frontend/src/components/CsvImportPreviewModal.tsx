@@ -1,4 +1,5 @@
-import { Alert, Modal, Space, Table, Tag } from 'antd'
+import { Alert, Modal, Space, Table } from 'antd'
+import { MetaBadge } from './PresentationBadge'
 import type { ColumnsType } from 'antd/es/table'
 
 export interface CsvImportRow {
@@ -68,7 +69,7 @@ export function CsvImportPreviewModal<T extends CsvImportRow>({
                 title: 'Kết quả',
                 dataIndex: 'valid',
                 width: 130,
-                render: (valid: boolean) => <Tag color={valid ? 'green' : 'red'}>{valid ? 'Hợp lệ' : 'Lỗi'}</Tag>,
+                render: (valid: boolean) => <MetaBadge tone={valid ? 'success' : 'danger'}>{valid ? 'Hợp lệ' : 'Lỗi'}</MetaBadge>,
               },
               { title: 'Ghi chú', dataIndex: 'message', ellipsis: true },
             ]}

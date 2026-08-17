@@ -1,13 +1,14 @@
 import { DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography, Upload } from 'antd'
+import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Space, Table, Typography, Upload } from 'antd'
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { inventoryApi } from '../../inventory/api'
 import { useAuth } from '../../auth/AuthContext'
 import { PageHeader } from '../../../components/PageHeader'
+import { MetaBadge } from '../../../components/PresentationBadge'
 import type { SparePart, SparePartImportResult, SparePartImportRowResult } from '../../../types'
-import { formatCurrency, formatDateTime, formatNumber } from '../../../utils/format'
+import { formatCompactDecimalInput, formatCurrency, formatDateTime, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
 
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob)
@@ -157,11 +158,11 @@ export function InventoryPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Inventory control"
+        eyebrow="Quản lý tồn kho"
         title="Kho phụ tùng"
         description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
         actions={inventoryActions}
-        meta={<Space size={[8, 8]} wrap><Tag color="blue">{data?.totalElements ?? 0} SKU</Tag><Tag color="red">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</Tag></Space>}
+        meta={<><MetaBadge>{data?.totalElements ?? 0} SKU</MetaBadge><MetaBadge tone="danger">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</MetaBadge></>}
       />
 
       <div className="table-toolbar">
@@ -193,18 +194,17 @@ export function InventoryPage() {
             width: 180,
             render: (_, record) => (
               <Space size={8} wrap>
-                <strong>{formatNumber(record.stockQuantity)}</strong>
+                <strong>{formatQuantity(record.stockQuantity)}</strong>
                 <span>{record.unit}</span>
-                {record.lowStock && <Tag color="red">Sắp hết</Tag>}
+                {record.lowStock && <MetaBadge tone="danger">Sắp hết</MetaBadge>}
               </Space>
             ),
           },
-          { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
+          { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 150, render: (value, record) => formatQuantityWithUnit(value, record.unit) },
           { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, render: formatCurrency },
           { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
           ...(canManageStock ? [{
             title: '',
-            fixed: 'right' as const,
             width: 120,
             render: (_: unknown, record: SparePart) => (
               <Button icon={<InboxOutlined />} onClick={() => { setImporting(record); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}>
@@ -221,8 +221,8 @@ export function InventoryPage() {
             <Form.Item label="SKU" name="sku" rules={[{ required: true, message: 'Nhập SKU' }]}><Input /></Form.Item>
             <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true, message: 'Nhập tên phụ tùng' }]}><Input /></Form.Item>
             <Form.Item label="Đơn vị" name="unit" rules={[{ required: true, message: 'Nhập đơn vị' }]}><Input /></Form.Item>
-            <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item label="Mức đặt hàng lại" name="reorderLevel" rules={[{ required: true, message: 'Nhập mức đặt hàng' }]}><InputNumber min={0} precision={3} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Mức đặt hàng lại" name="reorderLevel" rules={[{ required: true, message: 'Nhập mức đặt hàng' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
             <Form.Item label="Đơn giá" name="unitPrice" rules={[{ required: true, message: 'Nhập đơn giá' }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} addonAfter="VND" /></Form.Item>
           </div>
         </Form>
@@ -230,7 +230,7 @@ export function InventoryPage() {
 
       <Modal title={`Nhập kho · ${importing?.sku ?? ''}`} open={Boolean(importing)} onCancel={() => setImporting(undefined)} onOk={() => importForm.submit()} confirmLoading={importStock.isPending} destroyOnHidden>
         <Form form={importForm} layout="vertical" onFinish={(values) => importStock.mutate(values)} requiredMark={false}>
-          <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
+          <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
           <Form.Item label="Ghi chú" name="note" rules={[{ required: true, message: 'Nhập ghi chú' }]}><Input /></Form.Item>
         </Form>
       </Modal>
@@ -267,7 +267,7 @@ export function InventoryPage() {
                   title: 'Kết quả',
                   dataIndex: 'valid',
                   width: 130,
-                  render: (valid: boolean) => <Tag color={valid ? 'green' : 'red'}>{valid ? 'Hợp lệ' : 'Lỗi'}</Tag>,
+                  render: (valid: boolean) => <MetaBadge tone={valid ? 'success' : 'danger'}>{valid ? 'Hợp lệ' : 'Lỗi'}</MetaBadge>,
                 },
                 { title: 'Ghi chú', dataIndex: 'message', ellipsis: true },
               ]}

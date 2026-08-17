@@ -1,5 +1,5 @@
 import { MenuOutlined, RocketOutlined } from '@ant-design/icons'
-import { Button, Divider, Drawer, Space, Tag } from 'antd'
+import { Button, Divider, Drawer, Space } from 'antd'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { NAV_LINKS } from '../content/landingData'
@@ -15,7 +15,7 @@ export function LandingNavbar() {
         <div className="lp-nav-inner">
           <Link to="/landing" className="lp-nav-brand" aria-label="ServiceOps home">
             <BrandLockup />
-            <Tag color="blue" className="lp-brand-tag">FSM</Tag>
+            <span className="lp-brand-tag">FSM</span>
           </Link>
 
           <div className="lp-nav-links" role="list">

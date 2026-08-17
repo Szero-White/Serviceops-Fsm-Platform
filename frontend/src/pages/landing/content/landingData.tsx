@@ -10,29 +10,23 @@ import {
   SafetyCertificateOutlined,
   TeamOutlined,
   ThunderboltOutlined,
-  TrophyOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
 
-export type FeatureColor = 'blue' | 'purple' | 'green' | 'orange' | 'cyan' | 'red'
+export type FeatureColor = 'primary' | 'accent' | 'neutral'
 
 export type NavLink = { label: string; href: string }
 export type Stat = { value: string; label: string; icon: ReactNode }
 export type Feature = { icon: ReactNode; colorKey: FeatureColor; title: string; desc: string }
 export type Step = { step: string; title: string; desc: string }
-export type Testimonial = {
-  name: string
-  role: string
-  company: string
-  avatar: string
-  avatarColor: string
-  rating: number
+export type OperationalScenario = {
+  title: string
+  audience: string
+  icon: ReactNode
   text: string
 }
-export type PricingTier = {
+export type DeploymentOption = {
   name: string
-  price: string
-  unit: string
   badge: string | null
   desc: string
   features: string[]
@@ -47,63 +41,60 @@ export type FooterLink = { label: string; href: string }
 export const NAV_LINKS: NavLink[] = [
   { label: 'Tính năng', href: '#features' },
   { label: 'Quy trình', href: '#how' },
-  { label: 'Khách hàng', href: '#testimonials' },
-  { label: 'Bảng giá', href: '#pricing' },
+  { label: 'Kịch bản', href: '#scenarios' },
+  { label: 'Triển khai', href: '#deployment' },
 ]
 
 export const STATS: Stat[] = [
-  { value: '500+', label: 'Doanh nghiệp tin dùng', icon: <TrophyOutlined /> },
-  { value: '98%', label: 'Tỉ lệ hoàn thành đúng hẹn', icon: <CalendarOutlined /> },
-  { value: '3.2x', label: 'Tăng năng suất kỹ thuật viên', icon: <ThunderboltOutlined /> },
-  { value: '<2h', label: 'Thời gian onboarding', icon: <RocketOutlined /> },
+  { value: '5', label: 'Vai trò nghiệp vụ có phân quyền', icon: <TeamOutlined /> },
+  { value: '59', label: 'Bài kiểm thử tự động ở acceptance gate', icon: <SafetyCertificateOutlined /> },
+  { value: '3', label: 'Dịch vụ trong production Docker stack', icon: <RocketOutlined /> },
+  { value: '1', label: 'Luồng dịch vụ end-to-end được truy vết', icon: <AuditOutlined /> },
 ]
 
 export const FEATURES: Feature[] = [
   {
     icon: <CustomerServiceOutlined />,
-    colorKey: 'blue',
+    colorKey: 'primary',
     title: 'Quản lý yêu cầu dịch vụ',
     desc: 'Tiếp nhận, phân loại và điều phối mọi yêu cầu khách hàng trên một giao diện thống nhất.',
   },
   {
     icon: <CalendarOutlined />,
-    colorKey: 'purple',
-    title: 'Lịch và Work Order thông minh',
-    desc: 'Lập lịch kỹ thuật viên theo kỹ năng, vị trí và khả năng. Giao việc và theo dõi tiến độ rõ ràng.',
+    colorKey: 'accent',
+    title: 'Điều phối và lịch công việc',
+    desc: 'Phân công kỹ thuật viên, đặt khung giờ và chặn lịch chồng lấn để điều phối công việc rõ ràng.',
   },
   {
     icon: <AppstoreOutlined />,
-    colorKey: 'green',
+    colorKey: 'neutral',
     title: 'Hồ sơ thiết bị toàn diện',
-    desc: 'Lịch sử bảo trì, bảo hành, nhật ký sửa chữa và vị trí lắp đặt trong một nơi để tra cứu nhanh.',
+    desc: 'Theo dõi serial, loại thiết bị, bảo hành, ngày lắp đặt và liên kết thiết bị với lịch sử yêu cầu dịch vụ.',
   },
   {
     icon: <DatabaseOutlined />,
-    colorKey: 'orange',
-    title: 'Kho phụ tùng thông minh',
-    desc: 'Quản lý tồn kho, cảnh báo ngưỡng tối thiểu và gắn giao dịch phụ tùng trực tiếp với phiếu công việc.',
+    colorKey: 'neutral',
+    title: 'Kho phụ tùng có truy vết',
+    desc: 'Quản lý tồn hiện tại, ngưỡng đặt hàng và ledger nhập/xuất gắn trực tiếp với nghiệp vụ phiếu công việc.',
   },
   {
     icon: <BarChartOutlined />,
-    colorKey: 'cyan',
-    title: 'Báo cáo và phân tích',
-    desc: 'Dashboard KPI: tỉ lệ hoàn thành, thời gian phản hồi và hiệu suất từng kỹ thuật viên.',
+    colorKey: 'neutral',
+    title: 'Tổng quan vận hành',
+    desc: 'Dashboard tổng hợp yêu cầu mở, tiến độ phiếu, rủi ro phụ tùng, tỷ lệ hoàn tất và dữ liệu vận hành gần đây.',
   },
   {
     icon: <SafetyCertificateOutlined />,
-    colorKey: 'red',
+    colorKey: 'neutral',
     title: 'Phân quyền và bảo mật',
     desc: 'JWT authentication, role-based access, multi-tenant isolation và audit log cho thao tác quan trọng.',
   },
 ]
 
 export const FEATURE_COLORS: Record<FeatureColor, { bg: string; fg: string }> = {
-  blue: { bg: '#eff6ff', fg: '#2563eb' },
-  purple: { bg: '#f5f3ff', fg: '#7c3aed' },
-  green: { bg: '#ecfdf5', fg: '#059669' },
-  orange: { bg: '#fff7ed', fg: '#d97706' },
-  cyan: { bg: '#ecfeff', fg: '#0891b2' },
-  red: { bg: '#fef2f2', fg: '#dc2626' },
+  primary: { bg: '#eef4f8', fg: '#3f6f93' },
+  accent: { bg: '#eef6f4', fg: '#4f7f7b' },
+  neutral: { bg: '#f3f6f8', fg: '#596b78' },
 }
 
 export const HOW_IT_WORKS: Step[] = [
@@ -113,95 +104,80 @@ export const HOW_IT_WORKS: Step[] = [
   { step: '04', title: 'Hoàn thành và báo cáo', desc: 'Đóng việc, cập nhật kho, ghi audit log và tổng hợp KPI lên dashboard.' },
 ]
 
-export const TESTIMONIALS: Testimonial[] = [
+export const OPERATIONAL_SCENARIOS: OperationalScenario[] = [
   {
-    name: 'Nguyễn Văn Minh',
-    role: 'Giám đốc vận hành',
-    company: 'TechCool HVAC',
-    avatar: 'M',
-    avatarColor: '#2563eb',
-    rating: 5,
-    text: 'ServiceOps giúp đội ngũ phân công công việc nhanh hơn, dữ liệu thiết bị rõ ràng và giảm sai sót điều phối.',
+    title: 'Điều phối công việc trong ngày',
+    audience: 'Dispatcher',
+    icon: <CalendarOutlined />,
+    text: 'Theo dõi yêu cầu chưa xử lý, phân công kỹ thuật viên, kiểm tra xung đột lịch và chuyển trạng thái phiếu trên cùng một luồng.',
   },
   {
-    name: 'Trần Thị Lan',
-    role: 'CEO',
-    company: 'Lan Anh Elevator',
-    avatar: 'L',
-    avatarColor: '#7c3aed',
-    rating: 5,
-    text: 'Tỉ lệ hoàn thành đúng hẹn tăng rõ rệt sau khi đội ngũ chuyển từ spreadsheet sang quy trình tập trung.',
+    title: 'Thực hiện dịch vụ tại hiện trường',
+    audience: 'Technician',
+    icon: <ThunderboltOutlined />,
+    text: 'Xem phiếu được giao, cập nhật tiến độ, ghi nhận phụ tùng đã dùng và hoàn tất công việc với lịch sử trạng thái được lưu lại.',
   },
   {
-    name: 'Lê Thanh Phong',
-    role: 'Trưởng phòng kỹ thuật',
-    company: 'Phong Phú Engineering',
-    avatar: 'P',
-    avatarColor: '#059669',
-    rating: 5,
-    text: 'Quản lý 40 kỹ thuật viên và hàng trăm thiết bị dễ hơn nhiều, kho phụ tùng cũng có cảnh báo kịp thời.',
+    title: 'Kiểm soát tồn kho và truy vết',
+    audience: 'Warehouse / Owner',
+    icon: <DatabaseOutlined />,
+    text: 'Theo dõi tồn hiện tại, ledger giao dịch, ngưỡng đặt hàng, audit log và các thay đổi quan trọng theo tenant.',
   },
 ]
 
-export const PRICING: PricingTier[] = [
+export const DEPLOYMENT_OPTIONS: DeploymentOption[] = [
   {
-    name: 'Starter',
-    price: '1.990.000',
-    unit: '/tháng',
+    name: 'Evaluation',
     badge: null,
     highlight: false,
-    desc: 'Cho doanh nghiệp mới bắt đầu số hóa vận hành dịch vụ',
-    features: ['Tối đa 10 kỹ thuật viên', 'Khách hàng và thiết bị', 'Phiếu công việc và lịch làm việc', 'Kho phụ tùng cơ bản', 'Báo cáo tháng', 'Hỗ trợ qua email'],
-    cta: 'Dùng thử miễn phí 14 ngày',
+    desc: 'Dành cho reviewer hoặc đội kỹ thuật muốn chạy nhanh toàn bộ luồng nghiệp vụ.',
+    features: ['Java 21 + Spring Boot', 'React + TypeScript', 'PostgreSQL local hoặc Testcontainers', 'Demo accounts theo 5 vai trò'],
+    cta: 'Mở bản demo',
   },
   {
-    name: 'Professional',
-    price: '4.490.000',
-    unit: '/tháng',
-    badge: 'Phổ biến nhất',
+    name: 'Production-like',
+    badge: 'Sẵn sàng kiểm thử',
     highlight: true,
-    desc: 'Cho đội ngũ tăng trưởng cần báo cáo sâu và phân quyền rõ ràng',
-    features: ['Tối đa 50 kỹ thuật viên', 'Tất cả tính năng Starter', 'Dashboard và KPI nâng cao', 'Audit log đầy đủ', 'Multi-tenant isolation', 'Priority support 8/5'],
-    cta: 'Bắt đầu ngay',
+    desc: 'Mô hình single-node rõ ràng để kiểm thử deployment, backup và health checks trước khi public demo.',
+    features: ['Nginx phục vụ frontend', 'Spring Boot backend container', 'PostgreSQL 17 private network', 'Health checks + backup/restore + CI'],
+    cta: 'Xem luồng vận hành',
   },
   {
-    name: 'Enterprise',
-    price: 'Liên hệ',
-    unit: '',
-    badge: null,
+    name: 'Product rollout',
+    badge: 'Mở rộng theo nhu cầu',
     highlight: false,
-    desc: 'Giải pháp tùy chỉnh cho doanh nghiệp lớn và quy trình đặc thù',
-    features: ['Không giới hạn kỹ thuật viên', 'Tất cả tính năng Professional', 'Tích hợp ERP / CRM', 'Custom workflow và SLA', 'Triển khai on-premise', 'Dedicated account manager'],
-    cta: 'Đặt lịch tư vấn',
+    desc: 'Các hạng mục productization được ưu tiên theo nhu cầu vận hành thật, không thêm công nghệ chỉ để làm đẹp CV.',
+    features: ['Dispatch schedule board', 'SLA / promised service windows', 'Preventive maintenance agreements', 'Object storage / SSO khi có yêu cầu triển khai'],
+    cta: 'Xem định hướng',
   },
 ]
 
 export const INTEGRATIONS: Integration[] = [
-  { icon: <GlobalOutlined />, name: 'REST API', desc: 'Webhook và API mở' },
-  { icon: <TeamOutlined />, name: 'CRM', desc: 'Salesforce, HubSpot' },
-  { icon: <DatabaseOutlined />, name: 'ERP', desc: 'SAP, Oracle, MISA' },
-  { icon: <AuditOutlined />, name: 'Kế toán', desc: 'Xero, QuickBooks' },
+  { icon: <GlobalOutlined />, name: 'REST API', desc: 'HTTP/JSON cho frontend và tích hợp nội bộ' },
+  { icon: <DatabaseOutlined />, name: 'PostgreSQL', desc: 'Flyway migrations và Testcontainers' },
+  { icon: <RocketOutlined />, name: 'Docker + Nginx', desc: 'Production-like Compose và health checks' },
+  { icon: <BarChartOutlined />, name: 'Observability', desc: 'Actuator health, metrics và Prometheus endpoint' },
 ]
 
-export const TRUST_LOGOS = [
-  'TechCool HVAC',
-  'Lan Anh Elevator',
-  'Phong Phú Engineering',
-  'Nam Tiến Services',
-  'Minh Quang Electric',
-  'Delta Facilities',
+export const CAPABILITY_LABELS = [
+  'Tiếp nhận yêu cầu',
+  'Thiết bị khách hàng',
+  'Phiếu công việc',
+  'Lịch kỹ thuật viên',
+  'Kho phụ tùng',
+  'Audit & báo cáo',
 ]
 
 export const MOCK_METRICS: MockMetric[] = [
-  { label: 'Work Orders', value: '24', bg: '#eff6ff', icon: 'WO' },
-  { label: 'Đang xử lý', value: '8', bg: '#ecfdf5', icon: 'IP' },
-  { label: 'Hoàn thành', value: '14', bg: '#f0fdf4', icon: 'OK' },
-  { label: 'Phụ tùng', value: '312', bg: '#fef9c3', icon: 'SP' },
+  { label: 'Phiếu', value: '24', bg: '#eef4f8', icon: 'WO' },
+  { label: 'Đang xử lý', value: '8', bg: '#f3f6f8', icon: 'IP' },
+  { label: 'Hoàn thành', value: '14', bg: '#eef6f4', icon: 'OK' },
+  { label: 'Phụ tùng', value: '312', bg: '#faf6ee', icon: 'SP' },
 ]
 
 export const MOCK_ROWS: MockRow[] = [
-  { id: 'WO-0041', client: 'Minh Quang Electric', status: 'Đang xử lý', statusBg: '#fef3c7' },
-  { id: 'WO-0040', client: 'TechCool HVAC', status: 'Hoàn thành', statusBg: '#dcfce7' },
+  { id: 'WO-0041', client: 'Minh Quang Electric', status: 'Đang xử lý', statusBg: '#faf6ee' },
+  { id: 'WO-0040', client: 'TechCool HVAC', status: 'Hoàn thành', statusBg: '#eef6f4' },
   { id: 'WO-0039', client: 'Lan Anh Elevator', status: 'Chờ phân công', statusBg: '#f1f5f9' },
 ]
 
@@ -210,17 +186,16 @@ export const MOCK_NAV_ITEMS = ['Tổng quan', 'Work Orders', 'Kỹ thuật viên
 export const FOOTER_LINKS: Record<string, FooterLink[]> = {
   'Sản phẩm': [
     { label: 'Tính năng', href: '#features' },
-    { label: 'Bảng giá', href: '#pricing' },
-    { label: 'Kết quả', href: '#stats' },
+    { label: 'Quy trình', href: '#how' },
+    { label: 'Triển khai', href: '#deployment' },
   ],
-  'Doanh nghiệp': [
-    { label: 'Khách hàng', href: '#testimonials' },
+  'Kỹ thuật': [
+    { label: 'Năng lực nền tảng', href: '#stats' },
     { label: 'Tích hợp', href: '#integrations' },
-    { label: 'Đăng nhập', href: '/login' },
+    { label: 'Đăng nhập demo', href: '/login' },
   ],
-  'Liên hệ': [
-    { label: 'hello@serviceops.vn', href: 'mailto:hello@serviceops.vn' },
-    { label: '0909 000 000', href: 'tel:+84909000000' },
-    { label: 'TP. Hồ Chí Minh', href: '#' },
+  'Repository': [
+    { label: 'GitHub', href: 'https://github.com/Szero-White/Serviceops-Fsm-Platform' },
+    { label: 'Kiến trúc & tài liệu', href: 'https://github.com/Szero-White/Serviceops-Fsm-Platform/tree/main/docs' },
   ],
 }

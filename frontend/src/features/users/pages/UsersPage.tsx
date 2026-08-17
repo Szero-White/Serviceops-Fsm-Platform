@@ -1,12 +1,13 @@
 import { DeleteOutlined, EditOutlined, KeyOutlined, PlusOutlined, SearchOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Typography } from 'antd'
+import { Alert, App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { usersApi } from '../api'
 import { useAuth } from '../../auth/AuthContext'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { BinaryStatusTag, MetaBadge, RoleTag } from '../../../components/PresentationBadge'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 
@@ -24,14 +25,6 @@ const roleDescriptions: Record<UserRole, string> = {
   CUSTOMER_SERVICE: 'Tiếp nhận yêu cầu, quản lý khách hàng và thiết bị.',
   TECHNICIAN: 'Xem việc được giao, cập nhật tiến độ, ghi nhận vật tư và bằng chứng.',
   WAREHOUSE_STAFF: 'Quản lý phụ tùng, nhập kho và theo dõi tồn.',
-}
-
-const roleColors: Record<UserRole, string> = {
-  OWNER: 'gold',
-  DISPATCHER: 'blue',
-  CUSTOMER_SERVICE: 'cyan',
-  TECHNICIAN: 'green',
-  WAREHOUSE_STAFF: 'purple',
 }
 
 const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({
@@ -128,17 +121,17 @@ export function UsersPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Access control"
+        eyebrow="Quản trị truy cập"
         title="Người dùng & phân quyền"
         description="OWNER tạo tài khoản cho nhân sự, phân vai trò theo trách nhiệm và kiểm soát trạng thái truy cập."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm người dùng</Button>}
-        meta={<Tag color="blue">{data.length} tài khoản</Tag>}
+        meta={<MetaBadge>{data.length} tài khoản</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
-        <MetricCard label="Đang hoạt động" value={activeCount} helper="Có thể đăng nhập hệ thống" icon={<TeamOutlined />} tone="green" />
-        <MetricCard label="Chủ sở hữu" value={ownerCount} helper="Tài khoản quản trị cao nhất" icon={<UserSwitchOutlined />} tone="blue" />
-        <MetricCard label="Kỹ thuật viên" value={technicianCount} helper="Đồng bộ hồ sơ phân công" icon={<KeyOutlined />} tone="purple" />
+        <MetricCard label="Đang hoạt động" value={activeCount} helper="Có thể đăng nhập hệ thống" icon={<TeamOutlined />} tone="success" />
+        <MetricCard label="Chủ sở hữu" value={ownerCount} helper="Tài khoản quản trị cao nhất" icon={<UserSwitchOutlined />} tone="primary" />
+        <MetricCard label="Kỹ thuật viên" value={technicianCount} helper="Đồng bộ hồ sơ phân công" icon={<KeyOutlined />} tone="primary" />
       </div>
 
       <div className="table-toolbar">
@@ -174,14 +167,13 @@ export function UsersPage() {
               </div>
             ),
           },
-          { title: 'Vai trò', dataIndex: 'role', width: 160, render: (role: UserRole) => <Tag color={roleColors[role]}>{roleLabels[role]}</Tag> },
+          { title: 'Vai trò', dataIndex: 'role', width: 160, render: (role: UserRole) => <RoleTag role={role} /> },
           { title: 'Phạm vi trách nhiệm', dataIndex: 'role', ellipsis: true, render: (role: UserRole) => roleDescriptions[role] },
-          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (active: boolean) => <Tag color={active ? 'green' : 'default'}>{active ? 'Hoạt động' : 'Tạm ngưng'}</Tag> },
+          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (active: boolean) => <BinaryStatusTag active={active} /> },
           { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
           {
             title: '',
             width: 92,
-            fixed: 'right',
             render: (_, record) => {
               const isSelf = currentUser?.id === record.id
               return (

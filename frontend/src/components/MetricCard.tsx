@@ -5,13 +5,13 @@ export function MetricCard({
   value,
   helper,
   icon,
-  tone = 'blue',
+  tone = 'primary',
 }: {
   label: string
   value: number | string
   helper?: string
   icon: ReactNode
-  tone?: 'blue' | 'green' | 'orange' | 'purple' | 'red'
+  tone?: 'primary' | 'success' | 'warning' | 'danger' | 'neutral'
 }) {
   return (
     <div className={`metric-card metric-card-${tone}`}>

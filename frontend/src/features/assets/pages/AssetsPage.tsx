@@ -1,6 +1,6 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, Upload } from 'antd'
+import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
@@ -8,6 +8,7 @@ import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
 import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
+import { MetaBadge, WarrantyTag } from '../../../components/PresentationBadge'
 import { StatusTag } from '../../../components/StatusTag'
 import type { Asset, AssetImportResult, AssetImportRowResult } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
@@ -170,11 +171,11 @@ export function AssetsPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Installed base"
+        eyebrow="Danh mục thiết bị"
         title="Thiết bị khách hàng"
         description="Theo dõi serial, bảo hành, vòng đời và tình trạng phục vụ của từng tài sản."
         actions={assetActions}
-        meta={<Tag color="blue">{data?.totalElements ?? 0} thiết bị</Tag>}
+        meta={<MetaBadge>{data?.totalElements ?? 0} thiết bị</MetaBadge>}
       />
 
       <div className="table-toolbar">
@@ -186,13 +187,13 @@ export function AssetsPage() {
         loading={isLoading}
         dataSource={data?.content ?? []}
         className="content-table"
-        scroll={{ x: 1320 }}
+        scroll={{ x: 1120 }}
         pagination={{ pageSize: 12, showSizeChanger: false }}
         locale={{ emptyText: <Empty description="Chưa có thiết bị phù hợp" /> }}
         columns={[
           {
             title: 'Thiết bị',
-            width: 300,
+            width: 230,
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{[record.brand, record.model].filter(Boolean).join(' ') || record.category}</Typography.Text>
@@ -200,31 +201,30 @@ export function AssetsPage() {
               </div>
             ),
           },
-          { title: 'Khách hàng', dataIndex: 'customerName', width: 230, ellipsis: true },
-          { title: 'Loại', dataIndex: 'category', width: 150 },
+          { title: 'Khách hàng', dataIndex: 'customerName', width: 180, ellipsis: true },
+          { title: 'Loại', dataIndex: 'category', width: 120 },
           {
             title: 'Bảo hành',
-            width: 180,
+            width: 150,
             render: (_, record) => (
               <div className="table-secondary-stack">
                 <span>{formatDate(record.warrantyUntil)}</span>
-                <Tag color={record.underWarranty ? 'green' : 'red'}>{record.underWarranty ? 'Còn bảo hành' : 'Hết bảo hành'}</Tag>
+                <WarrantyTag underWarranty={record.underWarranty} />
               </div>
             ),
           },
-          { title: 'Trạng thái', dataIndex: 'status', width: 150, render: (value) => <StatusTag status={value} /> },
-          { title: 'Ngày lắp', dataIndex: 'installedAt', width: 130, render: formatDate },
+          { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (value) => <StatusTag status={value} /> },
+          { title: 'Ngày lắp', dataIndex: 'installedAt', width: 110, render: formatDate },
           {
             title: 'Ghi chú',
             dataIndex: 'notes',
-            width: 240,
+            width: 180,
             ellipsis: true,
             render: (value) => value ? <Typography.Text>{value}</Typography.Text> : <Typography.Text type="secondary">Chưa có ghi chú</Typography.Text>,
           },
           {
             title: 'Thao tác',
-            width: 92,
-            fixed: 'right',
+            width: 76,
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />

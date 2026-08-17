@@ -6,7 +6,7 @@ import {
 } from '@ant-design/icons'
 import { Button, Typography } from 'antd'
 import { Link } from 'react-router-dom'
-import { MOCK_METRICS, MOCK_NAV_ITEMS, MOCK_ROWS, TRUST_LOGOS } from '../content/landingData'
+import { CAPABILITY_LABELS, MOCK_METRICS, MOCK_NAV_ITEMS, MOCK_ROWS } from '../content/landingData'
 import { backgroundStyle } from '../shared/landingShared'
 
 const { Title, Paragraph } = Typography
@@ -75,12 +75,6 @@ function DashboardMockup() {
 export function HeroSection() {
   return (
     <section className="lp-hero" aria-labelledby="hero-heading">
-      <div className="lp-hero-orbs" aria-hidden="true">
-        <span className="lp-orb lp-orb--1" />
-        <span className="lp-orb lp-orb--2" />
-        <span className="lp-orb lp-orb--3" />
-      </div>
-
       <div className="lp-container">
         <div className="lp-hero-grid">
           <div className="lp-hero-copy">
@@ -95,7 +89,7 @@ export function HeroSection() {
 
             <Paragraph className="lp-hero-sub">
               ServiceOps gom khách hàng, thiết bị, phiếu công việc, lịch kỹ thuật viên, phụ tùng và audit log vào một
-              luồng vận hành local-first để demo, học tập và mở rộng.
+              luồng vận hành thống nhất, có phân quyền và khả năng truy vết rõ ràng.
             </Paragraph>
 
             <div className="lp-hero-actions">
@@ -112,11 +106,11 @@ export function HeroSection() {
             </div>
 
             <div className="lp-hero-social-proof">
-              <span className="lp-social-proof-label">Được tin dùng bởi</span>
-              {TRUST_LOGOS.slice(0, 3).map((name) => (
+              <span className="lp-social-proof-label">Phạm vi demo</span>
+              {CAPABILITY_LABELS.slice(0, 3).map((name) => (
                 <span key={name} className="lp-social-proof-logo">{name}</span>
               ))}
-              <span className="lp-social-proof-more">+50 doanh nghiệp</span>
+              <span className="lp-social-proof-more">Một luồng thống nhất</span>
             </div>
           </div>
 
@@ -131,14 +125,12 @@ export function HeroSection() {
 
 export function LogoBar() {
   return (
-    <section className="lp-logobar" aria-label="Trusted by">
-      <div className="lp-logobar-label">Được tin dùng bởi các doanh nghiệp dịch vụ hàng đầu</div>
-      <div className="lp-logobar-mask" aria-hidden="true">
-        <div className="lp-logobar-track">
-          {[...TRUST_LOGOS, ...TRUST_LOGOS].map((name, index) => (
-            <span key={`${name}-${index}`} className="lp-logobar-item">{name}</span>
-          ))}
-        </div>
+    <section className="lp-logobar" aria-label="Phạm vi nghiệp vụ">
+      <div className="lp-logobar-label">Luồng nghiệp vụ được mô hình hóa end-to-end</div>
+      <div className="lp-logobar-track" aria-label="Phạm vi nghiệp vụ">
+        {CAPABILITY_LABELS.map((name) => (
+          <span key={name} className="lp-logobar-item">{name}</span>
+        ))}
       </div>
     </section>
   )

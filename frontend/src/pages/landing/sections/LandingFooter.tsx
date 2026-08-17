@@ -34,10 +34,10 @@ export function LandingFooter() {
         </div>
 
         <div className="lp-footer-bottom">
-          <span className="lp-footer-copy">© {new Date().getFullYear()} ServiceOps. All rights reserved.</span>
+          <span className="lp-footer-copy">© {new Date().getFullYear()} ServiceOps · Production-oriented portfolio project.</span>
           <div className="lp-footer-legal">
-            <a href="#" className="lp-footer-link">Chính sách bảo mật</a>
-            <a href="#" className="lp-footer-link">Điều khoản sử dụng</a>
+            <Link to="/login" className="lp-footer-link">Demo</Link>
+            <a href="https://github.com/Szero-White/Serviceops-Fsm-Platform" target="_blank" rel="noreferrer" className="lp-footer-link">GitHub</a>
           </div>
         </div>
       </div>

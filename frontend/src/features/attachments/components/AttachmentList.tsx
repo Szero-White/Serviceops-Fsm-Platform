@@ -202,11 +202,11 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
             <List.Item.Meta
               avatar={
                 isImage(item.contentType) ? (
-                  <FileImageOutlined style={{ fontSize: 24, color: '#3b82f6' }} />
+                  <FileImageOutlined className="attachment-type-icon attachment-type-icon--image" />
                 ) : isPdf(item.contentType) ? (
-                  <FilePdfOutlined style={{ fontSize: 24, color: '#ef4444' }} />
+                  <FilePdfOutlined className="attachment-type-icon attachment-type-icon--pdf" />
                 ) : (
-                  <CloudUploadOutlined style={{ fontSize: 24, color: '#64748b' }} />
+                  <CloudUploadOutlined className="attachment-type-icon" />
                 )
               }
               title={item.originalFilename}

@@ -1,24 +1,27 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
 import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 
 const colorOptions = [
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'cyan', label: 'Cyan' },
-  { value: 'geekblue', label: 'Navy' },
-  { value: 'purple', label: 'Purple' },
-  { value: 'orange', label: 'Orange' },
-  { value: 'red', label: 'Red' },
-  { value: 'default', label: 'Default' },
+  { value: 'blue', label: 'Xanh dương' },
+  { value: 'green', label: 'Xanh lá' },
+  { value: 'cyan', label: 'Xanh ngọc' },
+  { value: 'geekblue', label: 'Xanh đậm' },
+  { value: 'purple', label: 'Tím' },
+  { value: 'orange', label: 'Cam' },
+  { value: 'red', label: 'Đỏ' },
+  { value: 'default', label: 'Trung tính' },
 ]
+
+const colorLabels = Object.fromEntries(colorOptions.map((option) => [option.value, option.label])) as Record<string, string>
 
 function buildCode(value: string) {
   return value
@@ -96,17 +99,17 @@ export function ServiceChannelsPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Intake settings"
+        eyebrow="Cấu hình tiếp nhận"
         title="Kênh tiếp nhận"
-        description="Quản trị các kênh tiếp nhận yêu cầu để đội CSKH dùng thống nhất khi tạo service request."
+        description="Quản trị các kênh tiếp nhận để đội chăm sóc khách hàng dùng thống nhất khi tạo yêu cầu dịch vụ."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kênh</Button>}
-        meta={<Tag color="blue">{data.length} kênh</Tag>}
+        meta={<MetaBadge>{data.length} kênh</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
-        <MetricCard label="Đang dùng" value={activeCount} helper="Hiển thị trong form tiếp nhận" icon={<PlusOutlined />} tone="green" />
-        <MetricCard label="Mặc định hệ thống" value={systemCount} helper="Có sẵn khi khởi tạo tenant" icon={<SearchOutlined />} tone="blue" />
-        <MetricCard label="Tạm ngưng" value={data.length - activeCount} helper="Giữ lịch sử, không cho chọn mới" icon={<DeleteOutlined />} tone="orange" />
+        <MetricCard label="Đang dùng" value={activeCount} helper="Hiển thị trong form tiếp nhận" icon={<PlusOutlined />} tone="success" />
+        <MetricCard label="Mặc định hệ thống" value={systemCount} helper="Có sẵn khi khởi tạo tenant" icon={<SearchOutlined />} tone="primary" />
+        <MetricCard label="Tạm ngưng" value={data.length - activeCount} helper="Giữ lịch sử, không cho chọn mới" icon={<DeleteOutlined />} tone="warning" />
       </div>
 
       <div className="table-toolbar">
@@ -136,14 +139,13 @@ export function ServiceChannelsPage() {
             ),
           },
           { title: 'Mô tả', dataIndex: 'description', ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Màu', dataIndex: 'color', width: 130, render: (value, record) => <Tag color={value}>{record.name}</Tag> },
+          { title: 'Màu nhận diện', dataIndex: 'color', width: 140, render: (value: string) => <span className="channel-color-value"><span className={`channel-color-dot channel-color-${value}`} />{colorLabels[value] ?? 'Trung tính'}</span> },
           { title: 'Thứ tự', dataIndex: 'sortOrder', width: 110 },
-          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? 'Đang dùng' : 'Tạm ngưng'}</Tag> },
+          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (value: boolean) => <BinaryStatusTag active={value} activeLabel="Đang dùng" /> },
           { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
           {
             title: '',
             width: 92,
-            fixed: 'right',
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa kênh" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />

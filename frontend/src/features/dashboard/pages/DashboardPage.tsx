@@ -10,10 +10,11 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Space, Table, Tag, Typography } from 'antd'
+import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Table, Typography } from 'antd'
 import { dashboardApi } from '../api'
 import { useAuth } from '../../auth/AuthContext'
 import { MetricCard } from '../../../components/MetricCard'
+import { MetaBadge } from '../../../components/PresentationBadge'
 import { PageHeader } from '../../../components/PageHeader'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { formatDateTime } from '../../../utils/format'
@@ -31,9 +32,8 @@ export function DashboardPage() {
           eyebrow="Trung tâm vận hành"
           title="Tổng quan vận hành"
           description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
-          meta={<Tag color="blue">Đang tải dữ liệu</Tag>}
+          meta={<MetaBadge tone="info">Đang tải dữ liệu</MetaBadge>}
         />
-        <Card className="content-card dashboard-hero" bordered={false}><Skeleton active paragraph={{ rows: 4 }} /></Card>
         <Row gutter={[16, 16]}>
           {Array.from({ length: 4 }).map((_, index) => (
             <Col key={index} xs={24} sm={12} xl={6}><Card className="content-card" bordered={false}><Skeleton active title={false} paragraph={{ rows: 2 }} /></Card></Col>
@@ -51,13 +51,11 @@ export function DashboardPage() {
           title="Tổng quan vận hành"
           description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
           actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Tải lại</Button>}
-          meta={<Space size={[8, 8]} wrap><Tag color="red">Backend chưa kết nối</Tag><Tag>API chưa sẵn sàng</Tag></Space>}
+          meta={<><MetaBadge tone="danger">Backend chưa kết nối</MetaBadge><MetaBadge>API chưa sẵn sàng</MetaBadge></>}
         />
 
         <Card className="content-card dashboard-empty-shell" bordered={false}>
           <div className="dashboard-empty-visual">
-            <div className="dashboard-empty-orb" />
-            <div className="dashboard-empty-orb dashboard-empty-orb-secondary" />
             <CloudServerOutlined className="dashboard-empty-icon" />
           </div>
           <Result
@@ -79,18 +77,6 @@ export function DashboardPage() {
   const activeTotal = data.openWorkOrders + data.assignedWorkOrders + data.inProgressWorkOrders + data.waitingForPartsWorkOrders
   const completedTotal = data.completedWorkOrders + data.closedWorkOrders
   const completionRate = activeTotal + completedTotal === 0 ? 0 : Math.round((completedTotal / (activeTotal + completedTotal)) * 100)
-  const heroHighlights = isTechnician
-    ? [
-        { label: 'Đã phân công', value: data.assignedWorkOrders },
-        { label: 'Đang xử lý', value: data.inProgressWorkOrders },
-        { label: 'Chờ phụ tùng', value: data.waitingForPartsWorkOrders },
-      ]
-    : [
-        { label: 'Yêu cầu mở', value: data.openServiceRequests },
-        { label: 'Đang xử lý', value: data.inProgressWorkOrders },
-        { label: 'Sắp hết tồn', value: data.lowStockParts },
-      ]
-
   return (
     <div className="page-shell">
       <PageHeader
@@ -98,43 +84,23 @@ export function DashboardPage() {
         title="Tổng quan vận hành"
         description="Một màn hình điều phối tập trung cho yêu cầu dịch vụ, phiếu công việc, kỹ thuật viên và tồn kho."
         actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>}
-        meta={<Space size={[8, 8]} wrap>{isTechnician ? <Tag color="blue">Góc kỹ thuật viên</Tag> : <Tag color="cyan">Góc điều phối</Tag>}<Tag color="green">API đã kết nối</Tag></Space>}
+        meta={<MetaBadge>{isTechnician ? 'Chế độ kỹ thuật viên' : 'Chế độ điều phối'}</MetaBadge>}
       />
-
-      <Card className="content-card dashboard-hero" bordered={false}>
-        <div className="dashboard-hero-copy">
-          <Typography.Text className="dashboard-kicker">Bảng dịch vụ trực tiếp</Typography.Text>
-          <Typography.Title level={3} className="dashboard-hero-title">
-            {isTechnician ? 'Tập trung vào những phiếu đang chờ bạn xử lý.' : 'Nhìn nhanh điểm nóng vận hành trong ngày.'}
-          </Typography.Title>
-          <Typography.Paragraph className="dashboard-hero-text">
-            Dữ liệu quan trọng được gom theo thứ tự ưu tiên: việc cần tiếp nhận, việc đang chạy, rủi ro tồn kho và tỷ lệ hoàn tất.
-          </Typography.Paragraph>
-        </div>
-        <div className="dashboard-hero-highlights">
-          {heroHighlights.map((item) => (
-            <div key={item.label}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       <Row gutter={[16, 16]}>
         {isTechnician ? (
           <>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đã phân công" value={data.assignedWorkOrders} helper="Công việc cần chuẩn bị" icon={<CustomerServiceOutlined />} tone="blue" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper="Công việc của bạn" icon={<ToolOutlined />} tone="purple" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="orange" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đã hoàn thành" value={data.completedWorkOrders} helper="Chờ xác nhận hoặc đóng phiếu" icon={<CheckCircleOutlined />} tone="green" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đã phân công" value={data.assignedWorkOrders} helper="Công việc cần chuẩn bị" icon={<CustomerServiceOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper="Công việc của bạn" icon={<ToolOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="warning" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đã hoàn thành" value={data.completedWorkOrders} helper="Chờ xác nhận hoặc đóng phiếu" icon={<CheckCircleOutlined />} tone="success" /></Col>
           </>
         ) : (
           <>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Yêu cầu đang mở" value={data.openServiceRequests} helper="Cần tiếp nhận và xử lý" icon={<CustomerServiceOutlined />} tone="blue" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper={`${data.assignedWorkOrders} phiếu đã phân công`} icon={<ToolOutlined />} tone="purple" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="orange" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm mức đặt hàng" icon={<AlertOutlined />} tone="red" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Yêu cầu đang mở" value={data.openServiceRequests} helper="Cần tiếp nhận và xử lý" icon={<CustomerServiceOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper={`${data.assignedWorkOrders} phiếu đã phân công`} icon={<ToolOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="warning" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm mức đặt hàng" icon={<AlertOutlined />} tone="danger" /></Col>
           </>
         )}
       </Row>
@@ -161,15 +127,13 @@ export function DashboardPage() {
               dataSource={data.recentWorkOrders}
               pagination={false}
               className="content-table"
-              scroll={{ x: 840 }}
               locale={{ emptyText: <Empty description="Chưa có phiếu công việc gần đây" /> }}
               columns={[
-                { title: 'Phiếu', dataIndex: 'code', width: 165, render: (value: string) => <Typography.Text strong code>{value}</Typography.Text> },
-                { title: 'Nội dung', dataIndex: 'summary', width: 280, ellipsis: true },
-                { title: 'Khách hàng', dataIndex: 'customerName', width: 190, ellipsis: true },
-                { title: 'Ưu tiên', dataIndex: 'priority', width: 120, render: (value) => <PriorityTag priority={value} /> },
-                { title: 'Trạng thái', dataIndex: 'status', width: 160, render: (value) => <StatusTag status={value} /> },
-                { title: 'Lịch hẹn', dataIndex: 'scheduledStart', width: 170, render: formatDateTime },
+                { title: 'Phiếu', dataIndex: 'code', width: 145, render: (value: string) => <Typography.Text code>{value}</Typography.Text> },
+                { title: 'Nội dung', dataIndex: 'summary', ellipsis: true },
+                { title: 'Ưu tiên', dataIndex: 'priority', width: 105, render: (value) => <PriorityTag priority={value} /> },
+                { title: 'Trạng thái', dataIndex: 'status', width: 135, render: (value) => <StatusTag status={value} /> },
+                { title: 'Lịch hẹn', dataIndex: 'scheduledStart', width: 145, render: formatDateTime },
               ]}
             />
           </Card>
