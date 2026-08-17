@@ -55,7 +55,7 @@ No business feature was intentionally removed. This pass hardens the existing Se
 
 ### Regression coverage
 
-The backend test source now contains **60 targeted `@Test` methods** covering substantially more than the original baseline, including:
+The accepted backend suite executes **59 automated tests** covering substantially more than the original baseline, including:
 
 - work-order lifecycle/state invariants;
 - spare-part stock invariants;
@@ -99,21 +99,40 @@ These features remain in place:
 10. **Observability expansion** — structured JSON logs, centralized log aggregation, dashboards and tracing remain P1 improvements; request correlation plus the existing Actuator/Prometheus foundation are already in place.
 11. **Browser token storage** — the SPA still keeps its access token client-side. Moving to HttpOnly secure cookies/BFF + CSRF protection is a threat-model/architecture decision and was deliberately deferred instead of changing authentication semantics during this hardening pass.
 
-## Verification status for this edited package
+## Verification status
 
-Static/config checks completed in the editing environment:
+The production-hardening baseline was validated on the developer workstation and through GitHub Pull Request checks before merge:
 
-- Java runtime available: Java 21.
-- Spring YAML files parse successfully.
-- Docker Compose YAML files parse successfully.
-- Maven `pom.xml` parses successfully.
-- production backup/restore shell scripts pass `sh -n` syntax validation.
-- frontend `npm run lint` passed before an attempted clean dependency restore modified the bundled `node_modules` snapshot.
+- Java 21 runtime.
+- 59 backend tests, 0 failures, 0 errors, 0 skipped.
+- Testcontainers PostgreSQL 17 integration path and Flyway migrations.
+- frontend lint/type-check and production build.
+- zero findings from `npm audit` and `npm audit --omit=dev`.
+- backend/frontend Docker builds and a healthy production-like Compose smoke test.
 
-Not claimed as green in this environment:
+The later enterprise-refinement branch also reran the 59-test backend suite with Docker/Testcontainers and passed frontend lint/build on the developer workstation. Any subsequent source change still requires its own acceptance gate; this report does not copy a historical PASS forward as proof for changed code.
 
-- backend Maven test execution, because this container has no Maven distribution/cache and outbound package-registry DNS is unavailable;
-- frontend production build after clean restore, because outbound npm access is unavailable and the uploaded `node_modules` snapshot had incomplete React type packages;
-- Docker image build/Testcontainers execution, because Docker CLI/daemon is unavailable here.
+## Enterprise codebase & recruiter UX refinement — 2026-08-17
 
-Therefore **CI on a normal network-enabled runner is the final acceptance gate before merge/deploy**. Do not present this package as runtime-verified until the commands in `PRODUCTION_DEPLOYMENT.md` pass.
+A follow-up maintainability pass was applied after the production hardening baseline was successfully validated and merged.
+
+### Maintainability improvements
+
+- `WorkOrderInvoiceService` is now an orchestration service; HTML rendering lives in `WorkOrderInvoiceHtmlRenderer` and the document template is a classpath resource.
+- `DemoDataSeeder` now orchestrates the fixture scenario while `DemoDataFactory` owns demo entity construction/persistence helpers.
+- `AiHelpService` now owns provider/orchestration behavior while `AiHelpKnowledgeBase` owns role-aware help topics and route guidance.
+- `WorkOrdersPage` was decomposed into feature-owned table, detail drawer, dialogs, presentation rules and permission rules.
+- `LoginPage` was decomposed into focused unauthenticated presentation components.
+- TypeScript contracts were separated by business area under `frontend/src/types/`; the index file is now only a stable barrel export.
+
+The refactor intentionally avoids a hard "N lines per file" rule. The new source-size profile removes the previous 300–400+ line production hotspots while retaining cohesive files where further splitting would add ceremony without improving ownership.
+
+### Recruiter/public-demo UX
+
+The login experience now exposes five role-oriented demo cards (Owner, Dispatcher, Customer Service, Technician and Warehouse). Selecting a role fills its username and, when configured, the public demo password. The public demo password is explicitly a disposable presentation credential and must never be reused as a production/admin secret.
+
+### Documentation quality
+
+- README rewritten around product scope, engineering highlights, demo roles, recruiter walkthrough, deployment and architecture direction.
+- Added `CODEBASE_STANDARDS.md` to document naming, responsibilities, module boundaries, transaction/concurrency expectations and PR acceptance gates.
+- Verification documentation now distinguishes the previously proven hardening baseline from the acceptance gate required after structural refactoring.

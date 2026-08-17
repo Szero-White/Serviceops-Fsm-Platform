@@ -1,49 +1,58 @@
 # Verification Results
 
-## Historical baseline from the uploaded package
+## Verified production-hardening baseline
 
-The original package included a verification note dated **2026-07-21** reporting:
+The production-hardening baseline merged through Pull Request #1 was validated on the developer workstation and GitHub CI:
 
-- Java 21 compilation passed;
-- 7 Maven tests discovered (6 passed, 1 Docker-dependent Testcontainers smoke test skipped);
-- a separate PostgreSQL smoke test passed;
-- frontend type check and production build passed at that time.
+- Java 21 runtime: PASS.
+- Backend automated suite: 59 tests, 0 failures, 0 errors, 0 skipped.
+- Testcontainers PostgreSQL 17 + Flyway migrations: PASS.
+- Frontend TypeScript/lint: PASS.
+- Frontend production build: PASS.
+- `npm audit`: 0 known vulnerabilities.
+- `npm audit --omit=dev`: 0 known vulnerabilities.
+- Production backend/frontend Docker image builds: PASS.
+- Production-like Compose runtime: PostgreSQL/backend/frontend healthy.
+- Manual production-like browser smoke test: PASS.
+- GitHub PR checks: backend, frontend and Docker build PASS.
 
-Those results predate the senior-hardening changes and are **not** treated as proof that this edited revision is green.
+## Enterprise-refinement validation performed on 2026-08-17
 
-## Senior-hardening verification — 2026-08-16
+After the maintainability/login/work-order/type/invoice refactor was applied, the developer workstation reran the automated gates:
 
-Completed in the editing environment:
+- `mvnw clean test`: **59 tests, 0 failures, 0 errors, 0 skipped — PASS**.
+- Testcontainers connected to Docker Desktop and executed the PostgreSQL integration suite — PASS.
+- `npm ci`: PASS.
+- `npm run lint`: PASS.
+- `npm run build`: PASS.
+- `npm audit`: 0 known vulnerabilities.
+- `npm audit --omit=dev`: 0 known vulnerabilities.
 
-- Java 21 runtime confirmed.
-- `backend/pom.xml` XML parse: PASS.
-- all `application*.yml` files parse: PASS.
-- `docker-compose.local.yml` parse: PASS.
-- `docker-compose.prod.yml` parse: PASS.
-- `scripts/production/backup-postgres.sh` shell syntax: PASS.
-- `scripts/production/restore-postgres.sh` shell syntax: PASS.
-- frontend `npm run lint`: PASS before the attempted clean dependency restore.
-- backend test source now contains 60 targeted `@Test` methods.
+The later typography/layout refinement also passed `npm run lint` and `npm run build` before the final product-UI coherence pass.
 
-Environment limitations preventing a full runtime acceptance run here:
+## Current final product-UI coherence pass
 
-- Maven is not installed/cached in this container and outbound Maven registry DNS is unavailable, so `./mvnw clean test` cannot fetch the Maven distribution/dependencies.
-- The uploaded `frontend/node_modules` snapshot contains incomplete React type packages; outbound npm access is unavailable, so a clean `npm ci` + production build cannot be completed here.
-- Docker is not installed, so Docker image builds and Testcontainers concurrency/integration tests cannot execute here.
+This uncommitted pass further standardizes semantic tags, table density, application navigation, dashboard hierarchy and public landing-page truthfulness. It does **not** intentionally change backend business behavior or API contracts.
 
-## Required acceptance gate on the developer machine / CI
+Because these frontend/documentation changes were produced after the verified runs above, they must be revalidated before merge. Do not copy prior PASS results forward as proof for changed source.
 
-```bash
-cd backend
-./mvnw --batch-mode clean test
+## Required acceptance gate before merge
 
-cd ../frontend
-npm ci
+```powershell
+cd frontend
 npm run lint
-VITE_API_URL=/api/v1 npm run build
+npm run build
+npm audit
+npm audit --omit=dev
+
+cd ../backend
+.\mvnw.cmd clean test
 
 cd ..
+docker compose --env-file .env.production -f docker-compose.prod.yml config
 docker compose --env-file .env.production -f docker-compose.prod.yml build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
 ```
 
-After containers start, smoke-test login, critical module reads, tenant isolation, scheduling concurrency, inventory concurrency and attachment upload/download before publishing the demo.
+Manual smoke coverage must include login/demo roles, dashboard, service requests, work orders, scheduling, inventory/parts, attachments/invoice, customers/assets, audit/users, role restrictions and demo destructive-action protection.
