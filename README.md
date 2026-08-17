@@ -2,7 +2,7 @@
 
 ServiceOps is a production-oriented field-service management platform built as a **Spring Boot modular monolith** with a React operations console. The project models an end-to-end service workflow from customer intake to technician execution, parts consumption, acceptance and closure while preserving tenant isolation, role-based access, transactional consistency and auditability.
 
-> Portfolio focus: realistic business workflow, maintainable application structure, security/concurrency controls, production-like deployment and a recruiter-friendly public demo — not feature-count maximization.
+> Portfolio focus: realistic business workflow, maintainable application structure, security/concurrency controls, production-like deployment and a recruiter-friendly demo workflow — not feature-count maximization.
 
 ## Product scope
 
@@ -34,7 +34,7 @@ Key capabilities:
 - Controlled optimistic-lock conflict handling (`409 CONCURRENT_MODIFICATION`).
 - Login throttling, request correlation IDs and hardened production configuration.
 - Attachment MIME/signature validation, path-boundary protection and tenant storage quota.
-- JUnit 5, Mockito and Testcontainers-backed PostgreSQL integration coverage.
+- JUnit 5, Mockito and Testcontainers-backed PostgreSQL integration coverage, including cross-role core workflow and concurrency invariants.
 
 ### Frontend
 
@@ -42,7 +42,7 @@ Key capabilities:
 - Feature-oriented module structure.
 - Shared enterprise UI primitives for page headers, filters, tables, statuses and forms.
 - Role-aware actions and recruiter-friendly demo account selector.
-- Production bundle served by Nginx with API proxying.
+- Same-origin API path (`/api/v1`) in development/production, with Vite/Nginx proxying to avoid environment-specific localhost URLs in application code.
 
 ### Operations
 
@@ -51,7 +51,7 @@ Key capabilities:
 - PostgreSQL is private to the Compose network.
 - Health/readiness checks and persistent database/upload volumes.
 - Backup and guarded restore scripts.
-- GitHub Actions for backend, frontend and Docker build validation.
+- GitHub Actions for backend/frontend quality gates plus a production-like Compose runtime smoke test (health, frontend HTTP and demo login).
 
 ## Demo accounts
 

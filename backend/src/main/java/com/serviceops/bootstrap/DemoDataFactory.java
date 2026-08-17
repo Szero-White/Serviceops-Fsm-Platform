@@ -38,6 +38,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Component
@@ -162,7 +163,7 @@ public class DemoDataFactory {
         wo.setCustomer(customer);
         wo.setAsset(asset);
         wo.setTechnician(technician);
-        wo.setCode("WO-2026-%06d".formatted(workOrderRepository.nextNumber()));
+        wo.setCode("WO-%d-%06d".formatted(Instant.now().atZone(ZoneOffset.UTC).getYear(), workOrderRepository.nextNumber()));
         wo.setSummary(summary);
         wo.setDescription(sr == null ? summary : sr.getDescription());
         wo.setPriority(priority);

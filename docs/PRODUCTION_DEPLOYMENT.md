@@ -14,6 +14,7 @@ Public demo defaults:
 - `DEMO_PASSWORD` must be at least 8 characters and cannot be `123456` or a shipped placeholder value; startup fails instead of silently exposing a known demo password.
 - `JWT_ACCESS_TOKEN_MINUTES=30` affects production/demo only; local development keeps its existing behavior.
 - `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured.
+- `SWAGGER_ENABLED=false` by default. Enable it only for an intentional API-review environment; the recruiter demo does not require public Swagger.
 - `MAX_TENANT_STORAGE_BYTES=104857600` limits each tenant to 100 MiB on the local storage adapter in the public demo. Use `0` for unlimited storage in a controlled environment.
 
 Generate a JWT secret on Linux:
@@ -29,6 +30,8 @@ SPRING_PROFILES_ACTIVE=prod
 DEMO_MODE=false
 SWAGGER_ENABLED=false
 ```
+
+If API documentation is temporarily required in a controlled review environment, set `SWAGGER_ENABLED=true` explicitly and disable it again afterward.
 
 ## 2. Build and start
 

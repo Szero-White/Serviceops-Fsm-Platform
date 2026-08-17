@@ -9,6 +9,8 @@ import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.scheduling.domain.AppointmentRepository;
+import com.serviceops.servicerequest.domain.ServiceRequestRepository;
+import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.tenant.domain.Tenant;
 import com.serviceops.tenant.domain.TenantRepository;
@@ -34,8 +36,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -65,6 +70,9 @@ class LocalPostgresSmokeTest {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private ServiceRequestRepository serviceRequestRepository;
 
     @Autowired
     private SparePartRepository sparePartRepository;
@@ -159,6 +167,76 @@ class LocalPostgresSmokeTest {
 
         assertThat(crossTenant.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(ownTenant.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void coreServiceFlowShouldRunAcrossBusinessRoles() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        UserAccount technicianUser = userAccountRepository.findByUsernameIgnoreCase("technician").orElseThrow();
+        Customer customer = customerRepository.findAll().stream()
+                .filter(c -> owner.getTenantId().equals(c.getTenantId()))
+                .findFirst()
+                .orElseThrow();
+        var technician = technicianRepository.findByTenantIdAndUserId(owner.getTenantId(), technicianUser.getId())
+                .orElseThrow();
+
+        String customerServiceToken = login("customer-service", "123456");
+        ResponseEntity<Map> createdRequest = postJsonMap(
+                "/api/v1/service-requests",
+                customerServiceToken,
+                Map.of(
+                        "customerId", customer.getId(),
+                        "title", "Integration flow service request",
+                        "description", "End-to-end role workflow integration test",
+                        "priority", "NORMAL",
+                        "channel", "PHONE"
+                )
+        );
+        assertThat(createdRequest.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(createdRequest.getBody()).isNotNull();
+        String serviceRequestId = String.valueOf(createdRequest.getBody().get("id"));
+
+        ResponseEntity<Map> converted = postJsonMap(
+                "/api/v1/work-orders/from-service-request/" + serviceRequestId,
+                customerServiceToken,
+                Map.of()
+        );
+        assertThat(converted.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(converted.getBody()).isNotNull();
+        assertThat(converted.getBody().get("status")).isEqualTo("OPEN");
+        String workOrderId = String.valueOf(converted.getBody().get("id"));
+        assertThat(serviceRequestRepository.findById(UUID.fromString(serviceRequestId)).orElseThrow().getStatus())
+                .isEqualTo(ServiceRequestStatus.CONVERTED);
+
+        Instant start = Instant.now().plus(90, ChronoUnit.DAYS);
+        Instant end = start.plus(2, ChronoUnit.HOURS);
+        ResponseEntity<Map> scheduled = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/schedule",
+                login("dispatcher", "123456"),
+                Map.of(
+                        "technicianId", technician.getId(),
+                        "startTime", start.toString(),
+                        "endTime", end.toString()
+                )
+        );
+        assertThat(scheduled.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(scheduled.getBody()).isNotNull();
+        assertThat(scheduled.getBody().get("status")).isEqualTo("ASSIGNED");
+
+        String technicianToken = login("technician", "123456");
+        assertTransition(workOrderId, technicianToken, "ON_THE_WAY", Map.of("note", "Technician departed"));
+        assertTransition(workOrderId, technicianToken, "IN_PROGRESS", Map.of("note", "Technician started service"));
+        assertTransition(workOrderId, technicianToken, "COMPLETED", Map.of(
+                "note", "Service completed",
+                "diagnosis", "Integration test diagnosis",
+                "resolution", "Integration test resolution"
+        ));
+
+        String ownerToken = login("owner", "123456");
+        assertTransition(workOrderId, ownerToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
+        ResponseEntity<Map> closed = assertTransition(workOrderId, ownerToken, "CLOSED", Map.of("note", "Workflow closed"));
+        assertThat(closed.getBody()).isNotNull();
+        assertThat(closed.getBody().get("status")).isEqualTo("CLOSED");
     }
 
     @Test
@@ -328,6 +406,23 @@ class LocalPostgresSmokeTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    private ResponseEntity<Map> assertTransition(String workOrderId, String token, String targetStatus, Map<String, Object> fields) {
+        HashMap<String, Object> body = new HashMap<>(fields);
+        body.put("targetStatus", targetStatus);
+        ResponseEntity<Map> response = postJsonMap("/api/v1/work-orders/" + workOrderId + "/transition", token, body);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("status")).isEqualTo(targetStatus);
+        return response;
+    }
+
+    private ResponseEntity<Map> postJsonMap(String path, String token, Map<String, Object> body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
     }
 
     private ResponseEntity<String> postJson(String path, String token, Map<String, Object> body) {

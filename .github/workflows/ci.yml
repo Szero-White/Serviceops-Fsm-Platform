@@ -51,7 +51,53 @@ jobs:
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
-      - name: Build backend image
-        run: docker build -t serviceops-backend:ci ./backend
-      - name: Build frontend image
-        run: docker build --build-arg VITE_API_URL=/api/v1 -t serviceops-frontend:ci ./frontend
+      - name: Prepare isolated CI runtime configuration
+        run: |
+          CI_SUFFIX=$(openssl rand -hex 16)
+          CI_JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+          cat > .env.ci <<EOF
+          SPRING_PROFILES_ACTIVE=prod,demo
+          POSTGRES_DB=serviceops
+          POSTGRES_USER=serviceops
+          POSTGRES_PASSWORD=ci-db-$CI_SUFFIX
+          JWT_SECRET=$CI_JWT_SECRET
+          JWT_ISSUER=serviceops-ci
+          JWT_ACCESS_TOKEN_MINUTES=15
+          CORS_ALLOWED_ORIGINS=http://localhost:8088
+          DEMO_MODE=true
+          DEMO_PASSWORD=CiDemo-$CI_SUFFIX
+          MAX_TENANT_STORAGE_BYTES=104857600
+          AI_ENABLED=false
+          GEMINI_API_KEY=
+          SWAGGER_ENABLED=false
+          HTTP_PORT=8088
+          LOGIN_MAX_FAILURES=5
+          LOGIN_WINDOW_SECONDS=60
+          EOF
+      - name: Build and start production-like stack
+        run: docker compose --env-file .env.ci -f docker-compose.prod.yml up -d --build
+      - name: Verify runtime health, frontend and demo login
+        run: |
+          set -a
+          . ./.env.ci
+          set +a
+          curl --retry 30 --retry-delay 2 --retry-all-errors --fail --silent --show-error \
+            http://127.0.0.1:8088/actuator/health/readiness
+          curl --retry 10 --retry-delay 1 --retry-all-errors --fail --silent --show-error \
+            http://127.0.0.1:8088/ > /dev/null
+          LOGIN_RESPONSE=$(curl --fail --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data-binary "{\"username\":\"owner\",\"password\":\"$DEMO_PASSWORD\"}" \
+            http://127.0.0.1:8088/api/v1/auth/login)
+          echo "$LOGIN_RESPONSE" | grep -q '"accessToken"'
+          echo "$LOGIN_RESPONSE" | grep -q '"role":"OWNER"'
+      - name: Show Compose diagnostics on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env.ci -f docker-compose.prod.yml ps
+          docker compose --env-file .env.ci -f docker-compose.prod.yml logs --no-color --tail=200
+      - name: Stop production-like stack
+        if: always()
+        run: |
+          docker compose --env-file .env.ci -f docker-compose.prod.yml down --remove-orphans
+          rm -f .env.ci
