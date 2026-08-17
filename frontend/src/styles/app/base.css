@@ -1,15 +1,87 @@
-/* Base browser reset and app-wide background. Keep this file free of page-specific classes. */
+/* ServiceOps visual foundation.
+   One neutral canvas, one brand accent, and semantic color only when meaning depends on it. */
 :root {
-  color: #0f172a;
-  background: #f8fafc;
+  --app-primary: #47789f;
+  --app-primary-hover: #3e6c91;
+  --app-primary-active: #345c7b;
+  --app-primary-soft: #eef5f9;
+  --app-primary-border: #d8e6ef;
+  --app-accent: #5d918c;
+  --app-accent-soft: #eef6f4;
+
+  --app-success: #4b7968;
+  --app-success-soft: #eff7f3;
+  --app-success-border: #d8e8e0;
+  --app-warning: #896631;
+  --app-warning-soft: #faf6ee;
+  --app-warning-border: #eadfc8;
+  --app-danger: #9c5050;
+  --app-danger-soft: #fbf1f1;
+  --app-danger-border: #ecdada;
+  --app-neutral-soft: #f5f7f8;
+  --app-neutral-border: #dce3e8;
+
+  --app-bg: #f5f7f9;
+  --app-surface: #ffffff;
+  --app-surface-muted: #fafbfc;
+  --app-surface-subtle: #f3f6f8;
+
+  --app-text: #24313d;
+  --app-text-secondary: #536371;
+  --app-text-muted: #71808c;
+  --app-text-subtle: #87939d;
+
+  --app-border: #dfe6eb;
+  --app-border-strong: #cbd6de;
+  --app-focus: rgba(71, 120, 159, 0.14);
+
+  --app-shadow-sm: 0 1px 2px rgba(36, 49, 61, 0.025);
+  --app-shadow-md: 0 10px 28px rgba(36, 49, 61, 0.06);
+
+  --app-radius-sm: 6px;
+  --app-radius: 8px;
+  --app-radius-lg: 11px;
+  --app-radius-xl: 14px;
+
+  --app-font: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --app-font-mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /*
+   * Uniform productive typography for the authenticated product.
+   * Six visual sizes only: 11 / 12 / 13 / 15 / 20 / 22.
+   * Semantic aliases intentionally share sizes so pages do not invent their own scale.
+   */
+  --app-type-caption: 11px;
+  --app-type-meta: 11px;
+  --app-type-label: 12px;
+  --app-type-body: 12px;
+  --app-type-body-lg: 13px;
+  --app-type-section-title: 13px;
+  --app-type-panel-title: 15px;
+  --app-type-auth-title: 20px;
+  --app-type-metric: 20px;
+  --app-type-page-title: 22px;
+  --app-type-login-hero: clamp(30px, 3vw, 40px);
+
+  /* Icon sizes live outside the text scale to avoid accidental visual hierarchy. */
+  --app-icon-sm: 13px;
+  --app-icon-md: 15px;
+  --app-icon-lg: 21px;
+
+  --app-line-compact: 1.35;
+  --app-line-body: 1.45;
+  --app-line-reading: 1.55;
+
+  color: var(--app-text);
+  background: var(--app-bg);
+  font-family: var(--app-font);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
 body,
@@ -17,17 +89,41 @@ body,
   min-width: 320px;
   min-height: 100%;
   margin: 0;
-  font-family: inherit;
+  font-family: var(--app-font);
 }
+
+html { background: var(--app-bg); }
 
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-size: var(--app-type-body);
+  font-weight: 400;
+  line-height: var(--app-line-body);
 }
 
 button,
 input,
 textarea,
-select {
-  font: inherit;
+select { font: inherit; }
+
+a {
+  color: var(--app-primary);
+  text-underline-offset: 2px;
 }
+
+strong,
+b { font-weight: 600; }
+
+code,
+kbd,
+samp { font-family: var(--app-font-mono); }
+
+::selection {
+  background: #dce8ef;
+  color: var(--app-text);
+}
+
+.ant-typography { color: var(--app-text); }
+.ant-typography-secondary { color: var(--app-text-muted) !important; }

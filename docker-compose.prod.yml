@@ -55,6 +55,7 @@ services:
       context: ./frontend
       args:
         VITE_API_URL: /api/v1
+        VITE_DEMO_PASSWORD: ${DEMO_PASSWORD:-}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${HTTP_PORT:-8088}:80"

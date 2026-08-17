@@ -1,9 +1,10 @@
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Tag, Timeline, Typography } from 'antd'
+import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Timeline, Typography } from 'antd'
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
+import { MetaBadge } from '../../../components/PresentationBadge'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { WorkOrder, WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
@@ -59,10 +60,10 @@ export function WorkOrderHistoryPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Service archive"
+        eyebrow="Lưu trữ dịch vụ"
         title="Lịch sử phiếu công việc"
         description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại tiến trình xử lý và tải hóa đơn khi cần đối soát."
-        meta={<Tag color="blue">{data?.totalElements ?? 0} phiếu lưu trữ</Tag>}
+        meta={<MetaBadge>{data?.totalElements ?? 0} phiếu lưu trữ</MetaBadge>}
       />
 
       <div className="table-toolbar toolbar-row">
@@ -121,7 +122,6 @@ export function WorkOrderHistoryPage() {
           { title: 'Ngày tạo', dataIndex: 'createdAt', width: 170, render: formatDateTime },
           {
             title: 'Thao tác',
-            fixed: 'right',
             width: canDelete ? 168 : 116,
             render: (_, record) => (
               <Space size={4}>
@@ -146,10 +146,16 @@ export function WorkOrderHistoryPage() {
       />
 
       <Drawer
-        title={detail ? `${detail.code} · ${detail.summary}` : 'Chi tiết phiếu lịch sử'}
+        rootClassName="serviceops-detail-drawer"
+        title={detail ? (
+          <div className="detail-drawer-title">
+            <span className="detail-drawer-code">{detail.code}</span>
+            <span className="detail-drawer-summary">{detail.summary}</span>
+          </div>
+        ) : 'Chi tiết phiếu lịch sử'}
         open={Boolean(selectedId)}
         onClose={() => setSelectedId(undefined)}
-        width={760}
+        width={720}
         loading={detailLoading}
         extra={detail ? (
           <Space>
@@ -171,7 +177,7 @@ export function WorkOrderHistoryPage() {
       >
         {detail ? (
           <Space direction="vertical" size={24} style={{ width: '100%' }}>
-            <Descriptions column={2} bordered size="small">
+            <Descriptions className="detail-descriptions" column={2} bordered size="small">
               <Descriptions.Item label="Trạng thái"><StatusTag status={detail.status} /></Descriptions.Item>
               <Descriptions.Item label="Ưu tiên"><PriorityTag priority={detail.priority} /></Descriptions.Item>
               <Descriptions.Item label="Khách hàng">{detail.customerName}</Descriptions.Item>
@@ -183,21 +189,21 @@ export function WorkOrderHistoryPage() {
               <Descriptions.Item label="Giải pháp" span={2}>{detail.resolution ?? EMPTY_VALUE}</Descriptions.Item>
             </Descriptions>
 
-            <div>
-              <Typography.Title level={5}>Tiến trình xử lý</Typography.Title>
+            <section className="detail-section">
+              <h3 className="detail-section-title">Tiến trình xử lý</h3>
               {detail.history?.length ? (
-                <Timeline items={detail.history.map((item) => ({
-                  color: item.toStatus === 'CANCELLED' ? 'red' : item.toStatus === 'CLOSED' || item.toStatus === 'COMPLETED' ? 'green' : 'blue',
+                <Timeline className="detail-timeline" items={detail.history.map((item) => ({
+                  color: item.toStatus === 'CANCELLED' ? '#9c5050' : item.toStatus === 'CLOSED' || item.toStatus === 'COMPLETED' ? '#4b7968' : '#47789f',
                   children: (
-                    <div>
-                      <Space><StatusTag status={item.toStatus} /><Typography.Text strong>{item.changedBy}</Typography.Text></Space>
-                      <div>{item.note ?? 'Không có ghi chú'}</div>
-                      <Typography.Text type="secondary">{formatDateTime(item.createdAt)}</Typography.Text>
+                    <div className="timeline-entry">
+                      <div className="timeline-entry-head"><StatusTag status={item.toStatus} /><Typography.Text className="timeline-actor">{item.changedBy}</Typography.Text></div>
+                      <div className="timeline-note">{item.note ?? 'Không có ghi chú'}</div>
+                      <Typography.Text className="timeline-time">{formatDateTime(item.createdAt)}</Typography.Text>
                     </div>
                   ),
                 }))} />
               ) : <Empty description="Chưa có lịch sử trạng thái" />}
-            </div>
+            </section>
           </Space>
         ) : null}
       </Drawer>

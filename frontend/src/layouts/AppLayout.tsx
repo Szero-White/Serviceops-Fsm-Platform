@@ -57,19 +57,48 @@ export function AppLayout() {
 
   const items = useMemo(() => {
     const role = user?.role ?? ''
-    return [
-      { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
-      { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-      { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-      { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-      { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-      { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
-      { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'] },
-      { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link>, roles: ['OWNER', 'DISPATCHER'] },
-      { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link>, roles: ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'] },
-      { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link>, roles: ['OWNER', 'DISPATCHER'] },
-      { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link>, roles: ['OWNER'] },
-    ].filter((item) => item.roles.includes(role)).map(({ roles: _roles, ...item }) => item)
+    const sections = [
+      {
+        key: 'operations',
+        label: 'Vận hành',
+        children: [
+          { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
+          { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
+          { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
+          { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'] },
+        ],
+      },
+      {
+        key: 'master-data',
+        label: 'Danh mục & nguồn lực',
+        children: [
+          { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
+          { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
+          { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
+          { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link>, roles: ['OWNER', 'DISPATCHER'] },
+          { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link>, roles: ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'] },
+        ],
+      },
+      {
+        key: 'governance',
+        label: 'Quản trị',
+        children: [
+          { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link>, roles: ['OWNER', 'DISPATCHER'] },
+          { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link>, roles: ['OWNER'] },
+        ],
+      },
+    ]
+
+    return sections
+      .map((section) => ({
+        type: 'group' as const,
+        key: section.key,
+        label: section.label,
+        children: section.children
+          .filter((item) => item.roles.includes(role))
+          .map(({ roles: _roles, ...item }) => item),
+      }))
+      .filter((section) => section.children.length > 0)
   }, [user?.role])
 
   const selectedKey = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
@@ -80,7 +109,7 @@ export function AppLayout() {
 
   return (
     <Layout className="app-shell">
-      <Sider trigger={null} collapsible collapsed={collapsed} width={268} className="app-sider">
+      <Sider trigger={null} collapsible collapsed={collapsed} width={228} className="app-sider">
         <div className="brand">
           <div className="brand-mark"><SettingOutlined /></div>
           {!collapsed && (

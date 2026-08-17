@@ -5,6 +5,7 @@
 .gitignore
 README.md
 RUN_LOCAL.md
+SOURCE_MANIFEST.txt
 VERIFY_RESULTS.md
 backend/.dockerignore
 backend/.mvn/wrapper/maven-wrapper.properties
@@ -14,6 +15,7 @@ backend/mvnw.cmd
 backend/pom.xml
 backend/run-local-gemini.ps1
 backend/src/main/java/com/serviceops/ServiceOpsApplication.java
+backend/src/main/java/com/serviceops/ai/application/AiHelpKnowledgeBase.java
 backend/src/main/java/com/serviceops/ai/application/AiHelpService.java
 backend/src/main/java/com/serviceops/ai/application/AiSuggestionService.java
 backend/src/main/java/com/serviceops/ai/config/AiProperties.java
@@ -37,6 +39,7 @@ backend/src/main/java/com/serviceops/audit/application/AuditService.java
 backend/src/main/java/com/serviceops/audit/domain/AuditLog.java
 backend/src/main/java/com/serviceops/audit/domain/AuditLogRepository.java
 backend/src/main/java/com/serviceops/audit/web/AuditController.java
+backend/src/main/java/com/serviceops/bootstrap/DemoDataFactory.java
 backend/src/main/java/com/serviceops/bootstrap/DemoDataSeeder.java
 backend/src/main/java/com/serviceops/common/application/CsvFileService.java
 backend/src/main/java/com/serviceops/common/config/OpenApiConfig.java
@@ -103,6 +106,7 @@ backend/src/main/java/com/serviceops/technician/domain/TechnicianRepository.java
 backend/src/main/java/com/serviceops/technician/web/TechnicianController.java
 backend/src/main/java/com/serviceops/tenant/domain/Tenant.java
 backend/src/main/java/com/serviceops/tenant/domain/TenantRepository.java
+backend/src/main/java/com/serviceops/workorder/application/WorkOrderInvoiceHtmlRenderer.java
 backend/src/main/java/com/serviceops/workorder/application/WorkOrderInvoiceService.java
 backend/src/main/java/com/serviceops/workorder/application/WorkOrderService.java
 backend/src/main/java/com/serviceops/workorder/domain/WorkOrder.java
@@ -119,6 +123,7 @@ backend/src/main/resources/application.yml
 backend/src/main/resources/db/migration/V1__initial_schema.sql
 backend/src/main/resources/db/migration/V2__service_request_channels.sql
 backend/src/main/resources/db/migration/V3__soft_delete_work_orders.sql
+backend/src/main/resources/templates/work-order-invoice.html
 backend/src/test/java/com/serviceops/attachment/application/LocalFileStorageServiceTest.java
 backend/src/test/java/com/serviceops/common/exception/GlobalExceptionHandlerTest.java
 backend/src/test/java/com/serviceops/common/web/RequestCorrelationFilterTest.java
@@ -135,13 +140,16 @@ docker-compose.prod.yml
 docs/API.md
 docs/ARCHITECTURE.md
 docs/BUSINESS_FLOW.md
+docs/CODEBASE_STANDARDS.md
 docs/DATABASE.md
 docs/DEVELOPMENT_PROCESS.md
+docs/ENTERPRISE_REFINEMENT_REPORT.md
 docs/PRODUCTION_DEPLOYMENT.md
 docs/ROADMAP.md
 docs/SECURITY.md
 docs/SENIOR_HARDENING_REPORT.md
 docs/UAT_CHECKLIST.md
+docs/UI_DESIGN_SYSTEM.md
 docs/USER_GUIDE.md
 frontend/.dockerignore
 frontend/.env.example
@@ -150,11 +158,13 @@ frontend/index.html
 frontend/nginx/default.conf
 frontend/package-lock.json
 frontend/package.json
+frontend/scripts/check-ui-typography.mjs
 frontend/src/api/http.ts
 frontend/src/api/services.ts
 frontend/src/components/CsvImportPreviewModal.tsx
 frontend/src/components/MetricCard.tsx
 frontend/src/components/PageHeader.tsx
+frontend/src/components/PresentationBadge.tsx
 frontend/src/components/StatusTag.tsx
 frontend/src/features/README.md
 frontend/src/features/ai/api.ts
@@ -168,6 +178,9 @@ frontend/src/features/audit/pages/AuditPage.tsx
 frontend/src/features/auth/AuthContext.tsx
 frontend/src/features/auth/ProtectedRoute.tsx
 frontend/src/features/auth/api.ts
+frontend/src/features/auth/components/DemoAccountSelector.tsx
+frontend/src/features/auth/components/LoginHero.tsx
+frontend/src/features/auth/components/LoginPanel.tsx
 frontend/src/features/auth/pages/LoginPage.tsx
 frontend/src/features/customers/api.ts
 frontend/src/features/customers/pages/CustomersPage.tsx
@@ -185,6 +198,11 @@ frontend/src/features/technicians/pages/TechniciansPage.tsx
 frontend/src/features/users/api.ts
 frontend/src/features/users/pages/UsersPage.tsx
 frontend/src/features/work-orders/api.ts
+frontend/src/features/work-orders/components/WorkOrderDetailDrawer.tsx
+frontend/src/features/work-orders/components/WorkOrderDialogs.tsx
+frontend/src/features/work-orders/components/WorkOrderTable.tsx
+frontend/src/features/work-orders/model/workOrderPermissions.ts
+frontend/src/features/work-orders/model/workOrderPresentation.ts
 frontend/src/features/work-orders/pages/WorkOrderHistoryPage.tsx
 frontend/src/features/work-orders/pages/WorkOrdersPage.tsx
 frontend/src/layouts/AppLayout.tsx
@@ -193,6 +211,7 @@ frontend/src/pages/LandingPage.tsx
 frontend/src/pages/landing/LandingPage.tsx
 frontend/src/pages/landing/content/landingData.tsx
 frontend/src/pages/landing/sections/CtaBanner.tsx
+frontend/src/pages/landing/sections/DeploymentSection.tsx
 frontend/src/pages/landing/sections/HeroSection.tsx
 frontend/src/pages/landing/sections/LandingFooter.tsx
 frontend/src/pages/landing/sections/LandingNavbar.tsx
@@ -213,6 +232,7 @@ frontend/src/styles/app/components.css
 frontend/src/styles/app/components/assistant.css
 frontend/src/styles/app/components/cards.css
 frontend/src/styles/app/components/controls.css
+frontend/src/styles/app/components/details.css
 frontend/src/styles/app/components/forms.css
 frontend/src/styles/app/components/page-header.css
 frontend/src/styles/app/components/shell.css
@@ -222,7 +242,15 @@ frontend/src/styles/app/dashboard.css
 frontend/src/styles/app/layout.css
 frontend/src/styles/app/login.css
 frontend/src/styles/app/responsive.css
+frontend/src/types/asset.ts
+frontend/src/types/auth.ts
+frontend/src/types/common.ts
+frontend/src/types/customer.ts
 frontend/src/types/index.ts
+frontend/src/types/inventory.ts
+frontend/src/types/operations.ts
+frontend/src/types/service-request.ts
+frontend/src/types/work-order.ts
 frontend/src/utils/download.ts
 frontend/src/utils/format.ts
 frontend/src/vite-env.d.ts
@@ -234,4 +262,3 @@ scripts/check-local.ps1
 scripts/production/backup-postgres.sh
 scripts/production/restore-postgres.sh
 scripts/start-postgres.ps1
-SOURCE_MANIFEST.txt

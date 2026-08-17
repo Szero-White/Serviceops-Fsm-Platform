@@ -1,11 +1,12 @@
 import { DeleteOutlined, EditOutlined, PhoneOutlined, PlusOutlined, SearchOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Avatar, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd'
+import { App, Avatar, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { techniciansApi } from '../../technicians/api'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
 import type { Technician } from '../../../types'
 import { EMPTY_VALUE } from '../../../utils/format'
 
@@ -94,17 +95,17 @@ export function TechniciansPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Field workforce"
+        eyebrow="Nhân sự hiện trường"
         title="Đội ngũ kỹ thuật"
         description="Quản lý tài khoản kỹ thuật viên, thông tin liên hệ, kỹ năng phục vụ và trạng thái sẵn sàng tại hiện trường."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kỹ thuật viên</Button>}
-        meta={<Tag color="blue">{data.length} kỹ thuật viên</Tag>}
+        meta={<MetaBadge>{data.length} kỹ thuật viên</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
-        <MetricCard label="Sẵn sàng" value={activeCount} helper="Có thể nhận lịch mới" icon={<UserOutlined />} tone="green" />
-        <MetricCard label="Có kỹ năng" value={skilledCount} helper="Đã khai báo năng lực" icon={<ToolOutlined />} tone="blue" />
-        <MetricCard label="Tạm ngưng" value={pausedCount} helper="Không hiển thị khi phân công" icon={<PhoneOutlined />} tone="orange" />
+        <MetricCard label="Sẵn sàng" value={activeCount} helper="Có thể nhận lịch mới" icon={<UserOutlined />} tone="success" />
+        <MetricCard label="Có kỹ năng" value={skilledCount} helper="Đã khai báo năng lực" icon={<ToolOutlined />} tone="primary" />
+        <MetricCard label="Tạm ngưng" value={pausedCount} helper="Không hiển thị khi phân công" icon={<PhoneOutlined />} tone="warning" />
       </div>
 
       <div className="table-toolbar">
@@ -140,13 +141,12 @@ export function TechniciansPage() {
             width: 150,
             render: (_, record) => {
               const active = record.active && record.accountActive
-              return <Tag color={active ? 'green' : 'default'}>{active ? 'Sẵn sàng' : 'Tạm ngưng'}</Tag>
+              return <BinaryStatusTag active={active} activeLabel="Sẵn sàng" />
             },
           },
           {
             title: '',
             width: 92,
-            fixed: 'right',
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa kỹ thuật viên" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />

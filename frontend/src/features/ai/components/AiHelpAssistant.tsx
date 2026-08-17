@@ -1,10 +1,11 @@
 import { BulbOutlined, SendOutlined } from '@ant-design/icons'
 import { useMutation } from '@tanstack/react-query'
-import { App, Button, Drawer, Empty, Input, Space, Tag, Typography } from 'antd'
+import { App, Button, Drawer, Empty, Input, Space, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { useAuth } from '../../auth/AuthContext'
+import { MetaBadge } from '../../../components/PresentationBadge'
 import { aiApi } from '../api'
 import type { AiHelpResponse } from '../../../types'
 
@@ -167,9 +168,7 @@ function AssistantAnswer({ response, onOpenRoute }: { response: AiHelpResponse; 
     <Space direction="vertical" size={10}>
       <Space size={8} wrap>
         <Typography.Text strong>Hướng dẫn</Typography.Text>
-        <Tag color={response.provider === 'gemini' ? 'geekblue' : 'blue'}>
-          {response.provider === 'gemini' ? 'Gemini' : 'Nội bộ'}
-        </Tag>
+        <MetaBadge tone="info">{response.provider === 'gemini' ? 'Gemini' : 'Nội bộ'}</MetaBadge>
       </Space>
       <Typography.Text>{response.answer}</Typography.Text>
       <ol className="ai-help-steps">

@@ -1,6 +1,6 @@
-/* Shared internal-app primitives: page headers, cards, metrics, tables, forms, and technician cards. */
+/* Shared page container: wide enough for operational tables, constrained enough for visual order. */
 .page-shell {
-  max-width: 1500px;
+  width: 100%;
+  max-width: 1480px;
   margin: 0 auto;
-  padding: 0 24px;
 }

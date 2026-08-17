@@ -1,11 +1,12 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography, Upload } from 'antd'
+import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography, Upload } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { customersApi } from '../../customers/api'
 import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
+import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
 import type { Customer, CustomerImportResult, CustomerImportRowResult } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
@@ -148,11 +149,11 @@ export function CustomersPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Customer operations"
+        eyebrow="Quản lý khách hàng"
         title="Khách hàng"
         description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
         actions={customerActions}
-        meta={<Tag color="blue">{data?.totalElements ?? 0} hồ sơ</Tag>}
+        meta={<MetaBadge>{data?.totalElements ?? 0} hồ sơ</MetaBadge>}
       />
 
       <CardlessTableToolbar>
@@ -196,12 +197,11 @@ export function CustomersPage() {
             ),
           },
           { title: 'Địa chỉ', dataIndex: 'address', ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (value: boolean) => <Tag color={value ? 'green' : 'default'}>{value ? 'Hoạt động' : 'Ngừng'}</Tag> },
+          { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (value: boolean) => <BinaryStatusTag active={value} inactiveLabel="Ngừng hoạt động" /> },
           { title: 'Ngày tạo', dataIndex: 'createdAt', width: 130, render: formatDate },
           {
             title: '',
             width: 92,
-            fixed: 'right',
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
