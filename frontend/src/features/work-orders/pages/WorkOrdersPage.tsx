@@ -1,14 +1,19 @@
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Form, Input, Select } from 'antd'
 import dayjs from 'dayjs'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
+import { formatQuantity } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { assetsApi } from '../../assets/api'
 import { attachmentsApi } from '../../attachments/api'
 import { useAuth } from '../../auth/AuthContext'
@@ -30,10 +35,13 @@ import { workOrderPermissions } from '../model/workOrderPermissions'
 
 export function WorkOrdersPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const permissions = workOrderPermissions(user?.role)
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<WorkOrderStatus>()
-  const [selectedId, setSelectedId] = useState<string>()
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const [createOpen, setCreateOpen] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -42,22 +50,59 @@ export function WorkOrdersPage() {
   const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const [completeForm] = Form.useForm<CompleteWorkOrderValues>()
   const [consumeForm] = Form.useForm<ConsumePartValues>()
-  const { message } = App.useApp()
+  const watchedCreateCustomerId = Form.useWatch('customerId', createForm)
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['work-orders', search, status],
-    queryFn: () => workOrdersApi.list(search, status),
+  const selectWorkOrder = (id?: string) => {
+    setSelectedId(id)
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('open', id)
+    else next.delete('open')
+    setSearchParams(next, { replace: true })
+  }
+
+  const workOrdersQuery = useQuery({
+    queryKey: ['work-orders', { search, status, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => workOrdersApi.list(search, status, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   })
+  const { data, isLoading, isFetching } = workOrdersQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ['work-order', selectedId],
     queryFn: () => workOrdersApi.get(selectedId!),
     enabled: Boolean(selectedId),
   })
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 200) })
-  const { data: assets } = useQuery({ queryKey: ['assets', 'all'], queryFn: () => assetsApi.list('', 0, 300) })
-  const { data: technicians } = useQuery({ queryKey: ['technicians'], queryFn: () => techniciansApi.list() })
-  const { data: parts } = useQuery({ queryKey: ['spare-parts', 'all'], queryFn: () => inventoryApi.list('', 0, 300) })
+  const { data: customers } = useQuery({
+    queryKey: ['customers', 'all'],
+    queryFn: () => customersApi.list('', 0, 100),
+    enabled: permissions.canCreate,
+  })
+  const { data: assets, isFetching: assetsLoading } = useQuery({
+    queryKey: ['assets', 'work-order-customer', watchedCreateCustomerId],
+    queryFn: () => assetsApi.list('', 0, 100, watchedCreateCustomerId),
+    enabled: permissions.canCreate && Boolean(watchedCreateCustomerId),
+  })
+  const { data: technicians } = useQuery({
+    queryKey: ['technicians'],
+    queryFn: () => techniciansApi.list(),
+    enabled: permissions.canSchedule,
+  })
+  const { data: parts } = useQuery({
+    queryKey: ['spare-parts', 'all'],
+    queryFn: () => inventoryApi.list('', 0, 100),
+    enabled: permissions.canConsumePart,
+  })
   const { data: attachments } = useQuery({
     queryKey: ['attachments', selectedId],
     queryFn: () => attachmentsApi.list('WORK_ORDER', selectedId!),
@@ -79,11 +124,14 @@ export function WorkOrdersPage() {
   const create = useMutation({
     mutationFn: (values: CreateWorkOrderValues) => workOrdersApi.create(values),
     onSuccess: (workOrder) => {
-      message.success(`Đã tạo ${workOrder.code}`)
+      notification.success({
+        message: `Đã tạo ${workOrder.code}`,
+        description: workOrder.summary,
+      })
       setCreateOpen(false)
       createForm.resetFields()
       refreshOperations()
-      setSelectedId(workOrder.id)
+      selectWorkOrder(workOrder.id)
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -94,8 +142,12 @@ export function WorkOrdersPage() {
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
     }),
-    onSuccess: () => {
-      message.success('Đã phân công và xếp lịch')
+    onSuccess: (workOrder, values) => {
+      const technicianName = technicians?.find((technician) => technician.id === values.technicianId)?.name ?? workOrder.technicianName ?? 'Kỹ thuật viên'
+      notification.success({
+        message: `Đã phân công · ${workOrder.code}`,
+        description: `${technicianName} · ${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`,
+      })
       setScheduleOpen(false)
       scheduleForm.resetFields()
       refreshOperations()
@@ -105,8 +157,12 @@ export function WorkOrdersPage() {
 
   const transition = useMutation({
     mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) => workOrdersApi.transition(selectedId!, { targetStatus, note }),
-    onSuccess: () => {
-      message.success('Đã cập nhật trạng thái')
+    onSuccess: (workOrder) => {
+      const statusLabel = WORK_ORDER_STATUS_OPTIONS.find((option) => option.value === workOrder.status)?.label ?? workOrder.status
+      notification.success({
+        message: `Đã cập nhật ${workOrder.code}`,
+        description: `Trạng thái hiện tại: ${statusLabel}.`,
+      })
       refreshOperations()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -114,8 +170,11 @@ export function WorkOrdersPage() {
 
   const complete = useMutation({
     mutationFn: (values: CompleteWorkOrderValues) => workOrdersApi.transition(selectedId!, { targetStatus: 'COMPLETED', ...values }),
-    onSuccess: () => {
-      message.success('Đã hoàn thành công việc')
+    onSuccess: (workOrder) => {
+      notification.success({
+        message: `Đã hoàn thành ${workOrder.code}`,
+        description: workOrder.summary,
+      })
       setCompleteOpen(false)
       completeForm.resetFields()
       refreshOperations()
@@ -125,8 +184,11 @@ export function WorkOrdersPage() {
 
   const consume = useMutation({
     mutationFn: (values: ConsumePartValues) => workOrdersApi.consumePart(selectedId!, values),
-    onSuccess: () => {
-      message.success('Đã ghi nhận phụ tùng sử dụng')
+    onSuccess: (part, values) => {
+      notification.success({
+        message: `Đã ghi nhận phụ tùng · ${part.sku}`,
+        description: `${part.name} · Đã dùng ${formatQuantity(values.quantity)} ${part.unit} · Tồn còn ${formatQuantity(part.stockQuantity)} ${part.unit}${detail?.code ? ` · ${detail.code}` : ''}.`,
+      })
       setConsumeOpen(false)
       consumeForm.resetFields()
       queryClient.invalidateQueries({ queryKey: ['spare-parts'] })
@@ -190,15 +252,32 @@ export function WorkOrdersPage() {
             Tạo phiếu công việc
           </Button>
         ) : undefined}
-        meta={<><MetaBadge>{data?.totalElements ?? 0} phiếu</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? 'Đang lọc' : 'Tất cả trạng thái'}</MetaBadge></>}
+        meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? 'Đang lọc' : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng hoặc serial" value={search} onChange={(event) => setSearch(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={setStatus} options={WORK_ORDER_STATUS_OPTIONS} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={WORK_ORDER_STATUS_OPTIONS} />
       </div>
 
-      <WorkOrderTable workOrders={data?.content ?? []} loading={isLoading} onSelect={setSelectedId} />
+      {workOrdersQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách phiếu công việc"
+          error={workOrdersQuery.error}
+          onRetry={() => workOrdersQuery.refetch()}
+        />
+      )}
+
+      <WorkOrderTable
+        workOrders={workOrdersQuery.isError ? [] : (data?.content ?? [])}
+        loading={isLoading || isFetching}
+        page={page}
+        pageSize={LIST_PAGE_SIZE}
+        total={workOrdersQuery.isError ? 0 : (data?.totalElements ?? 0)}
+        onPageChange={setPage}
+        onSelect={selectWorkOrder}
+        loadError={workOrdersQuery.isError}
+      />
 
       <WorkOrderDetailDrawer
         workOrder={detail}
@@ -208,7 +287,7 @@ export function WorkOrdersPage() {
         permissions={permissions}
         transitions={transitions}
         transitionPending={transition.isPending}
-        onClose={() => setSelectedId(undefined)}
+        onClose={() => selectWorkOrder(undefined)}
         onSchedule={openSchedule}
         onComplete={() => setCompleteOpen(true)}
         onConsumePart={() => setConsumeOpen(true)}
@@ -225,6 +304,7 @@ export function WorkOrdersPage() {
         consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
         customers={customers}
         assets={assets}
+        assetsLoading={assetsLoading}
         technicians={technicians}
         parts={parts}
       />

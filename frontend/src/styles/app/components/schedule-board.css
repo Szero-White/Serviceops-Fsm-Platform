@@ -1,0 +1,490 @@
+.schedule-board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.schedule-board-nav,
+.schedule-board-range {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.schedule-board-range {
+  color: var(--app-text-secondary);
+}
+
+.schedule-board-loading {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+}
+
+.schedule-board-layout {
+  display: grid;
+  grid-template-columns: 286px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.dispatch-queue-panel,
+.schedule-board-panel {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  overflow: hidden;
+}
+
+.dispatch-queue-panel {
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+}
+
+.dispatch-queue-header {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.dispatch-queue-header > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dispatch-queue-list {
+  min-height: 180px;
+  padding: 8px;
+  overflow: auto;
+}
+
+.dispatch-queue-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 7px;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.dispatch-queue-item:hover {
+  border-color: var(--app-primary-border);
+  background: var(--app-primary-soft);
+}
+
+.dispatch-queue-item:focus-visible,
+.schedule-appointment-card:focus-visible {
+  outline: 2px solid rgba(71, 120, 159, .35);
+  outline-offset: 1px;
+}
+
+.dispatch-queue-item > strong,
+.schedule-appointment-card > strong {
+  font-size: var(--app-type-body);
+  font-weight: 600;
+  line-height: var(--app-line-compact);
+}
+
+.dispatch-queue-item > span,
+.schedule-appointment-summary,
+.schedule-appointment-customer {
+  color: var(--app-text-secondary);
+  font-size: var(--app-type-meta);
+  line-height: var(--app-line-compact);
+}
+
+.dispatch-queue-item-topline,
+.dispatch-queue-item-footer,
+.schedule-appointment-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dispatch-queue-code {
+  color: var(--app-primary-active);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-type-meta);
+  font-weight: 600;
+}
+
+.dispatch-queue-item-footer {
+  margin-top: 2px;
+  color: var(--app-text-muted);
+  font-size: var(--app-type-caption);
+}
+
+.dispatch-queue-item .ant-tag,
+.schedule-appointment-card .ant-tag {
+  margin-inline-end: 0;
+}
+
+.dispatch-queue-limit-note {
+  display: block;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.schedule-board-scroll {
+  width: 100%;
+  overflow: auto;
+}
+
+.schedule-board-grid {
+  min-width: 1240px;
+  display: grid;
+  grid-template-columns: 190px repeat(7, minmax(150px, 1fr));
+}
+
+.schedule-board-corner,
+.schedule-board-day-header,
+.schedule-board-technician,
+.schedule-board-cell {
+  border-right: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.schedule-board-corner,
+.schedule-board-day-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  min-height: 54px;
+  background: var(--app-surface-muted);
+}
+
+.schedule-board-corner {
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--app-text-secondary);
+  font-size: var(--app-type-label);
+  font-weight: 600;
+}
+
+.schedule-board-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--app-text-secondary);
+  font-size: var(--app-type-meta);
+}
+
+.schedule-board-day-header strong {
+  color: var(--app-text);
+  font-size: var(--app-type-body);
+  font-weight: 600;
+}
+
+.schedule-board-day-header.is-today,
+.schedule-board-cell.is-today {
+  background: #f7fafc;
+}
+
+.schedule-board-technician {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-height: 112px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 10px;
+  background: var(--app-surface);
+}
+
+.schedule-board-technician-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-primary-border);
+  border-radius: 8px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary);
+}
+
+.schedule-board-technician > div:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.schedule-board-technician strong {
+  font-size: var(--app-type-body);
+  font-weight: 600;
+}
+
+.schedule-board-technician span {
+  color: var(--app-text-muted);
+  font-size: var(--app-type-caption);
+  line-height: var(--app-line-compact);
+}
+
+.schedule-board-cell {
+  min-height: 112px;
+  padding: 6px;
+  background: var(--app-surface);
+}
+
+.schedule-board-empty-slot {
+  display: block;
+  padding: 8px;
+  color: var(--app-text-subtle);
+  font-size: var(--app-type-caption);
+}
+
+.schedule-appointment-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--app-primary-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-primary-soft);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.schedule-appointment-card:hover {
+  border-color: #b9d0df;
+  background: #e8f2f7;
+}
+
+.schedule-appointment-topline {
+  color: var(--app-primary-active);
+  font-size: var(--app-type-meta);
+  font-weight: 600;
+}
+
+.schedule-appointment-summary,
+.schedule-appointment-customer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-modal-summary {
+  margin-bottom: 12px !important;
+}
+
+@media (max-width: 1100px) {
+  .schedule-board-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dispatch-queue-panel {
+    position: static;
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 700px) {
+  .schedule-board-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .schedule-board-range {
+    justify-content: space-between;
+  }
+}
+
+.my-schedule-week {
+  display: grid;
+  gap: 10px;
+}
+
+.my-schedule-day {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+}
+
+.my-schedule-day.is-today {
+  border-color: var(--app-primary-border);
+}
+
+.my-schedule-day-header {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.my-schedule-day-header > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.my-schedule-day-list {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.my-schedule-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+}
+
+.my-schedule-time {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--app-primary-active);
+  font-size: var(--app-type-body);
+}
+
+.my-schedule-card-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.my-schedule-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.my-schedule-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.my-schedule-tags .ant-tag {
+  margin-inline-end: 0;
+}
+
+.my-schedule-summary {
+  font-size: var(--app-type-body);
+  font-weight: 600;
+  line-height: var(--app-line-compact);
+}
+
+.my-schedule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 14px;
+  color: var(--app-text-secondary);
+  font-size: var(--app-type-meta);
+}
+
+.my-schedule-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.my-schedule-day-empty,
+.my-schedule-empty {
+  color: var(--app-text-muted);
+  font-size: var(--app-type-meta);
+}
+
+.my-schedule-day-empty {
+  padding: 16px 14px;
+}
+
+.my-schedule-empty {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+}
+
+.schedule-board-scroll {
+  scrollbar-color: #aab8c3 transparent;
+  scrollbar-width: thin;
+}
+
+.schedule-board-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-board-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #aab8c3;
+  background-clip: padding-box;
+}
+
+.schedule-board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (max-width: 700px) {
+  .my-schedule-card {
+    grid-template-columns: 1fr;
+  }
+
+  .my-schedule-card-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .my-schedule-tags {
+    justify-content: flex-start;
+  }
+}
+
+.my-schedule-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}

@@ -2,9 +2,9 @@ import { http } from '../../api/http'
 import type { PageResponse, SparePart, WorkOrder, WorkOrderStatus } from '../../types'
 
 export const workOrdersApi = {
-  list: (search = '', status?: WorkOrderStatus, page = 0, size = 100) =>
+  list: (search = '', status?: WorkOrderStatus, page = 0, size = 20) =>
     http.get<PageResponse<WorkOrder>>('/work-orders', { params: { search, status, page, size } }).then((response) => response.data),
-  history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 100) =>
+  history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 20) =>
     http.get<PageResponse<WorkOrder>>('/work-orders/history', { params: { search, status, page, size } }).then((response) => response.data),
   get: (id: string) => http.get<WorkOrder>(`/work-orders/${id}`).then((response) => response.data),
   create: (payload: Record<string, unknown>) => http.post<WorkOrder>('/work-orders', payload).then((response) => response.data),

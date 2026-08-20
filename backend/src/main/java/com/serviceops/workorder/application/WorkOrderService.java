@@ -4,6 +4,7 @@ import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -29,7 +30,6 @@ import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistoryResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,8 +54,8 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public PageResponse<WorkOrderResponse> search(String search, WorkOrderStatus status, int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        String normalizedSearch = search == null ? "" : search.trim();
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        String normalizedSearch = PageRequestSupport.normalizeSearch(search);
         var result = CurrentUser.hasRole("TECHNICIAN")
                 ? repository.searchAssigned(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
                 : repository.search(CurrentUser.tenantId(), status, normalizedSearch, pageable);
@@ -75,8 +75,8 @@ public class WorkOrderService {
         if (status != null && status != WorkOrderStatus.CLOSED && status != WorkOrderStatus.CANCELLED) {
             throw BusinessException.badRequest("INVALID_HISTORY_STATUS", "Lịch sử phiếu chỉ lọc trạng thái đã đóng hoặc đã hủy");
         }
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        String normalizedSearch = search == null ? "" : search.trim();
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        String normalizedSearch = PageRequestSupport.normalizeSearch(search);
         var result = CurrentUser.hasRole("TECHNICIAN")
                 ? repository.searchAssignedHistory(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
                 : repository.searchHistory(CurrentUser.tenantId(), status, normalizedSearch, pageable);

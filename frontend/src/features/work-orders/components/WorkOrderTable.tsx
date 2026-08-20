@@ -7,11 +7,21 @@ import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 export function WorkOrderTable({
   workOrders,
   loading,
+  page,
+  pageSize,
+  total,
+  onPageChange,
   onSelect,
+  loadError = false,
 }: {
   workOrders: WorkOrder[]
   loading: boolean
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (page: number) => void
   onSelect: (id: string) => void
+  loadError?: boolean
 }) {
   return (
     <Table
@@ -20,9 +30,16 @@ export function WorkOrderTable({
       dataSource={workOrders}
       className="content-table"
       scroll={{ x: 1120 }}
-      pagination={{ pageSize: 12, showSizeChanger: false }}
+      pagination={{
+        current: page + 1,
+        pageSize,
+        total,
+        showSizeChanger: false,
+        showTotal: (count, range) => `${range[0]}–${range[1]} / ${count} phiếu`,
+      }}
+      onChange={(pagination) => onPageChange(Math.max((pagination.current ?? 1) - 1, 0))}
       onRow={(record) => ({ onDoubleClick: () => onSelect(record.id) })}
-      locale={{ emptyText: <Empty description="Chưa có phiếu công việc phù hợp" /> }}
+      locale={{ emptyText: <Empty description={loadError ? 'Không thể tải dữ liệu phiếu công việc' : 'Chưa có phiếu công việc phù hợp'} /> }}
       columns={[
         {
           title: 'Phiếu',
