@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,6 +87,50 @@ class NotificationServiceRoutingTest {
         assertThat(captor.getAllValues())
                 .extracting(notification -> notification.getRecipient().getId())
                 .containsExactlyInAnyOrder(actor.getId(), owner.getId());
+    }
+
+    @Test
+    void unreadListUsesRecipientScopedUnreadQueryAndNormalizesPaging() {
+        authenticate(ACTOR_ID, "dispatcher", "DISPATCHER");
+        when(repository.findByTenantIdAndRecipientIdAndReadAtIsNull(
+                org.mockito.ArgumentMatchers.eq(TENANT_ID),
+                org.mockito.ArgumentMatchers.eq(ACTOR_ID),
+                any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        NotificationService service = new NotificationService(repository, userAccountRepository);
+        service.list(-1, 500, true);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findByTenantIdAndRecipientIdAndReadAtIsNull(
+                org.mockito.ArgumentMatchers.eq(TENANT_ID),
+                org.mockito.ArgumentMatchers.eq(ACTOR_ID),
+                pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageNumber()).isZero();
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(100);
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt")).isNotNull();
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt").isDescending()).isTrue();
+    }
+
+    @Test
+    void allNotificationsListKeepsRecipientScope() {
+        authenticate(ACTOR_ID, "dispatcher", "DISPATCHER");
+        when(repository.findByTenantIdAndRecipientId(
+                org.mockito.ArgumentMatchers.eq(TENANT_ID),
+                org.mockito.ArgumentMatchers.eq(ACTOR_ID),
+                any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        NotificationService service = new NotificationService(repository, userAccountRepository);
+        service.list(1, 30, false);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findByTenantIdAndRecipientId(
+                org.mockito.ArgumentMatchers.eq(TENANT_ID),
+                org.mockito.ArgumentMatchers.eq(ACTOR_ID),
+                pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(30);
     }
 
     private static UserAccount user(UUID id, String username, UserRole role) {

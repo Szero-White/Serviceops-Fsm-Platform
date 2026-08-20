@@ -1,16 +1,16 @@
 package com.serviceops.notification.application;
 
 import com.serviceops.common.exception.BusinessException;
-import com.serviceops.identity.domain.UserAccountRepository;
-import com.serviceops.identity.domain.UserRole;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.identity.domain.UserAccount;
+import com.serviceops.identity.domain.UserAccountRepository;
+import com.serviceops.identity.domain.UserRole;
 import com.serviceops.notification.domain.Notification;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.notification.web.NotificationController.NotificationResponse;
 import com.serviceops.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -70,10 +70,12 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<NotificationResponse> list(int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 50), Sort.by("createdAt").descending());
-        return PageResponse.from(repository.findByTenantIdAndRecipientId(CurrentUser.tenantId(), CurrentUser.userId(), pageable)
-                .map(NotificationService::toResponse));
+    public PageResponse<NotificationResponse> list(int page, int size, boolean unreadOnly) {
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        var notifications = unreadOnly
+                ? repository.findByTenantIdAndRecipientIdAndReadAtIsNull(CurrentUser.tenantId(), CurrentUser.userId(), pageable)
+                : repository.findByTenantIdAndRecipientId(CurrentUser.tenantId(), CurrentUser.userId(), pageable);
+        return PageResponse.from(notifications.map(NotificationService::toResponse));
     }
 
     @Transactional(readOnly = true)

@@ -241,6 +241,14 @@
   background: var(--app-bg);
 }
 
+.notification-drawer-content {
+  width: 100%;
+}
+
+.notification-drawer-content .ant-pagination {
+  align-self: flex-end;
+}
+
 .notification-unread {
   border-radius: 8px;
   background: var(--app-primary-soft);
