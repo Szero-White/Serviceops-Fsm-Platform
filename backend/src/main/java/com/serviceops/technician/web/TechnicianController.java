@@ -2,14 +2,11 @@ package com.serviceops.technician.web;
 
 import com.serviceops.technician.application.TechnicianService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,31 +28,30 @@ public class TechnicianController {
         return service.list(activeOnly);
     }
 
-    @PostMapping
-    public TechnicianResponse create(@Valid @RequestBody TechnicianRequest request) {
-        return service.create(request);
-    }
-
     @PutMapping("/{id}")
-    public TechnicianResponse update(@PathVariable UUID id, @Valid @RequestBody TechnicianRequest request) {
-        return service.update(id, request);
+    public TechnicianResponse updateProfile(
+            @PathVariable UUID id,
+            @Valid @RequestBody TechnicianProfileRequest request
+    ) {
+        return service.updateProfile(id, request);
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        service.delete(id);
-    }
-
-    public record TechnicianRequest(
-            @NotBlank @Size(max = 150) String name,
-            @NotBlank @Size(max = 100) String username,
-            @Size(min = 8, max = 100) String password,
+    public record TechnicianProfileRequest(
             @Size(max = 30) String phone,
             @Size(max = 500) String skills,
             Boolean active
     ) {
     }
 
-    public record TechnicianResponse(UUID id, UUID userId, String name, String username, String phone, String skills, boolean active, boolean accountActive) {
+    public record TechnicianResponse(
+            UUID id,
+            UUID userId,
+            String name,
+            String username,
+            String phone,
+            String skills,
+            boolean active,
+            boolean accountActive
+    ) {
     }
 }

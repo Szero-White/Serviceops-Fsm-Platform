@@ -24,8 +24,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { username: 'warehouse', role: 'Warehouse', description: 'Phụ tùng và giao dịch kho', icon: <UserOutlined /> },
 ]
 
-export const LOCAL_DEMO_PASSWORD = '123456'
-export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || (import.meta.env.DEV ? LOCAL_DEMO_PASSWORD : '')
+export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD?.trim() ?? ''
 
 export function DemoAccountSelector({ onSelect }: { onSelect: (username: string, password: string) => void }) {
   return (
@@ -58,7 +57,7 @@ export function DemoAccountSelector({ onSelect }: { onSelect: (username: string,
 
       <Typography.Text className="demo-password-note" type="secondary">
         {DEMO_PASSWORD
-          ? 'Mật khẩu demo dùng chung sẽ được điền tự động khi chọn vai trò.'
+          ? 'Mỗi thẻ đại diện cho một vai trò demo. Khi vận hành thực tế, mỗi nhân viên sử dụng tài khoản cá nhân riêng.'
           : 'Public deployment cần cấu hình VITE_DEMO_PASSWORD để bật đăng nhập một chạm.'}
       </Typography.Text>
     </section>

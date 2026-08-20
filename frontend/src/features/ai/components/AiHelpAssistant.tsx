@@ -30,6 +30,7 @@ const roleSuggestions: Record<string, string[]> = {
     'AI tiếp nhận trong form dùng ra sao?',
   ],
   TECHNICIAN: [
+    'Tôi xem lịch làm việc của mình ở đâu?',
     'Tôi xem công việc được giao ở đâu?',
     'Cập nhật trạng thái và ghi chẩn đoán như thế nào?',
     'Tôi ghi phụ tùng đã dùng ở đâu?',

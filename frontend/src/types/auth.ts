@@ -26,4 +26,5 @@ export interface UserAccount {
   skills?: string
   createdAt: string
   updatedAt: string
+  protectedDemo?: boolean
 }

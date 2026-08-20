@@ -4,6 +4,7 @@ import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -17,7 +18,6 @@ import com.serviceops.servicerequest.web.ServiceRequestDtos.CreateServiceRequest
 import com.serviceops.servicerequest.web.ServiceRequestDtos.ServiceRequestResponse;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +38,8 @@ public class ServiceRequestService {
 
     @Transactional(readOnly = true)
     public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        String keyword = search == null ? "" : search.trim();
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        String keyword = PageRequestSupport.normalizeSearch(search);
         return PageResponse.from(repository.search(CurrentUser.tenantId(), status, keyword, pageable).map(ServiceRequestService::toResponse));
     }
 

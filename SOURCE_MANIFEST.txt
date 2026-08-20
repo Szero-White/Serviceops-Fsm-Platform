@@ -48,6 +48,7 @@ backend/src/main/java/com/serviceops/common/domain/Priority.java
 backend/src/main/java/com/serviceops/common/domain/TenantScopedEntity.java
 backend/src/main/java/com/serviceops/common/exception/BusinessException.java
 backend/src/main/java/com/serviceops/common/exception/GlobalExceptionHandler.java
+backend/src/main/java/com/serviceops/common/web/PageRequestSupport.java
 backend/src/main/java/com/serviceops/common/web/PageResponse.java
 backend/src/main/java/com/serviceops/common/web/RequestCorrelationFilter.java
 backend/src/main/java/com/serviceops/customer/application/CustomerCsvService.java
@@ -77,9 +78,15 @@ backend/src/main/java/com/serviceops/notification/application/NotificationServic
 backend/src/main/java/com/serviceops/notification/domain/Notification.java
 backend/src/main/java/com/serviceops/notification/domain/NotificationRepository.java
 backend/src/main/java/com/serviceops/notification/web/NotificationController.java
+backend/src/main/java/com/serviceops/scheduling/application/MyScheduleService.java
+backend/src/main/java/com/serviceops/scheduling/application/ScheduleBoardService.java
 backend/src/main/java/com/serviceops/scheduling/domain/Appointment.java
 backend/src/main/java/com/serviceops/scheduling/domain/AppointmentRepository.java
 backend/src/main/java/com/serviceops/scheduling/domain/AppointmentStatus.java
+backend/src/main/java/com/serviceops/scheduling/web/MyScheduleController.java
+backend/src/main/java/com/serviceops/scheduling/web/MyScheduleDtos.java
+backend/src/main/java/com/serviceops/scheduling/web/ScheduleBoardController.java
+backend/src/main/java/com/serviceops/scheduling/web/ScheduleBoardDtos.java
 backend/src/main/java/com/serviceops/security/AuthRateLimitProperties.java
 backend/src/main/java/com/serviceops/security/CorsProperties.java
 backend/src/main/java/com/serviceops/security/CurrentUser.java
@@ -123,9 +130,11 @@ backend/src/main/resources/application.yml
 backend/src/main/resources/db/migration/V1__initial_schema.sql
 backend/src/main/resources/db/migration/V2__service_request_channels.sql
 backend/src/main/resources/db/migration/V3__soft_delete_work_orders.sql
+backend/src/main/resources/db/migration/V4__schedule_board_query_index.sql
 backend/src/main/resources/templates/work-order-invoice.html
 backend/src/test/java/com/serviceops/attachment/application/LocalFileStorageServiceTest.java
 backend/src/test/java/com/serviceops/common/exception/GlobalExceptionHandlerTest.java
+backend/src/test/java/com/serviceops/common/web/PageRequestSupportTest.java
 backend/src/test/java/com/serviceops/common/web/RequestCorrelationFilterTest.java
 backend/src/test/java/com/serviceops/identity/web/ApiPasswordValidationTest.java
 backend/src/test/java/com/serviceops/integration/LocalPostgresSmokeTest.java
@@ -165,7 +174,9 @@ frontend/src/components/CsvImportPreviewModal.tsx
 frontend/src/components/MetricCard.tsx
 frontend/src/components/PageHeader.tsx
 frontend/src/components/PresentationBadge.tsx
+frontend/src/components/QueryErrorAlert.tsx
 frontend/src/components/StatusTag.tsx
+frontend/src/constants/pagination.ts
 frontend/src/features/README.md
 frontend/src/features/ai/api.ts
 frontend/src/features/ai/components/AiHelpAssistant.tsx
@@ -177,6 +188,7 @@ frontend/src/features/audit/api.ts
 frontend/src/features/audit/pages/AuditPage.tsx
 frontend/src/features/auth/AuthContext.tsx
 frontend/src/features/auth/ProtectedRoute.tsx
+frontend/src/features/auth/RoleRoute.tsx
 frontend/src/features/auth/api.ts
 frontend/src/features/auth/components/DemoAccountSelector.tsx
 frontend/src/features/auth/components/LoginHero.tsx
@@ -189,6 +201,10 @@ frontend/src/features/dashboard/pages/DashboardPage.tsx
 frontend/src/features/inventory/api.ts
 frontend/src/features/inventory/pages/InventoryPage.tsx
 frontend/src/features/notifications/api.ts
+frontend/src/features/scheduling/api.ts
+frontend/src/features/scheduling/components/ScheduleAppointmentModal.tsx
+frontend/src/features/scheduling/pages/MySchedulePage.tsx
+frontend/src/features/scheduling/pages/ScheduleBoardPage.tsx
 frontend/src/features/service-channels/api.ts
 frontend/src/features/service-channels/pages/ServiceChannelsPage.tsx
 frontend/src/features/service-requests/api.ts
@@ -205,6 +221,7 @@ frontend/src/features/work-orders/model/workOrderPermissions.ts
 frontend/src/features/work-orders/model/workOrderPresentation.ts
 frontend/src/features/work-orders/pages/WorkOrderHistoryPage.tsx
 frontend/src/features/work-orders/pages/WorkOrdersPage.tsx
+frontend/src/hooks/useDebouncedValue.ts
 frontend/src/layouts/AppLayout.tsx
 frontend/src/main.tsx
 frontend/src/pages/LandingPage.tsx
@@ -226,6 +243,7 @@ frontend/src/pages/landing/styles/marketing.css
 frontend/src/pages/landing/styles/navigation.css
 frontend/src/pages/landing/styles/responsive.css
 frontend/src/router/AppRouter.tsx
+frontend/src/router/routeAccess.ts
 frontend/src/styles/README.md
 frontend/src/styles/app/base.css
 frontend/src/styles/app/components.css
@@ -235,6 +253,7 @@ frontend/src/styles/app/components/controls.css
 frontend/src/styles/app/components/details.css
 frontend/src/styles/app/components/forms.css
 frontend/src/styles/app/components/page-header.css
+frontend/src/styles/app/components/schedule-board.css
 frontend/src/styles/app/components/shell.css
 frontend/src/styles/app/components/status-cells.css
 frontend/src/styles/app/components/tables.css
@@ -249,6 +268,7 @@ frontend/src/types/customer.ts
 frontend/src/types/index.ts
 frontend/src/types/inventory.ts
 frontend/src/types/operations.ts
+frontend/src/types/schedule.ts
 frontend/src/types/service-request.ts
 frontend/src/types/work-order.ts
 frontend/src/utils/download.ts

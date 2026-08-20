@@ -1,7 +1,7 @@
 import { BulbOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tooltip, Typography } from 'antd'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { aiApi } from '../../ai/api'
 import { assetsApi } from '../../assets/api'
@@ -9,10 +9,13 @@ import { customersApi } from '../../customers/api'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { serviceRequestsApi } from '../api'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { ChannelTag, PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
 const priorityOptions = [
   { value: 'LOW', label: 'Thấp' },
@@ -28,23 +31,42 @@ const requestStatusOptions = [
 ]
 
 export function ServiceRequestsPage() {
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<string>()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceRequest>()
   const [lastAiDraft, setLastAiDraft] = useState<ServiceRequestDraftSuggestion>()
   const [form] = Form.useForm()
+  const watchedCustomerId = Form.useWatch('customerId', form)
   const watchedTitle = Form.useWatch('title', form)
   const watchedDescription = Form.useWatch('description', form)
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['service-requests', search, status],
-    queryFn: () => serviceRequestsApi.list(search, status),
+  const serviceRequestsQuery = useQuery({
+    queryKey: ['service-requests', { search, status, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => serviceRequestsApi.list(search, status, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   })
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 200) })
-  const { data: assets } = useQuery({ queryKey: ['assets', 'all'], queryFn: () => assetsApi.list('', 0, 300) })
+  const { data, isLoading, isFetching } = serviceRequestsQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
+  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100) })
+  const { data: assets, isFetching: assetsLoading } = useQuery({
+    queryKey: ['assets', 'service-request-customer', watchedCustomerId],
+    queryFn: () => assetsApi.list('', 0, 100, watchedCustomerId),
+    enabled: Boolean(watchedCustomerId),
+  })
   const { data: channels = [] } = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
 
   const channelOptions = useMemo(
@@ -61,8 +83,15 @@ export function ServiceRequestsPage() {
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => editing ? serviceRequestsApi.update(editing.id, values) : serviceRequestsApi.create(values),
-    onSuccess: () => {
-      message.success(editing ? 'Đã cập nhật yêu cầu dịch vụ' : 'Đã tiếp nhận yêu cầu dịch vụ')
+    onSuccess: (savedRequest) => {
+      if (editing) {
+        message.success('Đã cập nhật yêu cầu dịch vụ')
+      } else {
+        notification.success({
+          message: 'Đã tiếp nhận yêu cầu dịch vụ',
+          description: savedRequest.title,
+        })
+      }
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
@@ -83,7 +112,10 @@ export function ServiceRequestsPage() {
   const convert = useMutation({
     mutationFn: serviceRequestsApi.convert,
     onSuccess: (workOrder) => {
-      message.success(`Đã tạo ${workOrder.code}`)
+      notification.success({
+        message: `Đã tạo ${workOrder.code}`,
+        description: `Phiếu công việc đã được tạo từ yêu cầu dịch vụ · ${workOrder.summary}`,
+      })
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -139,6 +171,10 @@ export function ServiceRequestsPage() {
     aiDraft.mutate({ rawText, preferredChannel: values.channel })
   }
 
+  const handleCustomerChange = (customerId: string) => {
+    form.setFieldsValue({ customerId, assetId: undefined })
+  }
+
   const showCreate = () => {
     setEditing(undefined)
     setLastAiDraft(undefined)
@@ -168,22 +204,37 @@ export function ServiceRequestsPage() {
         title="Yêu cầu dịch vụ"
         description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành phiếu công việc khi đủ thông tin."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
-        meta={<><MetaBadge>{data?.totalElements ?? 0} yêu cầu</MetaBadge><MetaBadge tone="warning">{data?.content.filter((request) => request.status === 'OPEN').length ?? 0} đang mở</MetaBadge></>}
+        meta={<><MetaBadge>{serviceRequestsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? requestStatusOptions.find((option) => option.value === status)?.label : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm nội dung, khách hàng hoặc serial" value={search} onChange={(event) => setSearch(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={setStatus} options={requestStatusOptions} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tiêu đề, mô tả, khách hàng hoặc serial" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={requestStatusOptions} />
       </div>
+
+      {serviceRequestsQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách yêu cầu dịch vụ"
+          error={serviceRequestsQuery.error}
+          onRetry={() => serviceRequestsQuery.refetch()}
+        />
+      )}
 
       <Table
         rowKey="id"
-        loading={isLoading}
-        dataSource={data?.content ?? []}
+        loading={isLoading || isFetching}
+        dataSource={serviceRequestsQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         scroll={{ x: 1180 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có yêu cầu phù hợp" /> }}
+        pagination={{
+          current: page + 1,
+          pageSize: LIST_PAGE_SIZE,
+          total: serviceRequestsQuery.isError ? 0 : (data?.totalElements ?? 0),
+          showSizeChanger: false,
+          showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} yêu cầu`,
+        }}
+        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        locale={{ emptyText: <Empty description={serviceRequestsQuery.isError ? 'Không thể tải dữ liệu yêu cầu dịch vụ' : 'Chưa có yêu cầu phù hợp'} /> }}
         columns={[
           {
             title: 'Yêu cầu',
@@ -256,10 +307,28 @@ export function ServiceRequestsPage() {
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-              <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Chọn khách hàng"
+                options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))}
+                onChange={handleCustomerChange}
+              />
             </Form.Item>
-            <Form.Item label="Thiết bị" name="assetId">
-              <Select allowClear showSearch optionFilterProp="label" options={assets?.content.map((asset) => ({ value: asset.id, label: `${asset.serialNumber} · ${asset.customerName}` }))} />
+            <Form.Item label="Thiết bị (không bắt buộc)" name="assetId">
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                disabled={!watchedCustomerId}
+                loading={assetsLoading}
+                placeholder={watchedCustomerId ? 'Chọn thiết bị của khách hàng' : 'Chọn khách hàng trước'}
+                notFoundContent={watchedCustomerId && !assetsLoading ? 'Khách hàng này chưa có thiết bị' : undefined}
+                options={assets?.content.map((asset) => ({
+                  value: asset.id,
+                  label: `${asset.serialNumber} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
+                }))}
+              />
             </Form.Item>
             <Form.Item label="Mức độ ưu tiên" name="priority" rules={[{ required: true, message: 'Chọn mức ưu tiên' }]}><Select options={priorityOptions} /></Form.Item>
             <Form.Item label="Kênh tiếp nhận" name="channel" rules={[{ required: true, message: 'Chọn kênh tiếp nhận' }]}>

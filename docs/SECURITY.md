@@ -6,7 +6,7 @@
 - JWT HMAC-SHA256, có issuer và thời hạn; profile production không có secret fallback và yêu cầu secret Base64 tối thiểu 256 bit sau khi giải mã.
 - Production/demo mặc định access token 30 phút; local development giữ hành vi cũ.
 - Stateless API; không lưu session server.
-- Method-level authorization theo role và tenant context lấy từ claim đã ký.
+- Method-level authorization theo role và tenant context lấy từ claim đã ký. Frontend dùng cùng ma trận route-role để tránh đưa người dùng vào màn hình không thuộc trách nhiệm, nhưng backend vẫn là lớp authorization quyết định.
 - Bean Validation cho request; tài khoản mới qua API yêu cầu mật khẩu tối thiểu 8 ký tự.
 - Login failure throttling theo cặp IP + username, tổng theo account và tổng theo IP cho deployment single-node.
 - Correlation/request ID (`X-Request-ID`) được sanitize, đưa vào MDC và trả lại client; exception 500 được log server-side nhưng không trả stack trace.
@@ -40,6 +40,7 @@
 |---|---|
 | Đọc chéo doanh nghiệp | Tenant claim + repository tenant scope + cross-tenant integration test |
 | Kỹ thuật viên sửa phiếu người khác | Role/assignment authorization tại service/controller |
+| Kỹ thuật viên xem lịch người khác | `/my-schedule` suy ra `TechnicianProfile` từ signed-in `userId`; client không gửi `technicianId` |
 | Double booking | Transaction + pessimistic technician lock + overlap query + concurrency test |
 | Tồn kho âm | Part lock + work-order lock + validate + ledger trong một transaction + concurrency test |
 | Hai OWNER vô hiệu hóa nhau | Pessimistic tenant-row lock trước invariant “ít nhất một OWNER active” |

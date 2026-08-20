@@ -66,3 +66,10 @@ Khi hai điều phối viên gửi request đồng thời, pessimistic lock trê
 - CUSTOMER_SERVICE: customer, asset, request.
 - TECHNICIAN: xem/cập nhật công việc được giao, upload và dùng phụ tùng.
 - WAREHOUSE_STAFF: phụ tùng và nhập kho.
+
+
+## Workspace theo vai trò
+
+- Dispatcher/OWNER dùng **Lịch điều phối** để nhìn toàn đội, xử lý hàng đợi và thay đổi phân công.
+- TECHNICIAN dùng **Lịch của tôi**. Backend lấy `userId` từ JWT, ánh xạ sang `technician_profiles.user_id` và chỉ trả appointment của hồ sơ đó.
+- Hai kỹ thuật viên cùng role vẫn là hai tài khoản riêng; role xác định quyền, còn `UserAccount` xác định danh tính và audit accountability.

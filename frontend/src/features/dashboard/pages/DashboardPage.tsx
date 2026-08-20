@@ -1,6 +1,7 @@
 import {
   AlertOutlined,
   AppstoreOutlined,
+  CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloudServerOutlined,
@@ -10,7 +11,7 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Table, Typography } from 'antd'
+import { Button, Card, Col, Empty, Progress, Result, Row, Skeleton, Space, Table, Typography } from 'antd'
 import { dashboardApi } from '../api'
 import { useAuth } from '../../auth/AuthContext'
 import { MetricCard } from '../../../components/MetricCard'
@@ -19,19 +20,26 @@ import { PageHeader } from '../../../components/PageHeader'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { formatDateTime } from '../../../utils/format'
 import { API_URL } from '../../../api/http'
+import { useNavigate } from 'react-router-dom'
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const isTechnician = user?.role === 'TECHNICIAN'
+  const dashboardEyebrow = isTechnician ? 'Không gian kỹ thuật viên' : 'Trung tâm vận hành'
+  const dashboardTitle = isTechnician ? 'Tổng quan công việc của tôi' : 'Tổng quan vận hành'
+  const dashboardDescription = isTechnician
+    ? 'Theo dõi công việc được phân công, tiến độ thực hiện và lịch làm việc cá nhân.'
+    : 'Một màn hình điều phối tập trung cho yêu cầu dịch vụ, phiếu công việc, kỹ thuật viên và tồn kho.'
   const { data, isLoading, error, refetch, isFetching } = useQuery({ queryKey: ['dashboard'], queryFn: dashboardApi.get })
 
   if (isLoading) {
     return (
       <div className="page-shell">
         <PageHeader
-          eyebrow="Trung tâm vận hành"
-          title="Tổng quan vận hành"
-          description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
+          eyebrow={dashboardEyebrow}
+          title={dashboardTitle}
+          description={dashboardDescription}
           meta={<MetaBadge tone="info">Đang tải dữ liệu</MetaBadge>}
         />
         <Row gutter={[16, 16]}>
@@ -47,9 +55,9 @@ export function DashboardPage() {
     return (
       <div className="page-shell">
         <PageHeader
-          eyebrow="Trung tâm vận hành"
-          title="Tổng quan vận hành"
-          description="Theo dõi tình trạng dịch vụ và các công việc cần ưu tiên hôm nay."
+          eyebrow={dashboardEyebrow}
+          title={dashboardTitle}
+          description={dashboardDescription}
           actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Tải lại</Button>}
           meta={<><MetaBadge tone="danger">Backend chưa kết nối</MetaBadge><MetaBadge>API chưa sẵn sàng</MetaBadge></>}
         />
@@ -80,11 +88,16 @@ export function DashboardPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Trung tâm vận hành"
-        title="Tổng quan vận hành"
-        description="Một màn hình điều phối tập trung cho yêu cầu dịch vụ, phiếu công việc, kỹ thuật viên và tồn kho."
-        actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>}
-        meta={<MetaBadge>{isTechnician ? 'Chế độ kỹ thuật viên' : 'Chế độ điều phối'}</MetaBadge>}
+        eyebrow={dashboardEyebrow}
+        title={dashboardTitle}
+        description={dashboardDescription}
+        actions={isTechnician ? (
+          <Space>
+            <Button type="primary" icon={<CalendarOutlined />} onClick={() => navigate('/my-schedule')}>Lịch của tôi</Button>
+            <Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>
+          </Space>
+        ) : <Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Làm mới</Button>}
+        meta={<MetaBadge>{isTechnician ? 'Dữ liệu cá nhân' : 'Chế độ điều phối'}</MetaBadge>}
       />
 
       <Row gutter={[16, 16]}>
@@ -107,7 +120,7 @@ export function DashboardPage() {
 
       <Row gutter={[16, 16]} className="section-row">
         <Col xs={24} xl={7}>
-          <Card title="Sức khỏe vận hành" className="content-card operations-health" bordered={false}>
+          <Card title={isTechnician ? 'Tiến độ của tôi' : 'Sức khỏe vận hành'} className="content-card operations-health" bordered={false}>
             <div className="completion-ring">
               <Progress type="dashboard" percent={completionRate} strokeWidth={10} />
               <div><strong>Tỷ lệ hoàn tất</strong><span>Trên tổng số phiếu hiện có</span></div>
@@ -121,7 +134,7 @@ export function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} xl={17}>
-          <Card title="Phiếu công việc gần đây" className="content-card" bordered={false}>
+          <Card title={isTechnician ? 'Công việc gần đây của tôi' : 'Phiếu công việc gần đây'} className="content-card" bordered={false}>
             <Table
               rowKey="id"
               dataSource={data.recentWorkOrders}

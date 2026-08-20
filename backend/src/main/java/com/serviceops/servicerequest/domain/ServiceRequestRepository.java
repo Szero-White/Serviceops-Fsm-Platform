@@ -17,6 +17,7 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
             where r.tenantId = :tenantId
               and (:status is null or r.status = :status)
               and (:search = '' or lower(r.title) like lower(concat('%', :search, '%'))
+                   or lower(r.description) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
                    or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
             """)

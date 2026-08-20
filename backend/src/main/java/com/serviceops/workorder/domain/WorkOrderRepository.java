@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,8 +26,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> search(@Param("tenantId") UUID tenantId,
                            @Param("status") WorkOrderStatus status,
@@ -47,8 +51,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """,
             countQuery = """
             select count(w) from WorkOrder w
@@ -63,8 +70,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> searchAssigned(@Param("tenantId") UUID tenantId,
                                    @Param("userId") UUID userId,
@@ -134,8 +144,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> searchHistory(@Param("tenantId") UUID tenantId,
                                   @Param("status") WorkOrderStatus status,
@@ -155,8 +168,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """,
             countQuery = """
             select count(w) from WorkOrder w
@@ -171,14 +187,48 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
               and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> searchAssignedHistory(@Param("tenantId") UUID tenantId,
                                           @Param("userId") UUID userId,
                                           @Param("status") WorkOrderStatus status,
                                           @Param("search") String search,
                                           Pageable pageable);
+
+    @Query("""
+            select w from WorkOrder w
+            join fetch w.customer
+            where w.tenantId = :tenantId
+              and w.deletedAt is null
+              and w.status in (
+                  com.serviceops.workorder.domain.WorkOrderStatus.OPEN,
+                  com.serviceops.workorder.domain.WorkOrderStatus.REOPENED
+              )
+            order by
+              case w.priority
+                when com.serviceops.common.domain.Priority.URGENT then 0
+                when com.serviceops.common.domain.Priority.HIGH then 1
+                when com.serviceops.common.domain.Priority.NORMAL then 2
+                else 3
+              end,
+              w.createdAt asc
+            """)
+    List<WorkOrder> findDispatchQueue(@Param("tenantId") UUID tenantId, Pageable pageable);
+
+    @Query("""
+            select count(w) from WorkOrder w
+            where w.tenantId = :tenantId
+              and w.deletedAt is null
+              and w.status in (
+                  com.serviceops.workorder.domain.WorkOrderStatus.OPEN,
+                  com.serviceops.workorder.domain.WorkOrderStatus.REOPENED
+              )
+            """)
+    long countDispatchQueue(@Param("tenantId") UUID tenantId);
 
     long countByTenantIdAndTechnicianId(UUID tenantId, UUID technicianId);
     long countByTenantIdAndServiceRequestId(UUID tenantId, UUID serviceRequestId);

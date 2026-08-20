@@ -7,7 +7,6 @@ import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.identity.web.UserManagementController.UserAccountRequest;
 import com.serviceops.identity.web.UserManagementController.UserAccountResponse;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
@@ -35,7 +34,7 @@ public class UserManagementService {
     private final NotificationRepository notificationRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
-    private final NotificationService notificationService;
+    private final DemoAccountProtectionPolicy demoAccountProtectionPolicy;
 
     @Transactional(readOnly = true)
     public List<UserAccountResponse> list() {
@@ -64,13 +63,13 @@ public class UserManagementService {
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
         auditService.record("CREATE", "USER_ACCOUNT", user.getId(), "Tạo người dùng " + user.getUsername() + " với vai trò " + user.getRole());
-        notificationService.notifyCurrentUser("Người dùng mới: " + user.getUsername(), user.getDisplayName());
         return toResponse(user, technician);
     }
 
     @Transactional
     public UserAccountResponse update(UUID id, UserAccountRequest request) {
         UserAccount user = require(id);
+        demoAccountProtectionPolicy.guardMutation(user);
         guardSelfUpdate(user, request);
         guardLastOwner(user, request.role(), request.active());
 
@@ -86,13 +85,13 @@ public class UserManagementService {
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
         auditService.record("UPDATE", "USER_ACCOUNT", user.getId(), "Cập nhật người dùng " + user.getUsername());
-        notificationService.notifyCurrentUser("Người dùng được cập nhật: " + user.getUsername(), user.getDisplayName());
         return toResponse(user, technician);
     }
 
     @Transactional
     public void delete(UUID id) {
         UserAccount user = require(id);
+        demoAccountProtectionPolicy.guardMutation(user);
         if (user.getId().equals(CurrentUser.userId())) {
             throw BusinessException.badRequest("USER_SELF_DELETE_BLOCKED", "Không thể xóa chính tài khoản đang đăng nhập");
         }
@@ -116,7 +115,6 @@ public class UserManagementService {
 
         repository.delete(user);
         auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + user.getUsername());
-        notificationService.notifyCurrentUser("Người dùng đã xoá: " + user.getUsername(), user.getDisplayName());
     }
 
     private UserAccount require(UUID id) {
@@ -141,14 +139,25 @@ public class UserManagementService {
             return technician;
         }
 
-        if (technician == null) {
+        boolean newProfile = technician == null;
+        if (newProfile) {
             technician = new TechnicianProfile();
             technician.setTenantId(tenantId);
             technician.setUser(user);
         }
-        technician.setPhone(blankToNull(request.phone()));
-        technician.setSkills(blankToNull(request.skills()));
-        technician.setActive(user.isActive());
+
+        if (newProfile || request.phone() != null) {
+            technician.setPhone(blankToNull(request.phone()));
+        }
+        if (newProfile || request.skills() != null) {
+            technician.setSkills(blankToNull(request.skills()));
+        }
+        if (newProfile) {
+            technician.setActive(user.isActive());
+        } else if (!user.isActive()) {
+            technician.setActive(false);
+        }
+
         return technicianRepository.save(technician);
     }
 
@@ -189,7 +198,7 @@ public class UserManagementService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private static UserAccountResponse toResponse(UserAccount user, TechnicianProfile technician) {
+    private UserAccountResponse toResponse(UserAccount user, TechnicianProfile technician) {
         return new UserAccountResponse(
                 user.getId(),
                 user.getUsername(),
@@ -200,7 +209,8 @@ public class UserManagementService {
                 technician == null ? null : technician.getPhone(),
                 technician == null ? null : technician.getSkills(),
                 user.getCreatedAt(),
-                user.getUpdatedAt()
+                user.getUpdatedAt(),
+                demoAccountProtectionPolicy.isProtected(user.getUsername())
         );
     }
 }

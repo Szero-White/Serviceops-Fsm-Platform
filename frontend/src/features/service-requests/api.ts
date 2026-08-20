@@ -2,7 +2,7 @@ import { http } from '../../api/http'
 import type { PageResponse, ServiceRequest, WorkOrder } from '../../types'
 
 export const serviceRequestsApi = {
-  list: (search = '', status?: string, page = 0, size = 100) =>
+  list: (search = '', status?: string, page = 0, size = 20) =>
     http.get<PageResponse<ServiceRequest>>('/service-requests', { params: { search, status, page, size } }).then((response) => response.data),
   create: (payload: Record<string, unknown>) => http.post<ServiceRequest>('/service-requests', payload).then((response) => response.data),
   update: (id: string, payload: Record<string, unknown>) => http.put<ServiceRequest>(`/service-requests/${id}`, payload).then((response) => response.data),

@@ -6,7 +6,7 @@ import {
 } from '@ant-design/icons'
 import { Alert, Button, Card, Form, Input, Typography } from 'antd'
 import type { ReactNode } from 'react'
-import { DEMO_PASSWORD, LOCAL_DEMO_PASSWORD, DemoAccountSelector } from './DemoAccountSelector'
+import { DEMO_PASSWORD, DemoAccountSelector } from './DemoAccountSelector'
 
 export type LoginFormValues = {
   username: string
@@ -14,7 +14,7 @@ export type LoginFormValues = {
 }
 
 const DEFAULT_LOGIN_VALUES: LoginFormValues = import.meta.env.DEV
-  ? { username: 'owner', password: LOCAL_DEMO_PASSWORD }
+  ? { username: 'owner', password: DEMO_PASSWORD }
   : { username: 'owner', password: '' }
 
 function TagLine({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {

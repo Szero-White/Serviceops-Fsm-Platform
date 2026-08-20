@@ -1,14 +1,17 @@
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Timeline, Typography } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { WorkOrder, WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 import { workOrdersApi } from '../api'
 
@@ -20,16 +23,30 @@ const historyStatusOptions: Array<{ value: Extract<WorkOrderStatus, 'CLOSED' | '
 export function WorkOrderHistoryPage() {
   const { user } = useAuth()
   const canDelete = ['OWNER', 'DISPATCHER'].includes(user?.role ?? '')
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>>()
   const [selectedId, setSelectedId] = useState<string>()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['work-order-history', search, status],
-    queryFn: () => workOrdersApi.history(search, status),
+  const historyQuery = useQuery({
+    queryKey: ['work-order-history', { search, status, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => workOrdersApi.history(search, status, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   })
+  const { data, isLoading, isFetching } = historyQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
 
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ['work-order', selectedId],
@@ -63,35 +80,50 @@ export function WorkOrderHistoryPage() {
         eyebrow="Lưu trữ dịch vụ"
         title="Lịch sử phiếu công việc"
         description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại tiến trình xử lý và tải hóa đơn khi cần đối soát."
-        meta={<MetaBadge>{data?.totalElements ?? 0} phiếu lưu trữ</MetaBadge>}
+        meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu lưu trữ`}</MetaBadge>}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm mã phiếu, nội dung, khách hàng hoặc serial"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
         />
         <Select
           allowClear
           placeholder="Tất cả trạng thái"
           value={status}
-          onChange={setStatus}
+          onChange={(value) => { setStatus(value); setPage(0) }}
           options={historyStatusOptions}
         />
       </div>
 
+      {historyQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được lịch sử phiếu công việc"
+          error={historyQuery.error}
+          onRetry={() => historyQuery.refetch()}
+        />
+      )}
+
       <Table
         rowKey="id"
-        loading={isLoading}
-        dataSource={data?.content ?? []}
+        loading={isLoading || isFetching}
+        dataSource={historyQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         scroll={{ x: 1160 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
+        pagination={{
+          current: page + 1,
+          pageSize: LIST_PAGE_SIZE,
+          total: historyQuery.isError ? 0 : (data?.totalElements ?? 0),
+          showSizeChanger: false,
+          showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phiếu`,
+        }}
+        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
         onRow={(record) => ({ onDoubleClick: () => setSelectedId(record.id) })}
-        locale={{ emptyText: <Empty description="Chưa có phiếu lịch sử phù hợp" /> }}
+        locale={{ emptyText: <Empty description={historyQuery.isError ? 'Không thể tải dữ liệu lịch sử phiếu' : 'Chưa có phiếu lịch sử phù hợp'} /> }}
         columns={[
           {
             title: 'Phiếu',

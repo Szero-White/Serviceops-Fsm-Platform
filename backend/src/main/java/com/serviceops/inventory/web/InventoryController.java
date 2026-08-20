@@ -33,6 +33,7 @@ public class InventoryController {
     private final InventoryService service;
 
     @GetMapping("/spare-parts")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF','TECHNICIAN')")
     public PageResponse<SparePartResponse> search(@RequestParam(defaultValue = "") String search,
                                                   @RequestParam(defaultValue = "0") int page,
                                                   @RequestParam(defaultValue = "20") int size) {
@@ -46,6 +47,7 @@ public class InventoryController {
     }
 
     @GetMapping("/spare-parts/export")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF','TECHNICIAN')")
     public ResponseEntity<byte[]> export(@RequestParam(defaultValue = "") String search) {
         return csv("serviceops-spare-parts.csv", service.exportSpareParts(search));
     }

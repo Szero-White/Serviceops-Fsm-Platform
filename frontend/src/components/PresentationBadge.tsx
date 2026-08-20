@@ -56,21 +56,32 @@ export function WarrantyTag({ underWarranty }: { underWarranty: boolean }) {
   )
 }
 
-const auditActionLabels: Record<string, string> = {
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
   CREATE: 'Tạo mới',
   UPDATE: 'Cập nhật',
+  DELETE: 'Xóa',
   ASSIGN: 'Phân công',
   CHANGE_STATUS: 'Đổi trạng thái',
+  CANCEL: 'Hủy',
   CONSUME_PART: 'Xuất phụ tùng',
   IMPORT_STOCK: 'Nhập kho',
-  CANCEL: 'Hủy',
+  IMPORT_CUSTOMERS: 'Import khách hàng',
+  IMPORT_ASSETS: 'Import thiết bị',
+  IMPORT_SPARE_PARTS: 'Import phụ tùng',
   UPLOAD_FILE: 'Tải tệp',
+  RENAME_FILE: 'Đổi tên tệp',
+  DELETE_FILE: 'Xóa tệp',
+  DELETE_HISTORY: 'Xóa khỏi lịch sử',
   AI_HELP_LOCAL: 'Trợ lý nội bộ',
   AI_HELP_GEMINI: 'Trợ lý AI',
+  AI_HELP_FALLBACK: 'Trợ lý dự phòng',
+  AI_DRAFT_LOCAL: 'Gợi ý nội bộ',
+  AI_DRAFT_GEMINI: 'Gợi ý AI',
+  AI_DRAFT_FALLBACK: 'Gợi ý dự phòng',
   SEED: 'Khởi tạo dữ liệu',
 }
 
 export function AuditActionTag({ action }: { action: string }) {
-  const tone: SemanticTone = action === 'CANCEL' ? 'danger' : 'neutral'
-  return <Tag className={`${toneClass(tone)} audit-action-tag`}>{auditActionLabels[action] ?? action}</Tag>
+  const tone: SemanticTone = ['CANCEL', 'DELETE', 'DELETE_FILE', 'DELETE_HISTORY'].includes(action) ? 'danger' : 'neutral'
+  return <Tag className={`${toneClass(tone)} audit-action-tag`}>{AUDIT_ACTION_LABELS[action] ?? action}</Tag>
 }

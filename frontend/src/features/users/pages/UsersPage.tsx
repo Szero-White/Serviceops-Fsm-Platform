@@ -1,13 +1,16 @@
 import { DeleteOutlined, EditOutlined, KeyOutlined, PlusOutlined, SearchOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography } from 'antd'
-import { useMemo, useState } from 'react'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { usersApi } from '../api'
 import { useAuth } from '../../auth/AuthContext'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge, RoleTag } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 
@@ -54,11 +57,25 @@ export function UsersPage() {
   const { user: currentUser } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const { data = [], isError, isLoading } = useQuery({
+  const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: usersApi.list,
   })
+  const { data = [], isError, isLoading } = usersQuery
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'technician') {
+      return
+    }
+
+    setEditing(undefined)
+    form.resetFields()
+    form.setFieldsValue({ role: 'TECHNICIAN', active: true })
+    setOpen(true)
+    setSearchParams({}, { replace: true })
+  }, [form, searchParams, setSearchParams])
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -125,7 +142,7 @@ export function UsersPage() {
         title="Người dùng & phân quyền"
         description="OWNER tạo tài khoản cho nhân sự, phân vai trò theo trách nhiệm và kiểm soát trạng thái truy cập."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm người dùng</Button>}
-        meta={<MetaBadge>{data.length} tài khoản</MetaBadge>}
+        meta={<MetaBadge>{isError ? 'Lỗi tải dữ liệu' : `${data.length} tài khoản`}</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
@@ -135,27 +152,25 @@ export function UsersPage() {
       </div>
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tên, username, vai trò hoặc kỹ năng" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tên, username, vai trò, điện thoại hoặc kỹ năng" value={search} onChange={(event) => setSearch(event.target.value)} />
       </div>
 
       {isError && (
-        <Alert
-          showIcon
-          type="error"
-          message="Chưa tải được danh sách người dùng"
-          description="Hãy restart backend để API /api/v1/users mới được nạp, sau đó tải lại trang."
-          style={{ marginBottom: 14 }}
+        <QueryErrorAlert
+          title="Chưa tải được danh sách người dùng"
+          error={usersQuery.error}
+          onRetry={() => usersQuery.refetch()}
         />
       )}
 
       <Table
         rowKey="id"
         loading={isLoading}
-        dataSource={filtered}
+        dataSource={isError ? [] : filtered}
         className="content-table"
         scroll={{ x: 1120 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có người dùng phù hợp" /> }}
+        pagination={{ pageSize: LIST_PAGE_SIZE, showSizeChanger: false }}
+        locale={{ emptyText: <Empty description={isError ? 'Không thể tải dữ liệu người dùng' : 'Chưa có người dùng phù hợp'} /> }}
         columns={[
           {
             title: 'Người dùng',
@@ -163,7 +178,9 @@ export function UsersPage() {
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.displayName}</Typography.Text>
-                <Typography.Text type="secondary">@{record.username}</Typography.Text>
+                <Typography.Text type="secondary">
+                  @{record.username}{record.protectedDemo ? ' · Demo cố định' : ''}
+                </Typography.Text>
               </div>
             ),
           },
@@ -176,18 +193,45 @@ export function UsersPage() {
             width: 92,
             render: (_, record) => {
               const isSelf = currentUser?.id === record.id
+              const isProtectedDemo = Boolean(record.protectedDemo)
+              const deleteBlocked = isSelf || isProtectedDemo
+
               return (
                 <Space size={4}>
-                  <Button aria-label="Sửa người dùng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                  <Button
+                    aria-label="Sửa người dùng"
+                    type="text"
+                    icon={<EditOutlined />}
+                    disabled={isProtectedDemo}
+                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                    onClick={() => showEdit(record)}
+                  />
                   <Popconfirm
-                    title="Xoá người dùng này?"
-                    description={isSelf ? 'Không thể xóa tài khoản đang đăng nhập.' : 'Chỉ xoá được khi người dùng chưa bị ràng buộc dữ liệu vận hành.'}
+                    title={isProtectedDemo ? 'Tài khoản demo cố định' : 'Xoá người dùng này?'}
+                    description={
+                      isProtectedDemo
+                        ? 'Tài khoản này cần được giữ nguyên để bảo đảm luồng public demo luôn hoạt động.'
+                        : isSelf
+                          ? 'Không thể xóa tài khoản đang đăng nhập.'
+                          : 'Chỉ xoá được khi người dùng chưa bị ràng buộc dữ liệu vận hành.'
+                    }
                     okText="Xoá"
                     cancelText="Huỷ"
-                    okButtonProps={{ danger: true, loading: remove.isPending, disabled: isSelf }}
-                    onConfirm={() => remove.mutate(record.id)}
+                    okButtonProps={{ danger: true, loading: remove.isPending, disabled: deleteBlocked }}
+                    onConfirm={() => {
+                      if (!deleteBlocked) {
+                        remove.mutate(record.id)
+                      }
+                    }}
                   >
-                    <Button aria-label="Xoá người dùng" type="text" danger disabled={isSelf} icon={<DeleteOutlined />} />
+                    <Button
+                      aria-label="Xoá người dùng"
+                      type="text"
+                      danger
+                      disabled={deleteBlocked}
+                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                      icon={<DeleteOutlined />}
+                    />
                   </Popconfirm>
                 </Space>
               )
@@ -196,7 +240,21 @@ export function UsersPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật người dùng' : 'Thêm người dùng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={760} destroyOnHidden>
+      <Modal
+        title={
+          editing
+            ? 'Cập nhật người dùng'
+            : selectedRole === 'TECHNICIAN'
+              ? 'Thêm kỹ thuật viên'
+              : 'Thêm người dùng'
+        }
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={() => form.submit()}
+        confirmLoading={save.isPending}
+        width={760}
+        destroyOnHidden
+      >
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
           <div className="form-grid two-cols">
             <Form.Item label="Họ tên" name="displayName" rules={[{ required: true, message: 'Nhập họ tên người dùng' }]}>
@@ -214,7 +272,7 @@ export function UsersPage() {
             <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
               <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
             </Form.Item>
-            {selectedRole === 'TECHNICIAN' && (
+            {selectedRole === 'TECHNICIAN' && (!editing || editing.role !== 'TECHNICIAN') && (
               <>
                 <Form.Item label="Điện thoại kỹ thuật viên" name="phone">
                   <Input placeholder="0909123456" />

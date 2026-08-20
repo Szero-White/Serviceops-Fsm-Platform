@@ -71,7 +71,7 @@ final class AiHelpKnowledgeBase {
 
     private static final List<HelpTopic> TOPICS = List.of(
             topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicWorkOrders(),
-            topicTechnicianWork(), topicTechnicians(), topicInventory(), topicChannels(), topicUsers(), topicAudit()
+            topicTechnicianWork(), topicMySchedule(), topicTechnicians(), topicInventory(), topicChannels(), topicUsers(), topicAudit()
     );
 
     private static HelpTopic topicDashboard() {
@@ -114,6 +114,14 @@ final class AiHelpKnowledgeBase {
                 List.of("toi la ky thuat", "viec duoc giao", "cap nhat trang thai", "chan doan", "giai phap"),
                 "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý.",
                 List.of("Mở menu Phiếu công việc", "Lọc hoặc tìm phiếu được giao cho bạn", "Mở chi tiết phiếu", "Cập nhật trạng thái theo tiến độ thực tế", "Ghi chẩn đoán, giải pháp và phụ tùng đã dùng", "Đính kèm ảnh/PDF minh chứng nếu có"));
+    }
+
+
+    private static HelpTopic topicMySchedule() {
+        return new HelpTopic("Lịch của tôi", "/my-schedule", List.of("TECHNICIAN"),
+                List.of("lich cua toi", "lich lam viec", "lich hom nay", "lich tuan", "hen cua toi"),
+                "Lịch của tôi chỉ hiển thị các lịch hẹn được phân công cho kỹ thuật viên đang đăng nhập; hệ thống tự xác định theo tài khoản và không yêu cầu chọn kỹ thuật viên.",
+                List.of("Mở menu Lịch của tôi", "Chọn tuần cần xem", "Đọc giờ hẹn, khách hàng, địa chỉ và thiết bị", "Mở Phiếu công việc để cập nhật tiến độ khi bắt đầu xử lý"));
     }
 
     private static HelpTopic topicTechnicians() {

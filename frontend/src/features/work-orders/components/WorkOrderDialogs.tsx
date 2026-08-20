@@ -40,6 +40,7 @@ export function WorkOrderDialogs({
   consume,
   customers,
   assets,
+  assetsLoading,
   technicians,
   parts,
 }: {
@@ -49,9 +50,11 @@ export function WorkOrderDialogs({
   consume: { open: boolean; form: FormInstance<ConsumePartValues>; pending: boolean; onClose: () => void; onSubmit: (values: ConsumePartValues) => void }
   customers?: PageResponse<Customer>
   assets?: PageResponse<Asset>
+  assetsLoading?: boolean
   technicians?: Technician[]
   parts?: PageResponse<SparePart>
 }) {
+  const selectedCustomerId = Form.useWatch('customerId', create.form)
   const selectedPartId = Form.useWatch('sparePartId', consume.form)
   const selectedPart = parts?.content.find((item) => item.id === selectedPartId)
 
@@ -61,10 +64,28 @@ export function WorkOrderDialogs({
         <Form form={create.form} layout="vertical" onFinish={create.onSubmit} requiredMark={false}>
           <div className="form-grid two-cols">
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-              <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="Chọn khách hàng"
+                options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))}
+                onChange={(customerId) => create.form.setFieldsValue({ customerId, assetId: undefined })}
+              />
             </Form.Item>
-            <Form.Item label="Thiết bị" name="assetId">
-              <Select allowClear showSearch optionFilterProp="label" options={assets?.content.map((asset) => ({ value: asset.id, label: `${asset.serialNumber} · ${asset.customerName}` }))} />
+            <Form.Item label="Thiết bị (không bắt buộc)" name="assetId">
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                disabled={!selectedCustomerId}
+                loading={assetsLoading}
+                placeholder={selectedCustomerId ? 'Chọn thiết bị của khách hàng' : 'Chọn khách hàng trước'}
+                notFoundContent={selectedCustomerId && !assetsLoading ? 'Khách hàng này chưa có thiết bị' : undefined}
+                options={assets?.content.map((asset) => ({
+                  value: asset.id,
+                  label: `${asset.serialNumber} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
+                }))}
+              />
             </Form.Item>
           </div>
           <Form.Item label="Nội dung công việc" name="summary" rules={[{ required: true, message: 'Nhập nội dung công việc' }]}><Input /></Form.Item>
@@ -81,7 +102,7 @@ export function WorkOrderDialogs({
           <Form.Item label="Thời gian thực hiện" name="period" rules={[{ required: true, message: 'Chọn thời gian thực hiện' }]}>
             <RangePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} disabledDate={(date) => date.isBefore(dayjs().startOf('day'))} />
           </Form.Item>
-          <Typography.Text type="secondary">Hệ thống khoá bản ghi kỹ thuật viên và kiểm tra lịch chồng lấn trong cùng transaction.</Typography.Text>
+          <Typography.Text type="secondary">Hệ thống sẽ cảnh báo nếu kỹ thuật viên đã có lịch trùng với khoảng thời gian này.</Typography.Text>
         </Form>
       </Modal>
 

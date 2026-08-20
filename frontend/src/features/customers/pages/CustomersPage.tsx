@@ -1,27 +1,47 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography, Upload } from 'antd'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { customersApi } from '../../customers/api'
 import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { Customer, CustomerImportResult, CustomerImportRowResult } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
 export function CustomersPage() {
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Customer>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<CustomerImportResult>()
   const [form] = Form.useForm()
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({ queryKey: ['customers', search], queryFn: () => customersApi.list(search) })
+  const customersQuery = useQuery({
+    queryKey: ['customers', { search, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+  })
+  const { data, isLoading, isFetching } = customersQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => editing ? customersApi.update(editing.id, values) : customersApi.create(values),
@@ -61,7 +81,10 @@ export function CustomersPage() {
     onSuccess: (result) => {
       setBulkImportResult(result)
       if (result.committed) {
-        message.success(`Đã import ${result.importedRows} khách hàng`)
+        notification.success({
+          message: 'Import khách hàng hoàn tất',
+          description: `Đã thêm ${result.importedRows} khách hàng vào hệ thống.`,
+        })
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
@@ -74,7 +97,7 @@ export function CustomersPage() {
 
   const exportCsv = async () => {
     try {
-      downloadBlob(await customersApi.exportCsv(search), 'serviceops-customers.csv')
+      downloadBlob(await customersApi.exportCsv(searchInput.trim()), 'serviceops-customers.csv')
     } catch (error) {
       message.error(apiErrorMessage(error))
     }
@@ -153,7 +176,7 @@ export function CustomersPage() {
         title="Khách hàng"
         description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
         actions={customerActions}
-        meta={<MetaBadge>{data?.totalElements ?? 0} hồ sơ</MetaBadge>}
+        meta={<MetaBadge>{customersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
       />
 
       <CardlessTableToolbar>
@@ -161,19 +184,34 @@ export function CustomersPage() {
           allowClear
           prefix={<SearchOutlined />}
           placeholder="Tìm tên, mã, số điện thoại hoặc email"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
         />
       </CardlessTableToolbar>
 
+      {customersQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách khách hàng"
+          error={customersQuery.error}
+          onRetry={() => customersQuery.refetch()}
+        />
+      )}
+
       <Table
         rowKey="id"
-        loading={isLoading}
-        dataSource={data?.content ?? []}
+        loading={isLoading || isFetching}
+        dataSource={customersQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         scroll={{ x: 980 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có khách hàng phù hợp" /> }}
+        pagination={{
+          current: page + 1,
+          pageSize: LIST_PAGE_SIZE,
+          total: customersQuery.isError ? 0 : (data?.totalElements ?? 0),
+          showSizeChanger: false,
+          showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} khách hàng`,
+        }}
+        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        locale={{ emptyText: <Empty description={customersQuery.isError ? 'Không thể tải dữ liệu khách hàng' : 'Chưa có khách hàng phù hợp'} /> }}
         columns={[
           {
             title: 'Khách hàng',
