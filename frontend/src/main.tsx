@@ -93,7 +93,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         },
       }}
     >
-      <AntApp>
+      <AntApp
+        message={{ duration: 4.5, maxCount: 3, top: 76 }}
+        notification={{
+          duration: 6,
+          maxCount: 3,
+          placement: 'topRight',
+          top: 76,
+          showProgress: true,
+          pauseOnHover: true,
+        }}
+      >
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <AuthProvider>

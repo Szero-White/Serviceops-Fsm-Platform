@@ -11,6 +11,28 @@
 .toolbar-row .ant-input-affix-wrapper { max-width: 620px; }
 .toolbar-row .ant-select { min-width: 190px; }
 
+
+.audit-toolbar {
+  max-width: none;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.audit-toolbar .audit-search-input {
+  flex: 1 1 320px;
+  max-width: 520px;
+}
+.audit-toolbar .audit-actor-input {
+  width: 190px;
+  flex: 0 0 190px;
+}
+.audit-toolbar .ant-picker {
+  width: 260px;
+  height: 36px;
+}
+.audit-toolbar .ant-select {
+  min-width: 170px;
+}
+
 .content-table {
   overflow: hidden;
   margin-bottom: 16px;

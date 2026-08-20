@@ -147,7 +147,7 @@ export const DEPLOYMENT_OPTIONS: DeploymentOption[] = [
     badge: 'Mở rộng theo nhu cầu',
     highlight: false,
     desc: 'Các hạng mục productization được ưu tiên theo nhu cầu vận hành thật, không thêm công nghệ chỉ để làm đẹp CV.',
-    features: ['Dispatch schedule board', 'SLA / promised service windows', 'Preventive maintenance agreements', 'Object storage / SSO khi có yêu cầu triển khai'],
+    features: ['SLA / promised service windows', 'Preventive maintenance agreements', 'Technician mobile/PWA khi có use case', 'Object storage / SSO khi có yêu cầu triển khai'],
     cta: 'Xem định hướng',
   },
 ]
@@ -163,7 +163,7 @@ export const CAPABILITY_LABELS = [
   'Tiếp nhận yêu cầu',
   'Thiết bị khách hàng',
   'Phiếu công việc',
-  'Lịch kỹ thuật viên',
+  'Điều phối lịch tuần',
   'Kho phụ tùng',
   'Audit & báo cáo',
 ]

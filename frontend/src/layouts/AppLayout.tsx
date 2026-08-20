@@ -24,6 +24,7 @@ import { notificationsApi } from '../features/notifications/api'
 import { useAuth } from '../features/auth/AuthContext'
 import { AiHelpAssistant } from '../features/ai/components/AiHelpAssistant'
 import { formatDateTime } from '../utils/format'
+import { canAccessRoute } from '../router/routeAccess'
 
 const { Header, Sider, Content } = Layout
 
@@ -43,48 +44,58 @@ export function AppLayout() {
   const location = useLocation()
   const queryClient = useQueryClient()
 
+  const notificationCountKey = ['notification-count', user?.id] as const
+  const notificationsKey = ['notifications', user?.id] as const
+
   const { data: unread = 0 } = useQuery({
-    queryKey: ['notification-count'],
+    queryKey: notificationCountKey,
     queryFn: notificationsApi.unreadCount,
+    enabled: Boolean(user?.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchInterval: 30_000,
   })
 
-  const { data: notifications } = useQuery({
-    queryKey: ['notifications'],
+  const { data: notifications, isFetching: notificationsFetching } = useQuery({
+    queryKey: notificationsKey,
     queryFn: notificationsApi.list,
-    enabled: notificationsOpen,
+    enabled: Boolean(user?.id) && notificationsOpen,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const items = useMemo(() => {
-    const role = user?.role ?? ''
+    const role = user?.role
     const sections = [
       {
         key: 'operations',
         label: 'Vận hành',
         children: [
-          { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
-          { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-          { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF'] },
-          { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'] },
+          { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link> },
+          { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link> },
+          { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link> },
+          { key: '/schedule', icon: <CalendarOutlined />, label: <Link to="/schedule">Lịch điều phối</Link> },
+          { key: '/my-schedule', icon: <CalendarOutlined />, label: <Link to="/my-schedule">Lịch của tôi</Link> },
+          { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link> },
         ],
       },
       {
         key: 'master-data',
         label: 'Danh mục & nguồn lực',
         children: [
-          { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-          { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-          { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link>, roles: ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'] },
-          { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link>, roles: ['OWNER', 'DISPATCHER'] },
-          { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link>, roles: ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'] },
+          { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link> },
+          { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link> },
+          { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link> },
+          { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link> },
+          { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link> },
         ],
       },
       {
         key: 'governance',
         label: 'Quản trị',
         children: [
-          { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link>, roles: ['OWNER', 'DISPATCHER'] },
-          { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link>, roles: ['OWNER'] },
+          { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link> },
+          { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link> },
         ],
       },
     ]
@@ -95,8 +106,7 @@ export function AppLayout() {
         key: section.key,
         label: section.label,
         children: section.children
-          .filter((item) => item.roles.includes(role))
-          .map(({ roles: _roles, ...item }) => item),
+          .filter((item) => canAccessRoute(role, item.key)),
       }))
       .filter((section) => section.children.length > 0)
   }, [user?.role])
@@ -143,7 +153,15 @@ export function AppLayout() {
 
           <div className="header-spacer" />
 
-          <Button type="text" className="notification-button" onClick={() => setNotificationsOpen(true)}>
+          <Button
+            type="text"
+            className="notification-button"
+            onClick={() => {
+              setNotificationsOpen(true)
+              void queryClient.invalidateQueries({ queryKey: notificationCountKey })
+              void queryClient.invalidateQueries({ queryKey: notificationsKey })
+            }}
+          >
             <Badge count={unread} size="small"><BellOutlined className="header-icon" /></Badge>
           </Button>
 
@@ -174,6 +192,7 @@ export function AppLayout() {
       <Drawer title="Thông báo" open={notificationsOpen} onClose={() => setNotificationsOpen(false)} size="default">
         {notifications?.content.length ? (
           <List
+            loading={notificationsFetching}
             dataSource={notifications.content}
             renderItem={(item) => (
               <List.Item
@@ -181,8 +200,8 @@ export function AppLayout() {
                 onClick={async () => {
                   if (!item.readAt) {
                     await notificationsApi.markRead(item.id)
-                    queryClient.invalidateQueries({ queryKey: ['notifications'] })
-                    queryClient.invalidateQueries({ queryKey: ['notification-count'] })
+                    queryClient.invalidateQueries({ queryKey: notificationsKey })
+                    queryClient.invalidateQueries({ queryKey: notificationCountKey })
                   }
                 }}
               >

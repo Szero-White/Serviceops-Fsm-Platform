@@ -6,7 +6,9 @@ import { apiErrorMessage } from '../../../api/http'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 
@@ -41,10 +43,11 @@ export function ServiceChannelsPage() {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
 
-  const { data = [], isLoading } = useQuery({
+  const channelsQuery = useQuery({
     queryKey: ['service-channels'],
     queryFn: () => serviceChannelsApi.list(false),
   })
+  const { data = [], isLoading } = channelsQuery
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -103,7 +106,7 @@ export function ServiceChannelsPage() {
         title="Kênh tiếp nhận"
         description="Quản trị các kênh tiếp nhận để đội chăm sóc khách hàng dùng thống nhất khi tạo yêu cầu dịch vụ."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kênh</Button>}
-        meta={<MetaBadge>{data.length} kênh</MetaBadge>}
+        meta={<MetaBadge>{channelsQuery.isError ? 'Lỗi tải dữ liệu' : `${data.length} kênh`}</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
@@ -116,14 +119,22 @@ export function ServiceChannelsPage() {
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên, mã hoặc mô tả" value={search} onChange={(event) => setSearch(event.target.value)} />
       </div>
 
+      {channelsQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách kênh tiếp nhận"
+          error={channelsQuery.error}
+          onRetry={() => channelsQuery.refetch()}
+        />
+      )}
+
       <Table
         rowKey="id"
         loading={isLoading}
-        dataSource={filtered}
+        dataSource={channelsQuery.isError ? [] : filtered}
         className="content-table"
         scroll={{ x: 980 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có kênh tiếp nhận phù hợp" /> }}
+        pagination={{ pageSize: LIST_PAGE_SIZE, showSizeChanger: false }}
+        locale={{ emptyText: <Empty description={channelsQuery.isError ? 'Không thể tải dữ liệu kênh tiếp nhận' : 'Chưa có kênh tiếp nhận phù hợp'} /> }}
         columns={[
           {
             title: 'Kênh',
