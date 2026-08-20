@@ -35,9 +35,10 @@ public class AssetController {
 
     @GetMapping
     public PageResponse<AssetResponse> search(@RequestParam(defaultValue = "") String search,
+                                              @RequestParam(required = false) UUID customerId,
                                               @RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "20") int size) {
-        return service.search(search, page, size);
+        return service.search(search, customerId, page, size);
     }
 
     @GetMapping("/{id}")

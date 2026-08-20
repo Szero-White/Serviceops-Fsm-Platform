@@ -3,6 +3,7 @@ package com.serviceops.customer.application;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -43,8 +44,8 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public PageResponse<CustomerResponse> search(String search, int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable).map(CustomerService::toResponse));
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +100,7 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public byte[] exportCustomers(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("code").ascending());
-        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable)
+        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(CustomerService::toResponse)
                 .toList();

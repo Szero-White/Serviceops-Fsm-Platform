@@ -16,7 +16,8 @@ public interface SparePartRepository extends JpaRepository<SparePart, UUID> {
             select p from SparePart p
             where p.tenantId = :tenantId
               and (:search = '' or lower(p.sku) like lower(concat('%', :search, '%'))
-                   or lower(p.name) like lower(concat('%', :search, '%')))
+                   or lower(p.name) like lower(concat('%', :search, '%'))
+                   or lower(p.unit) like lower(concat('%', :search, '%')))
             """)
     Page<SparePart> search(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
 

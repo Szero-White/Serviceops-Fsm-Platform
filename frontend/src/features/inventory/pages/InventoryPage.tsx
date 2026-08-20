@@ -1,14 +1,17 @@
 import { DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Space, Table, Typography, Upload } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { inventoryApi } from '../../inventory/api'
 import { useAuth } from '../../auth/AuthContext'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { SparePart, SparePartImportResult, SparePartImportRowResult } from '../../../types'
 import { formatCompactDecimalInput, formatCurrency, formatDateTime, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob)
@@ -24,7 +27,9 @@ function downloadBlob(blob: Blob, filename: string) {
 export function InventoryPage() {
   const { user } = useAuth()
   const canManageStock = ['OWNER', 'WAREHOUSE_STAFF'].includes(user?.role ?? '')
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [createOpen, setCreateOpen] = useState(false)
   const [importing, setImporting] = useState<SparePart>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
@@ -32,9 +37,24 @@ export function InventoryPage() {
   const [bulkImportResult, setBulkImportResult] = useState<SparePartImportResult>()
   const [createForm] = Form.useForm()
   const [importForm] = Form.useForm()
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({ queryKey: ['spare-parts', search], queryFn: () => inventoryApi.list(search) })
+  const inventoryQuery = useQuery({
+    queryKey: ['spare-parts', { search, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+  })
+  const { data, isLoading, isFetching } = inventoryQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['spare-parts'] })
@@ -54,8 +74,11 @@ export function InventoryPage() {
 
   const importStock = useMutation({
     mutationFn: (values: { quantity: number; note: string }) => inventoryApi.importStock(importing!.id, values),
-    onSuccess: () => {
-      message.success('Đã nhập kho')
+    onSuccess: (part, values) => {
+      notification.success({
+        message: `Đã nhập kho · ${part.sku}`,
+        description: `${part.name} · +${formatQuantity(values.quantity)} ${part.unit} · Tồn hiện tại ${formatQuantity(part.stockQuantity)} ${part.unit}.`,
+      })
       setImporting(undefined)
       importForm.resetFields()
       refresh()
@@ -78,7 +101,10 @@ export function InventoryPage() {
     onSuccess: (result) => {
       setBulkImportResult(result)
       if (result.committed) {
-        message.success(`Đã import ${result.importedRows} phụ tùng`)
+        notification.success({
+          message: 'Import danh mục phụ tùng hoàn tất',
+          description: `Đã thêm ${result.importedRows} SKU vào kho phụ tùng.`,
+        })
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
@@ -90,7 +116,7 @@ export function InventoryPage() {
 
   const exportCsv = async () => {
     try {
-      downloadBlob(await inventoryApi.exportCsv(search), 'serviceops-spare-parts.csv')
+      downloadBlob(await inventoryApi.exportCsv(searchInput.trim()), 'serviceops-spare-parts.csv')
     } catch (error) {
       message.error(apiErrorMessage(error))
     }
@@ -162,22 +188,37 @@ export function InventoryPage() {
         title="Kho phụ tùng"
         description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
         actions={inventoryActions}
-        meta={<><MetaBadge>{data?.totalElements ?? 0} SKU</MetaBadge><MetaBadge tone="danger">{data?.content.filter((part) => part.lowStock).length ?? 0} sắp hết</MetaBadge></>}
+        meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} SKU`}</MetaBadge><MetaBadge tone={search ? 'info' : 'neutral'}>{search ? 'Đang lọc' : 'Tất cả phụ tùng'}</MetaBadge></>}
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo SKU hoặc tên phụ tùng" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên hoặc đơn vị phụ tùng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       </div>
+
+      {inventoryQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách phụ tùng"
+          error={inventoryQuery.error}
+          onRetry={() => inventoryQuery.refetch()}
+        />
+      )}
 
       <Table
         rowKey="id"
-        loading={isLoading}
-        dataSource={data?.content ?? []}
+        loading={isLoading || isFetching}
+        dataSource={inventoryQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         scroll={{ x: 980 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
+        pagination={{
+          current: page + 1,
+          pageSize: LIST_PAGE_SIZE,
+          total: inventoryQuery.isError ? 0 : (data?.totalElements ?? 0),
+          showSizeChanger: false,
+          showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phụ tùng`,
+        }}
+        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
         rowClassName={(record) => record.lowStock ? 'low-stock-row' : ''}
-        locale={{ emptyText: <Empty description="Chưa có phụ tùng phù hợp" /> }}
+        locale={{ emptyText: <Empty description={inventoryQuery.isError ? 'Không thể tải dữ liệu phụ tùng' : 'Chưa có phụ tùng phù hợp'} /> }}
         columns={[
           {
             title: 'Phụ tùng',

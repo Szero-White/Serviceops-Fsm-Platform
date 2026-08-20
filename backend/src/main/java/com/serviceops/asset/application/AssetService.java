@@ -10,6 +10,7 @@ import com.serviceops.asset.web.AssetDtos.AssetRequest;
 import com.serviceops.asset.web.AssetDtos.AssetResponse;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -46,9 +47,14 @@ public class AssetService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public PageResponse<AssetResponse> search(String search, int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("createdAt").descending());
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable).map(AssetService::toResponse));
+    public PageResponse<AssetResponse> search(String search, UUID customerId, int page, int size) {
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return PageResponse.from(repository.search(
+                CurrentUser.tenantId(),
+                customerId,
+                PageRequestSupport.normalizeSearch(search),
+                pageable
+        ).map(AssetService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -108,7 +114,7 @@ public class AssetService {
     @Transactional(readOnly = true)
     public byte[] exportAssets(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("serialNumber").ascending());
-        List<AssetResponse> assets = repository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable)
+        List<AssetResponse> assets = repository.search(CurrentUser.tenantId(), null, PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(AssetService::toResponse)
                 .toList();

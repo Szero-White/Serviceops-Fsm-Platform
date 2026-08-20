@@ -17,7 +17,8 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
             where c.tenantId = :tenantId
               and (:search = '' or lower(c.name) like lower(concat('%', :search, '%'))
                    or lower(c.code) like lower(concat('%', :search, '%'))
-                   or lower(coalesce(c.phone, '')) like lower(concat('%', :search, '%')))
+                   or lower(coalesce(c.phone, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(c.email, '')) like lower(concat('%', :search, '%')))
             """)
     Page<Customer> search(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
 

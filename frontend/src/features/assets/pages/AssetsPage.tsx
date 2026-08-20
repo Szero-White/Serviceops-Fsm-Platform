@@ -1,18 +1,21 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
 import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge, WarrantyTag } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { StatusTag } from '../../../components/StatusTag'
 import type { Asset, AssetImportResult, AssetImportRowResult } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { formatDate } from '../../../utils/format'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
@@ -22,17 +25,34 @@ const assetStatusOptions = [
 ]
 
 export function AssetsPage() {
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(0)
+  const search = useDebouncedValue(searchInput.trim())
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Asset>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<AssetImportResult>()
   const [form] = Form.useForm()
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({ queryKey: ['assets', search], queryFn: () => assetsApi.list(search) })
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 200) })
+  const assetsQuery = useQuery({
+    queryKey: ['assets', { search, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => assetsApi.list(search, page, LIST_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+  })
+  const { data, isLoading, isFetching } = assetsQuery
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
+
+  useEffect(() => {
+    if (data && page > 0 && page >= data.totalPages) {
+      setPage(Math.max(data.totalPages - 1, 0))
+    }
+  }, [data, page])
+  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100) })
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
@@ -79,7 +99,10 @@ export function AssetsPage() {
     onSuccess: (result) => {
       setBulkImportResult(result)
       if (result.committed) {
-        message.success(`Đã import ${result.importedRows} thiết bị`)
+        notification.success({
+          message: 'Import thiết bị hoàn tất',
+          description: `Đã thêm ${result.importedRows} thiết bị vào hệ thống.`,
+        })
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
@@ -92,7 +115,7 @@ export function AssetsPage() {
 
   const exportCsv = async () => {
     try {
-      downloadBlob(await assetsApi.exportCsv(search), 'serviceops-assets.csv')
+      downloadBlob(await assetsApi.exportCsv(searchInput.trim()), 'serviceops-assets.csv')
     } catch (error) {
       message.error(apiErrorMessage(error))
     }
@@ -175,21 +198,36 @@ export function AssetsPage() {
         title="Thiết bị khách hàng"
         description="Theo dõi serial, bảo hành, vòng đời và tình trạng phục vụ của từng tài sản."
         actions={assetActions}
-        meta={<MetaBadge>{data?.totalElements ?? 0} thiết bị</MetaBadge>}
+        meta={<MetaBadge>{assetsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} thiết bị`}</MetaBadge>}
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm serial, hãng, model hoặc khách hàng" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm serial, loại, hãng, model hoặc mã/tên khách hàng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       </div>
+
+      {assetsQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách thiết bị"
+          error={assetsQuery.error}
+          onRetry={() => assetsQuery.refetch()}
+        />
+      )}
 
       <Table
         rowKey="id"
-        loading={isLoading}
-        dataSource={data?.content ?? []}
+        loading={isLoading || isFetching}
+        dataSource={assetsQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         scroll={{ x: 1120 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có thiết bị phù hợp" /> }}
+        pagination={{
+          current: page + 1,
+          pageSize: LIST_PAGE_SIZE,
+          total: assetsQuery.isError ? 0 : (data?.totalElements ?? 0),
+          showSizeChanger: false,
+          showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} thiết bị`,
+        }}
+        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        locale={{ emptyText: <Empty description={assetsQuery.isError ? 'Không thể tải dữ liệu thiết bị' : 'Chưa có thiết bị phù hợp'} /> }}
         columns={[
           {
             title: 'Thiết bị',

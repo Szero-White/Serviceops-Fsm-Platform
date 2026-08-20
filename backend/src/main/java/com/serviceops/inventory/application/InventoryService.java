@@ -2,6 +2,7 @@ package com.serviceops.inventory.application;
 
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
+import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.application.InventoryCsvService.SparePartCsvRow;
@@ -48,8 +49,8 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public PageResponse<SparePartResponse> search(String search, int page, int size) {
-        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("name").ascending());
-        return PageResponse.from(sparePartRepository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable).map(InventoryService::toResponse));
+        var pageable = PageRequestSupport.of(page, size, Sort.by("name").ascending());
+        return PageResponse.from(sparePartRepository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable).map(InventoryService::toResponse));
     }
 
     @Transactional
@@ -91,7 +92,7 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public byte[] exportSpareParts(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("sku").ascending());
-        List<SparePartResponse> parts = sparePartRepository.search(CurrentUser.tenantId(), search == null ? "" : search.trim(), pageable)
+        List<SparePartResponse> parts = sparePartRepository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(InventoryService::toResponse)
                 .toList();
@@ -155,7 +156,7 @@ public class InventoryService {
         saveTransaction(part, workOrder, InventoryTransactionType.CONSUME, request.quantity(), request.note());
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
         if (part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0) {
-            notificationService.notifyRoles(tenantId, warehouseRoles(), "Phụ tùng sắp hết: " + part.getSku(), part.getName() + " còn " + part.getStockQuantity() + " " + part.getUnit());
+            notificationService.notifyRolesIncludingCurrentUser(tenantId, warehouseRoles(), "Phụ tùng sắp hết: " + part.getSku(), part.getName() + " còn " + part.getStockQuantity() + " " + part.getUnit());
         }
         return toResponse(part);
     }
