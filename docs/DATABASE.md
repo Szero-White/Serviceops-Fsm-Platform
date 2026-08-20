@@ -40,6 +40,7 @@
 
 ```text
 tenant 1─n users/customers/assets/work_orders/...
+user_account 1─0..1 technician_profile
 customer 1─n assets
 customer 1─n service_requests
 service_request 0..1─1 work_order

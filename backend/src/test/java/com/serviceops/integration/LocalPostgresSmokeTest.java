@@ -1,5 +1,8 @@
 package com.serviceops.integration;
 
+import com.serviceops.asset.domain.Asset;
+import com.serviceops.asset.domain.AssetRepository;
+import com.serviceops.asset.domain.AssetStatus;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -72,6 +75,9 @@ class LocalPostgresSmokeTest {
     private CustomerRepository customerRepository;
 
     @Autowired
+    private AssetRepository assetRepository;
+
+    @Autowired
     private ServiceRequestRepository serviceRequestRepository;
 
     @Autowired
@@ -127,12 +133,42 @@ class LocalPostgresSmokeTest {
     }
 
     @Test
-    void technicianShouldBeDeniedCustomerAdministration() {
-        String token = login("technician", "123456");
+    void assetsShouldBeFilterableByCustomerForDependentSelectors() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
-        ResponseEntity<String> response = exchangeGet("/api/v1/customers", token);
+        Customer firstCustomer = testCustomer(owner.getTenantId(), "FILTER-CUST-A", "Asset Filter Customer A");
+        Customer secondCustomer = testCustomer(owner.getTenantId(), "FILTER-CUST-B", "Asset Filter Customer B");
+        customerRepository.saveAllAndFlush(List.of(firstCustomer, secondCustomer));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        Asset firstAsset = testAsset(owner.getTenantId(), firstCustomer, "FILTER-ASSET-A");
+        Asset secondAsset = testAsset(owner.getTenantId(), secondCustomer, "FILTER-ASSET-B");
+        assetRepository.saveAllAndFlush(List.of(firstAsset, secondAsset));
+
+        ResponseEntity<Map> response = exchangeGetMap(
+                "/api/v1/assets?customerId=" + firstCustomer.getId() + "&size=100",
+                login("customer-service", "123456")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().get("content");
+        assertThat(content)
+                .extracting(item -> item.get("id"))
+                .contains(firstAsset.getId().toString())
+                .doesNotContain(secondAsset.getId().toString());
+    }
+
+    @Test
+    void roleBoundariesShouldProtectRoleSpecificModules() {
+        String technicianToken = login("technician", "123456");
+        String customerServiceToken = login("customer-service", "123456");
+
+        assertThat(exchangeGet("/api/v1/customers", technicianToken).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(exchangeGet("/api/v1/spare-parts", customerServiceToken).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(exchangeGet("/api/v1/spare-parts", technicianToken).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -237,6 +273,110 @@ class LocalPostgresSmokeTest {
         ResponseEntity<Map> closed = assertTransition(workOrderId, ownerToken, "CLOSED", Map.of("note", "Workflow closed"));
         assertThat(closed.getBody()).isNotNull();
         assertThat(closed.getBody().get("status")).isEqualTo("CLOSED");
+    }
+
+    @Test
+    void dispatcherShouldReadScheduleBoardAndTechnicianShouldBeDenied() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer customer = customerRepository.findAll().stream()
+                .filter(c -> owner.getTenantId().equals(c.getTenantId()))
+                .findFirst()
+                .orElseThrow();
+        var technician = technicianRepository.findActive(owner.getTenantId()).get(0);
+
+        WorkOrder scheduledWorkOrder = testWorkOrder(owner.getTenantId(), customer, "TEST-BOARD-SCHEDULED");
+        WorkOrder queuedWorkOrder = testWorkOrder(owner.getTenantId(), customer, "TEST-BOARD-QUEUE");
+        workOrderRepository.saveAllAndFlush(List.of(scheduledWorkOrder, queuedWorkOrder));
+
+        Instant start = Instant.now().plus(120, ChronoUnit.DAYS);
+        Instant end = start.plus(2, ChronoUnit.HOURS);
+        String dispatcherToken = login("dispatcher", "123456");
+        ResponseEntity<Map> scheduled = postJsonMap(
+                "/api/v1/work-orders/" + scheduledWorkOrder.getId() + "/schedule",
+                dispatcherToken,
+                Map.of(
+                        "technicianId", technician.getId(),
+                        "startTime", start.toString(),
+                        "endTime", end.toString()
+                )
+        );
+        assertThat(scheduled.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        String boardPath = "/api/v1/schedule-board?from="
+                + start.minus(1, ChronoUnit.DAYS)
+                + "&to="
+                + end.plus(1, ChronoUnit.DAYS);
+        ResponseEntity<Map> board = exchangeGetMap(boardPath, dispatcherToken);
+
+        assertThat(board.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(board.getBody()).isNotNull();
+        List<Map<String, Object>> appointments = (List<Map<String, Object>>) board.getBody().get("appointments");
+        List<Map<String, Object>> dispatchQueue = (List<Map<String, Object>>) board.getBody().get("dispatchQueue");
+        assertThat(appointments).anySatisfy(item ->
+                assertThat(item.get("workOrderId")).isEqualTo(scheduledWorkOrder.getId().toString()));
+        assertThat(dispatchQueue).anySatisfy(item ->
+                assertThat(item.get("workOrderId")).isEqualTo(queuedWorkOrder.getId().toString()));
+
+        ResponseEntity<Map> technicianAccess = exchangeGetMap(boardPath, login("technician", "123456"));
+        assertThat(technicianAccess.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void technicianMyScheduleShouldUseAuthenticatedIdentity() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        UserAccount technicianUser = userAccountRepository.findByUsernameIgnoreCase("technician").orElseThrow();
+        UserAccount technician2User = userAccountRepository.findByUsernameIgnoreCase("technician-2").orElseThrow();
+        var technician = technicianRepository.findByTenantIdAndUserId(owner.getTenantId(), technicianUser.getId()).orElseThrow();
+        var technician2 = technicianRepository.findByTenantIdAndUserId(owner.getTenantId(), technician2User.getId()).orElseThrow();
+        Customer customer = customerRepository.findAll().stream()
+                .filter(c -> owner.getTenantId().equals(c.getTenantId()))
+                .findFirst()
+                .orElseThrow();
+
+        WorkOrder first = testWorkOrder(owner.getTenantId(), customer, "TEST-MY-SCHEDULE-A");
+        WorkOrder second = testWorkOrder(owner.getTenantId(), customer, "TEST-MY-SCHEDULE-B");
+        workOrderRepository.saveAllAndFlush(List.of(first, second));
+
+        Instant start = Instant.now().plus(210, ChronoUnit.DAYS);
+        Instant end = start.plus(2, ChronoUnit.HOURS);
+        String dispatcherToken = login("dispatcher", "123456");
+        assertThat(postJsonMap(
+                "/api/v1/work-orders/" + first.getId() + "/schedule",
+                dispatcherToken,
+                Map.of("technicianId", technician.getId(), "startTime", start.toString(), "endTime", end.toString())
+        ).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(postJsonMap(
+                "/api/v1/work-orders/" + second.getId() + "/schedule",
+                dispatcherToken,
+                Map.of("technicianId", technician2.getId(), "startTime", start.toString(), "endTime", end.toString())
+        ).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        String path = "/api/v1/my-schedule?from="
+                + start.minus(1, ChronoUnit.DAYS)
+                + "&to="
+                + end.plus(1, ChronoUnit.DAYS);
+
+        ResponseEntity<Map> firstSchedule = exchangeGetMap(path, login("technician", "123456"));
+        assertThat(firstSchedule.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(firstSchedule.getBody()).isNotNull();
+        assertThat(firstSchedule.getBody().get("technicianId")).isEqualTo(technician.getId().toString());
+        List<Map<String, Object>> firstAppointments = (List<Map<String, Object>>) firstSchedule.getBody().get("appointments");
+        assertThat(firstAppointments)
+                .extracting(item -> item.get("workOrderId"))
+                .contains(first.getId().toString())
+                .doesNotContain(second.getId().toString());
+
+        ResponseEntity<Map> secondSchedule = exchangeGetMap(path, login("technician-2", "123456"));
+        assertThat(secondSchedule.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(secondSchedule.getBody()).isNotNull();
+        assertThat(secondSchedule.getBody().get("technicianId")).isEqualTo(technician2.getId().toString());
+        List<Map<String, Object>> secondAppointments = (List<Map<String, Object>>) secondSchedule.getBody().get("appointments");
+        assertThat(secondAppointments)
+                .extracting(item -> item.get("workOrderId"))
+                .contains(second.getId().toString())
+                .doesNotContain(first.getId().toString());
+
+        assertThat(exchangeGetMap(path, dispatcherToken).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -355,6 +495,25 @@ class LocalPostgresSmokeTest {
     }
 
 
+    private Customer testCustomer(UUID tenantId, String code, String name) {
+        Customer customer = new Customer();
+        customer.setTenantId(tenantId);
+        customer.setCode(code);
+        customer.setName(name);
+        customer.setActive(true);
+        return customer;
+    }
+
+    private Asset testAsset(UUID tenantId, Customer customer, String serialNumber) {
+        Asset asset = new Asset();
+        asset.setTenantId(tenantId);
+        asset.setCustomer(customer);
+        asset.setCategory("Laptop");
+        asset.setSerialNumber(serialNumber);
+        asset.setStatus(AssetStatus.ACTIVE);
+        return asset;
+    }
+
     private UserAccount testOwner(Tenant tenant, String username, String displayName) {
         UserAccount owner = new UserAccount();
         owner.setTenantId(tenant.getId());
@@ -455,5 +614,11 @@ class LocalPostgresSmokeTest {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(null, headers), String.class);
+    }
+
+    private ResponseEntity<Map> exchangeGetMap(String path, String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(null, headers), Map.class);
     }
 }

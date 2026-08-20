@@ -15,7 +15,7 @@ Key capabilities:
 - Customer and installed-asset management.
 - Configurable service-request intake channels.
 - Work-order lifecycle with controlled state transitions.
-- Technician assignment and overlap-safe scheduling.
+- Technician assignment, overlap-safe scheduling, a weekly dispatcher schedule board and a personal technician schedule derived from the signed-in account.
 - Spare-parts inventory with transaction ledger and negative-stock protection.
 - Work-order attachments for image/PDF evidence.
 - Service invoice/export view derived from work-order data and consumed parts.
@@ -41,7 +41,7 @@ Key capabilities:
 - React 19, TypeScript, Vite, Ant Design and TanStack Query.
 - Feature-oriented module structure.
 - Shared enterprise UI primitives for page headers, filters, tables, statuses and forms.
-- Role-aware actions and recruiter-friendly demo account selector.
+- Centralized route-level role access, role-aware actions and recruiter-friendly individual demo accounts.
 - Same-origin API path (`/api/v1`) in development/production, with Vite/Nginx proxying to avoid environment-specific localhost URLs in application code.
 
 ### Operations
@@ -55,14 +55,15 @@ Key capabilities:
 
 ## Demo accounts
 
-The login screen exposes five demo roles so reviewers can quickly inspect permission boundaries and business workflows.
+The login screen exposes individual demo accounts across the five business roles so reviewers can quickly inspect permission boundaries and cross-role workflows.
 
 | Role | Username | Recommended review area |
 |---|---|---|
 | Owner | `owner` | Full administration and operational oversight |
 | Dispatcher | `dispatcher` | Work orders, technician assignment and scheduling |
 | Customer Service | `customer-service` | Customers, assets and service-request intake |
-| Technician | `technician` | Field execution and work-order lifecycle |
+| Technician · Phạm Quốc | `technician` | Personal schedule, assigned work and field execution |
+| Technician · Võ Hoàng | `technician-2` | Second individual technician account for schedule isolation |
 | Warehouse | `warehouse` | Spare parts and inventory operations |
 
 Local development uses the seeded password `123456`. A public deployment **must** provide a separate strong `DEMO_PASSWORD`; the production frontend receives that public demo credential only as a build-time demo value so role cards can populate the login form. Never reuse an administrative/production secret as a demo password.
@@ -71,8 +72,8 @@ Local development uses the seeded password `123456`. A public deployment **must*
 
 1. Sign in as **Customer Service** and review/create a customer, asset and service request.
 2. Convert the request into a work order.
-3. Sign in as **Dispatcher**, assign a technician and schedule the work.
-4. Sign in as **Technician**, progress the work order through field execution.
+3. Sign in as **Dispatcher**, open **Lịch điều phối**, assign a technician and schedule/reschedule the work from the weekly board.
+4. Sign in as **Technician**, open **Lịch của tôi** and verify that the newly assigned appointment appears only for that technician, then progress the work order through field execution.
 5. Record used parts and upload service evidence.
 6. Complete the work order with diagnosis and resolution notes.
 7. Review the invoice/export, audit trail and dashboard.
@@ -149,7 +150,7 @@ docker-compose.prod.yml  Production-like single-node topology
 
 ## Product direction
 
-The existing feature set is intentionally a cohesive field-service workflow rather than a collection of CRUD screens. The highest-value next product increments are a **dispatcher schedule board**, **SLA/promised service windows**, and **preventive-maintenance agreements**. They are documented in [docs/ROADMAP.md](docs/ROADMAP.md) and should be implemented one at a time with tests and deployment impact reviewed.
+The existing feature set is intentionally a cohesive field-service workflow rather than a collection of CRUD screens. The product now includes a **dispatcher schedule board** plus a **personal technician schedule** resolved from the authenticated user, so dispatchers plan the team while technicians see only their own appointments. The next highest-value product increments are **SLA/promised service windows** and **preventive-maintenance agreements**. They are documented in [docs/ROADMAP.md](docs/ROADMAP.md) and should be implemented one at a time with tests and deployment impact reviewed.
 
 ## Architecture direction
 

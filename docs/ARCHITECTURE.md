@@ -49,7 +49,8 @@ Mỗi module ưu tiên bốn vùng:
 MVP dùng shared database/shared schema:
 
 - Mọi entity nghiệp vụ kế thừa `TenantScopedEntity`.
-- `tenantId` lấy từ JWT, không nhận tùy ý từ request body.
+- `tenantId` và `userId` lấy từ JWT, không nhận tùy ý từ request body.
+- Với kỹ thuật viên, `UserAccount` liên kết 1-1 với `TechnicianProfile`; các API cá nhân như `/my-schedule` suy ra hồ sơ từ `userId` thay vì tin một `technicianId` do client gửi.
 - Repository luôn lọc theo `tenantId`.
 - Unique constraint quan trọng kết hợp `tenant_id`.
 

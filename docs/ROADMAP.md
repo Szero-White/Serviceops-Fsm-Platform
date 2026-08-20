@@ -13,7 +13,7 @@ Roadmap này ưu tiên **độ sâu nghiệp vụ và chất lượng vận hàn
 - Inventory current state + transaction ledger + chống âm kho.
 - Attachment bằng chứng, invoice/export, CSV import/export.
 - Notification, audit trail, dashboard và trợ lý hướng dẫn theo vai trò.
-- Năm vai trò nghiệp vụ với tenant isolation.
+- Năm vai trò nghiệp vụ với tenant isolation; mỗi kỹ thuật viên là một `UserAccount` riêng liên kết 1-1 với `TechnicianProfile`.
 
 ### Engineering / production foundation
 
@@ -28,17 +28,35 @@ Roadmap này ưu tiên **độ sâu nghiệp vụ và chất lượng vận hàn
 
 ## Ưu tiên product tiếp theo
 
-### P1 — Dispatch Schedule Board
+### P1 — Dispatch Schedule Board — implemented baseline
 
 Mục tiêu: biến dữ liệu lịch hiện có thành một màn điều phối thực sự hữu dụng cho Dispatcher.
 
-- Timeline/ngày-tuần theo kỹ thuật viên.
-- Hàng đợi phiếu chưa lên lịch.
-- Nhìn nhanh availability và booking hiện tại.
-- Mở/sửa lịch từ work order hiện có.
-- Hiển thị xung đột hoặc khoảng thời gian không khả dụng rõ ràng.
+Baseline đã triển khai:
 
-**Lý do ưu tiên:** scheduling đã là một capability lõi của field service; schedule board làm rõ giá trị sản phẩm hơn việc thêm một module CRUD mới.
+- Lịch tuần theo từng kỹ thuật viên hoạt động.
+- Hàng đợi `OPEN` / `REOPENED`, ưu tiên phiếu khẩn/cao trước.
+- Mở và đổi kỹ thuật viên/thời gian trực tiếp từ board.
+- Dùng lại scheduling transaction + pessimistic technician lock + overlap detection hiện có; conflict tiếp tục trả `409`.
+- API board tenant-scoped, giới hạn cửa sổ truy vấn 31 ngày và có index PostgreSQL riêng cho active appointment range.
+
+Các increment chỉ thêm khi có nhu cầu thật: drag/drop, working-hours/leave calendar, travel-time routing hoặc capacity rules.
+
+**Lý do ưu tiên:** scheduling là capability lõi của field service; schedule board làm rõ giá trị sản phẩm hơn việc thêm một module CRUD mới.
+
+### P1 — Technician Personal Schedule — implemented baseline
+
+Mục tiêu: tách rõ workspace của Dispatcher và Technician thay vì dùng một bảng lịch chung cho mọi vai trò.
+
+Baseline đã triển khai:
+
+- `Lịch của tôi` theo tuần cho tài khoản `TECHNICIAN`.
+- Backend tự ánh xạ `CurrentUser.userId` → `TechnicianProfile`; API không nhận `technicianId` từ client.
+- Hiển thị giờ, work order, khách hàng, địa chỉ, thiết bị, ưu tiên và trạng thái.
+- Hai tài khoản kỹ thuật viên demo riêng để kiểm tra schedule isolation.
+- Frontend có route-level role guard dùng chung với sidebar; backend method security vẫn là nguồn bảo vệ cuối.
+
+Increment tương lai chỉ khi có nhu cầu hiện trường thật: deep-link trực tiếp vào work order, calendar sync, mobile/PWA và offline queue.
 
 ### P1 — SLA / Promised Service Window
 
