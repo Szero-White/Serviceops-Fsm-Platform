@@ -65,7 +65,7 @@ public class AttachmentService {
 
     @Transactional(readOnly = true)
     public List<AttachmentResponse> list(String referenceType, UUID referenceId) {
-        String normalizedType = referenceType.toUpperCase(Locale.ROOT);
+        String normalizedType = referenceType.trim().toUpperCase(Locale.ROOT);
         UUID tenantId = CurrentUser.tenantId();
         authorizeReference(normalizedType, referenceId, tenantId);
         return repository.findByTenantIdAndReferenceTypeAndReferenceIdOrderByCreatedAtDesc(tenantId, normalizedType, referenceId)
@@ -157,21 +157,30 @@ public class AttachmentService {
                 }
             }
             case "ASSET" -> {
-                if (CurrentUser.hasRole("TECHNICIAN")) {
-                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Kỹ thuật viên không được truy cập file thiết bị ngoài phiếu công việc");
+                if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
+                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file thiết bị");
                 }
                 assetRepository.findDetailed(referenceId, tenantId)
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy thiết bị"));
             }
             case "SERVICE_REQUEST" -> {
-                if (CurrentUser.hasRole("TECHNICIAN")) {
-                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Kỹ thuật viên không được truy cập file yêu cầu dịch vụ");
+                if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
+                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file yêu cầu dịch vụ");
                 }
                 serviceRequestRepository.findDetailed(referenceId, tenantId)
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
             }
             default -> throw BusinessException.badRequest("INVALID_REFERENCE_TYPE", "Loại đối tượng đính kèm không hợp lệ");
         }
+    }
+
+    private static boolean hasAnyRole(String... roles) {
+        for (String role : roles) {
+            if (CurrentUser.hasRole(role)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Attachment getAuthorizedAttachment(UUID id, UUID tenantId) {

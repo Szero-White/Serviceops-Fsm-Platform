@@ -55,4 +55,5 @@ export interface Technician {
   skills?: string
   active: boolean
   accountActive: boolean
+  protectedDemo?: boolean
 }

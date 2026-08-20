@@ -31,7 +31,7 @@ public class TechnicianService {
 
         return (activeOnly ? repository.findActive(tenantId) : repository.findAllDetailed(tenantId))
                 .stream()
-                .map(TechnicianService::toResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -44,6 +44,13 @@ public class TechnicianService {
 
         technician.setPhone(blankToNull(request.phone()));
         technician.setSkills(blankToNull(request.skills()));
+        if (Boolean.TRUE.equals(request.active())
+                && (!user.isActive() || user.getRole() != UserRole.TECHNICIAN)) {
+            throw com.serviceops.common.exception.BusinessException.conflict(
+                    "TECHNICIAN_IDENTITY_INACTIVE",
+                    "Không thể kích hoạt hồ sơ kỹ thuật viên khi tài khoản đang tạm ngưng hoặc không còn vai trò Kỹ thuật viên"
+            );
+        }
         if (request.active() != null) {
             technician.setActive(request.active());
         }
@@ -81,7 +88,7 @@ public class TechnicianService {
         return List.of(UserRole.OWNER, UserRole.DISPATCHER);
     }
 
-    private static TechnicianResponse toResponse(TechnicianProfile technician) {
+    private TechnicianResponse toResponse(TechnicianProfile technician) {
         UserAccount user = technician.getUser();
 
         return new TechnicianResponse(
@@ -92,7 +99,8 @@ public class TechnicianService {
                 technician.getPhone(),
                 technician.getSkills(),
                 technician.isActive(),
-                user.isActive()
+                user.isActive(),
+                demoAccountProtectionPolicy.isProtected(user.getUsername())
         );
     }
 }

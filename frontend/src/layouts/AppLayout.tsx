@@ -122,8 +122,9 @@ export function AppLayout() {
 
   const selectedKey = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
   const handleLogout = () => {
+    queryClient.clear()
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (

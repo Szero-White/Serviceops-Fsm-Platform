@@ -14,7 +14,14 @@ public interface TechnicianRepository extends JpaRepository<TechnicianProfile, U
     @Query("select t from TechnicianProfile t join fetch t.user where t.tenantId = :tenantId order by t.user.displayName")
     List<TechnicianProfile> findAllDetailed(@Param("tenantId") UUID tenantId);
 
-    @Query("select t from TechnicianProfile t join fetch t.user where t.tenantId = :tenantId and t.active = true order by t.user.displayName")
+    @Query("""
+            select t from TechnicianProfile t join fetch t.user u
+            where t.tenantId = :tenantId
+              and t.active = true
+              and u.active = true
+              and u.role = com.serviceops.identity.domain.UserRole.TECHNICIAN
+            order by u.displayName
+            """)
     List<TechnicianProfile> findActive(@Param("tenantId") UUID tenantId);
 
     @Query("select t from TechnicianProfile t join fetch t.user where t.id = :id and t.tenantId = :tenantId")
@@ -24,7 +31,7 @@ public interface TechnicianRepository extends JpaRepository<TechnicianProfile, U
     Optional<TechnicianProfile> findByTenantIdAndUserId(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select t from TechnicianProfile t where t.id = :id and t.tenantId = :tenantId")
+    @Query("select t from TechnicianProfile t join fetch t.user where t.id = :id and t.tenantId = :tenantId")
     Optional<TechnicianProfile> findForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     long countByTenantIdAndActiveTrue(UUID tenantId);

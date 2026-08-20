@@ -1,8 +1,10 @@
 package com.serviceops.servicerequest.domain;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,6 +30,10 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
 
     @Query("select r from ServiceRequest r join fetch r.customer left join fetch r.asset where r.id = :id and r.tenantId = :tenantId")
     Optional<ServiceRequest> findDetailed(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ServiceRequest r join fetch r.customer left join fetch r.asset where r.id = :id and r.tenantId = :tenantId")
+    Optional<ServiceRequest> findDetailedForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     long countByTenantIdAndStatus(UUID tenantId, ServiceRequestStatus status);
     long countByTenantIdAndCustomerId(UUID tenantId, UUID customerId);

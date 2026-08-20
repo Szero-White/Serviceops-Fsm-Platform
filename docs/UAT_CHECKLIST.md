@@ -7,6 +7,11 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | AUTH-01 | Đăng nhập đúng tài khoản demo | Nhận JWT và vào dashboard |
 | AUTH-02 | Đăng nhập sai mật khẩu | HTTP 401, không lộ chi tiết nội bộ |
 | RBAC-01 | Technician mở trang khách hàng | Bị từ chối HTTP 403 |
+| RBAC-02 | Role truy cập trực tiếp URL không thuộc quyền trên frontend | Bị điều hướng về dashboard; API backend vẫn là lớp bảo vệ cuối |
+| RBAC-03 | Warehouse gọi trực tiếp API lịch sử phiếu | Bị từ chối HTTP 403 dù bỏ qua frontend |
+| RBAC-04 | Warehouse gọi attachment của Asset/Service Request | Bị từ chối HTTP 403; attachment Work Order vẫn theo quyền của phiếu |
+| RBAC-05 | Customer Service mở Kênh tiếp nhận | Xem được danh sách nhưng không thấy action thêm/sửa/xoá không thuộc quyền |
+| DEMO-01 | Owner/Dispatcher mở Kỹ thuật viên ở public demo | Seeded technician hiển thị “Demo cố định” và nút sửa bị khóa; user tự tạo vẫn chỉnh được |
 | TENANT-01 | Truy cập ID không thuộc tenant | Không trả dữ liệu |
 | CUS-01 | Tạo khách hàng hợp lệ | Khách hàng xuất hiện trong danh sách |
 | AST-01 | Tạo thiết bị với serial mới | Thiết bị liên kết đúng khách hàng |
@@ -19,7 +24,6 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SCH-04 | Technician gọi schedule-board API | Bị từ chối HTTP 403 |
 | SCH-05 | Technician mở `Lịch của tôi` | Chỉ thấy appointment gắn với technician profile của tài khoản đang đăng nhập |
 | SCH-06 | Đăng nhập hai tài khoản technician khác nhau | Hai lịch cá nhân không lẫn dữ liệu; client không truyền technicianId |
-| RBAC-02 | Role truy cập trực tiếp URL không thuộc quyền trên frontend | Bị điều hướng về dashboard; API backend vẫn là lớp bảo vệ cuối |
 | WO-02 | Chuyển trạng thái hợp lệ | Timeline lưu người thao tác và thời gian |
 | WO-03 | Nhảy trạng thái không hợp lệ | HTTP 409 INVALID_STATUS_TRANSITION |
 | INV-01 | Nhập kho số lượng dương | Tồn và ledger tăng đúng |
@@ -38,5 +42,6 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SEARCH-05 | Kết hợp keyword + status trên Yêu cầu/Phiếu/Lịch sử | Backend áp dụng đồng thời hai điều kiện, pagination và tổng số bản ghi đúng |
 | SEARCH-06 | Làm API danh sách lỗi hoặc backend tạm dừng | UI hiển thị lỗi + nút Thử lại; không hiển thị nhầm thành danh sách rỗng hợp lệ |
 | SEARCH-07 | Tìm ở Người dùng / Kỹ thuật viên / Kênh tiếp nhận | Lọc tức thời trên tập dữ liệu nhỏ đã tải, page size 20 và lỗi API có trạng thái Thử lại nhất quán |
+| AI-01 | Technician/Warehouse mở Trợ lý AI và gửi câu hỏi hướng dẫn | Nhận hướng dẫn phù hợp role, không bị HTTP 403 |
 | BUILD-01 | Chạy backend test | Build success |
 | BUILD-02 | Chạy frontend lint/build | Build success |

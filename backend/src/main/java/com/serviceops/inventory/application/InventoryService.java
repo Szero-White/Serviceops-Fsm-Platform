@@ -146,6 +146,9 @@ public class InventoryService {
             throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể dùng phụ tùng cho phiếu công việc đã đóng hoặc hủy");
         }
         SparePart part = requireLocked(request.sparePartId());
+        if (!part.isActive()) {
+            throw BusinessException.conflict("SPARE_PART_INACTIVE", "Phụ tùng đã ngừng hoạt động và không thể xuất dùng");
+        }
         try {
             part.consume(request.quantity());
         } catch (IllegalArgumentException ex) {

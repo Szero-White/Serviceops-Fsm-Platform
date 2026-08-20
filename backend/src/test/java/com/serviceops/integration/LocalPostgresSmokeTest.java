@@ -13,6 +13,7 @@ import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
+import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.tenant.domain.Tenant;
@@ -162,6 +163,7 @@ class LocalPostgresSmokeTest {
     void roleBoundariesShouldProtectRoleSpecificModules() {
         String technicianToken = login("technician", "123456");
         String customerServiceToken = login("customer-service", "123456");
+        String warehouseToken = login("warehouse", "123456");
 
         assertThat(exchangeGet("/api/v1/customers", technicianToken).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
@@ -169,6 +171,27 @@ class LocalPostgresSmokeTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(exchangeGet("/api/v1/spare-parts", technicianToken).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+        assertThat(exchangeGet("/api/v1/work-orders/history", warehouseToken).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(exchangeGet(
+                "/api/v1/attachments?referenceType=ASSET&referenceId=" + UUID.randomUUID(),
+                warehouseToken
+        ).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void aiHelpShouldSupportEveryRoleThatSeesTheAssistant() {
+        for (String username : List.of("technician", "warehouse")) {
+            ResponseEntity<String> response = postJson(
+                    "/api/v1/ai/help",
+                    login(username, "123456"),
+                    Map.of("question", "Tôi nên bắt đầu ở đâu?", "currentPath", "/")
+            );
+
+            assertThat(response.getStatusCode())
+                    .as("AI help for %s", username)
+                    .isEqualTo(HttpStatus.OK);
+        }
     }
 
     @Test
@@ -377,6 +400,192 @@ class LocalPostgresSmokeTest {
                 .doesNotContain(first.getId().toString());
 
         assertThat(exchangeGetMap(path, dispatcherToken).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void inactiveTechnicianIdentityCannotBeReactivatedOrScheduledThroughWorkforceProfile() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        UserAccount user = new UserAccount();
+        user.setTenantId(owner.getTenantId());
+        user.setUsername("inactive-tech-" + UUID.randomUUID());
+        user.setDisplayName("Inactive Technician Identity");
+        user.setPasswordHash(passwordEncoder.encode("Technician-Test1!"));
+        user.setRole(UserRole.TECHNICIAN);
+        user.setActive(false);
+        userAccountRepository.saveAndFlush(user);
+
+        TechnicianProfile technician = new TechnicianProfile();
+        technician.setTenantId(owner.getTenantId());
+        technician.setUser(user);
+        technician.setPhone("0900000000");
+        technician.setSkills("Integration test");
+        technician.setActive(true);
+        technicianRepository.saveAndFlush(technician);
+
+        String dispatcherToken = login("dispatcher", "123456");
+        ResponseEntity<String> reactivate = putJson(
+                "/api/v1/technicians/" + technician.getId(),
+                dispatcherToken,
+                Map.of("phone", "0900000000", "skills", "Integration test", "active", true)
+        );
+        assertThat(reactivate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        Customer customer = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(),
+                "INACTIVE-TECH-CUST-" + UUID.randomUUID(),
+                "Inactive Technician Customer"
+        ));
+        WorkOrder workOrder = workOrderRepository.saveAndFlush(testWorkOrder(
+                owner.getTenantId(),
+                customer,
+                "WO-INACTIVE-TECH-" + UUID.randomUUID()
+        ));
+
+        ResponseEntity<String> schedule = postJson(
+                "/api/v1/work-orders/" + workOrder.getId() + "/schedule",
+                dispatcherToken,
+                Map.of(
+                        "technicianId", technician.getId(),
+                        "startTime", Instant.now().plus(2, ChronoUnit.DAYS),
+                        "endTime", Instant.now().plus(2, ChronoUnit.DAYS).plus(2, ChronoUnit.HOURS)
+                )
+        );
+        assertThat(schedule.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void assetCustomerCannotChangeAfterOperationalHistoryExists() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer first = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(), "ASSET-HISTORY-A-" + UUID.randomUUID(), "Asset History Customer A"
+        ));
+        Customer second = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(), "ASSET-HISTORY-B-" + UUID.randomUUID(), "Asset History Customer B"
+        ));
+        Asset asset = assetRepository.saveAndFlush(testAsset(
+                owner.getTenantId(), first, "ASSET-HISTORY-" + UUID.randomUUID()
+        ));
+
+        String customerServiceToken = login("customer-service", "123456");
+        ResponseEntity<Map> serviceRequest = postJsonMap(
+                "/api/v1/service-requests",
+                customerServiceToken,
+                Map.of(
+                        "customerId", first.getId(),
+                        "assetId", asset.getId(),
+                        "title", "Asset ownership history test",
+                        "description", "Create history before trying to move the asset",
+                        "priority", "NORMAL",
+                        "channel", "PHONE"
+                )
+        );
+        assertThat(serviceRequest.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> update = putJson(
+                "/api/v1/assets/" + asset.getId(),
+                login("owner", "123456"),
+                Map.of(
+                        "customerId", second.getId(),
+                        "category", asset.getCategory(),
+                        "serialNumber", asset.getSerialNumber(),
+                        "status", asset.getStatus().name()
+                )
+        );
+        assertThat(update.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(assetRepository.findDetailed(asset.getId(), owner.getTenantId()).orElseThrow().getCustomer().getId())
+                .isEqualTo(first.getId());
+    }
+
+    @Test
+    void serviceRequestConversionMustPreserveCustomerAssetAndAllowOnlyOneConcurrentConversion() throws Exception {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer first = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(), "SR-WO-A-" + UUID.randomUUID(), "Service Request Customer A"
+        ));
+        Customer second = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(), "SR-WO-B-" + UUID.randomUUID(), "Service Request Customer B"
+        ));
+        Asset firstAsset = assetRepository.saveAndFlush(testAsset(
+                owner.getTenantId(), first, "SR-WO-ASSET-A-" + UUID.randomUUID()
+        ));
+        Asset secondAsset = assetRepository.saveAndFlush(testAsset(
+                owner.getTenantId(), second, "SR-WO-ASSET-B-" + UUID.randomUUID()
+        ));
+
+        String customerServiceToken = login("customer-service", "123456");
+        ResponseEntity<Map> createdRequest = postJsonMap(
+                "/api/v1/service-requests",
+                customerServiceToken,
+                Map.of(
+                        "customerId", first.getId(),
+                        "assetId", firstAsset.getId(),
+                        "title", "Source consistency test",
+                        "description", "Source request must stay linked to the same customer and asset",
+                        "priority", "HIGH",
+                        "channel", "PHONE"
+                )
+        );
+        assertThat(createdRequest.getStatusCode()).isEqualTo(HttpStatus.OK);
+        UUID serviceRequestId = UUID.fromString(String.valueOf(createdRequest.getBody().get("id")));
+
+        String ownerToken = login("owner", "123456");
+        Map<String, Object> mismatchBody = Map.of(
+                "serviceRequestId", serviceRequestId,
+                "customerId", second.getId(),
+                "assetId", secondAsset.getId(),
+                "summary", "Mismatched conversion must fail",
+                "description", "Integration test",
+                "priority", "HIGH"
+        );
+        assertThat(postJson("/api/v1/work-orders", ownerToken, mismatchBody).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(serviceRequestRepository.findDetailed(serviceRequestId, owner.getTenantId()).orElseThrow().getStatus())
+                .isEqualTo(ServiceRequestStatus.OPEN);
+
+        Map<String, Object> validBody = Map.of(
+                "serviceRequestId", serviceRequestId,
+                "customerId", first.getId(),
+                "assetId", firstAsset.getId(),
+                "summary", "Concurrent conversion must be single-winner",
+                "description", "Integration test",
+                "priority", "HIGH"
+        );
+        List<Integer> statuses = runTwoConcurrentPosts("/api/v1/work-orders", ownerToken, validBody);
+        assertThat(statuses).containsExactlyInAnyOrder(200, 409);
+        assertThat(workOrderRepository.countByTenantIdAndServiceRequestId(owner.getTenantId(), serviceRequestId))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void inactiveSparePartCannotBeConsumed() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer customer = customerRepository.saveAndFlush(testCustomer(
+                owner.getTenantId(), "INACTIVE-PART-CUST-" + UUID.randomUUID(), "Inactive Part Customer"
+        ));
+        WorkOrder workOrder = workOrderRepository.saveAndFlush(testWorkOrder(
+                owner.getTenantId(), customer, "WO-INACTIVE-PART-" + UUID.randomUUID()
+        ));
+
+        SparePart part = new SparePart();
+        part.setTenantId(owner.getTenantId());
+        part.setSku("INACTIVE-PART-" + UUID.randomUUID());
+        part.setName("Inactive Integration Part");
+        part.setUnit("cái");
+        part.setStockQuantity(new BigDecimal("5"));
+        part.setReorderLevel(BigDecimal.ONE);
+        part.setUnitPrice(new BigDecimal("10000"));
+        part.setActive(false);
+        sparePartRepository.saveAndFlush(part);
+
+        ResponseEntity<String> response = postJson(
+                "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
+                login("owner", "123456"),
+                Map.of("sparePartId", part.getId(), "quantity", new BigDecimal("1"), "note", "Must be rejected")
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId()).orElseThrow().getStockQuantity())
+                .isEqualByComparingTo("5");
     }
 
     @Test

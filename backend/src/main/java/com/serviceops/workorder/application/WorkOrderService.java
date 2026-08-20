@@ -98,10 +98,23 @@ public class WorkOrderService {
         }
         ServiceRequest serviceRequest = null;
         if (request.serviceRequestId() != null) {
-            serviceRequest = serviceRequestRepository.findDetailed(request.serviceRequestId(), tenantId)
+            serviceRequest = serviceRequestRepository.findDetailedForUpdate(request.serviceRequestId(), tenantId)
                     .orElseThrow(() -> BusinessException.notFound("SERVICE_REQUEST_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
             if (serviceRequest.getStatus() != ServiceRequestStatus.OPEN) {
                 throw BusinessException.conflict("SERVICE_REQUEST_ALREADY_PROCESSED", "Yêu cầu dịch vụ đã được xử lý");
+            }
+            if (!serviceRequest.getCustomer().getId().equals(customer.getId())) {
+                throw BusinessException.conflict(
+                        "SERVICE_REQUEST_CUSTOMER_MISMATCH",
+                        "Khách hàng của phiếu công việc không khớp với yêu cầu dịch vụ nguồn"
+                );
+            }
+            if (serviceRequest.getAsset() != null
+                    && (asset == null || !serviceRequest.getAsset().getId().equals(asset.getId()))) {
+                throw BusinessException.conflict(
+                        "SERVICE_REQUEST_ASSET_MISMATCH",
+                        "Thiết bị của phiếu công việc không khớp với yêu cầu dịch vụ nguồn"
+                );
             }
             serviceRequest.markConverted();
         }
@@ -139,8 +152,10 @@ public class WorkOrderService {
         WorkOrder workOrder = require(id);
         TechnicianProfile technician = technicianRepository.findForUpdate(request.technicianId(), tenantId)
                 .orElseThrow(() -> BusinessException.notFound("TECHNICIAN_NOT_FOUND", "Không tìm thấy kỹ thuật viên"));
-        if (!technician.isActive()) {
-            throw BusinessException.conflict("TECHNICIAN_INACTIVE", "Kỹ thuật viên đang ngừng hoạt động");
+        if (!technician.isActive()
+                || !technician.getUser().isActive()
+                || technician.getUser().getRole() != UserRole.TECHNICIAN) {
+            throw BusinessException.conflict("TECHNICIAN_INACTIVE", "Kỹ thuật viên đang ngừng hoạt động hoặc tài khoản không còn hiệu lực");
         }
         boolean overlap = appointmentRepository.existsOverlap(tenantId, technician.getId(), request.startTime(), request.endTime(), AppointmentStatus.ACTIVE, workOrder.getId());
         if (overlap) {
