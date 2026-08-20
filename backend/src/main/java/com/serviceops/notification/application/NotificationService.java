@@ -35,9 +35,18 @@ public class NotificationService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void notifyRoles(UUID tenantId, List<UserRole> roles, String title, String message) {
+        notifyRolesInternal(tenantId, roles, title, message, CurrentUser.userId());
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void notifyRolesIncludingCurrentUser(UUID tenantId, List<UserRole> roles, String title, String message) {
+        notifyRolesInternal(tenantId, roles, title, message, null);
+    }
+
+    private void notifyRolesInternal(UUID tenantId, List<UserRole> roles, String title, String message, UUID excludedUserId) {
         Set<UUID> notifiedUserIds = new HashSet<>();
         userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(tenantId, roles).forEach(recipient -> {
-            if (notifiedUserIds.add(recipient.getId())) {
+            if ((excludedUserId == null || !excludedUserId.equals(recipient.getId())) && notifiedUserIds.add(recipient.getId())) {
                 save(tenantId, recipient, title, message);
             }
         });

@@ -1,66 +1,70 @@
-import { DeleteOutlined, EditOutlined, PhoneOutlined, PlusOutlined, SearchOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
+import { EditOutlined, PhoneOutlined, PlusOutlined, SearchOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Avatar, Button, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography } from 'antd'
+import { App, Avatar, Button, Empty, Form, Input, Modal, Switch, Table, Typography } from 'antd'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
-import { techniciansApi } from '../../technicians/api'
 import { MetricCard } from '../../../components/MetricCard'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { Technician } from '../../../types'
 import { EMPTY_VALUE } from '../../../utils/format'
+import { useAuth } from '../../auth/AuthContext'
+import { techniciansApi } from '../api'
 
-function usernameFromName(value: string) {
-  const slug = value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .replace(/[^a-zA-Z0-9]+/g, '.')
-    .replace(/^\.+|\.+$/g, '')
-    .toLowerCase()
-
-  return slug || `technician.${Date.now().toString().slice(-5)}`
+type TechnicianProfileValues = {
+  phone?: string
+  skills?: string
+  active: boolean
 }
 
 export function TechniciansPage() {
   const [search, setSearch] = useState('')
-  const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Technician>()
-  const [form] = Form.useForm()
+  const [form] = Form.useForm<TechnicianProfileValues>()
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const { message } = App.useApp()
   const queryClient = useQueryClient()
 
-  const { data = [], isLoading } = useQuery({
+  const techniciansQuery = useQuery({
     queryKey: ['technicians', 'all'],
     queryFn: () => techniciansApi.list(false),
   })
+  const { data = [], isLoading } = techniciansQuery
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
+
     if (!keyword) {
       return data
     }
+
     return data.filter((technician) =>
-      [technician.name, technician.username, technician.phone, technician.skills].some((value) => value?.toLowerCase().includes(keyword)),
+      [technician.name, technician.username, technician.phone, technician.skills]
+        .some((value) => value?.toLowerCase().includes(keyword)),
     )
   }, [data, search])
 
-  const activeCount = data.filter((technician) => technician.active && technician.accountActive).length
+  const activeCount = data.filter(
+    (technician) => technician.active && technician.accountActive,
+  ).length
   const pausedCount = data.length - activeCount
   const skilledCount = data.filter((technician) => technician.skills?.trim()).length
+  const canManageAccounts = user?.role === 'OWNER'
 
-  const save = useMutation({
-    mutationFn: (values: Record<string, unknown>) => {
-      const payload = { ...values }
-      if (!payload.password) {
-        delete payload.password
+  const updateProfile = useMutation({
+    mutationFn: (values: TechnicianProfileValues) => {
+      if (!editing) {
+        throw new Error('Không có kỹ thuật viên đang được chỉnh sửa')
       }
-      return editing ? techniciansApi.update(editing.id, payload) : techniciansApi.create(payload)
+
+      return techniciansApi.updateProfile(editing.id, values)
     },
     onSuccess: () => {
-      message.success(editing ? 'Đã cập nhật kỹ thuật viên' : 'Đã tạo kỹ thuật viên')
-      setOpen(false)
+      message.success('Đã cập nhật hồ sơ kỹ thuật viên')
       setEditing(undefined)
       form.resetFields()
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
@@ -69,27 +73,13 @@ export function TechniciansPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
-  const remove = useMutation({
-    mutationFn: (id: string) => techniciansApi.delete(id),
-    onSuccess: () => {
-      message.success('Đã xoá kỹ thuật viên')
-      queryClient.invalidateQueries({ queryKey: ['technicians'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-    },
-    onError: (error) => message.error(apiErrorMessage(error)),
-  })
-
-  const showCreate = () => {
-    setEditing(undefined)
-    form.resetFields()
-    form.setFieldsValue({ active: true })
-    setOpen(true)
-  }
-
   const showEdit = (record: Technician) => {
     setEditing(record)
-    form.setFieldsValue({ ...record, active: record.active && record.accountActive, password: undefined })
-    setOpen(true)
+    form.setFieldsValue({
+      phone: record.phone,
+      skills: record.skills,
+      active: record.active,
+    })
   }
 
   return (
@@ -97,9 +87,19 @@ export function TechniciansPage() {
       <PageHeader
         eyebrow="Nhân sự hiện trường"
         title="Đội ngũ kỹ thuật"
-        description="Quản lý tài khoản kỹ thuật viên, thông tin liên hệ, kỹ năng phục vụ và trạng thái sẵn sàng tại hiện trường."
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kỹ thuật viên</Button>}
-        meta={<MetaBadge>{data.length} kỹ thuật viên</MetaBadge>}
+        description="Quản lý hồ sơ nghiệp vụ, kỹ năng và trạng thái sẵn sàng của đội ngũ kỹ thuật. Tài khoản, mật khẩu và phân quyền được quản lý tập trung tại Người dùng."
+        actions={
+          canManageAccounts ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/users?create=technician')}
+            >
+              Thêm kỹ thuật viên
+            </Button>
+          ) : undefined
+        }
+        meta={<MetaBadge>{techniciansQuery.isError ? 'Lỗi tải dữ liệu' : `${data.length} kỹ thuật viên`}</MetaBadge>}
       />
 
       <div className="channel-summary-grid">
@@ -109,17 +109,31 @@ export function TechniciansPage() {
       </div>
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tên, username, số điện thoại hoặc kỹ năng" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder="Tìm tên, username, số điện thoại hoặc kỹ năng"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
       </div>
 
-      <Table
+      {techniciansQuery.isError && (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách kỹ thuật viên"
+          error={techniciansQuery.error}
+          onRetry={() => techniciansQuery.refetch()}
+        />
+      )}
+
+      <Table<Technician>
         rowKey="id"
         loading={isLoading}
-        dataSource={filtered}
+        dataSource={techniciansQuery.isError ? [] : filtered}
         className="content-table"
         scroll={{ x: 980 }}
-        pagination={{ pageSize: 12, showSizeChanger: false }}
-        locale={{ emptyText: <Empty description="Chưa có kỹ thuật viên phù hợp" /> }}
+        pagination={{ pageSize: LIST_PAGE_SIZE, showSizeChanger: false }}
+        locale={{ emptyText: <Empty description={techniciansQuery.isError ? 'Không thể tải dữ liệu kỹ thuật viên' : 'Chưa có kỹ thuật viên phù hợp'} /> }}
         columns={[
           {
             title: 'Kỹ thuật viên',
@@ -146,47 +160,46 @@ export function TechniciansPage() {
           },
           {
             title: '',
-            width: 92,
+            width: 64,
             render: (_, record) => (
-              <Space size={4}>
-                <Button aria-label="Sửa kỹ thuật viên" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
-                <Popconfirm
-                  title="Xoá kỹ thuật viên này?"
-                  description="Chỉ xoá được khi kỹ thuật viên chưa có lịch hoặc phiếu công việc."
-                  okText="Xoá"
-                  cancelText="Huỷ"
-                  okButtonProps={{ danger: true, loading: remove.isPending }}
-                  onConfirm={() => remove.mutate(record.id)}
-                >
-                  <Button aria-label="Xoá kỹ thuật viên" type="text" danger icon={<DeleteOutlined />} />
-                </Popconfirm>
-              </Space>
+              <Button
+                aria-label="Sửa hồ sơ kỹ thuật viên"
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => showEdit(record)}
+              />
             ),
           },
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật kỹ thuật viên' : 'Thêm kỹ thuật viên'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={720} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
-          <div className="form-grid two-cols">
-            <Form.Item label="Họ tên" name="name" rules={[{ required: true, message: 'Nhập họ tên kỹ thuật viên' }]}>
-              <Input
-                placeholder="Ví dụ: Phạm Quốc Kỹ thuật"
-                onBlur={(event) => !editing && !form.getFieldValue('username') && form.setFieldValue('username', usernameFromName(event.target.value))}
-              />
-            </Form.Item>
-            <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
-              <Input placeholder="pham.quoc.ky.thuat" />
-            </Form.Item>
-            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
-              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
-            </Form.Item>
-            <Form.Item label="Điện thoại" name="phone">
-              <Input placeholder="0909123456" />
-            </Form.Item>
-          </div>
+      <Modal
+        title="Cập nhật hồ sơ kỹ thuật viên"
+        open={Boolean(editing)}
+        onCancel={() => {
+          setEditing(undefined)
+          form.resetFields()
+        }}
+        onOk={() => form.submit()}
+        confirmLoading={updateProfile.isPending}
+        width={620}
+        destroyOnHidden
+      >
+        <Typography.Paragraph type="secondary">
+          Username, mật khẩu, vai trò và trạng thái tài khoản được quản lý tại trang Người dùng.
+        </Typography.Paragraph>
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={(values) => updateProfile.mutate(values)}
+          requiredMark={false}
+        >
+          <Form.Item label="Điện thoại" name="phone">
+            <Input placeholder="0909123456" />
+          </Form.Item>
           <Form.Item label="Kỹ năng" name="skills">
-            <Input.TextArea rows={3} placeholder="Ví dụ: Máy lạnh, tủ lạnh, điện dân dụng, bảo trì định kỳ..." />
+            <Input.TextArea rows={3} placeholder="Máy lạnh, tủ lạnh, điện dân dụng, bảo trì định kỳ..." />
           </Form.Item>
           <Form.Item name="active" valuePropName="checked">
             <Switch checkedChildren="Sẵn sàng" unCheckedChildren="Tạm ngưng" />

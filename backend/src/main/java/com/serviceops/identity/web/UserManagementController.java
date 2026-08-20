@@ -69,7 +69,8 @@ public class UserManagementController {
             String phone,
             String skills,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            boolean protectedDemo
     ) {
     }
 }

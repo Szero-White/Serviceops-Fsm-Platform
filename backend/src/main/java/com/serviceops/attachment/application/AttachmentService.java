@@ -182,19 +182,10 @@ public class AttachmentService {
     }
 
     private void authorizeManage(Attachment attachment) {
-        if (CurrentUser.username().equals(attachment.getUploadedBy()) || canManageReference(attachment.getReferenceType())) {
+        if (CurrentUser.hasRole("OWNER") || CurrentUser.username().equals(attachment.getUploadedBy())) {
             return;
         }
-        throw BusinessException.forbidden("ATTACHMENT_MANAGE_DENIED", "Ban khong co quyen chinh sua file dinh kem nay");
-    }
-
-    private static boolean canManageReference(String referenceType) {
-        return switch (referenceType) {
-            case "WORK_ORDER" -> CurrentUser.hasRole("OWNER") || CurrentUser.hasRole("DISPATCHER");
-            case "SERVICE_REQUEST", "ASSET" ->
-                    CurrentUser.hasRole("OWNER") || CurrentUser.hasRole("DISPATCHER") || CurrentUser.hasRole("CUSTOMER_SERVICE");
-            default -> false;
-        };
+        throw BusinessException.forbidden("ATTACHMENT_MANAGE_DENIED", "Bạn không có quyền chỉnh sửa file đính kèm này");
     }
 
     private static String sanitizeFilename(String value) {

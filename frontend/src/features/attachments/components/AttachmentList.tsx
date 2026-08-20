@@ -10,6 +10,7 @@ import {
 import { App, Button, Empty, Form, Input, List, Modal, Popconfirm, Spin } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
+import { useAuth } from '../../auth/AuthContext'
 import type { AttachmentItem } from '../../../types'
 import { formatNumber } from '../../../utils/format'
 import { attachmentsApi } from '../api'
@@ -44,6 +45,7 @@ type AttachmentListProps = {
 
 export function AttachmentList({ attachments, onChanged }: AttachmentListProps) {
   const { message } = App.useApp()
+  const { user } = useAuth()
   const [renameForm] = Form.useForm<{ originalFilename: string }>()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewFile, setPreviewFile] = useState<AttachmentItem | null>(null)
@@ -166,54 +168,62 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
     <>
       <List
         dataSource={attachments}
-        renderItem={(item) => (
-          <List.Item
-            actions={[
-              <Button
-                key="preview"
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => handlePreview(item)}
-                disabled={!isImage(item.contentType) && !isPdf(item.contentType)}
-              >
-                Xem
-              </Button>,
-              <Button key="download" type="text" icon={<DownloadOutlined />} onClick={() => handleDownload(item)}>
-                Tải xuống
-              </Button>,
-              <Button key="rename" type="text" icon={<EditOutlined />} onClick={() => openRename(item)}>
-                Đổi tên
-              </Button>,
-              <Popconfirm
-                key="delete"
-                title="Xoá tệp đính kèm này?"
-                description="File sẽ bị xoá khỏi phiếu công việc và không còn tải xuống được."
-                okText="Xoá"
-                cancelText="Giữ lại"
-                okButtonProps={{ danger: true, loading: deletingId === item.id }}
-                onConfirm={() => handleDelete(item)}
-              >
-                <Button type="text" danger icon={<DeleteOutlined />} loading={deletingId === item.id}>
-                  Xoá
-                </Button>
-              </Popconfirm>,
-            ]}
-          >
-            <List.Item.Meta
-              avatar={
-                isImage(item.contentType) ? (
-                  <FileImageOutlined className="attachment-type-icon attachment-type-icon--image" />
-                ) : isPdf(item.contentType) ? (
-                  <FilePdfOutlined className="attachment-type-icon attachment-type-icon--pdf" />
-                ) : (
-                  <CloudUploadOutlined className="attachment-type-icon" />
-                )
-              }
-              title={item.originalFilename}
-              description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}`}
-            />
-          </List.Item>
-        )}
+        renderItem={(item) => {
+          const canManage = user?.role === 'OWNER' || item.uploadedBy === user?.username
+
+          return (
+            <List.Item
+              actions={[
+                <Button
+                  key="preview"
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => handlePreview(item)}
+                  disabled={!isImage(item.contentType) && !isPdf(item.contentType)}
+                >
+                  Xem
+                </Button>,
+                <Button key="download" type="text" icon={<DownloadOutlined />} onClick={() => handleDownload(item)}>
+                  Tải xuống
+                </Button>,
+                ...(canManage
+                  ? [
+                      <Button key="rename" type="text" icon={<EditOutlined />} onClick={() => openRename(item)}>
+                        Đổi tên
+                      </Button>,
+                      <Popconfirm
+                        key="delete"
+                        title="Xoá tệp đính kèm này?"
+                        description="File sẽ bị xoá khỏi phiếu công việc và không còn tải xuống được."
+                        okText="Xoá"
+                        cancelText="Giữ lại"
+                        okButtonProps={{ danger: true, loading: deletingId === item.id }}
+                        onConfirm={() => handleDelete(item)}
+                      >
+                        <Button type="text" danger icon={<DeleteOutlined />} loading={deletingId === item.id}>
+                          Xoá
+                        </Button>
+                      </Popconfirm>,
+                    ]
+                  : []),
+              ]}
+            >
+              <List.Item.Meta
+                avatar={
+                  isImage(item.contentType) ? (
+                    <FileImageOutlined className="attachment-type-icon attachment-type-icon--image" />
+                  ) : isPdf(item.contentType) ? (
+                    <FilePdfOutlined className="attachment-type-icon attachment-type-icon--pdf" />
+                  ) : (
+                    <CloudUploadOutlined className="attachment-type-icon" />
+                  )
+                }
+                title={item.originalFilename}
+                description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}`}
+              />
+            </List.Item>
+          )
+        }}
       />
 
       <Modal
