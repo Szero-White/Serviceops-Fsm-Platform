@@ -90,6 +90,11 @@ docker compose -f docker-compose.local.yml up -d
 
 # Backend
 cd backend
+$env:POSTGRES_HOST="localhost"
+$env:POSTGRES_PORT="5432"
+$env:POSTGRES_DB="serviceops"
+$env:POSTGRES_USER="serviceops"
+$env:POSTGRES_PASSWORD="serviceops"
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 
 # Frontend

@@ -5,6 +5,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
+import com.serviceops.security.DemoProperties;
 import com.serviceops.servicerequest.domain.ServiceChannel;
 import com.serviceops.servicerequest.domain.ServiceChannelRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -26,6 +27,7 @@ public class ServiceChannelService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final AuditService auditService;
     private final NotificationService notificationService;
+    private final DemoProperties demoProperties;
 
     @Transactional(readOnly = true)
     public List<ServiceChannelResponse> list(boolean activeOnly) {
@@ -57,6 +59,7 @@ public class ServiceChannelService {
     @Transactional
     public ServiceChannelResponse update(UUID id, ServiceChannelUpdateRequest request) {
         ServiceChannel channel = require(id);
+        guardProtectedDemoChannel(channel);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getCode());
         notificationService.notifyRoles(CurrentUser.tenantId(), channelRoles(), "Kênh tiếp nhận được cập nhật: " + channel.getCode(), channel.getName());
@@ -66,6 +69,7 @@ public class ServiceChannelService {
     @Transactional
     public void delete(UUID id) {
         ServiceChannel channel = require(id);
+        guardProtectedDemoChannel(channel);
         long usageCount = serviceRequestRepository.countByTenantIdAndChannel(CurrentUser.tenantId(), channel.getCode());
         if (usageCount > 0) {
             throw BusinessException.conflict("SERVICE_CHANNEL_IN_USE", "Không thể xóa kênh đã được dùng trong yêu cầu dịch vụ");
@@ -79,6 +83,17 @@ public class ServiceChannelService {
         return repository.findByTenantIdAndCodeIgnoreCase(tenantId, normalizeCode(code))
                 .filter(ServiceChannel::isActive)
                 .orElseThrow(() -> BusinessException.badRequest("SERVICE_CHANNEL_INVALID", "Kênh tiếp nhận không hợp lệ hoặc đã ngừng dùng"));
+    }
+
+
+    private void guardProtectedDemoChannel(ServiceChannel channel) {
+        if (!demoProperties.enabled() || !channel.isSystemDefined()) {
+            return;
+        }
+        throw BusinessException.forbidden(
+                "DEMO_SEED_PROTECTED",
+                "Kênh mặc định của public demo được bảo vệ. Hãy tạo kênh mới để thử đầy đủ chức năng CRUD"
+        );
     }
 
     private ServiceChannel require(UUID id) {

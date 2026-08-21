@@ -42,6 +42,8 @@ docker compose -f docker-compose.local.yml ps
 
 Kiểm tra container phải ở trạng thái `healthy`.
 
+File `.env` ở thư mục gốc được Docker Compose dùng để tạo PostgreSQL, nhưng Spring Boot không tự nạp file này. Ở bước chạy backend bên dưới, đặt cùng bộ biến `POSTGRES_*` để hai phía dùng đúng một tài khoản database.
+
 ### Cách B — PostgreSQL đã cài trên Windows
 
 Nếu máy đã có PostgreSQL, mở pgAdmin/psql và chạy từng lệnh bằng tài khoản quản trị:
@@ -52,7 +54,7 @@ CREATE DATABASE serviceops OWNER serviceops;
 GRANT ALL PRIVILEGES ON DATABASE serviceops TO serviceops;
 ```
 
-Không cần chạy Docker. Backend mặc định kết nối `localhost:5432`, database/user/password đều là `serviceops`. Nếu cấu hình khác, đặt biến môi trường `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` trước khi chạy backend.
+Không cần chạy Docker. Nếu cấu hình khác, đặt biến môi trường `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` trước khi chạy backend.
 
 ## 4. Chạy backend
 
@@ -60,7 +62,13 @@ Mở PowerShell mới:
 
 ```powershell
 cd backend
-mvn.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+$env:POSTGRES_HOST="localhost"
+$env:POSTGRES_PORT="5432"
+$env:POSTGRES_DB="serviceops"
+$env:POSTGRES_USER="serviceops"
+$env:POSTGRES_PASSWORD="serviceops"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
 
 Khi log có dòng `Started ServiceOpsApplication`, mở:
 
@@ -76,7 +84,7 @@ Mở PowerShell mới:
 ```powershell
 cd frontend
 Copy-Item .env.example .env
-npm install
+npm ci
 npm run dev
 ```
 

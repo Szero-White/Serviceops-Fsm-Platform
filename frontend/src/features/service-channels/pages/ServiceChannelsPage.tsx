@@ -11,6 +11,7 @@ import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadg
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
+import { useAuth } from '../../auth/AuthContext'
 
 const colorOptions = [
   { value: 'blue', label: 'Xanh dương' },
@@ -41,7 +42,9 @@ export function ServiceChannelsPage() {
   const [editing, setEditing] = useState<ServiceChannel>()
   const [form] = Form.useForm()
   const { message } = App.useApp()
+  const { user } = useAuth()
   const queryClient = useQueryClient()
+  const canManage = ['OWNER', 'DISPATCHER'].includes(user?.role ?? '')
 
   const channelsQuery = useQuery({
     queryKey: ['service-channels'],
@@ -105,7 +108,7 @@ export function ServiceChannelsPage() {
         eyebrow="Cấu hình tiếp nhận"
         title="Kênh tiếp nhận"
         description="Quản trị các kênh tiếp nhận để đội chăm sóc khách hàng dùng thống nhất khi tạo yêu cầu dịch vụ."
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kênh</Button>}
+        actions={canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm kênh</Button> : undefined}
         meta={<MetaBadge>{channelsQuery.isError ? 'Lỗi tải dữ liệu' : `${data.length} kênh`}</MetaBadge>}
       />
 
@@ -157,7 +160,7 @@ export function ServiceChannelsPage() {
           {
             title: '',
             width: 92,
-            render: (_, record) => (
+            render: (_, record) => canManage ? (
               <Space size={4}>
                 <Button aria-label="Sửa kênh" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
@@ -171,7 +174,7 @@ export function ServiceChannelsPage() {
                   <Button aria-label="Xoá kênh" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
-            ),
+            ) : null,
           },
         ]}
       />

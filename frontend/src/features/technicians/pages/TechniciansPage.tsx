@@ -143,7 +143,9 @@ export function TechniciansPage() {
                 <Avatar size={42} icon={<UserOutlined />} />
                 <div>
                   <Typography.Text strong>{record.name}</Typography.Text>
-                  <Typography.Text type="secondary">@{record.username}</Typography.Text>
+                  <Typography.Text type="secondary">
+                    @{record.username}{record.protectedDemo ? ' · Demo cố định' : ''}
+                  </Typography.Text>
                 </div>
               </div>
             ),
@@ -166,6 +168,8 @@ export function TechniciansPage() {
                 aria-label="Sửa hồ sơ kỹ thuật viên"
                 type="text"
                 icon={<EditOutlined />}
+                disabled={Boolean(record.protectedDemo)}
+                title={record.protectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
                 onClick={() => showEdit(record)}
               />
             ),

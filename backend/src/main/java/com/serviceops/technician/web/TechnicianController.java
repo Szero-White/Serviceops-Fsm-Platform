@@ -51,7 +51,8 @@ public class TechnicianController {
             String phone,
             String skills,
             boolean active,
-            boolean accountActive
+            boolean accountActive,
+            boolean protectedDemo
     ) {
     }
 }

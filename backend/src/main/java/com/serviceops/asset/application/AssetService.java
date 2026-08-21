@@ -88,8 +88,19 @@ public class AssetService {
         if (!asset.getSerialNumber().equalsIgnoreCase(serial) && repository.existsByTenantIdAndSerialNumberIgnoreCase(CurrentUser.tenantId(), serial)) {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), CurrentUser.tenantId())
+        UUID tenantId = CurrentUser.tenantId();
+        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
                 .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+        if (!asset.getCustomer().getId().equals(customer.getId())) {
+            long serviceRequestCount = serviceRequestRepository.countByTenantIdAndAssetId(tenantId, id);
+            long workOrderCount = workOrderRepository.countByTenantIdAndAssetId(tenantId, id);
+            if (serviceRequestCount > 0 || workOrderCount > 0) {
+                throw BusinessException.conflict(
+                        "ASSET_CUSTOMER_CHANGE_BLOCKED",
+                        "Không thể đổi khách hàng của thiết bị đã có lịch sử yêu cầu hoặc phiếu công việc"
+                );
+            }
+        }
         asset.setCustomer(customer);
         apply(asset, request, serial);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị serial " + serial);

@@ -117,7 +117,7 @@ export function WorkOrderDialogs({
       <Modal title="Ghi nhận phụ tùng sử dụng" open={consume.open} onCancel={consume.onClose} onOk={() => consume.form.submit()} confirmLoading={consume.pending} width={620} destroyOnHidden>
         <Form form={consume.form} layout="vertical" onFinish={consume.onSubmit} requiredMark={false}>
           <Form.Item label="Phụ tùng" name="sparePartId" rules={[{ required: true, message: 'Chọn phụ tùng' }]}>
-            <Select showSearch optionFilterProp="label" options={parts?.content.map((part) => ({ value: part.id, label: `${part.sku} · ${part.name} · Tồn ${formatQuantityWithUnit(part.stockQuantity, part.unit)}` }))} />
+            <Select showSearch optionFilterProp="label" options={parts?.content.filter((part) => part.active).map((part) => ({ value: part.id, label: `${part.sku} · ${part.name} · Tồn ${formatQuantityWithUnit(part.stockQuantity, part.unit)}` }))} />
           </Form.Item>
           <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
           <Form.Item label="Ghi chú" name="note"><Input placeholder="Ví dụ: Thay tụ máy nén" /></Form.Item>

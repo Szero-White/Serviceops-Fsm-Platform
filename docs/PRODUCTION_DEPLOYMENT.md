@@ -72,10 +72,10 @@ On a single VM, expose only what is required (normally SSH and HTTP/HTTPS), use 
 
 `DEMO_MODE=true` does not remove endpoints or business modules. It adds a public-instance safety gate:
 
-- all HTTP `DELETE` requests are blocked;
-- write operations under `/api/v1/users` are blocked;
-- write operations under `/api/v1/technicians` are blocked;
-- write operations under `/api/v1/service-channels` are blocked.
+- destructive HTTP `DELETE` requests are blocked by default;
+- User Management remains usable, but the seeded demo identities are protected by service-level policy from deletion, deactivation, credential changes and destructive role changes;
+- technician profile updates remain usable, while the same seeded identities are protected by service-level policy;
+- administrative writes under `/api/v1/service-channels` are blocked.
 
 Core workflow writes remain available so a recruiter can exercise customers/assets/service requests/work orders, scheduling, status transitions, inventory and attachments.
 
