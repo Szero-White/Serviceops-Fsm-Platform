@@ -1,7 +1,6 @@
 package com.serviceops.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,7 +21,6 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -90,17 +88,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    FilterRegistrationBean<DemoProtectionFilter> demoProtectionFilterRegistration(DemoProtectionFilter filter) {
-        FilterRegistrationBean<DemoProtectionFilter> registration = new FilterRegistrationBean<>(filter);
-        registration.setEnabled(false);
-        return registration;
-    }
-
-    @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             JwtAuthenticationConverter converter,
-                                            CorsConfigurationSource corsConfigurationSource,
-                                            DemoProtectionFilter demoProtectionFilter) throws Exception {
+                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -109,8 +99,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/login", "/actuator/health", "/actuator/health/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/attachments/*/download").authenticated()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
-                .addFilterAfter(demoProtectionFilter, AuthorizationFilter.class);
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
         return http.build();
     }
 
