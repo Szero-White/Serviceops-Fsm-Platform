@@ -15,28 +15,28 @@ type ChatMessage =
 
 const roleSuggestions: Record<string, string[]> = {
   OWNER: [
-    'Tôi cần tạo tài khoản nhân viên mới như thế nào?',
+    'Tôi mới bắt đầu dùng ServiceOps, nên kiểm tra những mục nào trước?',
     'Làm sao kiểm tra ai đã sửa dữ liệu trong hệ thống?',
     'Nên cấu hình kênh tiếp nhận ở đâu?',
   ],
   DISPATCHER: [
-    'Làm sao chuyển yêu cầu thành phiếu công việc?',
+    'Tôi mới làm Điều phối viên, quy trình xử lý một yêu cầu như thế nào?',
     'Tôi phân công và xếp lịch kỹ thuật viên ở đâu?',
     'Theo dõi phiếu đang xử lý như thế nào?',
   ],
   CUSTOMER_SERVICE: [
-    'Tôi tiếp nhận yêu cầu dịch vụ mới như thế nào?',
+    'Tôi mới làm CSKH, nên bắt đầu tiếp nhận yêu cầu như thế nào?',
     'Khi nào nên tạo khách hàng và thiết bị trước?',
     'AI tiếp nhận trong form dùng ra sao?',
   ],
   TECHNICIAN: [
-    'Tôi xem lịch làm việc của mình ở đâu?',
+    'Tôi mới làm Kỹ thuật viên, nên bắt đầu ca làm việc từ đâu?',
     'Tôi xem công việc được giao ở đâu?',
     'Cập nhật trạng thái và ghi chẩn đoán như thế nào?',
     'Tôi ghi phụ tùng đã dùng ở đâu?',
   ],
   WAREHOUSE_STAFF: [
-    'Tôi nhập kho phụ tùng như thế nào?',
+    'Tôi mới làm kho, quy trình theo dõi và nhập phụ tùng như thế nào?',
     'Làm sao biết phụ tùng sắp hết tồn?',
     'Khi kỹ thuật viên dùng phụ tùng thì theo dõi ở đâu?',
   ],
@@ -101,12 +101,12 @@ export function AiHelpAssistant() {
         </span>
         <span className="ai-help-launcher-copy">
           <span className="ai-help-launcher-title">Trợ lý AI</span>
-          <span className="ai-help-launcher-subtitle">Hướng dẫn thao tác</span>
+          <span className="ai-help-launcher-subtitle">Hướng dẫn theo vai trò</span>
         </span>
       </button>
 
       <Drawer
-        title="Trợ lý hướng dẫn"
+        title="Trợ lý AI ServiceOps"
         open={open}
         onClose={() => setOpen(false)}
         width={440}
@@ -115,7 +115,7 @@ export function AiHelpAssistant() {
         <div className="ai-help-intro">
           <Typography.Text strong>Hỏi cách dùng ServiceOps theo vai trò của bạn</Typography.Text>
           <Typography.Text type="secondary">
-            Trợ lý này hướng dẫn quy trình thao tác, quyền hạn và trang cần mở. Dữ liệu chỉ thay đổi khi bạn tự bấm lưu/xác nhận.
+            Trợ lý giải thích quy trình và chức năng theo vai trò của bạn. Trợ lý không tự đọc dữ liệu nghiệp vụ trong database và không tự thay đổi dữ liệu.
           </Typography.Text>
         </div>
 
