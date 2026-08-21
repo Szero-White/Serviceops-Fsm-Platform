@@ -185,7 +185,7 @@ public class AttachmentService {
 
     private Attachment getAuthorizedAttachment(UUID id, UUID tenantId) {
         Attachment attachment = repository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Khong tim thay file dinh kem"));
+                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy file đính kèm"));
         authorizeReference(attachment.getReferenceType(), attachment.getReferenceId(), tenantId);
         return attachment;
     }
@@ -200,7 +200,7 @@ public class AttachmentService {
     private static String sanitizeFilename(String value) {
         String raw = value == null ? "" : value.trim();
         if (raw.isBlank()) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Ten file khong duoc de trong");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Tên file không được để trống");
         }
         final String normalized;
         try {

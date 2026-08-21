@@ -127,8 +127,8 @@ public class InventoryService {
             createImportedPart(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phu tung tu CSV");
-        notificationService.notifyRoles(tenantId, warehouseRoles(), "Da import danh muc phu tung", validRows + " SKU moi duoc them vao kho");
+        auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phụ tùng từ CSV");
+        notificationService.notifyRoles(tenantId, warehouseRoles(), "Đã import danh mục phụ tùng", validRows + " SKU mới được thêm vào kho");
         return new SparePartImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -172,10 +172,10 @@ public class InventoryService {
     private SparePartImportCandidate validateImportRow(SparePartCsvRow row, Set<String> seenSkus, UUID tenantId) {
         String sku = row.sku().trim().toUpperCase(Locale.ROOT);
         if (sku.isBlank()) {
-            return SparePartImportCandidate.invalid(row, "SKU khong duoc de trong");
+            return SparePartImportCandidate.invalid(row, "SKU không được để trống");
         }
         if (sku.length() > 60) {
-            return SparePartImportCandidate.invalid(row, "SKU khong duoc vuot qua 60 ky tu");
+            return SparePartImportCandidate.invalid(row, "SKU không được vượt quá 60 ký tự");
         }
         if (!seenSkus.add(sku)) {
             return SparePartImportCandidate.invalid(row, "SKU bi trung trong file import");
@@ -184,10 +184,10 @@ public class InventoryService {
             return SparePartImportCandidate.invalid(row, "SKU da ton tai trong he thong");
         }
         if (row.name().isBlank() || row.name().length() > 180) {
-            return SparePartImportCandidate.invalid(row, "Ten phu tung bat buoc va toi da 180 ky tu");
+            return SparePartImportCandidate.invalid(row, "Tên phụ tùng bắt buộc và tối đa 180 ký tự");
         }
         if (row.unit().isBlank() || row.unit().length() > 30) {
-            return SparePartImportCandidate.invalid(row, "Don vi bat buoc va toi da 30 ky tu");
+            return SparePartImportCandidate.invalid(row, "Đơn vị bắt buộc và tối đa 30 ký tự");
         }
 
         try {
@@ -222,11 +222,11 @@ public class InventoryService {
         try {
             BigDecimal parsed = new BigDecimal(value == null || value.isBlank() ? "0" : value.trim());
             if (parsed.signum() < 0) {
-                throw new IllegalArgumentException(label + " khong duoc am");
+                throw new IllegalArgumentException(label + " không được âm");
             }
             return parsed;
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException(label + " khong dung dinh dang so");
+            throw new IllegalArgumentException(label + " không đúng định dạng số");
         }
     }
 

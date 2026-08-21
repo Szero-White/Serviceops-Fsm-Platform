@@ -135,8 +135,8 @@ public class CustomerService {
             createImportedCustomer(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khach hang tu CSV");
-        notificationService.notifyRoles(tenantId, customerRoles(), "Da import danh sach khach hang", validRows + " ho so moi duoc them vao he thong");
+        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khách hàng từ CSV");
+        notificationService.notifyRoles(tenantId, customerRoles(), "Đã import danh sách khách hàng", validRows + " hồ sơ mới được thêm vào hệ thống");
         return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -162,31 +162,31 @@ public class CustomerService {
     private CustomerImportCandidate validateImportRow(CustomerCsvRow row, Set<String> seenCodes, UUID tenantId) {
         String code = row.code().trim().toUpperCase(Locale.ROOT);
         if (code.isBlank()) {
-            return CustomerImportCandidate.invalid(row, "Ma khach hang khong duoc de trong");
+            return CustomerImportCandidate.invalid(row, "Mã khách hàng không được để trống");
         }
         if (code.length() > 40) {
-            return CustomerImportCandidate.invalid(row, "Ma khach hang toi da 40 ky tu");
+            return CustomerImportCandidate.invalid(row, "Mã khách hàng tối đa 40 ký tự");
         }
         if (!seenCodes.add(code)) {
-            return CustomerImportCandidate.invalid(row, "Ma khach hang bi trung trong file import");
+            return CustomerImportCandidate.invalid(row, "Mã khách hàng bị trùng trong file import");
         }
         if (repository.existsByTenantIdAndCodeIgnoreCase(tenantId, code)) {
-            return CustomerImportCandidate.invalid(row, "Ma khach hang da ton tai trong he thong");
+            return CustomerImportCandidate.invalid(row, "Mã khách hàng đã tồn tại trong hệ thống");
         }
         if (row.name().isBlank() || row.name().length() > 180) {
-            return CustomerImportCandidate.invalid(row, "Ten khach hang bat buoc va toi da 180 ky tu");
+            return CustomerImportCandidate.invalid(row, "Tên khách hàng bắt buộc và tối đa 180 ký tự");
         }
         if (row.phone().length() > 30) {
-            return CustomerImportCandidate.invalid(row, "So dien thoai toi da 30 ky tu");
+            return CustomerImportCandidate.invalid(row, "Số điện thoại tối đa 30 ký tự");
         }
         if (row.email().length() > 150 || (!row.email().isBlank() && !row.email().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))) {
-            return CustomerImportCandidate.invalid(row, "Email khong hop le");
+            return CustomerImportCandidate.invalid(row, "Email không hợp lệ");
         }
         if (row.address().length() > 300) {
-            return CustomerImportCandidate.invalid(row, "Dia chi toi da 300 ky tu");
+            return CustomerImportCandidate.invalid(row, "Địa chỉ tối đa 300 ký tự");
         }
         if (row.notes().length() > 2000) {
-            return CustomerImportCandidate.invalid(row, "Ghi chu toi da 2000 ky tu");
+            return CustomerImportCandidate.invalid(row, "Ghi chú tối đa 2000 ký tự");
         }
 
         try {

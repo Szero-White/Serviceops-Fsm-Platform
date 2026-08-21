@@ -19,7 +19,7 @@ public class CustomerCsvService {
     private final CsvFileService csvFileService;
 
     public List<CustomerCsvRow> parseCustomers(MultipartFile file) {
-        return csvFileService.parse(file, CUSTOMER_HEADERS, "khach hang")
+        return csvFileService.parse(file, CUSTOMER_HEADERS, "khách hàng")
                 .stream()
                 .map(row -> new CustomerCsvRow(
                         row.rowNumber(),
@@ -37,7 +37,7 @@ public class CustomerCsvService {
     public byte[] customerTemplate() {
         return csvFileService.write(List.of(
                 CUSTOMER_HEADERS,
-                List.of("KH-01001", "Cong ty Minh Anh", "0909123456", "support@example.com", "12 Nguyen Trai, TP.HCM", "Khach hang bao tri dinh ky", "true")
+                List.of("KH-01001", "Công ty Minh Anh", "0909123456", "support@example.com", "12 Nguyễn Trãi, TP.HCM", "Khách hàng bảo trì định kỳ", "true")
         ));
     }
 

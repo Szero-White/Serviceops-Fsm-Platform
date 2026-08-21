@@ -19,18 +19,18 @@ public class CsvFileService {
 
     public List<CsvRow> parse(MultipartFile file, List<String> expectedHeaders, String domainLabel) {
         if (file == null || file.isEmpty()) {
-            throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import khong duoc de trong");
+            throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import không được để trống");
         }
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
             if (headerLine == null) {
-                throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import khong co du lieu");
+                throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import không có dữ liệu");
             }
 
             List<String> headers = parseLine(removeBom(headerLine));
             if (!headers.equals(expectedHeaders)) {
-                throw BusinessException.badRequest("IMPORT_HEADER_INVALID", "File import khong dung mau cot cua " + domainLabel);
+                throw BusinessException.badRequest("IMPORT_HEADER_INVALID", "File import không đúng mẫu cột của " + domainLabel);
             }
 
             List<CsvRow> rows = new ArrayList<>();
@@ -42,13 +42,13 @@ public class CsvFileService {
                     continue;
                 }
                 if (rows.size() >= MAX_IMPORT_ROWS) {
-                    throw BusinessException.badRequest("IMPORT_TOO_MANY_ROWS", "Moi lan chi import toi da 1000 dong");
+                    throw BusinessException.badRequest("IMPORT_TOO_MANY_ROWS", "Mỗi lần chỉ import tối đa 1000 dòng");
                 }
                 rows.add(new CsvRow(rowNumber, parseLine(line)));
             }
             return rows;
         } catch (IOException ex) {
-            throw new BusinessException("IMPORT_FILE_READ_ERROR", "Khong the doc file import", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("IMPORT_FILE_READ_ERROR", "Không thể đọc file import", HttpStatus.BAD_REQUEST);
         }
     }
 
