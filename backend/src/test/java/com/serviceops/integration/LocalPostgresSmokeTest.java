@@ -432,13 +432,13 @@ class LocalPostgresSmokeTest {
 
         Customer customer = customerRepository.saveAndFlush(testCustomer(
                 owner.getTenantId(),
-                "INACTIVE-TECH-CUST-" + UUID.randomUUID(),
+                "INACTIVE-TECH-CUST-" + UUID.randomUUID().toString().substring(0, 8),
                 "Inactive Technician Customer"
         ));
         WorkOrder workOrder = workOrderRepository.saveAndFlush(testWorkOrder(
                 owner.getTenantId(),
                 customer,
-                "WO-INACTIVE-TECH-" + UUID.randomUUID()
+                "WO-INACTIVE-TECH-" + UUID.randomUUID().toString().substring(0, 8)
         ));
 
         ResponseEntity<String> schedule = postJson(
@@ -457,10 +457,10 @@ class LocalPostgresSmokeTest {
     void assetCustomerCannotChangeAfterOperationalHistoryExists() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
         Customer first = customerRepository.saveAndFlush(testCustomer(
-                owner.getTenantId(), "ASSET-HISTORY-A-" + UUID.randomUUID(), "Asset History Customer A"
+                owner.getTenantId(), "ASSET-HISTORY-A-" + UUID.randomUUID().toString().substring(0, 8), "Asset History Customer A"
         ));
         Customer second = customerRepository.saveAndFlush(testCustomer(
-                owner.getTenantId(), "ASSET-HISTORY-B-" + UUID.randomUUID(), "Asset History Customer B"
+                owner.getTenantId(), "ASSET-HISTORY-B-" + UUID.randomUUID().toString().substring(0, 8), "Asset History Customer B"
         ));
         Asset asset = assetRepository.saveAndFlush(testAsset(
                 owner.getTenantId(), first, "ASSET-HISTORY-" + UUID.randomUUID()
@@ -500,10 +500,10 @@ class LocalPostgresSmokeTest {
     void serviceRequestConversionMustPreserveCustomerAssetAndAllowOnlyOneConcurrentConversion() throws Exception {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
         Customer first = customerRepository.saveAndFlush(testCustomer(
-                owner.getTenantId(), "SR-WO-A-" + UUID.randomUUID(), "Service Request Customer A"
+                owner.getTenantId(), "SR-WO-A-" + UUID.randomUUID().toString().substring(0, 8), "Service Request Customer A"
         ));
         Customer second = customerRepository.saveAndFlush(testCustomer(
-                owner.getTenantId(), "SR-WO-B-" + UUID.randomUUID(), "Service Request Customer B"
+                owner.getTenantId(), "SR-WO-B-" + UUID.randomUUID().toString().substring(0, 8), "Service Request Customer B"
         ));
         Asset firstAsset = assetRepository.saveAndFlush(testAsset(
                 owner.getTenantId(), first, "SR-WO-ASSET-A-" + UUID.randomUUID()
@@ -560,10 +560,10 @@ class LocalPostgresSmokeTest {
     void inactiveSparePartCannotBeConsumed() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
         Customer customer = customerRepository.saveAndFlush(testCustomer(
-                owner.getTenantId(), "INACTIVE-PART-CUST-" + UUID.randomUUID(), "Inactive Part Customer"
+                owner.getTenantId(), "INACTIVE-PART-CUST-" + UUID.randomUUID().toString().substring(0, 8), "Inactive Part Customer"
         ));
         WorkOrder workOrder = workOrderRepository.saveAndFlush(testWorkOrder(
-                owner.getTenantId(), customer, "WO-INACTIVE-PART-" + UUID.randomUUID()
+                owner.getTenantId(), customer, "WO-INACTIVE-PART-" + UUID.randomUUID().toString().substring(0, 8)
         ));
 
         SparePart part = new SparePart();
