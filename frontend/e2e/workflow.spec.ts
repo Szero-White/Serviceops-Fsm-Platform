@@ -22,7 +22,12 @@ test('Customer Service can receive a service request and convert it to a work or
   const modal = modalByTitle(page, 'Tiếp nhận yêu cầu dịch vụ')
 
   await modal.getByLabel('Khách hàng').click()
-  await page.getByRole('option', { name: new RegExp(customerCode) }).click()
+  const customerOption = page
+    .locator('.ant-select-dropdown:visible .ant-select-item-option')
+    .filter({ hasText: customerCode })
+    .first()
+  await expect(customerOption).toBeVisible()
+  await customerOption.click()
   await modal.getByLabel('Tiêu đề').fill(title)
   await modal.getByLabel('Mô tả chi tiết').fill('Kiểm thử luồng tiếp nhận và chuyển đổi bằng trình duyệt thật.')
   await submitModal(page, 'Tiếp nhận yêu cầu dịch vụ')
