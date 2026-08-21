@@ -18,6 +18,19 @@ The enterprise-refinement/design-system baseline currently on `main` was validat
 
 This section records the **merged baseline only**. Future changes must be validated again; prior PASS results are not proof for modified source.
 
+## Latest merged baseline — Pull Request #5 (2026-08-21)
+
+The current `main` baseline was revalidated after the role/security hardening, public-demo protected-seed policy, Gemini assistant hardening and integration-test restructuring:
+
+- GitHub PR checks: backend, frontend and Docker build PASS.
+- Local backend clean suite: **88 tests, 0 failures, 0 errors; 16 Testcontainers integration tests skipped only because local Docker was intentionally off**.
+- GitHub backend CI executed with Docker/Testcontainers available and passed before merge.
+- Frontend lint/type/UI policy and production build PASS.
+- Public-demo CRUD UAT with `DEMO_MODE=true`: PASS; recruiter-created records support normal CRUD while protected seeds remain guarded.
+- Integration tests are organized by feature with shared PostgreSQL/HTTP fixtures rather than one monolithic smoke-test class.
+
+This is the current portfolio baseline. New behavior changes must still pass the release acceptance gate below.
+
 ## Release acceptance gate
 
 Run these checks before merging a change that affects application behavior, deployment, dependencies or shared UI infrastructure:

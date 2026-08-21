@@ -230,8 +230,8 @@ export function WorkOrdersPage() {
   }
 
   const transitions = useMemo(
-    () => detail ? availableWorkOrderTransitions(detail.status) : [],
-    [detail],
+    () => detail ? availableWorkOrderTransitions(detail.status, user?.role) : [],
+    [detail, user?.role],
   )
 
   return (

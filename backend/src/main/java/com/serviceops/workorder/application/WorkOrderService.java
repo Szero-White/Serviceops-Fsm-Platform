@@ -36,12 +36,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class WorkOrderService {
+    private static final Set<WorkOrderStatus> TECHNICIAN_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.ON_THE_WAY,
+            WorkOrderStatus.IN_PROGRESS,
+            WorkOrderStatus.WAITING_FOR_PARTS,
+            WorkOrderStatus.COMPLETED
+    );
+
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
     private final CustomerRepository customerRepository;
@@ -193,6 +202,7 @@ public class WorkOrderService {
     public WorkOrderResponse transition(UUID id, TransitionWorkOrder request) {
         WorkOrder workOrder = require(id);
         ensureTechnicianCanAccess(workOrder);
+        ensureTechnicianCanTransition(request.targetStatus());
         WorkOrderStatus previous = workOrder.getStatus();
         if (request.targetStatus() == WorkOrderStatus.COMPLETED) {
             if (request.diagnosis() == null || request.diagnosis().isBlank() || request.resolution() == null || request.resolution().isBlank()) {
@@ -236,6 +246,18 @@ public class WorkOrderService {
         if (workOrder.getTechnician() == null
                 || !workOrder.getTechnician().getUser().getId().equals(CurrentUser.userId())) {
             throw BusinessException.forbidden("WORK_ORDER_NOT_ASSIGNED", "Bạn chỉ được thao tác công việc được phân công cho mình");
+        }
+    }
+
+    private static void ensureTechnicianCanTransition(WorkOrderStatus targetStatus) {
+        if (!CurrentUser.hasRole("TECHNICIAN")) {
+            return;
+        }
+        if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+            throw BusinessException.forbidden(
+                    "WORK_ORDER_TRANSITION_FORBIDDEN",
+                    "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện; nghiệm thu, đóng, mở lại hoặc hủy phiếu thuộc quyền điều phối"
+            );
         }
     }
 
