@@ -63,7 +63,7 @@ jobs:
           JWT_SECRET=$CI_JWT_SECRET
           JWT_ISSUER=serviceops-ci
           JWT_ACCESS_TOKEN_MINUTES=15
-          CORS_ALLOWED_ORIGINS=http://localhost:8088
+          CORS_ALLOWED_ORIGINS=http://127.0.0.1:8088
           DEMO_MODE=true
           DEMO_PASSWORD=CiDemo-$CI_SUFFIX
           MAX_TENANT_STORAGE_BYTES=104857600
@@ -91,6 +91,32 @@ jobs:
             http://127.0.0.1:8088/api/v1/auth/login)
           echo "$LOGIN_RESPONSE" | grep -q '"accessToken"'
           echo "$LOGIN_RESPONSE" | grep -q '"role":"OWNER"'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install browser test dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run recruiter browser E2E
+        working-directory: frontend
+        run: |
+          set -a
+          . ../.env.ci
+          set +a
+          E2E_BASE_URL=http://127.0.0.1:8088 E2E_DEMO_PASSWORD="$DEMO_PASSWORD" npm run e2e
+      - name: Upload browser test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serviceops-playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
       - name: Show Compose diagnostics on failure
         if: failure()
         run: |

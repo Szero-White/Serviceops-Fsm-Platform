@@ -19,7 +19,7 @@ public class InventoryCsvService {
     private final CsvFileService csvFileService;
 
     public List<SparePartCsvRow> parseSpareParts(MultipartFile file) {
-        return csvFileService.parse(file, SPARE_PART_HEADERS, "kho phu tung")
+        return csvFileService.parse(file, SPARE_PART_HEADERS, "kho phụ tùng")
                 .stream()
                 .map(row -> toRow(row.rowNumber(), row.values()))
                 .toList();
@@ -28,7 +28,7 @@ public class InventoryCsvService {
     public byte[] sparePartTemplate() {
         return csvFileService.write(List.of(
                 SPARE_PART_HEADERS,
-                List.of("FILTER-AC-02", "Luoi loc may lanh", "cai", "10", "3", "95000", "true")
+                List.of("FILTER-AC-02", "Lưới lọc máy lạnh", "cái", "10", "3", "95000", "true")
         ));
     }
 

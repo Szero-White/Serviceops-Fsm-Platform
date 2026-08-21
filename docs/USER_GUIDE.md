@@ -50,6 +50,7 @@ Mật khẩu local cho các tài khoản demo: `123456`. Đây chỉ là credent
 - Work order đã đóng hoặc hủy không được dùng thêm phụ tùng.
 - Mỗi kỹ thuật viên có tài khoản riêng liên kết 1-1 với `technician_profile`; lịch cá nhân được backend suy ra từ JWT và không thể đổi ID để xem lịch người khác.
 - Kỹ thuật viên không thể xem dữ liệu khách hàng hoặc phiếu của người khác.
+- Kỹ thuật viên chỉ cập nhật tiến độ thực hiện (`ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`); nghiệm thu, đóng, mở lại hoặc hủy phiếu thuộc Owner/Dispatcher.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
 - File local chỉ chấp nhận JPG, PNG, WEBP và PDF, tối đa 10 MB.
 

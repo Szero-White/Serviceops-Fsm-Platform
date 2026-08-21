@@ -70,14 +70,14 @@ On a single VM, expose only what is required (normally SSH and HTTP/HTTPS), use 
 
 ## 4. Demo-mode behavior
 
-`DEMO_MODE=true` does not remove endpoints or business modules. It adds a public-instance safety gate:
+`DEMO_MODE=true` keeps normal application workflows usable while protecting only the seeded data required to keep the public demo recoverable:
 
-- destructive HTTP `DELETE` requests are blocked by default;
-- User Management remains usable, but the seeded demo identities are protected by service-level policy from deletion, deactivation, credential changes and destructive role changes;
-- technician profile updates remain usable, while the same seeded identities are protected by service-level policy;
-- administrative writes under `/api/v1/service-channels` are blocked.
+- recruiter-created customers, assets, service requests, work orders, inventory records, attachments and custom service channels keep their normal role-based create/update/delete behavior;
+- seeded demo identities are protected by service-level policy from deletion, deactivation, credential changes and destructive role changes;
+- technician profile updates remain usable, while profiles backed by the protected seeded identities cannot be used to bypass that identity protection;
+- system-defined service channels are protected from update/delete, while custom channels created during the demo support normal CRUD.
 
-Core workflow writes remain available so a recruiter can exercise customers/assets/service requests/work orders, scheduling, status transitions, inventory and attachments.
+Authorization and business invariants remain enforced exactly as in non-demo mode. Set `DEMO_MODE=false` for a private deployment that does not need seeded-data protection.
 
 Known seeded demo accounts are re-synchronized to the configured `DEMO_PASSWORD` when the demo profile starts. This prevents a reused local demo volume from silently retaining the local `123456` password.
 

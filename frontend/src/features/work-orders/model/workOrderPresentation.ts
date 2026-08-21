@@ -1,4 +1,4 @@
-import type { WorkOrderStatus } from '../../../types'
+import type { UserRole, WorkOrderStatus } from '../../../types'
 
 export const WORK_ORDER_STATUS_OPTIONS = [
   { value: 'OPEN', label: 'Đang mở' },
@@ -43,6 +43,15 @@ const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {
   CANCELLED: ['REOPENED'],
 }
 
-export function availableWorkOrderTransitions(status: WorkOrderStatus): WorkOrderStatus[] {
-  return TRANSITIONS[status] ?? []
+const TECHNICIAN_ALLOWED_TRANSITIONS = new Set<WorkOrderStatus>([
+  'ON_THE_WAY',
+  'IN_PROGRESS',
+  'WAITING_FOR_PARTS',
+  'COMPLETED',
+])
+
+export function availableWorkOrderTransitions(status: WorkOrderStatus, role?: UserRole): WorkOrderStatus[] {
+  const transitions = TRANSITIONS[status] ?? []
+  if (role !== 'TECHNICIAN') return transitions
+  return transitions.filter((target) => TECHNICIAN_ALLOWED_TRANSITIONS.has(target))
 }

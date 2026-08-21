@@ -10,7 +10,7 @@
 - Bean Validation cho request; tài khoản mới qua API yêu cầu mật khẩu tối thiểu 8 ký tự.
 - Login failure throttling theo cặp IP + username, tổng theo account và tổng theo IP cho deployment single-node.
 - Correlation/request ID (`X-Request-ID`) được sanitize, đưa vào MDC và trả lại client; exception 500 được log server-side nhưng không trả stack trace.
-- Public `DEMO_MODE` giữ nguyên endpoint, chặn destructive DELETE theo mặc định và chặn quản trị kênh tiếp nhận; riêng User Management/Technician Profile vẫn dùng được nhưng các seeded demo identities được bảo vệ bằng service-level policy.
+- Public `DEMO_MODE` giữ nguyên CRUD theo RBAC cho dữ liệu do recruiter tạo; service-level policy chỉ bảo vệ seeded demo identities và các service channel `systemDefined`, còn custom channel vẫn CRUD bình thường.
 - Demo password được externalize; public demo từ chối khởi động nếu dùng `123456` hoặc placeholder đi kèm source.
 - Upload giới hạn 10 MB/request, MIME allowlist JPG/PNG/WEBP/PDF, kiểm tra magic bytes, path normalization/traversal protection và quota theo tenant có thể cấu hình.
 - Attachment upload được dọn nếu DB rollback; file vật lý chỉ bị xóa sau DB commit.
@@ -42,6 +42,7 @@
 | Kỹ thuật viên sửa phiếu người khác | Role/assignment authorization tại service/controller |
 | Kỹ thuật viên xem lịch người khác | `/my-schedule` suy ra `TechnicianProfile` từ signed-in `userId`; client không gửi `technicianId` |
 | Double booking | Transaction + pessimistic technician lock + overlap query + concurrency test |
+| Technician tự nghiệm thu/đóng/hủy work order | Backend chỉ cho Technician cập nhật tiến độ `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`; frontend dùng cùng policy và integration test xác minh 403 cho transition quản trị |
 | Tồn kho âm | Part lock + work-order lock + validate + ledger trong một transaction + concurrency test |
 | Hai OWNER vô hiệu hóa nhau | Pessimistic tenant-row lock trước invariant “ít nhất một OWNER active” |
 | Upload giả MIME/traversal | Size limit + MIME allowlist + magic bytes + normalized path-boundary check |
@@ -49,4 +50,4 @@
 | Brute-force/credential stuffing cơ bản | Layered in-memory login throttling theo pair/account/IP |
 | Client gửi request ID độc hại | Header được whitelist ký tự/độ dài, nếu không hợp lệ sẽ tạo UUID mới |
 | DB rollback sau khi ghi file | Rollback cleanup; delete physical file sau DB commit |
-| Public demo bị phá dữ liệu | Demo safety gate chặn destructive DELETE/quản trị kênh; service policy bảo vệ các seeded demo identities |
+| Public demo bị phá dữ liệu | Service policy bảo vệ seeded demo identities và system-defined service channels; dữ liệu do recruiter tạo vẫn CRUD theo RBAC để demo đầy đủ chức năng |

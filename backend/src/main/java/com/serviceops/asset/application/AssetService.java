@@ -160,8 +160,8 @@ public class AssetService {
             createImportedAsset(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiet bi tu CSV");
-        notificationService.notifyRoles(tenantId, assetRoles(), "Da import danh sach thiet bi", validRows + " thiet bi moi duoc them vao he thong");
+        auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiết bị từ CSV");
+        notificationService.notifyRoles(tenantId, assetRoles(), "Đã import danh sách thiết bị", validRows + " thiết bị mới được thêm vào hệ thống");
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -188,19 +188,19 @@ public class AssetService {
     private AssetImportCandidate validateImportRow(AssetCsvRow row, Set<String> seenSerials, UUID tenantId) {
         String customerCode = row.customerCode().trim().toUpperCase(Locale.ROOT);
         if (customerCode.isBlank()) {
-            return AssetImportCandidate.invalid(row, "Ma khach hang khong duoc de trong");
+            return AssetImportCandidate.invalid(row, "Mã khách hàng không được để trống");
         }
         Customer customer = customerRepository.findByTenantIdAndCodeIgnoreCase(tenantId, customerCode).orElse(null);
         if (customer == null) {
-            return AssetImportCandidate.invalid(row, "Khong tim thay khach hang theo ma " + customerCode);
+            return AssetImportCandidate.invalid(row, "Không tìm thấy khách hàng theo mã " + customerCode);
         }
 
         String serial = row.serialNumber().trim().toUpperCase(Locale.ROOT);
         if (serial.isBlank()) {
-            return AssetImportCandidate.invalid(row, "Serial khong duoc de trong");
+            return AssetImportCandidate.invalid(row, "Serial không được để trống");
         }
         if (serial.length() > 120) {
-            return AssetImportCandidate.invalid(row, "Serial toi da 120 ky tu");
+            return AssetImportCandidate.invalid(row, "Serial tối đa 120 ký tự");
         }
         if (!seenSerials.add(serial)) {
             return AssetImportCandidate.invalid(row, "Serial bi trung trong file import");
@@ -209,13 +209,13 @@ public class AssetService {
             return AssetImportCandidate.invalid(row, "Serial da ton tai trong he thong");
         }
         if (row.category().isBlank() || row.category().length() > 80) {
-            return AssetImportCandidate.invalid(row, "Loai thiet bi bat buoc va toi da 80 ky tu");
+            return AssetImportCandidate.invalid(row, "Loại thiết bị bắt buộc và tối đa 80 ký tự");
         }
         if (row.brand().length() > 100 || row.model().length() > 100) {
-            return AssetImportCandidate.invalid(row, "Hang/model toi da 100 ky tu");
+            return AssetImportCandidate.invalid(row, "Hãng/model tối đa 100 ký tự");
         }
         if (row.notes().length() > 2000) {
-            return AssetImportCandidate.invalid(row, "Ghi chu toi da 2000 ky tu");
+            return AssetImportCandidate.invalid(row, "Ghi chú tối đa 2000 ký tự");
         }
 
         try {
@@ -224,7 +224,7 @@ public class AssetService {
             AssetStatus status = row.status().isBlank() ? AssetStatus.ACTIVE : AssetStatus.valueOf(row.status().trim().toUpperCase(Locale.ROOT));
             return new AssetImportCandidate(row, customer, row.category().trim(), serial, installedAt, warrantyUntil, status, true, "Hop le");
         } catch (IllegalArgumentException | DateTimeParseException ex) {
-            return AssetImportCandidate.invalid(row, "Ngay hoac trang thai khong hop le");
+            return AssetImportCandidate.invalid(row, "Ngày hoặc trạng thái không hợp lệ");
         }
     }
 

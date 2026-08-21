@@ -28,8 +28,8 @@ No business feature was intentionally removed. This pass hardens the existing Se
 ### Public demo safety
 
 - Added `DEMO_MODE` without removing endpoints.
-- Demo mode blocks all deletes and administrative writes for users, technicians and service channels while keeping the core service workflow writable.
-- Protected path matching is segment-safe so similarly named unrelated endpoints are not accidentally blocked.
+- Demo mode keeps normal recruiter-created CRUD available while service-level policy protects seeded demo identities and system-defined service channels from destructive changes.
+- Targeted service-level policies replace the former broad HTTP mutation filter, so normal recruiter-created CRUD is not accidentally blocked by path matching.
 - The existing “keep at least one active OWNER” invariant is now serialized with a pessimistic tenant-row lock so two owners cannot concurrently disable each other and leave a tenant ownerless.
 - Spare-part consumption now locks the target work order before checking its editable status, preventing a close/cancel race. Optimistic-lock conflicts are returned as controlled HTTP 409 `CONCURRENT_MODIFICATION` responses instead of generic 500 errors.
 - Demo seed password is externalized and rejects the local `123456` value plus shipped placeholder values when public demo protection is enabled.
@@ -55,13 +55,14 @@ No business feature was intentionally removed. This pass hardens the existing Se
 
 ### Regression coverage
 
-The accepted backend suite executes **59 automated tests** covering substantially more than the original baseline, including:
+The current backend suite executes **88 automated tests**; 16 PostgreSQL integration tests are Testcontainers-based and run when Docker is available. Coverage includes:
 
 - work-order lifecycle/state invariants;
 - spare-part stock invariants;
 - JWT secret validation;
 - login throttling;
-- demo safety behavior;
+- demo protected-seed behavior;
+- role-specific work-order transition authorization;
 - attachment signatures, traversal protection and tenant quota;
 - RBAC and critical read endpoints;
 - cross-tenant customer isolation;

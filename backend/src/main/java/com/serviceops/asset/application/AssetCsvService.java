@@ -19,7 +19,7 @@ public class AssetCsvService {
     private final CsvFileService csvFileService;
 
     public List<AssetCsvRow> parseAssets(MultipartFile file) {
-        return csvFileService.parse(file, ASSET_HEADERS, "thiet bi")
+        return csvFileService.parse(file, ASSET_HEADERS, "thiết bị")
                 .stream()
                 .map(row -> new AssetCsvRow(
                         row.rowNumber(),
@@ -39,7 +39,7 @@ public class AssetCsvService {
     public byte[] assetTemplate() {
         return csvFileService.write(List.of(
                 ASSET_HEADERS,
-                List.of("KH-0001", "May lanh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "ACTIVE", "Lap dat tai phong hop")
+                List.of("KH-0001", "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "ACTIVE", "Lắp đặt tại phòng họp")
         ));
     }
 
