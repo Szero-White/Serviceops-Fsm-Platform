@@ -18,7 +18,7 @@ test('Customer Service can receive a service request and convert it to a work or
   expect(customer.status).toBe(200)
 
   await page.goto('/service-requests')
-  await page.getByRole('button', { name: 'Tiếp nhận yêu cầu', exact: true }).click()
+  await page.getByRole('button', { name: /Tiếp nhận yêu cầu/ }).click()
   const modal = modalByTitle(page, 'Tiếp nhận yêu cầu dịch vụ')
 
   await modal.getByLabel('Khách hàng').click()

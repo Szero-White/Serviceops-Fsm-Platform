@@ -11,7 +11,7 @@ test('Owner can create, edit and delete recruiter-created customer data through 
   const initialName = `Khách hàng E2E ${suffix}`
   const updatedName = `Khách hàng E2E đã sửa ${suffix}`
 
-  await page.getByRole('button', { name: 'Thêm khách hàng', exact: true }).click()
+  await page.getByRole('button', { name: /Thêm khách hàng/ }).click()
   const createModal = modalByTitle(page, 'Thêm khách hàng')
   await createModal.getByLabel('Mã khách hàng').fill(code)
   await createModal.getByLabel('Tên khách hàng').fill(initialName)
@@ -51,7 +51,7 @@ test('Owner can CRUD a custom service channel while public-demo seeds remain sep
   const name = `Kênh E2E ${suffix}`
   const updatedName = `Kênh E2E đã sửa ${suffix}`
 
-  await page.getByRole('button', { name: 'Thêm kênh', exact: true }).click()
+  await page.getByRole('button', { name: /Thêm kênh/ }).click()
   const createModal = modalByTitle(page, 'Thêm kênh tiếp nhận')
   await createModal.getByLabel('Tên kênh').fill(name)
   await createModal.getByLabel('Mã kênh').fill(code)
@@ -88,7 +88,7 @@ test('Warehouse can create a spare part and import stock through the UI', async 
   const suffix = Date.now().toString().slice(-8)
   const sku = `E2E-${suffix}`
 
-  await page.getByRole('button', { name: 'Thêm phụ tùng', exact: true }).click()
+  await page.getByRole('button', { name: /Thêm phụ tùng/ }).click()
   const modal = modalByTitle(page, 'Thêm phụ tùng')
   await modal.getByLabel('SKU').fill(sku)
   await modal.getByLabel('Tên phụ tùng').fill(`Phụ tùng E2E ${suffix}`)
