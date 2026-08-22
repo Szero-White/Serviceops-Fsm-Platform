@@ -51,7 +51,8 @@ Key capabilities:
 - PostgreSQL is private to the Compose network.
 - Health/readiness checks and persistent database/upload volumes.
 - Backup and guarded restore scripts.
-- GitHub Actions for backend/frontend quality gates plus a production-like Compose runtime smoke test (health, frontend HTTP and demo login).
+- GitHub Actions for backend/frontend quality gates plus production-like Compose validation.
+- Playwright Chromium E2E runs against the Nginx-fronted production-like stack and covers demo-role route access, recruiter-facing CRUD/workflow paths and backend authorization checks.
 
 ## Demo accounts
 
@@ -84,7 +85,7 @@ Local development uses the seeded password `123456`. A public deployment **must*
 Detailed instructions are in [RUN_LOCAL.md](RUN_LOCAL.md).
 
 ```powershell
-# PostgreSQL
+# PostgreSQL (Docker option; RUN_LOCAL.md also documents native PostgreSQL)
 Copy-Item .env.example .env
 docker compose -f docker-compose.local.yml up -d
 
@@ -129,11 +130,12 @@ The local production-like frontend is exposed on `http://localhost:8088` by defa
 backend/                 Spring Boot modular monolith
 frontend/                React operations console
 frontend/src/features/   Feature-oriented frontend modules
-frontend/src/types/      Domain-specific TypeScript contracts
+frontend/e2e/            Playwright browser E2E for role access and core workflows
 scripts/production/      Backup and restore utilities
 docs/                    Architecture, security, business and operations docs
 .github/workflows/       CI validation
-docker-compose.prod.yml  Production-like single-node topology
+docker-compose.local.yml Local PostgreSQL option
+docker-compose.prod.yml  Production-like Nginx → backend → PostgreSQL topology
 ```
 
 ## Documentation
@@ -150,12 +152,13 @@ docker-compose.prod.yml  Production-like single-node topology
 - [Development process](docs/DEVELOPMENT_PROCESS.md)
 - [User guide](docs/USER_GUIDE.md)
 - [UAT checklist](docs/UAT_CHECKLIST.md)
-- [Senior hardening report](docs/SENIOR_HARDENING_REPORT.md)
 - [Verification results](VERIFY_RESULTS.md)
 
 ## Product direction
 
-The existing feature set is intentionally a cohesive field-service workflow rather than a collection of CRUD screens. The product now includes a **dispatcher schedule board** plus a **personal technician schedule** resolved from the authenticated user, so dispatchers plan the team while technicians see only their own appointments. The next highest-value product increments are **SLA/promised service windows** and **preventive-maintenance agreements**. They are documented in [docs/ROADMAP.md](docs/ROADMAP.md) and should be implemented one at a time with tests and deployment impact reviewed.
+The current portfolio baseline is intentionally **feature-frozen around the end-to-end field-service workflow**. The goal is to keep the demo reliable and the business rules explainable rather than increase feature count. Future ideas such as SLA/promised service windows and preventive-maintenance agreements remain in [docs/ROADMAP.md](docs/ROADMAP.md) as possible extensions, not as unfinished requirements of the current baseline.
+
+Changes to the portfolio baseline should now prioritize verified bugs, security/business correctness, test coverage, documentation accuracy and demo reliability.
 
 ## Architecture direction
 
