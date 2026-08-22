@@ -7,7 +7,7 @@ export interface Asset {
   category: string
   brand?: string
   model?: string
-  serialNumber: string
+  serialNumber: string | null
   installedAt?: string
   warrantyUntil?: string
   underWarranty: boolean

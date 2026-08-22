@@ -1,5 +1,6 @@
 package com.serviceops.scheduling.application;
 
+import com.serviceops.asset.domain.Asset;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -63,9 +64,7 @@ public class MyScheduleService {
 
     private static MyScheduleItemResponse toResponse(Appointment appointment) {
         WorkOrder workOrder = appointment.getWorkOrder();
-        String assetLabel = workOrder.getAsset() == null ? null : ((workOrder.getAsset().getBrand() == null ? "" : workOrder.getAsset().getBrand() + " ")
-                + (workOrder.getAsset().getModel() == null ? "" : workOrder.getAsset().getModel() + " ")
-                + "(" + workOrder.getAsset().getSerialNumber() + ")").trim();
+        String assetLabel = workOrder.getAsset() == null ? null : assetLabel(workOrder.getAsset());
 
         return new MyScheduleItemResponse(
                 appointment.getId(),
@@ -80,5 +79,15 @@ public class MyScheduleService {
                 appointment.getStartTime(),
                 appointment.getEndTime()
         );
+    }
+
+    private static String assetLabel(Asset asset) {
+        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
+                + (asset.getModel() == null ? "" : asset.getModel())).trim();
+        if (equipmentName.isBlank()) {
+            equipmentName = asset.getCategory();
+        }
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        return equipmentName + " (" + serial + ")";
     }
 }

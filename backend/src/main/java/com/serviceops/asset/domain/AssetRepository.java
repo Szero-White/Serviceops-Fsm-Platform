@@ -14,7 +14,7 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
             select a from Asset a join fetch a.customer c
             where a.tenantId = :tenantId
               and (:customerId is null or c.id = :customerId)
-              and (:search = '' or lower(a.serialNumber) like lower(concat('%', :search, '%'))
+              and (:search = '' or lower(coalesce(a.serialNumber, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(a.brand, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(a.model, '')) like lower(concat('%', :search, '%'))
                    or lower(a.category) like lower(concat('%', :search, '%'))

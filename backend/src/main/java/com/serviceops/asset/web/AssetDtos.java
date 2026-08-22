@@ -19,7 +19,7 @@ public final class AssetDtos {
             @NotBlank @Size(max = 80) String category,
             @Size(max = 100) String brand,
             @Size(max = 100) String model,
-            @NotBlank @Size(max = 120) String serialNumber,
+            @Size(max = 120) String serialNumber,
             LocalDate installedAt,
             LocalDate warrantyUntil,
             AssetStatus status,

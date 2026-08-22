@@ -326,7 +326,7 @@ export function ServiceRequestsPage() {
                 notFoundContent={watchedCustomerId && !assetsLoading ? 'Khách hàng này chưa có thiết bị' : undefined}
                 options={assets?.content.map((asset) => ({
                   value: asset.id,
-                  label: `${asset.serialNumber} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
+                  label: `${asset.serialNumber ?? 'Chưa xác định serial'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
                 }))}
               />
             </Form.Item>

@@ -58,6 +58,7 @@ export function AssetsPage() {
     mutationFn: (values: Record<string, unknown>) => {
       const payload = {
         ...values,
+        serialNumber: typeof values.serialNumber === 'string' ? values.serialNumber.trim() || null : null,
         installedAt: values.installedAt ? dayjs(values.installedAt as dayjs.Dayjs).format('YYYY-MM-DD') : null,
         warrantyUntil: values.warrantyUntil ? dayjs(values.warrantyUntil as dayjs.Dayjs).format('YYYY-MM-DD') : null,
       }
@@ -235,7 +236,7 @@ export function AssetsPage() {
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{[record.brand, record.model].filter(Boolean).join(' ') || record.category}</Typography.Text>
-                <Typography.Text type="secondary" code>{record.serialNumber}</Typography.Text>
+                <Typography.Text type="secondary" code>{record.serialNumber ?? 'Chưa xác định serial'}</Typography.Text>
               </div>
             ),
           },
@@ -289,7 +290,7 @@ export function AssetsPage() {
           </Form.Item>
           <div className="form-grid two-cols">
             <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>
-            <Form.Item label="Serial number" name="serialNumber" rules={[{ required: true, message: 'Nhập serial' }]}><Input /></Form.Item>
+            <Form.Item label="Serial number (không bắt buộc)" name="serialNumber"><Input placeholder="Có thể bổ sung sau khi xác minh tại hiện trường" /></Form.Item>
             <Form.Item label="Hãng" name="brand"><Input placeholder="Daikin" /></Form.Item>
             <Form.Item label="Model" name="model"><Input /></Form.Item>
             <Form.Item label="Ngày lắp đặt" name="installedAt"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item>

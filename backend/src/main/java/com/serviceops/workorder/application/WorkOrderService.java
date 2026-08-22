@@ -306,14 +306,22 @@ public class WorkOrderService {
     }
 
     public static WorkOrderResponse toResponse(WorkOrder w, List<WorkOrderHistoryResponse> history) {
-        String assetLabel = w.getAsset() == null ? null : ((w.getAsset().getBrand() == null ? "" : w.getAsset().getBrand() + " ")
-                + (w.getAsset().getModel() == null ? "" : w.getAsset().getModel() + " ")
-                + "(" + w.getAsset().getSerialNumber() + ")").trim();
+        String assetLabel = w.getAsset() == null ? null : assetLabel(w.getAsset());
         return new WorkOrderResponse(w.getId(), w.getCode(), w.getServiceRequest() == null ? null : w.getServiceRequest().getId(),
                 w.getCustomer().getId(), w.getCustomer().getName(), w.getAsset() == null ? null : w.getAsset().getId(), assetLabel,
                 w.getTechnician() == null ? null : w.getTechnician().getId(),
                 w.getTechnician() == null ? null : w.getTechnician().getUser().getDisplayName(),
                 w.getSummary(), w.getDescription(), w.getPriority(), w.getStatus(), w.getScheduledStart(), w.getScheduledEnd(),
                 w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history);
+    }
+
+    private static String assetLabel(Asset asset) {
+        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
+                + (asset.getModel() == null ? "" : asset.getModel())).trim();
+        if (equipmentName.isBlank()) {
+            equipmentName = asset.getCategory();
+        }
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        return equipmentName + " (" + serial + ")";
     }
 }
