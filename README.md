@@ -4,11 +4,75 @@
 
 **Live demo:** _Coming soon — add the deployed URL here before sharing the portfolio._
 
-ServiceOps is a full-stack field-service operations platform built as a **Spring Boot modular monolith** with a **React + TypeScript** operations console.
+ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
 
-It models the main field-service lifecycle from customer intake and asset service requests through dispatching, technician execution, spare-parts consumption, customer acceptance, closure, audit and reporting. The project focuses on **business correctness, RBAC, tenant isolation, transactional consistency, concurrency control, automated verification and production-like deployment**.
+The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a service request, then a work order, then a scheduled technician job; field execution can consume warehouse stock, and the completed job remains traceable through acceptance, closure, history, notifications, invoice export and audit records.
 
-## Core workflow
+## Business problem
+
+A field-service company has to keep several departments synchronized around the same service case. Customer Service needs accurate customer and equipment context. Dispatchers need assignable technicians and conflict-free schedules. Technicians need only the jobs assigned to them and a clear execution workflow. Warehouse staff need reliable stock balances and spare-part lifecycle controls. Management needs visibility, accountability and a durable history of what happened.
+
+ServiceOps provides one operational record that follows the work across those handoffs so the organization does not have to coordinate the same job through disconnected spreadsheets, chat messages or department-specific records.
+
+## Who uses the system
+
+| Real-world responsibility | ServiceOps role | Main responsibilities in the system |
+| --- | --- | --- |
+| Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, work-order management and oversight |
+| Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling, operational history and audit review |
+| Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, service requests and Service Request → Work Order handoff |
+| Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence and spare-part consumption |
+| Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock import, inventory balances and part lifecycle management |
+
+The frontend hides routes and actions that are outside a role's responsibility, while the backend remains the authoritative authorization boundary.
+
+## End-to-end operating story
+
+Consider a customer reporting that an air conditioner is no longer cooling properly. The same case moves through ServiceOps as it would through a real service organization:
+
+1. **Customer Service receives the issue.** The agent finds or creates the customer, records the customer's equipment and selects the configured intake channel such as phone or email. If a technical identifier such as the serial number is not available during the first call, the equipment can still be registered and the serial can be completed later after verification.
+2. **A Service Request is opened.** The request keeps the customer, optional equipment, issue description, priority and intake channel together. Asset selection is scoped to the selected customer, and the backend rejects a mismatched customer/asset relationship.
+3. **The request becomes a Work Order.** The operational job is created from the request while preserving the source customer and equipment relationship.
+4. **Dispatch plans the visit.** A Dispatcher selects a technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same technician is not silently double-booked.
+5. **The technician receives the assignment.** The technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied technician identifier.
+6. **Field execution begins.** The technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the technician.
+7. **Spare parts participate in the same job.** When a repair needs a part, consumption is recorded against the Work Order and the stock balance is reduced transactionally. Negative stock is blocked. Inactive/discontinued parts remain historically traceable but cannot be newly consumed.
+8. **The service result is documented.** Diagnosis, resolution notes and JPG/PNG/WEBP/PDF evidence stay attached to the job so the service record explains both what was found and what was done.
+9. **The job is accepted and closed.** After completion, an authorized management role can record customer acceptance and close the Work Order. Reopen/cancel paths remain controlled by the work-order state machine.
+10. **The organization can trace the result.** Work-order history, notifications, invoice export, dashboard data and audit records provide the operational trail after the field visit is finished.
+
+This produces one continuous business chain instead of separate records for each department:
+
+```text
+Customer reports an issue
+        ↓
+Customer Service
+Customer → Asset → Service Request
+        ↓
+Work Order
+        ↓
+Dispatcher
+Technician assignment → Schedule / Reschedule
+        ↓
+Technician
+ON_THE_WAY → IN_PROGRESS
+        ↓
+        ├── needs spare part ──→ Warehouse / Inventory
+        │                         ↓
+        └──────── consume part ←──┘
+        ↓
+Diagnosis → Resolution → Evidence → COMPLETED
+        ↓
+Customer Acceptance
+        ↓
+CLOSED
+        ↓
+History / Invoice / Notifications / Dashboard / Audit
+```
+
+## Core workflow and business rules
+
+The primary lifecycle is:
 
 ```text
 Customer
@@ -23,7 +87,7 @@ Customer
   → Closure
 ```
 
-The work-order state machine also supports controlled branches such as `WAITING_FOR_PARTS`, `REOPENED` and `CANCELLED`. Invalid or unauthorized transitions are rejected by the backend.
+The Work Order state machine also supports controlled branches such as `WAITING_FOR_PARTS`, `REOPENED` and `CANCELLED`. Invalid or unauthorized transitions are rejected by the backend. Customer/asset consistency, technician ownership, schedule conflicts, inventory balance and tenant scope are also enforced server-side rather than relying only on frontend visibility.
 
 ## Demo accounts
 
@@ -43,27 +107,28 @@ The login screen exposes **five quick-login cards**, one for each business role.
 
 ## Recruiter walkthrough
 
-A short walkthrough demonstrates the end-to-end workflow and role boundaries:
+For a review, use **one service case across every role** instead of demonstrating unrelated CRUD records:
 
-1. Sign in as **Customer Service** and create or inspect a customer and installed asset.
-2. Create a **Service Request** and convert it into a **Work Order**.
-3. Sign in as **Dispatcher**, open **Lịch điều phối**, assign a technician and schedule or reschedule the work.
-4. Sign in as **Technician**, open **Lịch của tôi**, verify the appointment and progress the assigned work through field execution.
-5. Record consumed spare parts and upload service evidence.
-6. Enter diagnosis/resolution notes and complete the work order.
-7. Sign in as **Owner** or **Dispatcher** to perform management-side acceptance/closure and review history, invoice export, notifications, dashboard and audit data.
+1. Sign in as **Customer Service**, create or inspect a customer and equipment record, then create a Service Request.
+2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
+3. Sign in as **Dispatcher**, assign a technician and demonstrate schedule/reschedule behavior.
+4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and record the service result.
+5. Sign in as **Warehouse** when spare-parts preparation or catalog lifecycle needs to be demonstrated; then return to the technician and consume the part through the Work Order.
+6. Complete the Work Order and use an authorized management role for customer acceptance and closure.
+7. Finish as **Owner** by reviewing users, dashboard, history and audit data for the same operational story.
 8. Switch roles or open protected routes directly to verify that frontend visibility and backend authorization remain aligned.
 
 ## Product capabilities
 
-- Customer and installed-asset management.
+- Customer and customer-equipment management, including equipment whose serial is not yet known at service intake.
 - Configurable service-request intake channels.
 - Service Request → Work Order conversion with customer/asset consistency checks.
 - Work-order lifecycle with controlled role-aware transitions and history.
 - Technician assignment, overlap-safe scheduling and weekly dispatcher schedule board.
 - Personal technician schedule derived from the authenticated account.
-- Spare-parts catalog, stock transactions and negative-stock protection.
-- CSV import/export for customers, assets and spare parts.
+- Spare-parts catalog, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
+- Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
+- CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work-order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Service invoice/export view derived from work-order and consumed-parts data.
 - Persistent notifications, audit trail and operational dashboard.
