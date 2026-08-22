@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface InventoryTransactionRepository extends JpaRepository<InventoryTransaction, UUID> {
     Page<InventoryTransaction> findByTenantIdAndSparePartId(UUID tenantId, UUID sparePartId, Pageable pageable);
+    boolean existsByTenantIdAndSparePartId(UUID tenantId, UUID sparePartId);
 
     @Query("""
             select tx from InventoryTransaction tx

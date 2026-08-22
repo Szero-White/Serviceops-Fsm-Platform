@@ -15,11 +15,15 @@ public interface SparePartRepository extends JpaRepository<SparePart, UUID> {
     @Query("""
             select p from SparePart p
             where p.tenantId = :tenantId
+              and (:active is null or p.active = :active)
               and (:search = '' or lower(p.sku) like lower(concat('%', :search, '%'))
                    or lower(p.name) like lower(concat('%', :search, '%'))
                    or lower(p.unit) like lower(concat('%', :search, '%')))
             """)
-    Page<SparePart> search(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
+    Page<SparePart> search(@Param("tenantId") UUID tenantId,
+                           @Param("active") Boolean active,
+                           @Param("search") String search,
+                           Pageable pageable);
 
     Optional<SparePart> findByIdAndTenantId(UUID id, UUID tenantId);
     boolean existsByTenantIdAndSkuIgnoreCase(UUID tenantId, String sku);

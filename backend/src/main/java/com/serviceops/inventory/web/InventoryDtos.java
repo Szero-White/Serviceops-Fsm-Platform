@@ -31,6 +31,11 @@ public final class InventoryDtos {
     ) {
     }
 
+    public record SparePartStatusRequest(
+            @NotNull Boolean active
+    ) {
+    }
+
     public record ConsumePartRequest(
             @NotNull UUID sparePartId,
             @NotNull @DecimalMin(value = "0.001") BigDecimal quantity,

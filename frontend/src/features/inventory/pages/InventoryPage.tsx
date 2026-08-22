@@ -1,6 +1,6 @@
-import { DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Space, Table, Typography, Upload } from 'antd'
+import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { inventoryApi } from '../../inventory/api'
@@ -29,7 +29,9 @@ export function InventoryPage() {
   const canManageStock = ['OWNER', 'WAREHOUSE_STAFF'].includes(user?.role ?? '')
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active')
   const search = useDebouncedValue(searchInput.trim())
+  const active = activeFilter === 'all' ? undefined : activeFilter === 'active'
   const [createOpen, setCreateOpen] = useState(false)
   const [importing, setImporting] = useState<SparePart>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
@@ -40,15 +42,15 @@ export function InventoryPage() {
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const inventoryQuery = useQuery({
-    queryKey: ['spare-parts', { search, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE),
+    queryKey: ['spare-parts', { search, active, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE, active),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = inventoryQuery
 
   useEffect(() => {
     setPage(0)
-  }, [search])
+  }, [search, activeFilter])
 
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) {
@@ -81,6 +83,31 @@ export function InventoryPage() {
       })
       setImporting(undefined)
       importForm.resetFields()
+      refresh()
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const setActive = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => inventoryApi.setActive(id, active),
+    onSuccess: (part) => {
+      notification.success({
+        message: part.active ? 'Đã kích hoạt lại phụ tùng' : 'Đã ngừng sử dụng phụ tùng',
+        description: part.active
+          ? `${part.name} (${part.sku}) có thể tiếp tục dùng cho nghiệp vụ mới.`
+          : Number(part.stockQuantity) > 0
+            ? `Tồn ${formatQuantity(part.stockQuantity)} ${part.unit} được giữ nguyên để tiếp tục theo dõi; phụ tùng không còn được dùng cho nghiệp vụ mới.`
+            : `${part.name} (${part.sku}) đã được đưa khỏi danh mục đang sử dụng.`,
+      })
+      refresh()
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => inventoryApi.delete(id),
+    onSuccess: () => {
+      message.success('Đã xóa phụ tùng chưa phát sinh nghiệp vụ')
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -188,11 +215,21 @@ export function InventoryPage() {
         title="Kho phụ tùng"
         description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
         actions={inventoryActions}
-        meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} SKU`}</MetaBadge><MetaBadge tone={search ? 'info' : 'neutral'}>{search ? 'Đang lọc' : 'Tất cả phụ tùng'}</MetaBadge></>}
+        meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} SKU`}</MetaBadge><MetaBadge tone={search || activeFilter !== 'all' ? 'info' : 'neutral'}>{activeFilter === 'active' ? 'Đang sử dụng' : activeFilter === 'inactive' ? 'Ngừng sử dụng' : 'Tất cả phụ tùng'}</MetaBadge></>}
       />
 
       <div className="table-toolbar">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên hoặc đơn vị phụ tùng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Select
+          value={activeFilter}
+          onChange={setActiveFilter}
+          style={{ minWidth: 180 }}
+          options={[
+            { value: 'active', label: 'Đang sử dụng' },
+            { value: 'inactive', label: 'Ngừng sử dụng' },
+            { value: 'all', label: 'Tất cả phụ tùng' },
+          ]}
+        />
       </div>
 
       {inventoryQuery.isError && (
@@ -217,7 +254,7 @@ export function InventoryPage() {
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phụ tùng`,
         }}
         onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
-        rowClassName={(record) => record.lowStock ? 'low-stock-row' : ''}
+        rowClassName={(record) => record.active && record.lowStock ? 'low-stock-row' : ''}
         locale={{ emptyText: <Empty description={inventoryQuery.isError ? 'Không thể tải dữ liệu phụ tùng' : 'Chưa có phụ tùng phù hợp'} /> }}
         columns={[
           {
@@ -243,15 +280,72 @@ export function InventoryPage() {
           },
           { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 150, render: (value, record) => formatQuantityWithUnit(value, record.unit) },
           { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, render: formatCurrency },
+          {
+            title: 'Trạng thái',
+            width: 140,
+            render: (_: unknown, record: SparePart) => (
+              <MetaBadge tone={record.active ? 'success' : 'neutral'}>
+                {record.active ? 'Đang sử dụng' : 'Ngừng sử dụng'}
+              </MetaBadge>
+            ),
+          },
           { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
           ...(canManageStock ? [{
-            title: '',
-            width: 120,
-            render: (_: unknown, record: SparePart) => (
-              <Button icon={<InboxOutlined />} onClick={() => { setImporting(record); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}>
-                Nhập kho
-              </Button>
-            ),
+            title: 'Thao tác',
+            width: 360,
+            fixed: 'right' as const,
+            render: (_: unknown, record: SparePart) => {
+              const hasStock = Number(record.stockQuantity) !== 0
+              return (
+                <Space size={6} wrap>
+                  <Button
+                    icon={<InboxOutlined />}
+                    disabled={!record.active}
+                    onClick={() => { setImporting(record); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}
+                  >
+                    Nhập kho
+                  </Button>
+
+                  {record.active ? (
+                    <Popconfirm
+                      title="Ngừng sử dụng phụ tùng?"
+                      description={hasStock
+                        ? `Phụ tùng vẫn còn ${formatQuantity(record.stockQuantity)} ${record.unit}. Tồn kho sẽ được giữ nguyên để theo dõi, nhưng phụ tùng sẽ không còn được dùng cho nghiệp vụ mới.`
+                        : 'Phụ tùng sẽ không còn được dùng cho nghiệp vụ mới.'}
+                      okText="Ngừng sử dụng"
+                      cancelText="Hủy"
+                      onConfirm={() => setActive.mutate({ id: record.id, active: false })}
+                    >
+                      <Button icon={<StopOutlined />} loading={setActive.isPending}>
+                        Ngừng sử dụng
+                      </Button>
+                    </Popconfirm>
+                  ) : (
+                    <Button
+                      icon={<CheckCircleOutlined />}
+                      loading={setActive.isPending}
+                      onClick={() => setActive.mutate({ id: record.id, active: true })}
+                    >
+                      Kích hoạt lại
+                    </Button>
+                  )}
+
+                  <Popconfirm
+                    title="Xóa phụ tùng?"
+                    description="Chỉ xóa được khi tồn kho bằng 0 và chưa từng phát sinh lịch sử kho."
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                    disabled={hasStock}
+                    onConfirm={() => remove.mutate(record.id)}
+                  >
+                    <Button danger icon={<DeleteOutlined />} disabled={hasStock} loading={remove.isPending}>
+                      Xóa
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              )
+            },
           }] : []),
         ]}
       />
