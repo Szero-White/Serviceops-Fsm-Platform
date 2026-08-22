@@ -177,7 +177,7 @@ See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the current verified baseline.
 
 ## Run locally
 
-The current portfolio environment uses `Demo@2026` for both the local PostgreSQL password and demo-user password.
+The current local portfolio environment uses PostgreSQL password `123456` and demo-user password `Demo@2026`.
 
 ### Prerequisites
 
@@ -190,10 +190,10 @@ Docker Desktop is optional for daily development when PostgreSQL already runs na
 
 ### Start backend and frontend with one PowerShell command
 
-If PostgreSQL is already running locally with database `serviceops`, user `serviceops` and password `Demo@2026`:
+If PostgreSQL is already running locally with database `serviceops`, user `serviceops` and password `123456`:
 
 ```powershell
-Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\backend" -ArgumentList "/k",'set POSTGRES_HOST=localhost&& set POSTGRES_PORT=5432&& set POSTGRES_DB=serviceops&& set POSTGRES_USER=serviceops&& set POSTGRES_PASSWORD=Demo@2026&& set DEMO_PASSWORD=Demo@2026&& mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'; Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\frontend" -ArgumentList "/k","set VITE_DEMO_PASSWORD=Demo@2026&& npm run dev"
+Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\backend" -ArgumentList "/k",'set POSTGRES_HOST=localhost&& set POSTGRES_PORT=5432&& set POSTGRES_DB=serviceops&& set POSTGRES_USER=serviceops&& set POSTGRES_PASSWORD=123456&& set DEMO_PASSWORD=Demo@2026&& mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'; Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\frontend" -ArgumentList "/k","set VITE_DEMO_PASSWORD=Demo@2026&& npm run dev"
 ```
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
