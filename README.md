@@ -190,10 +190,10 @@ Docker Desktop is optional for daily development when PostgreSQL already runs na
 
 ### Start backend and frontend with one PowerShell command
 
-If PostgreSQL is already running locally with database `serviceops`, user `serviceops` and password `123456`:
+If PostgreSQL is already running locally with database `serviceops`, user `postgres` and password `123456`:
 
 ```powershell
-Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\backend" -ArgumentList "/k",'set POSTGRES_HOST=localhost&& set POSTGRES_PORT=5432&& set POSTGRES_DB=serviceops&& set POSTGRES_USER=serviceops&& set POSTGRES_PASSWORD=123456&& set DEMO_PASSWORD=Demo@2026&& mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'; Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\frontend" -ArgumentList "/k","set VITE_DEMO_PASSWORD=Demo@2026&& npm run dev"
+Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\backend" -ArgumentList "/k",'set POSTGRES_HOST=localhost&& set POSTGRES_PORT=5432&& set POSTGRES_DB=serviceops&& set POSTGRES_USER=postgres&& set POSTGRES_PASSWORD=123456&& set DEMO_PASSWORD=Demo@2026&& mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'; Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\frontend" -ArgumentList "/k","set VITE_DEMO_PASSWORD=Demo@2026&& npm run dev"
 ```
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
