@@ -2,7 +2,6 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloudUploadOutlined,
-  DownloadOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
@@ -27,7 +26,6 @@ export function WorkOrderDetailDrawer({
   onComplete,
   onConsumePart,
   onTransition,
-  onExportInvoice,
   onUpload,
   onAttachmentsChanged,
 }: {
@@ -43,7 +41,6 @@ export function WorkOrderDetailDrawer({
   onComplete: () => void
   onConsumePart: () => void
   onTransition: (targetStatus: WorkOrderStatus, note?: string) => void
-  onExportInvoice: () => void
   onUpload: (options: UploadRequestOption) => Promise<void>
   onAttachmentsChanged: () => void
 }) {
@@ -88,7 +85,6 @@ export function WorkOrderDetailDrawer({
               {permissions.canConsumePart && !['CLOSED', 'CANCELLED'].includes(workOrder.status) && (
                 <Button icon={<ToolOutlined />} onClick={onConsumePart}>Dùng phụ tùng</Button>
               )}
-              <Button icon={<DownloadOutlined />} onClick={onExportInvoice}>Xuất hóa đơn</Button>
               <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
                 <Button icon={<CloudUploadOutlined />}>Tải ảnh / PDF</Button>
               </Upload>

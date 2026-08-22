@@ -11,7 +11,6 @@ import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { WorkOrderStatus } from '../../../types'
-import { downloadBlob } from '../../../utils/download'
 import { formatQuantity } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { assetsApi } from '../../assets/api'
@@ -209,15 +208,6 @@ export function WorkOrdersPage() {
     }
   }
 
-  const exportInvoice = async () => {
-    if (!detail) return
-    try {
-      downloadBlob(await workOrdersApi.invoice(detail.id), `hoa-don-dich-vu-${detail.code}.html`)
-    } catch (error) {
-      message.error(apiErrorMessage(error))
-    }
-  }
-
   const openSchedule = () => {
     if (!detail) return
     scheduleForm.setFieldsValue({
@@ -292,7 +282,6 @@ export function WorkOrdersPage() {
         onComplete={() => setCompleteOpen(true)}
         onConsumePart={() => setConsumeOpen(true)}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
-        onExportInvoice={exportInvoice}
         onUpload={uploadFile}
         onAttachmentsChanged={refreshAttachments}
       />
