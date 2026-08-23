@@ -34,15 +34,20 @@ Base URL local: `http://localhost:8080/api/v1`
 - `PUT /assets/{id}`
 
 ## Service requests
-- `GET /service-requests?search={text}&status={status}&page={n}&size={n}`
-- `POST /service-requests`
-- `POST /work-orders/from-service-request/{serviceRequestId}`
-- `POST /service-requests/{id}/cancel`
+- `GET /service-requests?search={text}&status={status}&page={n}&size={n}` — OWNER/CUSTOMER_SERVICE
+- `POST /service-requests` — OWNER/CUSTOMER_SERVICE
+- `POST /work-orders/from-service-request/{serviceRequestId}` — OWNER/CUSTOMER_SERVICE; đây là đường tạo Work Order chuẩn từ intake
+- `POST /service-requests/{id}/cancel` — OWNER/CUSTOMER_SERVICE
+
+## Service channels
+- `GET /service-channels` — OWNER/CUSTOMER_SERVICE
+- `POST /service-channels` — OWNER
+- `PUT /service-channels/{id}` — OWNER
+- `DELETE /service-channels/{id}` — OWNER
 
 ## Work orders
 - `GET /work-orders?search={text}&status={status}&page={n}&size={n}`
 - `GET /work-orders/history?search={text}&status={CLOSED|CANCELLED}&page={n}&size={n}`
-- `POST /work-orders`
 - `GET /work-orders/{id}`
 - `POST /work-orders/{id}/schedule`
 - `POST /work-orders/{id}/transition`
@@ -58,7 +63,7 @@ Base URL local: `http://localhost:8080/api/v1`
 - `GET /spare-parts?search={text}&page={n}&size={n}`
 - `POST /spare-parts`
 - `POST /spare-parts/{id}/import`
-- `POST /work-orders/{workOrderId}/parts/consume`
+- `POST /work-orders/{workOrderId}/parts/consume` — OWNER/TECHNICIAN; Technician chỉ được ghi nhận cho Work Order được giao
 
 ## Files
 - `POST /attachments`

@@ -70,6 +70,7 @@ public class UserManagementService {
     public UserAccountResponse update(UUID id, UserAccountRequest request) {
         UserAccount user = require(id);
         demoAccountProtectionPolicy.guardMutation(user);
+        guardRoleChange(user, request.role());
         guardSelfUpdate(user, request);
         guardLastOwner(user, request.role(), request.active());
 
@@ -159,6 +160,16 @@ public class UserManagementService {
         }
 
         return technicianRepository.save(technician);
+    }
+
+    private void guardRoleChange(UserAccount user, UserRole nextRole) {
+        if (nextRole == user.getRole()) {
+            return;
+        }
+        throw BusinessException.conflict(
+                "USER_ROLE_CHANGE_BLOCKED",
+                "Vai trò được cố định sau khi tạo tài khoản để bảo toàn dữ liệu nghiệp vụ liên kết"
+        );
     }
 
     private void guardSelfUpdate(UserAccount user, UserAccountRequest request) {

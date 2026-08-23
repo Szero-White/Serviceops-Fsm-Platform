@@ -1,7 +1,7 @@
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { SearchOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Form, Input, Select } from 'antd'
+import { App, Form, Input, Select } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -11,13 +11,10 @@ import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { WorkOrderStatus } from '../../../types'
-import { downloadBlob } from '../../../utils/download'
 import { formatQuantity } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { assetsApi } from '../../assets/api'
 import { attachmentsApi } from '../../attachments/api'
 import { useAuth } from '../../auth/AuthContext'
-import { customersApi } from '../../customers/api'
 import { inventoryApi } from '../../inventory/api'
 import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../api'
@@ -26,7 +23,6 @@ import {
   WorkOrderDialogs,
   type CompleteWorkOrderValues,
   type ConsumePartValues,
-  type CreateWorkOrderValues,
   type ScheduleWorkOrderValues,
 } from '../components/WorkOrderDialogs'
 import { WorkOrderTable } from '../components/WorkOrderTable'
@@ -42,15 +38,12 @@ export function WorkOrdersPage() {
   const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<WorkOrderStatus>()
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
-  const [createOpen, setCreateOpen] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
   const [consumeOpen, setConsumeOpen] = useState(false)
-  const [createForm] = Form.useForm<CreateWorkOrderValues>()
   const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const [completeForm] = Form.useForm<CompleteWorkOrderValues>()
   const [consumeForm] = Form.useForm<ConsumePartValues>()
-  const watchedCreateCustomerId = Form.useWatch('customerId', createForm)
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
@@ -83,16 +76,6 @@ export function WorkOrdersPage() {
     queryFn: () => workOrdersApi.get(selectedId!),
     enabled: Boolean(selectedId),
   })
-  const { data: customers } = useQuery({
-    queryKey: ['customers', 'all'],
-    queryFn: () => customersApi.list('', 0, 100),
-    enabled: permissions.canCreate,
-  })
-  const { data: assets, isFetching: assetsLoading } = useQuery({
-    queryKey: ['assets', 'work-order-customer', watchedCreateCustomerId],
-    queryFn: () => assetsApi.list('', 0, 100, watchedCreateCustomerId),
-    enabled: permissions.canCreate && Boolean(watchedCreateCustomerId),
-  })
   const { data: technicians } = useQuery({
     queryKey: ['technicians'],
     queryFn: () => techniciansApi.list(),
@@ -120,21 +103,6 @@ export function WorkOrdersPage() {
     queryClient.invalidateQueries({ queryKey: ['attachments', selectedId] })
     queryClient.invalidateQueries({ queryKey: ['audit'] })
   }
-
-  const create = useMutation({
-    mutationFn: (values: CreateWorkOrderValues) => workOrdersApi.create(values),
-    onSuccess: (workOrder) => {
-      notification.success({
-        message: `Đã tạo ${workOrder.code}`,
-        description: workOrder.summary,
-      })
-      setCreateOpen(false)
-      createForm.resetFields()
-      refreshOperations()
-      selectWorkOrder(workOrder.id)
-    },
-    onError: (error) => message.error(apiErrorMessage(error)),
-  })
 
   const schedule = useMutation({
     mutationFn: (values: ScheduleWorkOrderValues) => workOrdersApi.schedule(selectedId!, {
@@ -209,15 +177,6 @@ export function WorkOrdersPage() {
     }
   }
 
-  const exportInvoice = async () => {
-    if (!detail) return
-    try {
-      downloadBlob(await workOrdersApi.invoice(detail.id), `hoa-don-dich-vu-${detail.code}.html`)
-    } catch (error) {
-      message.error(apiErrorMessage(error))
-    }
-  }
-
   const openSchedule = () => {
     if (!detail) return
     scheduleForm.setFieldsValue({
@@ -237,21 +196,9 @@ export function WorkOrdersPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Bảng điều phối"
+        eyebrow="Vận hành dịch vụ"
         title="Phiếu công việc"
-        description="Điều phối, theo dõi trạng thái, lịch kỹ thuật viên, phụ tùng và bằng chứng hoàn thành."
-        actions={permissions.canCreate ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              createForm.setFieldsValue({ priority: 'NORMAL' })
-              setCreateOpen(true)
-            }}
-          >
-            Tạo phiếu công việc
-          </Button>
-        ) : undefined}
+        description="Theo dõi công việc đã được bàn giao từ Customer Service, từ điều phối đến hoàn thành."
         meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? 'Đang lọc' : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
@@ -292,19 +239,14 @@ export function WorkOrdersPage() {
         onComplete={() => setCompleteOpen(true)}
         onConsumePart={() => setConsumeOpen(true)}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
-        onExportInvoice={exportInvoice}
         onUpload={uploadFile}
         onAttachmentsChanged={refreshAttachments}
       />
 
       <WorkOrderDialogs
-        create={{ open: createOpen, form: createForm, pending: create.isPending, onClose: () => setCreateOpen(false), onSubmit: (values) => create.mutate(values) }}
         schedule={{ open: scheduleOpen, form: scheduleForm, pending: schedule.isPending, onClose: () => setScheduleOpen(false), onSubmit: (values) => schedule.mutate(values) }}
         complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, onClose: () => setCompleteOpen(false), onSubmit: (values) => complete.mutate(values) }}
         consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
-        customers={customers}
-        assets={assets}
-        assetsLoading={assetsLoading}
         technicians={technicians}
         parts={parts}
       />

@@ -4,7 +4,6 @@ import com.serviceops.common.web.PageResponse;
 import com.serviceops.workorder.application.WorkOrderInvoiceService;
 import com.serviceops.workorder.application.WorkOrderService;
 import com.serviceops.workorder.domain.WorkOrderStatus;
-import com.serviceops.workorder.web.WorkOrderDtos.CreateWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
@@ -68,14 +67,8 @@ public class WorkOrderController {
                 .body(invoiceService.exportInvoice(workOrder));
     }
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
-    public WorkOrderResponse create(@Valid @RequestBody CreateWorkOrder request) {
-        return service.create(request);
-    }
-
     @PostMapping("/from-service-request/{serviceRequestId}")
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public WorkOrderResponse convert(@PathVariable UUID serviceRequestId) {
         return service.convertServiceRequest(serviceRequestId);
     }
@@ -87,7 +80,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/{id}/transition")
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
     public WorkOrderResponse transition(@PathVariable UUID id, @Valid @RequestBody TransitionWorkOrder request) {
         return service.transition(id, request);
     }

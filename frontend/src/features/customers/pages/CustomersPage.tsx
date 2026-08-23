@@ -13,8 +13,11 @@ import type { Customer, CustomerImportResult, CustomerImportRowResult } from '..
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useAuth } from '../../auth/AuthContext'
 
 export function CustomersPage() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'OWNER' || user?.role === 'CUSTOMER_SERVICE'
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
@@ -175,7 +178,7 @@ export function CustomersPage() {
         eyebrow="Quản lý khách hàng"
         title="Khách hàng"
         description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
-        actions={customerActions}
+        actions={canManage ? customerActions : undefined}
         meta={<MetaBadge>{customersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
       />
 
@@ -240,6 +243,7 @@ export function CustomersPage() {
           {
             title: '',
             width: 92,
+            hidden: !canManage,
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />

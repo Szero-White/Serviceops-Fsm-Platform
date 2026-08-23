@@ -22,7 +22,7 @@ public class AiController {
     private final AiHelpService helpService;
 
     @PostMapping("/service-request-draft")
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public ServiceRequestDraftResponse draftServiceRequest(@Valid @RequestBody ServiceRequestDraftRequest request) {
         return suggestionService.draftServiceRequest(request);
     }

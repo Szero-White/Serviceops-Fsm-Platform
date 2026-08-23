@@ -114,7 +114,7 @@ public class ServiceChannelService {
     }
 
     private static List<UserRole> channelRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     private static ServiceChannelResponse toResponse(ServiceChannel channel) {

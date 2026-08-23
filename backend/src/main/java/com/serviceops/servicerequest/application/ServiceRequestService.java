@@ -135,14 +135,11 @@ public class ServiceRequestService {
     }
 
     private static List<UserRole> intakeRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static ServiceRequestResponse toResponse(ServiceRequest request) {
-        String assetLabel = request.getAsset() == null ? null : String.join(" ",
-                request.getAsset().getBrand() == null ? "" : request.getAsset().getBrand(),
-                request.getAsset().getModel() == null ? "" : request.getAsset().getModel(),
-                "(" + request.getAsset().getSerialNumber() + ")").trim();
+        String assetLabel = request.getAsset() == null ? null : assetLabel(request.getAsset());
         return new ServiceRequestResponse(
                 request.getId(),
                 request.getCustomer().getId(),
@@ -157,5 +154,15 @@ public class ServiceRequestService {
                 request.getCreatedBy(),
                 request.getCreatedAt()
         );
+    }
+
+    private static String assetLabel(Asset asset) {
+        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
+                + (asset.getModel() == null ? "" : asset.getModel())).trim();
+        if (equipmentName.isBlank()) {
+            equipmentName = asset.getCategory();
+        }
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        return equipmentName + " (" + serial + ")";
     }
 }

@@ -23,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/service-requests")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+@PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
 public class ServiceRequestController {
     private final ServiceRequestService service;
 

@@ -3,7 +3,6 @@ package com.serviceops.workorder.web;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -13,16 +12,6 @@ import java.util.UUID;
 
 public final class WorkOrderDtos {
     private WorkOrderDtos() {
-    }
-
-    public record CreateWorkOrder(
-            UUID serviceRequestId,
-            @NotNull UUID customerId,
-            UUID assetId,
-            @NotBlank @Size(max = 200) String summary,
-            @Size(max = 5000) String description,
-            @NotNull Priority priority
-    ) {
     }
 
     public record ScheduleWorkOrder(

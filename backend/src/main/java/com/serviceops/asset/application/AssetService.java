@@ -65,8 +65,8 @@ public class AssetService {
     @Transactional
     public AssetResponse create(AssetRequest request) {
         UUID tenantId = CurrentUser.tenantId();
-        String serial = request.serialNumber().trim().toUpperCase(Locale.ROOT);
-        if (repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
+        String serial = normalizeSerial(request.serialNumber());
+        if (serial != null && repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
         Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
@@ -76,16 +76,20 @@ public class AssetService {
         asset.setCustomer(customer);
         apply(asset, request, serial);
         repository.save(asset);
-        auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị serial " + serial);
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị mới: " + serial, customer.getName());
+        String label = assetDisplayLabel(asset);
+        auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị " + label);
+        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị mới: " + label, customer.getName());
         return toResponse(asset);
     }
 
     @Transactional
     public AssetResponse update(UUID id, AssetRequest request) {
         Asset asset = require(id);
-        String serial = request.serialNumber().trim().toUpperCase(Locale.ROOT);
-        if (!asset.getSerialNumber().equalsIgnoreCase(serial) && repository.existsByTenantIdAndSerialNumberIgnoreCase(CurrentUser.tenantId(), serial)) {
+        String serial = normalizeSerial(request.serialNumber());
+        String currentSerial = asset.getSerialNumber();
+        boolean serialChanged = currentSerial == null ? serial != null : serial == null || !currentSerial.equalsIgnoreCase(serial);
+        if (serialChanged && serial != null
+                && repository.existsByTenantIdAndSerialNumberIgnoreCase(CurrentUser.tenantId(), serial)) {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
         UUID tenantId = CurrentUser.tenantId();
@@ -103,8 +107,9 @@ public class AssetService {
         }
         asset.setCustomer(customer);
         apply(asset, request, serial);
-        auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị serial " + serial);
-        notificationService.notifyRoles(CurrentUser.tenantId(), assetRoles(), "Thiết bị được cập nhật: " + serial, customer.getName());
+        String label = assetDisplayLabel(asset);
+        auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị " + label);
+        notificationService.notifyRoles(CurrentUser.tenantId(), assetRoles(), "Thiết bị được cập nhật: " + label, customer.getName());
         return toResponse(asset);
     }
 
@@ -117,9 +122,10 @@ public class AssetService {
         if (serviceRequestCount > 0 || workOrderCount > 0) {
             throw BusinessException.conflict("ASSET_IN_USE", "Không thể xóa thiết bị đang được sử dụng");
         }
+        String label = assetDisplayLabel(asset);
         repository.delete(asset);
-        auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị serial " + asset.getSerialNumber());
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + asset.getSerialNumber(), asset.getCustomer().getName());
+        auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị " + label);
+        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + label, asset.getCustomer().getName());
     }
 
     @Transactional(readOnly = true)
@@ -185,6 +191,21 @@ public class AssetService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private static String normalizeSerial(String value) {
+        String serial = blankToNull(value);
+        return serial == null ? null : serial.toUpperCase(Locale.ROOT);
+    }
+
+    private static String assetDisplayLabel(Asset asset) {
+        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
+                + (asset.getModel() == null ? "" : asset.getModel())).trim();
+        if (equipmentName.isBlank()) {
+            equipmentName = asset.getCategory();
+        }
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        return equipmentName + " · " + serial;
+    }
+
     private AssetImportCandidate validateImportRow(AssetCsvRow row, Set<String> seenSerials, UUID tenantId) {
         String customerCode = row.customerCode().trim().toUpperCase(Locale.ROOT);
         if (customerCode.isBlank()) {
@@ -248,7 +269,7 @@ public class AssetService {
     }
 
     private static List<UserRole> assetRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static AssetResponse toResponse(Asset a) {

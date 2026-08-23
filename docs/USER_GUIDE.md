@@ -9,7 +9,7 @@
 - `technician-2`: tài khoản cá nhân của Võ Hoàng; dùng để kiểm tra dữ liệu lịch không bị lẫn giữa kỹ thuật viên.
 - `warehouse`: tạo phụ tùng và nhập kho.
 
-Mật khẩu local cho các tài khoản demo: `123456`. Đây chỉ là credential dùng chung để thuận tiện demo; mỗi username vẫn là một người dùng riêng với dữ liệu/quyền riêng.
+Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`. Đây chỉ là credential demo; production secrets phải được cấu hình riêng.
 
 ## 2. Kịch bản demo chuẩn
 
@@ -20,10 +20,10 @@ Mật khẩu local cho các tài khoản demo: `123456`. Đây chỉ là credent
 3. Vào **Thiết bị**, chọn khách hàng, nhập loại thiết bị, hãng, model, serial và hạn bảo hành.
 4. Vào **Yêu cầu dịch vụ**, tạo yêu cầu với mức ưu tiên và mô tả lỗi.
 
-### Bước 2 — Tạo và điều phối công việc
+### Bước 2 — Chuyển sang điều phối và xếp lịch
 
-1. Đăng nhập `dispatcher`.
-2. Mở **Yêu cầu dịch vụ** và chuyển yêu cầu thành work order.
+1. Khi Service Request đủ thông tin, `customer-service` bấm **Chuyển sang điều phối** để tạo Work Order nguồn chuẩn.
+2. Đăng nhập `dispatcher`.
 3. Mở **Lịch điều phối**, chọn phiếu trong hàng đợi, kỹ thuật viên và khung thời gian.
 4. Bấm một lịch đã có trên board để đổi kỹ thuật viên hoặc thời gian khi cần.
 5. Nếu lịch chồng lấn, hệ thống từ chối và hiển thị lỗi nghiệp vụ.
@@ -40,7 +40,7 @@ Mật khẩu local cho các tài khoản demo: `123456`. Đây chỉ là credent
 
 ### Bước 4 — Nghiệm thu và theo dõi
 
-1. Đăng nhập `owner` hoặc `dispatcher`.
+1. Đăng nhập `owner` để thực hiện nghiệm thu/đóng phiếu theo phạm vi quản lý.
 2. Chuyển `COMPLETED → CUSTOMER_ACCEPTED → CLOSED`.
 3. Xem timeline trạng thái, dashboard, notification và audit log.
 
@@ -50,7 +50,7 @@ Mật khẩu local cho các tài khoản demo: `123456`. Đây chỉ là credent
 - Work order đã đóng hoặc hủy không được dùng thêm phụ tùng.
 - Mỗi kỹ thuật viên có tài khoản riêng liên kết 1-1 với `technician_profile`; lịch cá nhân được backend suy ra từ JWT và không thể đổi ID để xem lịch người khác.
 - Kỹ thuật viên không thể xem dữ liệu khách hàng hoặc phiếu của người khác.
-- Kỹ thuật viên chỉ cập nhật tiến độ thực hiện (`ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`); nghiệm thu, đóng, mở lại hoặc hủy phiếu thuộc Owner/Dispatcher.
+- Kỹ thuật viên chỉ cập nhật tiến độ thực hiện (`ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`). Customer Service có thể hủy phiếu đang hoạt động khi khách thay đổi nhu cầu; các transition quản lý khác tuân theo policy backend.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
 - File local chỉ chấp nhận JPG, PNG, WEBP và PDF, tối đa 10 MB.
 

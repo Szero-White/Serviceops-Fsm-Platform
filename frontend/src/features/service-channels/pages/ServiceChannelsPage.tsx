@@ -44,7 +44,7 @@ export function ServiceChannelsPage() {
   const { message } = App.useApp()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const canManage = ['OWNER', 'DISPATCHER'].includes(user?.role ?? '')
+  const canManage = user?.role === 'OWNER'
 
   const channelsQuery = useQuery({
     queryKey: ['service-channels'],

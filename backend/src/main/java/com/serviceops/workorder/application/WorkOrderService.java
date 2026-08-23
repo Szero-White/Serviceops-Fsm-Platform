@@ -1,13 +1,10 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.asset.domain.Asset;
-import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
-import com.serviceops.customer.domain.Customer;
-import com.serviceops.customer.domain.CustomerRepository;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
@@ -24,7 +21,6 @@ import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
-import com.serviceops.workorder.web.WorkOrderDtos.CreateWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistoryResponse;
@@ -50,11 +46,12 @@ public class WorkOrderService {
             WorkOrderStatus.WAITING_FOR_PARTS,
             WorkOrderStatus.COMPLETED
     );
+    private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CANCELLED
+    );
 
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
-    private final CustomerRepository customerRepository;
-    private final AssetRepository assetRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final TechnicianRepository technicianRepository;
     private final AppointmentRepository appointmentRepository;
@@ -93,63 +90,37 @@ public class WorkOrderService {
     }
 
     @Transactional
-    public WorkOrderResponse create(CreateWorkOrder request) {
+    public WorkOrderResponse convertServiceRequest(UUID serviceRequestId) {
         UUID tenantId = CurrentUser.tenantId();
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
-        Asset asset = null;
-        if (request.assetId() != null) {
-            asset = assetRepository.findDetailed(request.assetId(), tenantId)
-                    .orElseThrow(() -> BusinessException.notFound("ASSET_NOT_FOUND", "Không tìm thấy thiết bị"));
-            if (!asset.getCustomer().getId().equals(customer.getId())) {
-                throw BusinessException.badRequest("ASSET_CUSTOMER_MISMATCH", "Thiết bị không thuộc khách hàng đã chọn");
-            }
+        ServiceRequest serviceRequest = serviceRequestRepository.findDetailedForUpdate(serviceRequestId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("SERVICE_REQUEST_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
+        if (serviceRequest.getStatus() != ServiceRequestStatus.OPEN) {
+            throw BusinessException.conflict("SERVICE_REQUEST_ALREADY_PROCESSED", "Yêu cầu dịch vụ đã được xử lý");
         }
-        ServiceRequest serviceRequest = null;
-        if (request.serviceRequestId() != null) {
-            serviceRequest = serviceRequestRepository.findDetailedForUpdate(request.serviceRequestId(), tenantId)
-                    .orElseThrow(() -> BusinessException.notFound("SERVICE_REQUEST_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
-            if (serviceRequest.getStatus() != ServiceRequestStatus.OPEN) {
-                throw BusinessException.conflict("SERVICE_REQUEST_ALREADY_PROCESSED", "Yêu cầu dịch vụ đã được xử lý");
-            }
-            if (!serviceRequest.getCustomer().getId().equals(customer.getId())) {
-                throw BusinessException.conflict(
-                        "SERVICE_REQUEST_CUSTOMER_MISMATCH",
-                        "Khách hàng của phiếu công việc không khớp với yêu cầu dịch vụ nguồn"
-                );
-            }
-            if (serviceRequest.getAsset() != null
-                    && (asset == null || !serviceRequest.getAsset().getId().equals(asset.getId()))) {
-                throw BusinessException.conflict(
-                        "SERVICE_REQUEST_ASSET_MISMATCH",
-                        "Thiết bị của phiếu công việc không khớp với yêu cầu dịch vụ nguồn"
-                );
-            }
-            serviceRequest.markConverted();
-        }
+
+        serviceRequest.markConverted();
 
         WorkOrder entity = new WorkOrder();
         entity.setTenantId(tenantId);
         entity.setServiceRequest(serviceRequest);
-        entity.setCustomer(customer);
-        entity.setAsset(asset);
+        entity.setCustomer(serviceRequest.getCustomer());
+        entity.setAsset(serviceRequest.getAsset());
         entity.setCode(nextCode());
-        entity.setSummary(request.summary().trim());
-        entity.setDescription(blankToNull(request.description()));
-        entity.setPriority(request.priority());
+        entity.setSummary(serviceRequest.getTitle().trim());
+        entity.setDescription(blankToNull(serviceRequest.getDescription()));
+        entity.setPriority(serviceRequest.getPriority());
         entity.setStatus(WorkOrderStatus.OPEN);
         repository.save(entity);
-        addHistory(entity, null, WorkOrderStatus.OPEN, "Tạo phiếu công việc");
-        auditService.record("CREATE", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode());
-        notificationService.notifyRoles(tenantId, dispatchRoles(), "Phiếu công việc mới: " + entity.getCode(), entity.getSummary());
-        return toResponse(entity, List.of());
-    }
 
-    @Transactional
-    public WorkOrderResponse convertServiceRequest(UUID serviceRequestId) {
-        ServiceRequest sr = serviceRequestRepository.findDetailed(serviceRequestId, CurrentUser.tenantId())
-                .orElseThrow(() -> BusinessException.notFound("SERVICE_REQUEST_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
-        return create(new CreateWorkOrder(sr.getId(), sr.getCustomer().getId(), sr.getAsset() == null ? null : sr.getAsset().getId(), sr.getTitle(), sr.getDescription(), sr.getPriority()));
+        addHistory(entity, null, WorkOrderStatus.OPEN, "Tiếp nhận từ yêu cầu dịch vụ");
+        auditService.record("CREATE_FROM_SERVICE_REQUEST", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode() + " từ yêu cầu dịch vụ");
+        notificationService.notifyRoles(
+                tenantId,
+                dispatchRoles(),
+                "Có phiếu mới chờ điều phối: " + entity.getCode(),
+                entity.getSummary()
+        );
+        return toResponse(entity, List.of());
     }
 
     @Transactional
@@ -202,7 +173,7 @@ public class WorkOrderService {
     public WorkOrderResponse transition(UUID id, TransitionWorkOrder request) {
         WorkOrder workOrder = require(id);
         ensureTechnicianCanAccess(workOrder);
-        ensureTechnicianCanTransition(request.targetStatus());
+        ensureRoleCanTransition(request);
         WorkOrderStatus previous = workOrder.getStatus();
         if (request.targetStatus() == WorkOrderStatus.COMPLETED) {
             if (request.diagnosis() == null || request.diagnosis().isBlank() || request.resolution() == null || request.resolution().isBlank()) {
@@ -249,15 +220,32 @@ public class WorkOrderService {
         }
     }
 
-    private static void ensureTechnicianCanTransition(WorkOrderStatus targetStatus) {
-        if (!CurrentUser.hasRole("TECHNICIAN")) {
+    private static void ensureRoleCanTransition(TransitionWorkOrder request) {
+        WorkOrderStatus targetStatus = request.targetStatus();
+
+        if (CurrentUser.hasRole("TECHNICIAN")) {
+            if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện của công việc được phân công"
+                );
+            }
             return;
         }
-        if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
-            throw BusinessException.forbidden(
-                    "WORK_ORDER_TRANSITION_FORBIDDEN",
-                    "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện; nghiệm thu, đóng, mở lại hoặc hủy phiếu thuộc quyền điều phối"
-            );
+
+        if (CurrentUser.hasRole("CUSTOMER_SERVICE")) {
+            if (!CUSTOMER_SERVICE_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Chăm sóc khách hàng chỉ được hủy phiếu công việc"
+                );
+            }
+            if (blankToNull(request.note()) == null) {
+                throw BusinessException.badRequest(
+                        "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
+                        "Phải nhập lý do hủy phiếu công việc"
+                );
+            }
         }
     }
 
@@ -306,14 +294,22 @@ public class WorkOrderService {
     }
 
     public static WorkOrderResponse toResponse(WorkOrder w, List<WorkOrderHistoryResponse> history) {
-        String assetLabel = w.getAsset() == null ? null : ((w.getAsset().getBrand() == null ? "" : w.getAsset().getBrand() + " ")
-                + (w.getAsset().getModel() == null ? "" : w.getAsset().getModel() + " ")
-                + "(" + w.getAsset().getSerialNumber() + ")").trim();
+        String assetLabel = w.getAsset() == null ? null : assetLabel(w.getAsset());
         return new WorkOrderResponse(w.getId(), w.getCode(), w.getServiceRequest() == null ? null : w.getServiceRequest().getId(),
                 w.getCustomer().getId(), w.getCustomer().getName(), w.getAsset() == null ? null : w.getAsset().getId(), assetLabel,
                 w.getTechnician() == null ? null : w.getTechnician().getId(),
                 w.getTechnician() == null ? null : w.getTechnician().getUser().getDisplayName(),
                 w.getSummary(), w.getDescription(), w.getPriority(), w.getStatus(), w.getScheduledStart(), w.getScheduledEnd(),
                 w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history);
+    }
+
+    private static String assetLabel(Asset asset) {
+        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
+                + (asset.getModel() == null ? "" : asset.getModel())).trim();
+        if (equipmentName.isBlank()) {
+            equipmentName = asset.getCategory();
+        }
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        return equipmentName + " (" + serial + ")";
     }
 }

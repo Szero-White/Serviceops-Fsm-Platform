@@ -23,7 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/service-channels")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+@PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
 public class ServiceChannelController {
     private final ServiceChannelService service;
 
@@ -33,19 +33,19 @@ public class ServiceChannelController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
+    @PreAuthorize("hasRole('OWNER')")
     public ServiceChannelResponse create(@Valid @RequestBody ServiceChannelRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
+    @PreAuthorize("hasRole('OWNER')")
     public ServiceChannelResponse update(@PathVariable UUID id, @Valid @RequestBody ServiceChannelUpdateRequest request) {
         return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
+    @PreAuthorize("hasRole('OWNER')")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
     }

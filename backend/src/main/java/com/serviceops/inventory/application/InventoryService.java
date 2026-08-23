@@ -48,9 +48,14 @@ public class InventoryService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public PageResponse<SparePartResponse> search(String search, int page, int size) {
+    public PageResponse<SparePartResponse> search(String search, Boolean active, int page, int size) {
         var pageable = PageRequestSupport.of(page, size, Sort.by("name").ascending());
-        return PageResponse.from(sparePartRepository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable).map(InventoryService::toResponse));
+        return PageResponse.from(sparePartRepository.search(
+                CurrentUser.tenantId(),
+                active,
+                PageRequestSupport.normalizeSearch(search),
+                pageable
+        ).map(InventoryService::toResponse));
     }
 
     @Transactional
@@ -82,6 +87,9 @@ public class InventoryService {
     @Transactional
     public SparePartResponse importStock(UUID id, StockAdjustmentRequest request) {
         SparePart part = requireLocked(id);
+        if (!part.isActive()) {
+            throw BusinessException.conflict("SPARE_PART_INACTIVE", "Phụ tùng đã ngừng sử dụng và không thể nhập kho");
+        }
         part.addStock(request.quantity());
         saveTransaction(part, null, InventoryTransactionType.IMPORT, request.quantity(), request.note());
         auditService.record("IMPORT_STOCK", "SPARE_PART", part.getId(), "Nhập " + request.quantity() + " " + part.getUnit());
@@ -92,7 +100,7 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public byte[] exportSpareParts(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("sku").ascending());
-        List<SparePartResponse> parts = sparePartRepository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable)
+        List<SparePartResponse> parts = sparePartRepository.search(CurrentUser.tenantId(), null, PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(InventoryService::toResponse)
                 .toList();
@@ -130,6 +138,45 @@ public class InventoryService {
         auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phụ tùng từ CSV");
         notificationService.notifyRoles(tenantId, warehouseRoles(), "Đã import danh mục phụ tùng", validRows + " SKU mới được thêm vào kho");
         return new SparePartImportResult(rows.size(), validRows, 0, validRows, true, results);
+    }
+
+    @Transactional
+    public SparePartResponse setActive(UUID id, boolean active) {
+        SparePart part = requireLocked(id);
+        if (part.isActive() == active) {
+            return toResponse(part);
+        }
+
+        part.setActive(active);
+        auditService.record(
+                active ? "REACTIVATE" : "DISCONTINUE",
+                "SPARE_PART",
+                part.getId(),
+                (active ? "Kích hoạt lại phụ tùng " : "Ngừng sử dụng phụ tùng ") + part.getSku()
+        );
+        return toResponse(part);
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        UUID tenantId = CurrentUser.tenantId();
+        SparePart part = requireLocked(id);
+
+        if (part.getStockQuantity().signum() != 0) {
+            throw BusinessException.conflict(
+                    "SPARE_PART_STOCK_NOT_ZERO",
+                    "Chỉ có thể xóa phụ tùng khi tồn kho bằng 0"
+            );
+        }
+        if (transactionRepository.existsByTenantIdAndSparePartId(tenantId, part.getId())) {
+            throw BusinessException.conflict(
+                    "SPARE_PART_HAS_HISTORY",
+                    "Phụ tùng đã có lịch sử kho và không thể xóa; hãy chuyển sang Ngừng sử dụng"
+            );
+        }
+
+        sparePartRepository.delete(part);
+        auditService.record("DELETE", "SPARE_PART", id, "Xóa phụ tùng chưa phát sinh nghiệp vụ " + part.getSku());
     }
 
     @Transactional

@@ -47,37 +47,38 @@ public class AssetController {
     }
 
     @GetMapping("/export")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public ResponseEntity<byte[]> export(@RequestParam(defaultValue = "") String search) {
         return csv("serviceops-assets.csv", service.exportAssets(search));
     }
 
     @GetMapping("/import-template")
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public ResponseEntity<byte[]> importTemplate() {
         return csv("serviceops-assets-template.csv", service.assetImportTemplate());
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public AssetImportResult importCsv(@RequestParam MultipartFile file,
                                        @RequestParam(defaultValue = "false") boolean commit) {
         return service.importAssets(file, commit);
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public AssetResponse create(@Valid @RequestBody AssetRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public AssetResponse update(@PathVariable UUID id, @Valid @RequestBody AssetRequest request) {
         return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
     }

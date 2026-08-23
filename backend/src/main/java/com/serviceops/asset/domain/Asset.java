@@ -35,7 +35,7 @@ public class Asset extends TenantScopedEntity {
     @Column(length = 100)
     private String model;
 
-    @Column(name = "serial_number", nullable = false, length = 120)
+    @Column(name = "serial_number", length = 120)
     private String serialNumber;
 
     @Column(name = "installed_at")
