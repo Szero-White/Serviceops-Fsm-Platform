@@ -269,7 +269,7 @@ public class AssetService {
     }
 
     private static List<UserRole> assetRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static AssetResponse toResponse(Asset a) {

@@ -2,19 +2,10 @@ import { DatePicker, Form, Input, InputNumber, Modal, Select, Typography } from 
 import { MetaBadge } from '../../../components/PresentationBadge'
 import type { FormInstance } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import type { Asset, Customer, PageResponse, SparePart, Technician } from '../../../types'
+import type { PageResponse, SparePart, Technician } from '../../../types'
 import { formatCompactDecimalInput, formatCurrency, formatQuantityWithUnit } from '../../../utils/format'
-import { PRIORITY_OPTIONS } from '../model/workOrderPresentation'
 
 const { RangePicker } = DatePicker
-
-export type CreateWorkOrderValues = {
-  customerId: string
-  assetId?: string
-  summary: string
-  description?: string
-  priority: string
-}
 
 export type ScheduleWorkOrderValues = {
   technicianId: string
@@ -34,66 +25,23 @@ export type ConsumePartValues = {
 }
 
 export function WorkOrderDialogs({
-  create,
   schedule,
   complete,
   consume,
-  customers,
-  assets,
-  assetsLoading,
   technicians,
   parts,
 }: {
-  create: { open: boolean; form: FormInstance<CreateWorkOrderValues>; pending: boolean; onClose: () => void; onSubmit: (values: CreateWorkOrderValues) => void }
   schedule: { open: boolean; form: FormInstance<ScheduleWorkOrderValues>; pending: boolean; onClose: () => void; onSubmit: (values: ScheduleWorkOrderValues) => void }
   complete: { open: boolean; form: FormInstance<CompleteWorkOrderValues>; pending: boolean; onClose: () => void; onSubmit: (values: CompleteWorkOrderValues) => void }
   consume: { open: boolean; form: FormInstance<ConsumePartValues>; pending: boolean; onClose: () => void; onSubmit: (values: ConsumePartValues) => void }
-  customers?: PageResponse<Customer>
-  assets?: PageResponse<Asset>
-  assetsLoading?: boolean
   technicians?: Technician[]
   parts?: PageResponse<SparePart>
 }) {
-  const selectedCustomerId = Form.useWatch('customerId', create.form)
   const selectedPartId = Form.useWatch('sparePartId', consume.form)
   const selectedPart = parts?.content.find((item) => item.id === selectedPartId)
 
   return (
     <>
-      <Modal title="Tạo phiếu công việc" open={create.open} onCancel={create.onClose} onOk={() => create.form.submit()} confirmLoading={create.pending} width={760} destroyOnHidden>
-        <Form form={create.form} layout="vertical" onFinish={create.onSubmit} requiredMark={false}>
-          <div className="form-grid two-cols">
-            <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                placeholder="Chọn khách hàng"
-                options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))}
-                onChange={(customerId) => create.form.setFieldsValue({ customerId, assetId: undefined })}
-              />
-            </Form.Item>
-            <Form.Item label="Thiết bị (không bắt buộc)" name="assetId">
-              <Select
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                disabled={!selectedCustomerId}
-                loading={assetsLoading}
-                placeholder={selectedCustomerId ? 'Chọn thiết bị của khách hàng' : 'Chọn khách hàng trước'}
-                notFoundContent={selectedCustomerId && !assetsLoading ? 'Khách hàng này chưa có thiết bị' : undefined}
-                options={assets?.content.map((asset) => ({
-                  value: asset.id,
-                  label: `${asset.serialNumber ?? 'Chưa xác định serial'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
-                }))}
-              />
-            </Form.Item>
-          </div>
-          <Form.Item label="Nội dung công việc" name="summary" rules={[{ required: true, message: 'Nhập nội dung công việc' }]}><Input /></Form.Item>
-          <Form.Item label="Mô tả" name="description"><Input.TextArea rows={4} /></Form.Item>
-          <Form.Item label="Ưu tiên" name="priority" rules={[{ required: true, message: 'Chọn mức ưu tiên' }]}><Select options={PRIORITY_OPTIONS} /></Form.Item>
-        </Form>
-      </Modal>
-
       <Modal title="Phân công và xếp lịch" open={schedule.open} onCancel={schedule.onClose} onOk={() => schedule.form.submit()} confirmLoading={schedule.pending} width={620} destroyOnHidden>
         <Form form={schedule.form} layout="vertical" onFinish={schedule.onSubmit} requiredMark={false}>
           <Form.Item label="Kỹ thuật viên" name="technicianId" rules={[{ required: true, message: 'Chọn kỹ thuật viên' }]}>

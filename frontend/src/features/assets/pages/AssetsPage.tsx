@@ -16,6 +16,7 @@ import type { Asset, AssetImportResult, AssetImportRowResult } from '../../../ty
 import { downloadBlob } from '../../../utils/download'
 import { formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useAuth } from '../../auth/AuthContext'
 
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
@@ -25,6 +26,8 @@ const assetStatusOptions = [
 ]
 
 export function AssetsPage() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'OWNER' || user?.role === 'CUSTOMER_SERVICE'
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
@@ -52,7 +55,7 @@ export function AssetsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100) })
+  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
@@ -198,7 +201,7 @@ export function AssetsPage() {
         eyebrow="Danh mục thiết bị"
         title="Thiết bị khách hàng"
         description="Theo dõi serial, bảo hành, vòng đời và tình trạng phục vụ của từng tài sản."
-        actions={assetActions}
+        actions={canManage ? assetActions : undefined}
         meta={<MetaBadge>{assetsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} thiết bị`}</MetaBadge>}
       />
 
@@ -264,6 +267,7 @@ export function AssetsPage() {
           {
             title: 'Thao tác',
             width: 76,
+            hidden: !canManage,
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />

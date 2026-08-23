@@ -65,7 +65,7 @@ class AttachmentOwnershipTest {
                 serviceRequestRepository,
                 notificationService
         );
-        when(workOrderRepository.findDetailed(WORK_ORDER_ID, TENANT_ID))
+        org.mockito.Mockito.lenient().when(workOrderRepository.findDetailed(WORK_ORDER_ID, TENANT_ID))
                 .thenReturn(Optional.of(new WorkOrder()));
     }
 
@@ -87,13 +87,13 @@ class AttachmentOwnershipTest {
 
     @Test
     void uploaderCanRenameOwnAttachment() {
-        authenticate("warehouse", "WAREHOUSE_STAFF");
-        Attachment attachment = attachmentUploadedBy("warehouse");
+        authenticate("customer-service", "CUSTOMER_SERVICE");
+        Attachment attachment = attachmentUploadedBy("customer-service");
         when(repository.findByIdAndTenantId(ATTACHMENT_ID, TENANT_ID)).thenReturn(Optional.of(attachment));
 
-        var response = service.rename(ATTACHMENT_ID, "warehouse-renamed.pdf");
+        var response = service.rename(ATTACHMENT_ID, "customer-service-renamed.pdf");
 
-        assertThat(response.originalFilename()).isEqualTo("warehouse-renamed.pdf");
+        assertThat(response.originalFilename()).isEqualTo("customer-service-renamed.pdf");
     }
 
     @Test
@@ -105,7 +105,7 @@ class AttachmentOwnershipTest {
         assertThatThrownBy(() -> service.rename(ATTACHMENT_ID, "forbidden.pdf"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("code")
-                .isEqualTo("ATTACHMENT_MANAGE_DENIED");
+                .isEqualTo("ATTACHMENT_ACCESS_DENIED");
     }
 
     @Test

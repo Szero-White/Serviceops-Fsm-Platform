@@ -149,11 +149,15 @@ public class AttachmentService {
     private void authorizeReference(String referenceType, UUID referenceId, UUID tenantId) {
         switch (referenceType) {
             case "WORK_ORDER" -> {
-                var workOrder = CurrentUser.hasRole("TECHNICIAN")
-                        ? workOrderRepository.findDetailedAssigned(referenceId, tenantId, CurrentUser.userId())
-                        : workOrderRepository.findDetailed(referenceId, tenantId);
-                if (workOrder.isEmpty()) {
-                    throw BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy đối tượng đính kèm");
+                if (CurrentUser.hasRole("TECHNICIAN")) {
+                    workOrderRepository.findDetailedAssigned(referenceId, tenantId, CurrentUser.userId())
+                            .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy đối tượng đính kèm"));
+                } else {
+                    if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
+                        throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file phiếu công việc");
+                    }
+                    workOrderRepository.findDetailed(referenceId, tenantId)
+                            .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy đối tượng đính kèm"));
                 }
             }
             case "ASSET" -> {
@@ -164,7 +168,7 @@ public class AttachmentService {
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy thiết bị"));
             }
             case "SERVICE_REQUEST" -> {
-                if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
+                if (!hasAnyRole("OWNER", "CUSTOMER_SERVICE")) {
                     throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file yêu cầu dịch vụ");
                 }
                 serviceRequestRepository.findDetailed(referenceId, tenantId)
@@ -219,7 +223,7 @@ public class AttachmentService {
 
     private static List<UserRole> notificationRoles(String referenceType) {
         return switch (referenceType) {
-            case "SERVICE_REQUEST" -> List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+            case "SERVICE_REQUEST" -> List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
             case "WORK_ORDER" -> List.of(UserRole.OWNER, UserRole.DISPATCHER);
             default -> List.of(UserRole.OWNER);
         };

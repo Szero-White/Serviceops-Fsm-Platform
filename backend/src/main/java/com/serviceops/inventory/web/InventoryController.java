@@ -91,7 +91,7 @@ public class InventoryController {
     }
 
     @PostMapping("/work-orders/{workOrderId}/parts/consume")
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF','TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('OWNER','TECHNICIAN')")
     public SparePartResponse consume(@PathVariable UUID workOrderId, @Valid @RequestBody ConsumePartRequest request) {
         return service.consume(workOrderId, request);
     }

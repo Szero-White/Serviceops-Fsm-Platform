@@ -225,7 +225,7 @@ public class CustomerService {
     }
 
     private static List<UserRole> customerRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static CustomerResponse toResponse(Customer c) {

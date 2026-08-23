@@ -135,7 +135,7 @@ public class ServiceRequestService {
     }
 
     private static List<UserRole> intakeRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER, UserRole.CUSTOMER_SERVICE);
+        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
     }
 
     public static ServiceRequestResponse toResponse(ServiceRequest request) {

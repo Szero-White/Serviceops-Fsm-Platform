@@ -26,7 +26,7 @@ const priorityOptions = [
 
 const requestStatusOptions = [
   { value: 'OPEN', label: 'Đang mở' },
-  { value: 'CONVERTED', label: 'Đã tạo phiếu' },
+  { value: 'CONVERTED', label: 'Đã chuyển điều phối' },
   { value: 'CANCELLED', label: 'Đã huỷ' },
 ]
 
@@ -34,7 +34,7 @@ export function ServiceRequestsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<string>()
+  const [status, setStatus] = useState<string>('OPEN')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceRequest>()
   const [lastAiDraft, setLastAiDraft] = useState<ServiceRequestDraftSuggestion>()
@@ -113,8 +113,8 @@ export function ServiceRequestsPage() {
     mutationFn: serviceRequestsApi.convert,
     onSuccess: (workOrder) => {
       notification.success({
-        message: `Đã tạo ${workOrder.code}`,
-        description: `Phiếu công việc đã được tạo từ yêu cầu dịch vụ · ${workOrder.summary}`,
+        message: `Đã chuyển sang điều phối · ${workOrder.code}`,
+        description: `${workOrder.summary} đã được tạo thành phiếu công việc và đưa vào hàng chờ điều phối.`,
       })
       refresh()
     },
@@ -202,7 +202,7 @@ export function ServiceRequestsPage() {
       <PageHeader
         eyebrow="Tiếp nhận dịch vụ"
         title="Yêu cầu dịch vụ"
-        description="Tiếp nhận, chỉnh sửa, huỷ hoặc chuyển yêu cầu thành phiếu công việc khi đủ thông tin."
+        description="Tiếp nhận nhu cầu khách hàng, hoàn thiện thông tin và bàn giao yêu cầu đủ điều kiện sang bộ phận điều phối."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Tiếp nhận yêu cầu</Button>}
         meta={<><MetaBadge>{serviceRequestsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? requestStatusOptions.find((option) => option.value === status)?.label : 'Tất cả trạng thái'}</MetaBadge></>}
       />
@@ -274,9 +274,21 @@ export function ServiceRequestsPage() {
 
                   {isOpen && (
                     <>
-                      <Tooltip title="Tạo phiếu công việc">
-                        <Button aria-label="Tạo phiếu công việc" type="text" icon={<SwapOutlined />} loading={convert.isPending} onClick={() => convert.mutate(record.id)} />
-                      </Tooltip>
+                      <Popconfirm
+                        title="Chuyển yêu cầu sang điều phối?"
+                        description="Yêu cầu sẽ được khóa và một phiếu công việc mới sẽ được tạo cho Dispatcher xử lý."
+                        okText="Chuyển sang điều phối"
+                        cancelText="Giữ lại"
+                        okButtonProps={{ loading: convert.isPending }}
+                        onConfirm={() => convert.mutate(record.id)}
+                      >
+                        <Button
+                          aria-label="Chuyển sang điều phối"
+                          title="Chuyển sang điều phối"
+                          type="text"
+                          icon={<SwapOutlined />}
+                        />
+                      </Popconfirm>
                       <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
                         <Tooltip title="Huỷ yêu cầu"><Button aria-label="Huỷ yêu cầu" type="text" danger icon={<CloseCircleOutlined />} /></Tooltip>
                       </Popconfirm>

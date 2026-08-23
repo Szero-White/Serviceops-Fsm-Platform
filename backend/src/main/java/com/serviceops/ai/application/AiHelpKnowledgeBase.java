@@ -130,10 +130,10 @@ final class AiHelpKnowledgeBase {
     private static String roleGuide(String role) {
         return switch (role) {
             case "OWNER" -> "Phạm vi OWNER: theo dõi tổng quan, khách hàng, thiết bị, yêu cầu dịch vụ, phiếu công việc, điều phối, kho, kênh tiếp nhận, người dùng và audit.";
-            case "DISPATCHER" -> "Phạm vi DISPATCHER: tiếp nhận/đánh giá yêu cầu, tạo hoặc theo dõi phiếu công việc, phân công/xếp lịch kỹ thuật viên và theo dõi audit được phép.";
+            case "DISPATCHER" -> "Phạm vi DISPATCHER: theo dõi phiếu công việc đã được chuyển sang điều phối, phân công/xếp lịch kỹ thuật viên và theo dõi audit được phép.";
             case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, theo dõi phiếu công việc và xem kênh tiếp nhận ở chế độ chỉ đọc.";
             case "TECHNICIAN" -> "Phạm vi TECHNICIAN: phiếu được giao, lịch của tôi, cập nhật tiến độ/chẩn đoán/giải pháp và phụ tùng theo luồng công việc.";
-            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: quản lý kho phụ tùng và xem thông tin phiếu công việc cần thiết cho nghiệp vụ kho.";
+            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, tồn kho và vòng đời phụ tùng.";
             default -> "Chỉ hướng dẫn các chức năng ServiceOps mà tài khoản hiện tại được phép sử dụng.";
         };
     }
@@ -264,10 +264,10 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicServiceRequests() {
-        return new HelpTopic("Yêu cầu dịch vụ", "/service-requests", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE"),
+        return new HelpTopic("Yêu cầu dịch vụ", "/service-requests", List.of("OWNER", "CUSTOMER_SERVICE"),
                 List.of("yeu cau", "tiep nhan", "khach bao", "tao yeu cau", "service request", "ai goi y", "chuyen thanh phieu"),
                 "Dùng để ghi nhận sự cố khách báo trước khi đủ điều kiện chuyển thành phiếu công việc.",
-                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Đồng ý để lưu", "Khi đủ thông tin, bấm Tạo phiếu"));
+                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Đồng ý để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
     }
 
     private static HelpTopic topicCustomers() {
@@ -285,7 +285,7 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicWorkOrders() {
-        return new HelpTopic("Phiếu công việc", "/work-orders", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN", "WAREHOUSE_STAFF"),
+        return new HelpTopic("Phiếu công việc", "/work-orders", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN"),
                 List.of("phieu", "work order", "cong viec", "phan cong", "xep lich", "trang thai", "ky thuat", "wo-"),
                 "Phiếu công việc là nhiệm vụ thực tế để theo dõi điều phối, lịch hẹn, trạng thái xử lý và phụ tùng. Các thao tác hiển thị phụ thuộc vai trò hiện tại.",
                 List.of("Mở menu Phiếu công việc", "Tìm phiếu theo thông tin mà giao diện cho phép", "Mở chi tiết phiếu", "Thực hiện thao tác phù hợp với vai trò hiện tại", "Theo dõi lịch sử và kết quả xử lý"));
@@ -320,7 +320,7 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicChannelsManage() {
-        return new HelpTopic("Kênh tiếp nhận", "/service-channels", List.of("OWNER", "DISPATCHER"),
+        return new HelpTopic("Kênh tiếp nhận", "/service-channels", List.of("OWNER"),
                 List.of("kenh", "zalo", "website", "dien thoai", "channel", "nguon tiep nhan"),
                 "Dùng để chuẩn hóa nguồn tiếp nhận yêu cầu như điện thoại, website, Zalo hoặc nội bộ.",
                 List.of("Mở menu Kênh tiếp nhận", "Kiểm tra các kênh đang hoạt động", "Nếu giao diện cho phép, thêm hoặc chỉnh sửa kênh", "Ưu tiên tắt kênh không còn dùng thay vì xoá dữ liệu đã phát sinh"));
