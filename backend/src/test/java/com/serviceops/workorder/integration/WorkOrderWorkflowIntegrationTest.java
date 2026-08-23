@@ -142,6 +142,81 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
+    void customerServiceCanCancelActiveWorkOrderButCannotPerformOtherTransitions() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer customer = customerRepository.findAll().stream()
+                .filter(item -> owner.getTenantId().equals(item.getTenantId()))
+                .findFirst()
+                .orElseThrow();
+
+        String customerServiceToken = login("customer-service", "123456");
+        ResponseEntity<Map<String, Object>> created = postJsonMap(
+                "/api/v1/work-orders",
+                customerServiceToken,
+                Map.of(
+                        "customerId", customer.getId(),
+                        "summary", "Customer cancellation policy test",
+                        "description", "Customer Service may cancel but cannot manage the technical lifecycle",
+                        "priority", "NORMAL"
+                )
+        );
+
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(created.getBody()).isNotNull();
+
+        String workOrderId = String.valueOf(created.getBody().get("id"));
+        String workOrderCode = String.valueOf(created.getBody().get("code"));
+
+        ResponseEntity<Map<String, Object>> forbidden = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/transition",
+                customerServiceToken,
+                Map.of("targetStatus", "SCHEDULED")
+        );
+        assertThat(forbidden.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(forbidden.getBody()).isNotNull();
+        assertThat(forbidden.getBody().get("code")).isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
+        assertThat(workOrderRepository.findById(UUID.fromString(workOrderId)).orElseThrow().getStatus().name())
+                .isEqualTo("OPEN");
+
+        ResponseEntity<Map<String, Object>> missingReason = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/transition",
+                customerServiceToken,
+                Map.of("targetStatus", "CANCELLED")
+        );
+        assertThat(missingReason.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(missingReason.getBody()).isNotNull();
+        assertThat(missingReason.getBody().get("code")).isEqualTo("WORK_ORDER_CANCELLATION_REASON_REQUIRED");
+
+        ResponseEntity<Map<String, Object>> cancelled = assertTransition(
+                workOrderId,
+                customerServiceToken,
+                "CANCELLED",
+                Map.of("note", "Khách hàng thông báo thiết bị đã hoạt động bình thường và không còn nhu cầu dịch vụ")
+        );
+        assertThat(cancelled.getBody()).isNotNull();
+
+        ResponseEntity<Map<String, Object>> activeSearch = exchangeGetMap(
+                "/api/v1/work-orders?search=" + workOrderCode,
+                customerServiceToken
+        );
+        assertThat(activeSearch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(activeSearch.getBody()).isNotNull();
+        assertThat(mapList(activeSearch.getBody(), "content"))
+                .extracting(item -> item.get("id"))
+                .doesNotContain(workOrderId);
+
+        ResponseEntity<Map<String, Object>> historySearch = exchangeGetMap(
+                "/api/v1/work-orders/history?status=CANCELLED&search=" + workOrderCode,
+                customerServiceToken
+        );
+        assertThat(historySearch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(historySearch.getBody()).isNotNull();
+        assertThat(mapList(historySearch.getBody(), "content"))
+                .extracting(item -> item.get("id"))
+                .contains(workOrderId);
+    }
+
+    @Test
     void serviceRequestConversionMustPreserveCustomerAssetAndAllowOnlyOneConcurrentConversion() throws Exception {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 

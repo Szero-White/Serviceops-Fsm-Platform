@@ -50,6 +50,9 @@ public class WorkOrderService {
             WorkOrderStatus.WAITING_FOR_PARTS,
             WorkOrderStatus.COMPLETED
     );
+    private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CANCELLED
+    );
 
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
@@ -202,7 +205,7 @@ public class WorkOrderService {
     public WorkOrderResponse transition(UUID id, TransitionWorkOrder request) {
         WorkOrder workOrder = require(id);
         ensureTechnicianCanAccess(workOrder);
-        ensureTechnicianCanTransition(request.targetStatus());
+        ensureRoleCanTransition(request);
         WorkOrderStatus previous = workOrder.getStatus();
         if (request.targetStatus() == WorkOrderStatus.COMPLETED) {
             if (request.diagnosis() == null || request.diagnosis().isBlank() || request.resolution() == null || request.resolution().isBlank()) {
@@ -249,15 +252,32 @@ public class WorkOrderService {
         }
     }
 
-    private static void ensureTechnicianCanTransition(WorkOrderStatus targetStatus) {
-        if (!CurrentUser.hasRole("TECHNICIAN")) {
+    private static void ensureRoleCanTransition(TransitionWorkOrder request) {
+        WorkOrderStatus targetStatus = request.targetStatus();
+
+        if (CurrentUser.hasRole("TECHNICIAN")) {
+            if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện của công việc được phân công"
+                );
+            }
             return;
         }
-        if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
-            throw BusinessException.forbidden(
-                    "WORK_ORDER_TRANSITION_FORBIDDEN",
-                    "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện; nghiệm thu, đóng, mở lại hoặc hủy phiếu thuộc quyền điều phối"
-            );
+
+        if (CurrentUser.hasRole("CUSTOMER_SERVICE")) {
+            if (!CUSTOMER_SERVICE_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Chăm sóc khách hàng chỉ được hủy phiếu công việc"
+                );
+            }
+            if (blankToNull(request.note()) == null) {
+                throw BusinessException.badRequest(
+                        "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
+                        "Phải nhập lý do hủy phiếu công việc"
+                );
+            }
         }
     }
 

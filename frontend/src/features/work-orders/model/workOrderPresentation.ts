@@ -33,6 +33,8 @@ export const TRANSITION_LABELS: Partial<Record<WorkOrderStatus, string>> = {
 }
 
 const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {
+  OPEN: ['CANCELLED'],
+  SCHEDULED: ['CANCELLED'],
   ASSIGNED: ['ON_THE_WAY', 'CANCELLED'],
   ON_THE_WAY: ['IN_PROGRESS', 'CANCELLED'],
   IN_PROGRESS: ['WAITING_FOR_PARTS', 'COMPLETED', 'CANCELLED'],
@@ -43,15 +45,20 @@ const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {
   CANCELLED: ['REOPENED'],
 }
 
-const TECHNICIAN_ALLOWED_TRANSITIONS = new Set<WorkOrderStatus>([
-  'ON_THE_WAY',
-  'IN_PROGRESS',
-  'WAITING_FOR_PARTS',
-  'COMPLETED',
-])
+const ROLE_ALLOWED_TRANSITIONS: Partial<Record<UserRole, ReadonlySet<WorkOrderStatus>>> = {
+  TECHNICIAN: new Set([
+    'ON_THE_WAY',
+    'IN_PROGRESS',
+    'WAITING_FOR_PARTS',
+    'COMPLETED',
+  ]),
+  CUSTOMER_SERVICE: new Set(['CANCELLED']),
+}
 
 export function availableWorkOrderTransitions(status: WorkOrderStatus, role?: UserRole): WorkOrderStatus[] {
   const transitions = TRANSITIONS[status] ?? []
-  if (role !== 'TECHNICIAN') return transitions
-  return transitions.filter((target) => TECHNICIAN_ALLOWED_TRANSITIONS.has(target))
+  const allowedTransitions = role ? ROLE_ALLOWED_TRANSITIONS[role] : undefined
+  return allowedTransitions
+    ? transitions.filter((target) => allowedTransitions.has(target))
+    : transitions
 }

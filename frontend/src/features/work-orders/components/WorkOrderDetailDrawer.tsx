@@ -5,10 +5,11 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
-import { Button, Descriptions, Drawer, Empty, Popconfirm, Space, Tabs, Timeline, Typography, Upload } from 'antd'
+import { Button, Descriptions, Drawer, Empty, Input, Popconfirm, Space, Tabs, Timeline, Typography, Upload } from 'antd'
 import { AttachmentList } from '../../attachments/components/AttachmentList'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { AttachmentItem, WorkOrder, WorkOrderStatus } from '../../../types'
+import { useState } from 'react'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { TRANSITION_LABELS } from '../model/workOrderPresentation'
 import type { WorkOrderPermissions } from '../model/workOrderPermissions'
@@ -44,6 +45,7 @@ export function WorkOrderDetailDrawer({
   onUpload: (options: UploadRequestOption) => Promise<void>
   onAttachmentsChanged: () => void
 }) {
+  const [cancelReason, setCancelReason] = useState('')
   const canScheduleCurrent = permissions.canSchedule
     && workOrder
     && ['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'].includes(workOrder.status)
@@ -73,9 +75,29 @@ export function WorkOrderDetailDrawer({
                 <Popconfirm
                   key={target}
                   title="Huỷ phiếu công việc này?"
-                  okText="Huỷ"
+                  description={(
+                    <Space direction="vertical" size={8}>
+                      <Typography.Text type="secondary">Lý do hủy sẽ được lưu vào lịch sử phiếu.</Typography.Text>
+                      <Input.TextArea
+                        value={cancelReason}
+                        onChange={(event) => setCancelReason(event.target.value)}
+                        placeholder="Ví dụ: Khách hàng thông báo thiết bị đã hoạt động bình thường và không còn nhu cầu dịch vụ."
+                        autoSize={{ minRows: 3, maxRows: 5 }}
+                        maxLength={1000}
+                        showCount
+                      />
+                    </Space>
+                  )}
+                  okText="Xác nhận hủy"
                   cancelText="Giữ lại"
-                  onConfirm={() => onTransition(target, 'Huỷ từ giao diện vận hành')}
+                  okButtonProps={{ danger: true, disabled: !cancelReason.trim(), loading: transitionPending }}
+                  onConfirm={() => {
+                    const reason = cancelReason.trim()
+                    if (!reason) return
+                    onTransition(target, reason)
+                    setCancelReason('')
+                  }}
+                  onCancel={() => setCancelReason('')}
                 >
                   <Button danger>{TRANSITION_LABELS[target]}</Button>
                 </Popconfirm>

@@ -87,7 +87,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/{id}/transition")
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
     public WorkOrderResponse transition(@PathVariable UUID id, @Valid @RequestBody TransitionWorkOrder request) {
         return service.transition(id, request);
     }
