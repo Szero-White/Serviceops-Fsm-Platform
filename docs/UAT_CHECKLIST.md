@@ -9,8 +9,10 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | RBAC-01 | Technician mở trang khách hàng | Bị từ chối HTTP 403 |
 | RBAC-02 | Role truy cập trực tiếp URL không thuộc quyền trên frontend | Bị điều hướng về dashboard; API backend vẫn là lớp bảo vệ cuối |
 | RBAC-03 | Warehouse gọi trực tiếp API lịch sử phiếu | Bị từ chối HTTP 403 dù bỏ qua frontend |
-| RBAC-04 | Warehouse gọi attachment của Asset/Service Request | Bị từ chối HTTP 403; attachment Work Order vẫn theo quyền của phiếu |
-| RBAC-05 | Customer Service mở Kênh tiếp nhận | Xem được danh sách nhưng không thấy action thêm/sửa/xoá không thuộc quyền |
+| RBAC-04 | Warehouse gọi attachment của Asset/Service Request/Work Order | Bị từ chối HTTP 403; Warehouse chỉ sở hữu nghiệp vụ kho |
+| RBAC-05 | Customer Service mở Kênh tiếp nhận | Xem được danh sách nhưng không thấy action thêm/sửa/xoá; cấu hình kênh là OWNER-only |
+| RBAC-06 | Warehouse mở trực tiếp /work-orders hoặc gọi API Work Order/attachment | Frontend từ chối route; backend không cấp quyền Work Order cho Warehouse |
+| RBAC-07 | Dispatcher gọi API Service Request hoặc Service Channel write | Bị từ chối HTTP 403; Dispatcher chỉ điều phối Work Order đã được handoff |
 | DEMO-01 | Owner/Dispatcher mở Kỹ thuật viên ở public demo | Seeded technician hiển thị “Demo cố định” và nút sửa bị khóa; user tự tạo vẫn chỉnh được |
 | TENANT-01 | Truy cập ID không thuộc tenant | Không trả dữ liệu |
 | CUS-01 | Tạo khách hàng hợp lệ | Khách hàng xuất hiện trong danh sách |

@@ -1,22 +1,21 @@
 # Verification Results
 
-## Current merged baseline — Pull Request #6 (2026-08-21)
+## Current feature-branch checkpoint — `docs/final-portfolio-polish` (2026-08-23)
 
-The current `main` baseline includes Pull Request #6, merged as commit `a682754`, after all three GitHub checks passed.
+The feature branch is intentionally still uncommitted while the final ownership/test-safety cleanup is being validated. The previous merged `main` CI baseline remains historical evidence only; current branch behavior must be revalidated before merge.
 
-Current verification evidence:
+Current local-safe verification evidence before push:
 
-- Backend clean suite: **88 tests, 0 failures, 0 errors**; 16 Testcontainers integration tests are skipped only when local Docker is intentionally unavailable.
-- GitHub backend CI runs in a clean environment with Docker/Testcontainers available and passed before merge.
-- Frontend TypeScript/UI policy lint and production build: PASS.
-- Production-like Docker Compose topology **Nginx → Spring Boot → PostgreSQL**: build/start and readiness checks PASS in CI.
-- Frontend HTTP response and demo authentication through Nginx: PASS in CI.
-- Playwright discovery: **10 browser tests across 3 spec files**.
-- Playwright Chromium E2E executes against the production-like Nginx endpoint inside the `docker-build` CI job; that job passed before Pull Request #6 was merged.
-- Browser coverage includes all five demo-role route policies, Customer CRUD, custom Service Channel CRUD, Warehouse spare-part create/import, Service Request → Work Order conversion, Technician transition UI policy and backend rejection of unauthorized Technician management transitions.
-- User-facing Vietnamese text normalization and UTF-8/mojibake checks were completed as part of the Pull Request #6 stabilization work.
+- Backend suite: **99 tests, 0 failures, 0 errors, 22 skipped**. The skipped tests are Testcontainers integration suites because Docker is unavailable locally; they were not executed and are not counted as passes.
+- Frontend TypeScript/UI policy lint: PASS.
+- Frontend production build: PASS (**3250 modules transformed** in the latest local run).
+- `git diff --check`: PASS; Windows LF→CRLF messages are line-ending warnings, not diff errors.
+- Playwright suite: **11 browser tests across 3 spec files** on the current feature branch.
+- Mutating Playwright E2E is deliberately **not run against the developer `:3000` environment**. `playwright.config.ts` requires an explicit `E2E_BASE_URL` and refuses localhost/127.0.0.1 development ports 3000/5173.
+- GitHub Actions remains the clean-environment browser gate: it creates an isolated Docker Compose **Nginx → Spring Boot → PostgreSQL** stack and runs Playwright against `http://127.0.0.1:8088`.
+- Current feature-branch GitHub CI/Playwright result is **pending until this branch is committed and pushed**. Do not copy the previous PR's green CI result onto this branch.
 
-These results provide strong evidence for the supported portfolio workflow; they are **not** a claim that the application can never contain a bug. Any behavior-changing commit must be revalidated.
+These results are evidence for the current checkpoint, not a claim that the application can never contain a bug. Any behavior-changing commit must be revalidated.
 
 ## Release acceptance gate
 

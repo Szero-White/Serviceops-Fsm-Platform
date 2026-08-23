@@ -228,7 +228,7 @@ GitHub Actions runs three major verification gates:
 2. **Frontend** — TypeScript/UI-policy lint and production build.
 3. **Production-like runtime** — Docker Compose starts **Nginx → Spring Boot → PostgreSQL**, verifies readiness/frontend/demo login and runs Playwright Chromium against the Nginx-fronted application.
 
-The current Playwright suite contains **10 browser tests across 3 spec files** and covers:
+The current Playwright suite contains **11 browser tests across 3 spec files** and covers:
 
 - route-access policy for all five demo roles;
 - Customer CRUD;
@@ -242,8 +242,6 @@ See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the current verified baseline.
 
 ## Run locally
 
-The current local portfolio environment uses PostgreSQL password `123456` and demo-user password `Demo@2026`.
-
 ### Prerequisites
 
 - Java JDK 21
@@ -253,12 +251,28 @@ The current local portfolio environment uses PostgreSQL password `123456` and de
 
 Docker Desktop is optional for daily development when PostgreSQL already runs natively.
 
-### Start backend and frontend with one PowerShell command
+For a reproducible setup, follow [RUN_LOCAL.md](RUN_LOCAL.md). It uses repository-relative commands and the disposable local credentials documented in `.env.example`; production credentials must be supplied separately.
 
-If PostgreSQL is already running locally with database `serviceops`, user `postgres` and password `123456`:
+After PostgreSQL is ready, start the backend from the repository root:
 
 ```powershell
-Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\backend" -ArgumentList "/k",'set POSTGRES_HOST=localhost&& set POSTGRES_PORT=5432&& set POSTGRES_DB=serviceops&& set POSTGRES_USER=postgres&& set POSTGRES_PASSWORD=123456&& set DEMO_PASSWORD=Demo@2026&& mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'; Start-Process cmd.exe -WorkingDirectory "D:\Study\Java\ServiceOps FSM\frontend" -ArgumentList "/k","set VITE_DEMO_PASSWORD=Demo@2026&& npm run dev"
+cd backend
+$env:POSTGRES_HOST="localhost"
+$env:POSTGRES_PORT="5432"
+$env:POSTGRES_DB="serviceops"
+$env:POSTGRES_USER="serviceops"
+$env:POSTGRES_PASSWORD="serviceops"
+$env:DEMO_PASSWORD="Demo@2026"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+In a second terminal:
+
+```powershell
+cd frontend
+Copy-Item .env.example .env
+npm ci
+npm run dev
 ```
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:

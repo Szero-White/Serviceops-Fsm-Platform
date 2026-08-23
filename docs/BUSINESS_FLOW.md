@@ -61,11 +61,11 @@ Khi hai điều phối viên gửi request đồng thời, pessimistic lock trê
 
 ## 5. Quyền thao tác
 
-- OWNER: toàn bộ nghiệp vụ.
-- DISPATCHER: customer, asset, request, work order, lịch.
-- CUSTOMER_SERVICE: customer, asset, request.
-- TECHNICIAN: xem/cập nhật công việc được giao, upload và dùng phụ tùng.
-- WAREHOUSE_STAFF: phụ tùng và nhập kho.
+- OWNER: quản trị người dùng, cấu hình kênh tiếp nhận, giám sát toàn hệ thống và các thao tác quản lý/override được ủy quyền.
+- DISPATCHER: xem customer/asset để phục vụ điều phối; theo dõi work order, kỹ thuật viên, phân công, xếp lịch/reschedule và nghiệp vụ điều phối được phép. Không tiếp nhận Service Request và không tạo Work Order trực tiếp.
+- CUSTOMER_SERVICE: quản lý customer/asset, tiếp nhận/chỉnh sửa/hủy Service Request, chuyển Service Request sang điều phối và hủy Work Order đang hoạt động khi khách thay đổi nhu cầu theo policy.
+- TECHNICIAN: xem/cập nhật công việc được giao, upload minh chứng và ghi nhận phụ tùng sử dụng cho chính công việc được giao.
+- WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, tồn kho và vòng đời phụ tùng; không sở hữu luồng Work Order.
 
 
 ## Workspace theo vai trò
