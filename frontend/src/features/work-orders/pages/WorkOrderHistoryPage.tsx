@@ -79,7 +79,7 @@ export function WorkOrderHistoryPage() {
       <PageHeader
         eyebrow="Lưu trữ dịch vụ"
         title="Lịch sử phiếu công việc"
-        description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại tiến trình xử lý và tải hóa đơn khi cần đối soát."
+        description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại tiến trình xử lý và tải hóa đơn cho phiếu đã đóng khi cần đối soát."
         meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu lưu trữ`}</MetaBadge>}
       />
 
@@ -158,7 +158,9 @@ export function WorkOrderHistoryPage() {
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => setSelectedId(record.id)} />
-                <Button aria-label="Tải hóa đơn" type="text" icon={<DownloadOutlined />} onClick={() => exportInvoice(record)} />
+                {record.status === 'CLOSED' && (
+                  <Button aria-label="Tải hóa đơn" type="text" icon={<DownloadOutlined />} onClick={() => exportInvoice(record)} />
+                )}
                 {canDelete && (
                   <Popconfirm
                     title="Xóa phiếu khỏi lịch sử?"
@@ -191,7 +193,9 @@ export function WorkOrderHistoryPage() {
         loading={detailLoading}
         extra={detail ? (
           <Space>
-            <Button icon={<DownloadOutlined />} onClick={() => exportInvoice(detail)}>Xuất hóa đơn</Button>
+            {detail.status === 'CLOSED' && (
+              <Button icon={<DownloadOutlined />} onClick={() => exportInvoice(detail)}>Xuất hóa đơn</Button>
+            )}
             {canDelete && (
               <Popconfirm
                 title="Xóa phiếu khỏi lịch sử?"
