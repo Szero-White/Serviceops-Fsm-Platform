@@ -32,10 +32,10 @@ export const ROUTES: Record<string, string> = {
 
 export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
   owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/inventory', '/audit'],
-  dispatcher: ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
+  dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
   'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history'],
   technician: ['/', '/work-orders', '/my-schedule', '/work-order-history', '/inventory'],
-  warehouse: ['/', '/work-orders', '/inventory'],
+  warehouse: ['/', '/inventory'],
 }
 
 export function dashboardHeading(username: DemoUser) {
