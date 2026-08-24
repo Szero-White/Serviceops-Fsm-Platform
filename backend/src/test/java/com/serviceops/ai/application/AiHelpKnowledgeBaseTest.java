@@ -116,4 +116,110 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().route()).isEqualTo("/users");
     }
 
+    @Test
+    void technicianCanAskWhereConsumedPartsAppearInWorkOrderTimeline() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tiến trình xử lý có hiện phụ tùng đã dùng và số lượng không?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/work-orders");
+        assertThat(decision.topic().answer())
+                .contains("Tiến trình")
+                .contains("số lượng");
+    }
+
+    @Test
+    void warehouseMinimumStockThresholdQuestionMapsToInventoryAndExplainsAlertPolicy() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi chỉnh ngưỡng tồn tối thiểu ở đâu và khi nào có cảnh báo?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().answer())
+                .contains("Ngưỡng tồn tối thiểu")
+                .contains("OWNER/WAREHOUSE_STAFF")
+                .contains("tồn thấp");
+    }
+
+    @Test
+    void warehouseStocktakeQuestionMapsToStocktakeRoute() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi kiểm kê tồn thực tế và điều chỉnh chênh lệch ở đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory-stocktake");
+        assertThat(decision.topic().answer()).contains("ADJUSTMENT");
+    }
+
+    @Test
+    void warehouseStocktakeNotificationQuestionExplainsCurrentRoutingWithoutInventingTechnicianImpact() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory-stocktake");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Kiểm kê lệch tồn thì ai nhận thông báo, kỹ thuật viên có nhận không?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory-stocktake");
+        assertThat(decision.topic().answer())
+                .contains("OWNER")
+                .contains("Warehouse")
+                .contains("TECHNICIAN")
+                .contains("part-request/reservation");
+    }
+
+    @Test
+    void warehouseMovementQuestionMapsToMovementLedger() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Làm sao xem lịch sử biến động kho và ai đã làm giao dịch?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
+        assertThat(decision.topic().answer()).contains("tồn sau");
+    }
+
+    @Test
+    void warehouseReturnQuestionMapsToMovementRoute() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory-movements");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Kỹ thuật viên không dùng hết phụ tùng, tôi hoàn trả lại theo Work Order như thế nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
+        assertThat(decision.topic().answer()).contains("RETURN");
+    }
+
+    @Test
+    void warehouseOperationalDashboardQuestionIsBlocked() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi mở dashboard vận hành ở đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.topic().route()).isEqualTo("/inventory");
+    }
+
 }

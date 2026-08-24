@@ -67,6 +67,10 @@ final class AiHelpKnowledgeBase {
         String normalizedQuestion = normalize(question);
         String currentPath = context.currentPath();
 
+        if (isFormFeedbackRequest(normalizedQuestion) && topicFormFeedback().allowedRoles().contains(context.role())) {
+            return topicFormFeedback();
+        }
+
         HelpTopic topic = TOPICS.stream()
                 .filter(item -> item.allowedRoles().contains(context.role()))
                 .max((left, right) -> Integer.compare(
@@ -118,7 +122,7 @@ final class AiHelpKnowledgeBase {
 
     private static String roleLabel(String role) {
         return switch (role) {
-            case "OWNER" -> "Chủ doanh nghiệp";
+            case "OWNER" -> "Quản trị hệ thống";
             case "DISPATCHER" -> "Điều phối viên";
             case "CUSTOMER_SERVICE" -> "Chăm sóc khách hàng";
             case "TECHNICIAN" -> "Kỹ thuật viên";
@@ -129,11 +133,11 @@ final class AiHelpKnowledgeBase {
 
     private static String roleGuide(String role) {
         return switch (role) {
-            case "OWNER" -> "Phạm vi OWNER: theo dõi tổng quan, khách hàng, thiết bị, yêu cầu dịch vụ, phiếu công việc, điều phối, kho, kênh tiếp nhận, người dùng và audit.";
+            case "OWNER" -> "Phạm vi OWNER: quản trị hệ thống và giám sát toàn cục; với Work Order có quyền quản trị ghi nhận Khách xác nhận, Đóng phiếu, Mở lại khi cần và Hủy phiếu theo state machine.";
             case "DISPATCHER" -> "Phạm vi DISPATCHER: theo dõi phiếu công việc đã được chuyển sang điều phối, phân công/xếp lịch kỹ thuật viên và theo dõi audit được phép.";
-            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, theo dõi phiếu công việc và xem kênh tiếp nhận ở chế độ chỉ đọc.";
-            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: phiếu được giao, lịch của tôi, cập nhật tiến độ/chẩn đoán/giải pháp và phụ tùng theo luồng công việc.";
-            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, tồn kho và vòng đời phụ tùng.";
+            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ và tiếp nhận phản hồi sau dịch vụ; có thể mở lại hoặc hủy Work Order khi khách thay đổi nhu cầu, nhưng không ghi nhận Khách xác nhận/Đóng phiếu.";
+            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: phiếu được giao, lịch của tôi, tiến độ/chẩn đoán/giải pháp, phụ tùng; sau khi hoàn thành có thể ghi nhận Khách xác nhận và Đóng phiếu cho chính job được giao, hoặc Mở lại trước khi đóng nếu khách báo lỗi vẫn còn.";
+            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, kiểm kê/điều chỉnh tồn, hoàn trả phụ tùng theo Work Order và tra cứu lịch sử biến động kho.";
             default -> "Chỉ hướng dẫn các chức năng ServiceOps mà tài khoản hiện tại được phép sử dụng.";
         };
     }
@@ -147,6 +151,20 @@ final class AiHelpKnowledgeBase {
             case "WAREHOUSE_STAFF" -> topicInventory();
             default -> topicDashboard();
         };
+    }
+
+    private static boolean isFormFeedbackRequest(String normalizedQuestion) {
+        return containsAny(
+                normalizedQuestion,
+                "bam dong y khong duoc",
+                "bam hoan thanh khong duoc",
+                "bam luu khong duoc",
+                "nut khong chay",
+                "khong co phan hoi",
+                "truong bat buoc",
+                "validation",
+                "form loi"
+        );
     }
 
     private static boolean isSensitiveSecurityRequest(String normalizedQuestion) {
@@ -253,11 +271,12 @@ final class AiHelpKnowledgeBase {
     private static final List<HelpTopic> TOPICS = List.of(
             topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicWorkOrders(),
             topicTechnicianWork(), topicMySchedule(), topicTechnicians(), topicInventory(),
-            topicChannelsManage(), topicChannelsReadOnly(), topicUsers(), topicAudit()
+            topicInventoryStocktake(), topicInventoryMovements(), topicInventoryReturns(),
+            topicChannelsManage(), topicChannelsReadOnly(), topicUsers(), topicAudit(), topicFormFeedback(), topicNotifications()
     );
 
     private static HelpTopic topicDashboard() {
-        return new HelpTopic("Tổng quan", "/", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN", "WAREHOUSE_STAFF"),
+        return new HelpTopic("Tổng quan", "/", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN"),
                 List.of("tong quan", "dashboard", "bao cao", "hom nay", "can xem gi", "bat dau", "moi vao lam"),
                 "Trang tổng quan giúp người dùng bắt đầu công việc và xem các chỉ số/tình trạng được giao diện hiện tại cung cấp. Trợ lý không tự đọc dữ liệu runtime trong database.",
                 List.of("Mở menu Tổng quan", "Xem các thẻ/chỉ số và danh sách đang hiển thị", "Xác định việc cần xử lý theo vai trò", "Đi tới trang nghiệp vụ liên quan để thao tác"));
@@ -267,7 +286,7 @@ final class AiHelpKnowledgeBase {
         return new HelpTopic("Yêu cầu dịch vụ", "/service-requests", List.of("OWNER", "CUSTOMER_SERVICE"),
                 List.of("yeu cau", "tiep nhan", "khach bao", "tao yeu cau", "service request", "ai goi y", "chuyen thanh phieu"),
                 "Dùng để ghi nhận sự cố khách báo trước khi đủ điều kiện chuyển thành phiếu công việc.",
-                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Đồng ý để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
+                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Tiếp nhận yêu cầu để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
     }
 
     private static HelpTopic topicCustomers() {
@@ -286,16 +305,16 @@ final class AiHelpKnowledgeBase {
 
     private static HelpTopic topicWorkOrders() {
         return new HelpTopic("Phiếu công việc", "/work-orders", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN"),
-                List.of("phieu", "work order", "cong viec", "phan cong", "xep lich", "trang thai", "ky thuat", "wo-"),
-                "Phiếu công việc là nhiệm vụ thực tế để theo dõi điều phối, lịch hẹn, trạng thái xử lý và phụ tùng. Các thao tác hiển thị phụ thuộc vai trò hiện tại.",
-                List.of("Mở menu Phiếu công việc", "Tìm phiếu theo thông tin mà giao diện cho phép", "Mở chi tiết phiếu", "Thực hiện thao tác phù hợp với vai trò hiện tại", "Theo dõi lịch sử và kết quả xử lý"));
+                List.of("phieu", "work order", "cong viec", "phan cong", "xep lich", "trang thai", "ky thuat", "tien trinh", "phu tung da dung", "wo-"),
+                "Phiếu công việc là nhiệm vụ thực tế để theo dõi điều phối, lịch hẹn, trạng thái xử lý và phụ tùng. Tab Tiến trình ghép lịch sử trạng thái với các giao dịch CONSUME/RETURN của chính Work Order, nên có thể xem kỹ thuật viên đã dùng phụ tùng gì, số lượng bao nhiêu, ai thao tác và lúc nào mà không phải chờ đến hóa đơn. Các thao tác hiển thị phụ thuộc vai trò hiện tại.",
+                List.of("Mở menu Phiếu công việc", "Tìm phiếu theo thông tin mà giao diện cho phép", "Mở chi tiết phiếu", "Mở tab Tiến trình để xem trạng thái và phụ tùng đã dùng/hoàn trả theo thời gian", "Thực hiện thao tác phù hợp với vai trò hiện tại", "Đối chiếu kết quả xử lý trước khi đóng phiếu"));
     }
 
     private static HelpTopic topicTechnicianWork() {
         return new HelpTopic("Công việc kỹ thuật viên", "/work-orders", List.of("TECHNICIAN", "OWNER", "DISPATCHER"),
-                List.of("toi la ky thuat", "viec duoc giao", "cap nhat trang thai", "chan doan", "giai phap", "viec cua toi"),
-                "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý.",
-                List.of("Mở menu Phiếu công việc", "Tìm phiếu được giao cho bạn", "Mở chi tiết phiếu", "Cập nhật trạng thái theo tiến độ thực tế", "Ghi chẩn đoán, giải pháp và phụ tùng đã dùng", "Đính kèm ảnh/PDF minh chứng nếu có"));
+                List.of("toi la ky thuat", "viec duoc giao", "cap nhat trang thai", "chan doan", "giai phap", "viec cua toi", "dung phu tung", "phu tung da dung", "tien trinh xu ly"),
+                "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý. Phụ tùng chỉ được ghi nhận khi phiếu đang ở ASSIGNED, ON_THE_WAY, IN_PROGRESS, WAITING_FOR_PARTS hoặc REOPENED; sau COMPLETED/CUSTOMER_ACCEPTED không được phát sinh CONSUME mới. Sau khi bấm Dùng phụ tùng, giao dịch được lưu ở sổ biến động kho và đồng thời xuất hiện trong tab Tiến trình của Work Order với tên/SKU, số lượng, người thao tác, thời gian và ghi chú; RETURN của kho cũng xuất hiện trong cùng timeline. Khi hoàn thành, Chẩn đoán / nguyên nhân và Giải pháp đã thực hiện là bắt buộc. Sau COMPLETED, kỹ thuật viên được giao hoặc Owner mở chi tiết phiếu và bấm Khách xác nhận khi khách đồng ý; trạng thái sau đó cho phép Đóng phiếu. Nếu khách báo lỗi lại trước khi đóng, dùng Mở lại xử lý. CLOSED/CANCELLED là trạng thái kết thúc và sự cố phát sinh sau CLOSED phải đi qua yêu cầu/phiếu mới.",
+                List.of("Mở menu Phiếu công việc", "Tìm phiếu được giao cho bạn", "Mở chi tiết phiếu", "Cập nhật trạng thái theo tiến độ thực tế", "Khi dùng phụ tùng, mở tab Tiến trình để kiểm tra tên/SKU, số lượng và thời điểm đã ghi nhận", "Khi bấm Hoàn thành, nhập đủ Chẩn đoán / nguyên nhân và Giải pháp đã thực hiện", "Sau khi khách đồng ý, bấm Khách xác nhận cạnh Tải ảnh / PDF", "Bấm Đóng phiếu để chuyển sang Lịch sử phiếu", "Nếu khách báo lỗi trước khi đóng, dùng Mở lại xử lý", "Đính kèm ảnh/PDF minh chứng nếu có"));
     }
 
     private static HelpTopic topicMySchedule() {
@@ -314,9 +333,30 @@ final class AiHelpKnowledgeBase {
 
     private static HelpTopic topicInventory() {
         return new HelpTopic("Kho phụ tùng", "/inventory", List.of("OWNER", "WAREHOUSE_STAFF", "TECHNICIAN"),
-                List.of("kho", "phu tung", "ton kho", "nhap kho", "het ton", "inventory", "sku"),
-                "Dùng để quản lý phụ tùng, theo dõi tồn và ghi nhận phụ tùng dùng cho phiếu theo quyền của vai trò.",
-                List.of("Mở menu Kho phụ tùng", "Tìm hoặc kiểm tra phụ tùng cần xử lý", "Nhân viên có quyền kho thực hiện nhập/cập nhật", "Kỹ thuật viên ghi nhận phụ tùng theo luồng phiếu được phép", "Theo dõi tồn sau giao dịch trên giao diện"));
+                List.of("kho", "phu tung", "ton kho", "nhap kho", "het ton", "inventory", "sku", "muc dat hang", "nguong ton toi thieu", "reorder level"),
+                "Dùng để xem danh mục phụ tùng và tồn hiện tại. Ngưỡng tồn tối thiểu là mốc cảnh báo tồn thấp, không phải số lượng đặt mua. OWNER/WAREHOUSE_STAFF có thể chỉnh ngưỡng tại Kho phụ tùng; nếu ngưỡng mới làm tồn hiện tại chuyển sang trạng thái tồn thấp, hệ thống phát cảnh báo sau commit cho các Owner/Warehouse liên quan. TECHNICIAN chỉ dùng phần được phép trong luồng công việc.",
+                List.of("Mở menu Kho phụ tùng", "Tìm phụ tùng theo SKU hoặc tên", "Kiểm tra tồn hiện tại và ngưỡng tồn tối thiểu", "OWNER/WAREHOUSE_STAFF dùng Sửa ngưỡng khi cần thay đổi mốc cảnh báo", "Nếu tồn chạm hoặc thấp hơn ngưỡng, kiểm tra cảnh báo tồn thấp", "Dùng Kiểm kê tồn kho hoặc Lịch sử biến động khi cần đối soát"));
+    }
+
+    private static HelpTopic topicInventoryStocktake() {
+        return new HelpTopic("Kiểm kê tồn kho", "/inventory-stocktake", List.of("OWNER", "WAREHOUSE_STAFF"),
+                List.of("kiem ke", "stocktake", "doi soat ton", "chenh lech ton", "ton thuc te", "dieu chinh ton", "adjustment", "thong bao kiem ke", "ai nhan thong bao"),
+                "Dùng để đối chiếu số lượng hệ thống với số đếm thực tế. Chênh lệch được ghi thành ADJUSTMENT_IN hoặc ADJUSTMENT_OUT kèm lý do và audit trail. Sau khi giao dịch commit, OWNER được thông báo về chênh lệch; nếu tồn sau kiểm kê chạm hoặc thấp hơn ngưỡng tồn tối thiểu thì Warehouse nhận cảnh báo tồn thấp. TECHNICIAN không nhận broadcast kiểm kê vì hệ thống hiện chưa có part-request/reservation để xác định Work Order nào thực sự bị thiếu vật tư.",
+                List.of("Mở menu Kiểm kê tồn kho", "Tìm SKU cần kiểm kê", "Bấm Kiểm kê", "Nhập số lượng thực tế và lý do", "Xác nhận điều chỉnh", "OWNER nhận thông báo nếu có chênh lệch", "Nếu tồn thấp, Warehouse nhận cảnh báo", "Mở Lịch sử biến động để kiểm tra giao dịch điều chỉnh và tồn sau"));
+    }
+
+    private static HelpTopic topicInventoryMovements() {
+        return new HelpTopic("Lịch sử biến động kho", "/inventory-movements", List.of("OWNER", "WAREHOUSE_STAFF"),
+                List.of("lich su bien dong kho", "lich su bien dong", "bien dong kho", "giao dich kho", "inventory movement", "inventory transaction", "ledger", "receive", "consume", "adjustment"),
+                "Dùng để truy vết các thay đổi tồn kho như nhập kho, sử dụng cho Work Order, hoàn trả và điều chỉnh kiểm kê; hiển thị actor, thời gian, số lượng, tồn sau và mã Work Order khi có.",
+                List.of("Mở menu Lịch sử biến động", "Tìm theo SKU, tên, mã WO, người thực hiện hoặc ghi chú", "Lọc theo loại giao dịch hoặc khoảng ngày", "Đối chiếu số lượng biến động và tồn sau", "Nếu một giao dịch CONSUME còn số lượng chưa dùng, Warehouse/Owner có thể mở thao tác Hoàn trả"));
+    }
+
+    private static HelpTopic topicInventoryReturns() {
+        return new HelpTopic("Hoàn trả phụ tùng theo Work Order", "/inventory-movements", List.of("OWNER", "WAREHOUSE_STAFF"),
+                List.of("hoan tra", "tra lai phu tung", "return part", "part return", "phu tung chua dung", "khong dung het"),
+                "Dùng để xác nhận phụ tùng đã ghi nhận CONSUME cho Work Order nhưng thực tế chưa sử dụng hết được trả lại kho. Tổng RETURN không được vượt lượng net consumed còn lại và không nhận return mới khi Work Order đã CLOSED/CANCELLED.",
+                List.of("Mở menu Lịch sử biến động", "Tìm giao dịch CONSUME của Work Order và phụ tùng cần trả", "Bấm Hoàn trả", "Kiểm tra số lượng tối đa có thể hoàn", "Nhập số lượng và lý do", "Xác nhận; tồn kho tăng và ledger ghi RETURN", "Đối chiếu lại tồn và số lượng còn có thể hoàn"));
     }
 
     private static HelpTopic topicChannelsManage() {
@@ -350,6 +390,20 @@ final class AiHelpKnowledgeBase {
                 List.of("nhat ky", "audit", "ai da sua", "ai sua", "lich su thay doi", "truy vet"),
                 "Dùng để truy vết hoạt động hệ thống trong phạm vi vai trò được phép xem.",
                 List.of("Mở menu Nhật ký hệ thống", "Lọc theo thời gian, người thao tác hoặc đối tượng", "Mở bản ghi liên quan", "Đối chiếu khi cần rà soát thay đổi bất thường"));
+    }
+
+    private static HelpTopic topicFormFeedback() {
+        return new HelpTopic("Phản hồi biểu mẫu", "/", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN", "WAREHOUSE_STAFF"),
+                List.of("bam dong y khong duoc", "bam hoan thanh khong duoc", "bam luu khong duoc", "nut khong chay", "khong co phan hoi", "thieu thong tin", "truong bat buoc", "validation", "form loi"),
+                "Nếu bấm Lưu/Hoàn thành mà dữ liệu bắt buộc còn thiếu, ServiceOps không gửi request: trường lỗi được đánh dấu, trang cuộn tới lỗi đầu tiên và hiện cảnh báo ngắn để người dùng biết cần bổ sung gì. Nếu request đã gửi nhưng API hoặc dữ liệu phụ trợ lỗi, giao diện hiển thị thông báo lỗi và nút Thử lại ở các màn hình tải dữ liệu chính.",
+                List.of("Đọc cảnh báo vừa hiện", "Tìm trường có dấu bắt buộc hoặc viền lỗi", "Bổ sung dữ liệu theo thông báo", "Bấm lại nút hành động có tên cụ thể như Hoàn thành công việc hoặc Lưu thay đổi", "Nếu là lỗi tải dữ liệu, bấm Thử lại hoặc kiểm tra backend"));
+    }
+
+    private static HelpTopic topicNotifications() {
+        return new HelpTopic("Thông báo", "/", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN", "WAREHOUSE_STAFF"),
+                List.of("thong bao", "notification", "chua doc", "da doc", "danh dau chua doc", "mark unread", "mark as unread", "bam nham da doc"),
+                "Mở biểu tượng chuông ở góc phải để xem các việc đáng chú ý. Mỗi thông báo phải trả lời được hai câu: chuyện gì vừa xảy ra hoặc cần làm gì, và người nhận nên làm gì tiếp theo. Mã nghiệp vụ như WO/SKU được giữ để tra cứu; enum nội bộ, chuỗi test hoặc mô tả kỹ thuật khó hiểu không được dùng làm nội dung chính. Các thông báo cũ dạng kỹ thuật được giao diện chuyển sang cách đọc thân thiện khi hiển thị. Nếu lỡ đánh dấu một thông báo là đã đọc, bấm biểu tượng ở bên phải thông báo và chọn Đánh dấu chưa đọc để đánh dấu lại chưa đọc. Trạng thái và số thông báo chưa đọc sẽ được cập nhật lại.",
+                List.of("Đọc tiêu đề để biết việc cần chú ý", "Đọc dòng mô tả để biết bước tiếp theo", "Bấm một thông báo chưa đọc để đánh dấu đã đọc", "Nếu lỡ đánh dấu đã đọc, bấm nút ngoài cùng bên phải để chuyển lại Chưa đọc", "Dùng mã WO/SKU trong thông báo để tìm đúng phiếu hoặc phụ tùng khi cần"));
     }
 
     record UserGuideContext(String role, String roleLabel, String currentPath) {

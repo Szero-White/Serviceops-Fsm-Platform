@@ -26,6 +26,7 @@ const roleSuggestions: Record<string, string[]> = {
   ],
   CUSTOMER_SERVICE: [
     'Tôi mới làm CSKH, nên bắt đầu tiếp nhận yêu cầu như thế nào?',
+    'Khi kỹ thuật viên hoàn thành thì tôi xác nhận với khách và đóng phiếu thế nào?',
     'Khi nào nên tạo khách hàng và thiết bị trước?',
     'AI tiếp nhận trong form dùng ra sao?',
   ],
@@ -36,9 +37,12 @@ const roleSuggestions: Record<string, string[]> = {
     'Tôi ghi phụ tùng đã dùng ở đâu?',
   ],
   WAREHOUSE_STAFF: [
-    'Tôi mới làm kho, quy trình theo dõi và nhập phụ tùng như thế nào?',
-    'Làm sao biết phụ tùng sắp hết tồn?',
-    'Khi kỹ thuật viên dùng phụ tùng thì theo dõi ở đâu?',
+    'Tôi mới làm kho, nên bắt đầu từ đâu?',
+    'Tôi kiểm kê tồn thực tế và xử lý chênh lệch như thế nào?',
+    'Tôi chỉnh ngưỡng tồn tối thiểu ở đâu và khi nào có cảnh báo?',
+    'Kiểm kê bị lệch tồn thì ai sẽ nhận thông báo?',
+    'Tôi xem lịch sử nhập, sử dụng, hoàn trả và điều chỉnh kho ở đâu?',
+    'Kỹ thuật viên không dùng hết phụ tùng thì tôi hoàn trả theo Work Order như thế nào?',
   ],
 }
 
@@ -51,10 +55,10 @@ export function AiHelpAssistant() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const suggestions = useMemo(
-    () => roleSuggestions[user?.role ?? ''] ?? ['Tôi nên bắt đầu sử dụng hệ thống từ đâu?'],
-    [user?.role],
-  )
+  const suggestions = useMemo(() => {
+    const roleItems = roleSuggestions[user?.role ?? ''] ?? ['Tôi nên bắt đầu sử dụng hệ thống từ đâu?']
+    return [...roleItems, 'Tôi bấm Lưu/Hoàn thành nhưng hệ thống chưa thực hiện, cần kiểm tra gì?', 'Tôi lỡ đánh dấu thông báo đã đọc, làm sao chuyển lại chưa đọc?']
+  }, [user?.role])
 
   const help = useMutation({
     mutationFn: aiApi.help,
