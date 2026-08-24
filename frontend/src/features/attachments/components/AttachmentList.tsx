@@ -137,7 +137,10 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       closeRename()
       onChanged?.()
     } catch (error) {
-      if (isFormValidationError(error)) return
+      if (isFormValidationError(error)) {
+        message.warning('Vui lòng nhập tên tệp trước khi lưu')
+        return
+      }
       message.error(apiErrorMessage(error))
     } finally {
       setRenaming(false)
@@ -274,7 +277,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
         cancelText="Huỷ"
         destroyOnHidden
       >
-        <Form form={renameForm} layout="vertical" requiredMark={false}>
+        <Form form={renameForm} layout="vertical" requiredMark>
           <Form.Item
             label="Tên file hiển thị"
             name="originalFilename"

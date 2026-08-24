@@ -14,6 +14,7 @@ import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const roleLabels: Record<UserRole, string> = {
   OWNER: 'Chủ sở hữu',
   DISPATCHER: 'Điều phối',
@@ -53,6 +54,7 @@ export function UsersPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<UserAccount>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const selectedRole = Form.useWatch('role', form)
   const { user: currentUser } = useAuth()
   const { message } = App.useApp()
@@ -261,11 +263,12 @@ export function UsersPage() {
         open={open}
         onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
+        okText={editing ? 'Lưu thay đổi' : 'Tạo người dùng'}
         confirmLoading={save.isPending}
         width={760}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Họ tên" name="displayName" rules={[{ required: true, message: 'Nhập họ tên người dùng' }]}>
               <Input

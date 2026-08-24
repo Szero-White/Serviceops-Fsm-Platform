@@ -119,7 +119,7 @@ export function DashboardPage() {
             <Col xs={24} sm={12} xl={6}><MetricCard label="Yêu cầu đang mở" value={data.openServiceRequests} helper="Cần tiếp nhận và xử lý" icon={<CustomerServiceOutlined />} tone="primary" /></Col>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders + data.onTheWayWorkOrders + data.reopenedWorkOrders} helper={`${data.scheduledWorkOrders + data.assignedWorkOrders} phiếu chờ / đã phân công`} icon={<ToolOutlined />} tone="primary" /></Col>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="warning" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm mức đặt hàng" icon={<AlertOutlined />} tone="danger" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm ngưỡng tồn tối thiểu" icon={<AlertOutlined />} tone="danger" /></Col>
           </>
         )}
       </Row>

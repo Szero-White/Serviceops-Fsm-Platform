@@ -21,7 +21,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { username: 'dispatcher', role: 'Dispatcher', description: 'Điều phối phiếu công việc và lịch kỹ thuật', icon: <TeamOutlined /> },
   { username: 'customer-service', role: 'Customer Service', description: 'Khách hàng và yêu cầu dịch vụ', icon: <CustomerServiceOutlined /> },
   { username: 'technician', role: 'Technician', description: 'Thực hiện công việc hiện trường', icon: <ToolOutlined /> },
-  { username: 'warehouse', role: 'Warehouse', description: 'Phụ tùng và giao dịch kho', icon: <UserOutlined /> },
+  { username: 'warehouse', role: 'Warehouse', description: 'Tồn kho, kiểm kê và truy vết biến động', icon: <UserOutlined /> },
 ]
 
 export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD?.trim() ?? ''

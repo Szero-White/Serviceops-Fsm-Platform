@@ -3,6 +3,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import type { FormInstance } from 'antd'
 import type { Technician } from '../../../types'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const { RangePicker } = DatePicker
 
 export type ScheduleAppointmentValues = {
@@ -29,6 +30,7 @@ export function ScheduleAppointmentModal({
   onClose: () => void
   onSubmit: (values: ScheduleAppointmentValues) => void
 }) {
+  const handleFormValidationFailed = useFormValidationFeedback()
   return (
     <Modal
       title={workOrderCode ? `Xếp lịch ${workOrderCode}` : 'Xếp lịch công việc'}
@@ -45,7 +47,7 @@ export function ScheduleAppointmentModal({
           {workOrderSummary}
         </Typography.Paragraph>
       ) : null}
-      <Form form={form} layout="vertical" onFinish={onSubmit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={onSubmit} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
         <Form.Item label="Kỹ thuật viên" name="technicianId" rules={[{ required: true, message: 'Chọn kỹ thuật viên' }]}>
           <Select
             showSearch

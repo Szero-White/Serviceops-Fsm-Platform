@@ -11,6 +11,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { DispatchQueueItem, ScheduleAppointment, Technician } from '../../../types'
@@ -171,7 +172,23 @@ export function ScheduleBoardPage() {
         </div>
       </div>
 
-      {loading ? (
+      {boardQuery.isError ? (
+        <QueryErrorAlert
+          title="Chưa tải được lịch điều phối"
+          error={boardQuery.error}
+          onRetry={() => boardQuery.refetch()}
+        />
+      ) : null}
+
+      {techniciansQuery.isError ? (
+        <QueryErrorAlert
+          title="Chưa tải được danh sách kỹ thuật viên"
+          error={techniciansQuery.error}
+          onRetry={() => techniciansQuery.refetch()}
+        />
+      ) : null}
+
+      {boardQuery.isError || techniciansQuery.isError ? null : loading ? (
         <div className="schedule-board-loading"><Spin size="large" /></div>
       ) : (
         <div className="schedule-board-layout">

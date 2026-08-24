@@ -14,6 +14,7 @@ import { EMPTY_VALUE } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
 import { techniciansApi } from '../api'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 type TechnicianProfileValues = {
   phone?: string
   skills?: string
@@ -24,6 +25,7 @@ export function TechniciansPage() {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Technician>()
   const [form] = Form.useForm<TechnicianProfileValues>()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const navigate = useNavigate()
   const { user } = useAuth()
   const { message } = App.useApp()
@@ -191,6 +193,7 @@ export function TechniciansPage() {
           form.resetFields()
         }}
         onOk={() => form.submit()}
+        okText="Lưu thay đổi"
         confirmLoading={updateProfile.isPending}
         width={620}
         destroyOnHidden
@@ -203,7 +206,9 @@ export function TechniciansPage() {
           form={form}
           layout="vertical"
           onFinish={(values) => updateProfile.mutate(values)}
-          requiredMark={false}
+          onFinishFailed={handleFormValidationFailed}
+          scrollToFirstError
+          requiredMark
         >
           <Form.Item label="Điện thoại" name="phone">
             <Input placeholder="0909123456" />

@@ -27,15 +27,17 @@ export const ROUTES: Record<string, string> = {
   '/work-order-history': 'Lịch sử phiếu công việc',
   '/technicians': 'Đội ngũ kỹ thuật',
   '/inventory': 'Kho phụ tùng',
+  '/inventory-stocktake': 'Kiểm kê tồn kho',
+  '/inventory-movements': 'Lịch sử biến động kho',
   '/audit': 'Nhật ký hệ thống',
 }
 
 export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
-  owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/inventory', '/audit'],
+  owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/inventory', '/inventory-stocktake', '/inventory-movements', '/audit'],
   dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
   'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history'],
   technician: ['/', '/work-orders', '/my-schedule', '/work-order-history', '/inventory'],
-  warehouse: ['/inventory'],
+  warehouse: ['/inventory', '/inventory-stocktake', '/inventory-movements'],
 }
 
 export function dashboardHeading(username: DemoUser) {

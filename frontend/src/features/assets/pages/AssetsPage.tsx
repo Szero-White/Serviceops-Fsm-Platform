@@ -18,6 +18,7 @@ import { formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
   { value: 'IN_SERVICE', label: 'Đang sửa chữa' },
@@ -37,6 +38,7 @@ export function AssetsPage() {
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<AssetImportResult>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const assetsQuery = useQuery({
@@ -55,7 +57,8 @@ export function AssetsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
+  const customersQuery = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
+  const customers = customersQuery.data
 
   const refreshRelatedViews = () => {
     queryClient.invalidateQueries({ queryKey: ['assets'] })
@@ -295,8 +298,15 @@ export function AssetsPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật thiết bị' : 'Thêm thiết bị'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={720} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật thiết bị' : 'Thêm thiết bị'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm thiết bị'} width={720} destroyOnHidden>
+        {customersQuery.isError ? (
+          <QueryErrorAlert
+            title="Chưa tải được danh sách khách hàng"
+            error={customersQuery.error}
+            onRetry={() => customersQuery.refetch()}
+          />
+        ) : null}
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
             <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />
           </Form.Item>
