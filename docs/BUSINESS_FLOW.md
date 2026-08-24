@@ -102,6 +102,7 @@ Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn 
 - Service Request và Work Order nghiệp vụ ưu tiên state (`CANCELLED`) thay cho hard delete khi đã có lịch sử vận hành.
 - Work Order `CLOSED`/`CANCELLED` chỉ Owner được ẩn khỏi lịch sử tra cứu; audit vẫn được giữ.
 - Asset/Service Request chưa có operational reference vẫn không được hard-delete nếu còn attachment; phải xử lý attachment trước để tránh orphan metadata/file.
+- Customer `active=false` vẫn giữ trong danh mục và toàn bộ lịch sử cũ, nhưng không được dùng để tạo Service Request hoặc đăng ký Asset mới. Backend áp cùng invariant để API trực tiếp không thể bypass UI. Record đã tồn tại vẫn được phép hoàn thiện/chỉnh sửa với chính khách hàng cũ để không phá hồ sơ đang xử lý.
 - Technician có assignment operational không được deactivate.
 
 ## 7. Workspace theo vai trò

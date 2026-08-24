@@ -2,7 +2,7 @@ import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcel
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
@@ -57,8 +57,24 @@ export function AssetsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const customersQuery = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
+  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true), enabled: canManage })
   const customers = customersQuery.data
+  const customerOptions = useMemo(() => {
+    const options = (customers?.content ?? []).map((customer) => ({
+      value: customer.id,
+      label: `${customer.code} · ${customer.name}`,
+    }))
+    if (editing && !options.some((option) => option.value === editing.customerId)) {
+      return [
+        {
+          value: editing.customerId,
+          label: `${editing.customerName} · Khách hàng hiện tại`,
+        },
+        ...options,
+      ]
+    }
+    return options
+  }, [customers, editing])
 
   const refreshRelatedViews = () => {
     queryClient.invalidateQueries({ queryKey: ['assets'] })
@@ -308,7 +324,7 @@ export function AssetsPage() {
         ) : null}
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-            <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />
+            <Select showSearch optionFilterProp="label" options={customerOptions} />
           </Form.Item>
           <div className="form-grid two-cols">
             <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>

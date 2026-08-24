@@ -43,9 +43,9 @@ public class CustomerService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public PageResponse<CustomerResponse> search(String search, int page, int size) {
+    public PageResponse<CustomerResponse> search(String search, Boolean active, int page, int size) {
         var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), active, PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -115,7 +115,7 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public byte[] exportCustomers(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("code").ascending());
-        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable)
+        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), null, PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(CustomerService::toResponse)
                 .toList();

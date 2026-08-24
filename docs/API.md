@@ -33,7 +33,9 @@ Technician account không thể bị deactivate khi còn operational Work Order 
 
 Read — OWNER / CUSTOMER_SERVICE / DISPATCHER:
 
-- `GET /customers?search={text}&page={n}&size={n}`
+- `GET /customers?search={text}&active={bool}&page={n}&size={n}`
+  - `active` optional; omit để màn quản lý vẫn thấy cả khách hoạt động và ngừng hoạt động.
+  - workflow tạo mới dùng `active=true` để chỉ lấy khách còn hoạt động.
 - `GET /customers/{id}`
 
 Write/import/export — OWNER / CUSTOMER_SERVICE:

@@ -71,8 +71,8 @@ public class AssetService {
         if (serial != null && repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+        Customer customer = requireCustomer(request.customerId(), tenantId);
+        requireActiveCustomerForNewAsset(customer);
         Asset asset = new Asset();
         asset.setTenantId(tenantId);
         asset.setCustomer(customer);
@@ -100,9 +100,15 @@ public class AssetService {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
         UUID tenantId = CurrentUser.tenantId();
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
-        if (!asset.getCustomer().getId().equals(customer.getId())) {
+        Customer customer = requireCustomer(request.customerId(), tenantId);
+        boolean customerChanged = !asset.getCustomer().getId().equals(customer.getId());
+        if (customerChanged && !customer.isActive()) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể đăng ký thiết bị mới"
+            );
+        }
+        if (customerChanged) {
             long serviceRequestCount = serviceRequestRepository.countByTenantIdAndAssetId(tenantId, id);
             long workOrderCount = workOrderRepository.countByTenantIdAndAssetId(tenantId, id);
             if (serviceRequestCount > 0 || workOrderCount > 0) {
@@ -199,6 +205,20 @@ public class AssetService {
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
+    private Customer requireCustomer(UUID customerId, UUID tenantId) {
+        return customerRepository.findByIdAndTenantId(customerId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+    }
+
+    private static void requireActiveCustomerForNewAsset(Customer customer) {
+        if (!customer.isActive()) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể đăng ký thiết bị mới"
+            );
+        }
+    }
+
     private Asset require(UUID id) {
         return repository.findDetailed(id, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("ASSET_NOT_FOUND", "Không tìm thấy thiết bị"));
@@ -242,6 +262,9 @@ public class AssetService {
         Customer customer = customerRepository.findByTenantIdAndCodeIgnoreCase(tenantId, customerCode).orElse(null);
         if (customer == null) {
             return AssetImportCandidate.invalid(row, "Không tìm thấy khách hàng theo mã " + customerCode);
+        }
+        if (!customer.isActive()) {
+            return AssetImportCandidate.invalid(row, "Khách hàng " + customerCode + " đã ngừng hoạt động");
         }
 
         String serial = row.serialNumber().trim().toUpperCase(Locale.ROOT);

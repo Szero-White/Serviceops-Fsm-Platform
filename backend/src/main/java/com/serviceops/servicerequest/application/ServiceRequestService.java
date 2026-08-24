@@ -134,7 +134,7 @@ public class ServiceRequestService {
     }
 
     private void applyEditableFields(ServiceRequest entity, CreateServiceRequest request, UUID tenantId) {
-        Customer customer = resolveCustomer(request.customerId(), tenantId);
+        Customer customer = resolveCustomer(request.customerId(), tenantId, entity);
         Asset asset = resolveAsset(request.assetId(), customer, tenantId);
         String channelCode = serviceChannelService.requireActive(tenantId, request.channel()).getCode();
 
@@ -146,9 +146,18 @@ public class ServiceRequestService {
         entity.setChannel(channelCode);
     }
 
-    private Customer resolveCustomer(UUID customerId, UUID tenantId) {
-        return customerRepository.findByIdAndTenantId(customerId, tenantId)
+    private Customer resolveCustomer(UUID customerId, UUID tenantId, ServiceRequest existingRequest) {
+        Customer customer = customerRepository.findByIdAndTenantId(customerId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+        boolean sameExistingCustomer = existingRequest.getCustomer() != null
+                && existingRequest.getCustomer().getId().equals(customer.getId());
+        if (!customer.isActive() && !sameExistingCustomer) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể tiếp nhận yêu cầu dịch vụ mới"
+            );
+        }
+        return customer;
     }
 
     private Asset resolveAsset(UUID assetId, Customer customer, UUID tenantId) {

@@ -66,7 +66,7 @@ export function ServiceRequestsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const customersQuery = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100) })
+  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true) })
   const customers = customersQuery.data
   const assetsQuery = useQuery({
     queryKey: ['assets', 'service-request-customer', watchedCustomerId],
@@ -77,6 +77,23 @@ export function ServiceRequestsPage() {
   const assetsLoading = assetsQuery.isFetching
   const channelsQuery = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
   const channels = channelsQuery.data ?? []
+
+  const customerOptions = useMemo(() => {
+    const options = (customers?.content ?? []).map((customer) => ({
+      value: customer.id,
+      label: `${customer.code} · ${customer.name}`,
+    }))
+    if (editing && !options.some((option) => option.value === editing.customerId)) {
+      return [
+        {
+          value: editing.customerId,
+          label: `${editing.customerName} · Khách hàng hiện tại`,
+        },
+        ...options,
+      ]
+    }
+    return options
+  }, [customers, editing])
 
   const channelOptions = useMemo(
     () => channels.filter((channel) => channel.active).map((channel) => ({ value: channel.code, label: channel.name })),
@@ -344,7 +361,7 @@ export function ServiceRequestsPage() {
                 showSearch
                 optionFilterProp="label"
                 placeholder="Chọn khách hàng"
-                options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))}
+                options={customerOptions}
                 onChange={handleCustomerChange}
               />
             </Form.Item>
