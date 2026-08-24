@@ -4,6 +4,7 @@ import com.serviceops.ai.web.AiController;
 import com.serviceops.asset.web.AssetController;
 import com.serviceops.customer.web.CustomerController;
 import com.serviceops.dashboard.web.DashboardController;
+import com.serviceops.inventory.web.InventoryController;
 import com.serviceops.servicerequest.web.ServiceRequestController;
 import com.serviceops.technician.web.TechnicianController;
 import com.serviceops.workorder.web.WorkOrderController;
@@ -44,11 +45,11 @@ class RoleOwnershipContractTest {
         assertThat(Arrays.stream(WorkOrderController.class.getDeclaredMethods()).map(Method::getName))
                 .doesNotContain("create");
 
-        assertMethodAuthorization(WorkOrderController.class, "convert", INTAKE_OWNERS);
+        assertMethodAuthorization(WorkOrderController.class, "convert", "hasRole('CUSTOMER_SERVICE')");
         assertMethodAuthorization(
                 WorkOrderController.class,
                 "schedule",
-                "hasAnyRole('OWNER','DISPATCHER')"
+                "hasRole('DISPATCHER')"
         );
         assertMethodAuthorization(
                 WorkOrderController.class,
@@ -62,6 +63,18 @@ class RoleOwnershipContractTest {
     void dispatcherCanReadTechnicianProfilesButOnlyOwnerCanEditThem() {
         assertClassAuthorization(TechnicianController.class, "hasAnyRole('OWNER','DISPATCHER')");
         assertMethodAuthorization(TechnicianController.class, "updateProfile", "hasRole('OWNER')");
+    }
+
+
+    @Test
+    void warehouseOwnsStockReconciliationAndMovementTraceabilityButNotConsumption() {
+        String warehouseOwners = "hasAnyRole('OWNER','WAREHOUSE_STAFF')";
+        assertMethodAuthorization(InventoryController.class, "updateReorderLevel", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "stocktake", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "transactions", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "returnable", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "returnPart", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
     }
 
     @Test

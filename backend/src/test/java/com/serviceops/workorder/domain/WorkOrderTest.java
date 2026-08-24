@@ -90,12 +90,13 @@ class WorkOrderTest {
     }
 
     @Test
-    void cancelledWorkOrderCanBeReopened() {
+    void cancelledWorkOrderShouldNotAllowFurtherTransition() {
         WorkOrder workOrder = workOrder(WorkOrderStatus.CANCELLED);
 
-        workOrder.transitionTo(WorkOrderStatus.REOPENED);
-
-        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.REOPENED);
+        assertThatThrownBy(() -> workOrder.transitionTo(WorkOrderStatus.REOPENED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Không thể chuyển trạng thái");
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
     }
 
     @Test

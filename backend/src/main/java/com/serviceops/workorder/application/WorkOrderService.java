@@ -6,6 +6,8 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.domain.InventoryTransaction;
+import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -23,6 +25,7 @@ import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
+import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderActivityResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistoryResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +47,19 @@ public class WorkOrderService {
             WorkOrderStatus.ON_THE_WAY,
             WorkOrderStatus.IN_PROGRESS,
             WorkOrderStatus.WAITING_FOR_PARTS,
-            WorkOrderStatus.COMPLETED
+            WorkOrderStatus.COMPLETED,
+            WorkOrderStatus.CUSTOMER_ACCEPTED,
+            WorkOrderStatus.CLOSED,
+            WorkOrderStatus.REOPENED
+    );
+    private static final Set<WorkOrderStatus> OWNER_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CUSTOMER_ACCEPTED,
+            WorkOrderStatus.CLOSED,
+            WorkOrderStatus.REOPENED,
+            WorkOrderStatus.CANCELLED
     );
     private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.REOPENED,
             WorkOrderStatus.CANCELLED
     );
     private static final Set<WorkOrderStatus> DISPATCHER_ALLOWED_TRANSITIONS = EnumSet.of(
@@ -55,6 +68,7 @@ public class WorkOrderService {
 
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
+    private final InventoryTransactionRepository inventoryTransactionRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final TechnicianRepository technicianRepository;
     private final AppointmentRepository appointmentRepository;
@@ -74,9 +88,16 @@ public class WorkOrderService {
     @Transactional(readOnly = true)
     public WorkOrderResponse get(UUID id) {
         WorkOrder workOrder = require(id);
-        List<WorkOrderHistoryResponse> history = historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(CurrentUser.tenantId(), id)
-                .stream().map(WorkOrderService::toHistory).toList();
-        return toResponse(workOrder, history);
+        UUID tenantId = CurrentUser.tenantId();
+        List<WorkOrderStatusHistory> statusHistory = historyRepository
+                .findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(tenantId, id);
+        List<InventoryTransaction> partTransactions = inventoryTransactionRepository
+                .findPartUsageForWorkOrder(tenantId, id);
+        List<WorkOrderHistoryResponse> history = statusHistory.stream()
+                .map(WorkOrderService::toHistory)
+                .toList();
+        List<WorkOrderActivityResponse> activities = WorkOrderActivityMapper.merge(statusHistory, partTransactions);
+        return toResponse(workOrder, history, activities);
     }
 
     @Transactional(readOnly = true)
@@ -119,9 +140,9 @@ public class WorkOrderService {
         auditService.record("CREATE_FROM_SERVICE_REQUEST", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode() + " từ yêu cầu dịch vụ");
         notificationService.notifyRoles(
                 tenantId,
-                dispatchRoles(),
-                "Có phiếu mới chờ điều phối: " + entity.getCode(),
-                entity.getSummary()
+                dispatcherRoles(),
+                "Phiếu mới cần điều phối: " + entity.getCode(),
+                "Mở Phiếu công việc để sắp lịch và phân công kỹ thuật viên."
         );
         return toResponse(entity, List.of());
     }
@@ -194,27 +215,27 @@ public class WorkOrderService {
                 notificationService.create(
                         tenantId,
                         previousTechnician.getUser(),
-                        "Công việc đã được điều phối lại: " + workOrder.getCode(),
-                        "Phiếu " + workOrder.getCode() + " không còn trong lịch của bạn"
+                        "Lịch làm việc đã thay đổi: " + workOrder.getCode(),
+                        "Bạn không còn được phân công phiếu này. Kiểm tra Lịch của tôi để cập nhật kế hoạch."
                 );
             }
 
             notificationService.create(
                     tenantId,
                     technician.getUser(),
-                    "Lịch công việc được cập nhật: " + workOrder.getCode(),
-                    "Lịch mới: " + request.startTime() + " - " + request.endTime()
+                    "Lịch làm việc đã thay đổi: " + workOrder.getCode(),
+                    "Thời gian thực hiện đã được điều chỉnh. Mở Lịch của tôi để xem lịch mới."
             );
-            notificationService.notifyRoles(
-                    tenantId,
-                    dispatchRoles(),
-                    "Đã điều chỉnh lịch " + workOrder.getCode(),
-                    technicianName + " · " + request.startTime() + " - " + request.endTime()
-            );
+            // Dispatcher already receives immediate success feedback in the UI.
+            // Do not duplicate the same action as a bell notification.
         } else {
             auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technicianName);
-            notificationService.create(tenantId, technician.getUser(), "Công việc mới: " + workOrder.getCode(), "Bạn được phân công: " + workOrder.getSummary());
-            notificationService.notifyRoles(tenantId, dispatchRoles(), "Đã phân công " + workOrder.getCode(), technicianName + " phụ trách: " + workOrder.getSummary());
+            notificationService.create(
+                    tenantId,
+                    technician.getUser(),
+                    "Bạn được giao công việc mới: " + workOrder.getCode(),
+                    "Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện."
+            );
         }
         return get(id);
     }
@@ -243,7 +264,7 @@ public class WorkOrderService {
         }
         addHistory(workOrder, previous, workOrder.getStatus(), blankToNull(request.note()));
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
-        notifyStatusChange(workOrder, previous);
+        notifyStatusChange(workOrder);
         return get(id);
     }
 
@@ -256,7 +277,6 @@ public class WorkOrderService {
             throw BusinessException.conflict("WORK_ORDER_NOT_ARCHIVABLE", ex.getMessage());
         }
         auditService.record("DELETE_HISTORY", "WORK_ORDER", workOrder.getId(), "Xóa khỏi lịch sử " + workOrder.getCode());
-        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), "Đã xóa khỏi lịch sử: " + workOrder.getCode(), workOrder.getSummary());
     }
 
 
@@ -273,11 +293,28 @@ public class WorkOrderService {
     private static void ensureRoleCanTransition(TransitionWorkOrder request) {
         WorkOrderStatus targetStatus = request.targetStatus();
 
+        if (targetStatus == WorkOrderStatus.CANCELLED && blankToNull(request.note()) == null) {
+            throw BusinessException.badRequest(
+                    "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
+                    "Phải nhập lý do hủy phiếu công việc"
+            );
+        }
+
+        if (CurrentUser.hasRole("OWNER")) {
+            if (!OWNER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Owner có quyền quản trị bước xác nhận khách, đóng/mở lại và hủy phiếu; tiến độ hiện trường vẫn thuộc kỹ thuật viên"
+                );
+            }
+            return;
+        }
+
         if (CurrentUser.hasRole("TECHNICIAN")) {
             if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện của công việc được phân công"
+                        "Kỹ thuật viên chỉ được cập nhật tiến độ, ghi nhận khách xác nhận, đóng hoặc mở lại công việc được phân công"
                 );
             }
             return;
@@ -297,13 +334,7 @@ public class WorkOrderService {
             if (!CUSTOMER_SERVICE_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Chăm sóc khách hàng chỉ được hủy phiếu công việc"
-                );
-            }
-            if (blankToNull(request.note()) == null) {
-                throw BusinessException.badRequest(
-                        "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
-                        "Phải nhập lý do hủy phiếu công việc"
+                        "Chăm sóc khách hàng chỉ mở lại hoặc hủy phiếu khi tiếp nhận yêu cầu thay đổi từ khách hàng"
                 );
             }
         }
@@ -342,16 +373,88 @@ public class WorkOrderService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private void notifyStatusChange(WorkOrder workOrder, WorkOrderStatus previous) {
-        String title = "Cập nhật " + workOrder.getCode() + ": " + previous + " → " + workOrder.getStatus();
-        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), title, workOrder.getSummary());
-        if (workOrder.getTechnician() != null && !CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
-            notificationService.create(workOrder.getTenantId(), workOrder.getTechnician().getUser(), title, workOrder.getSummary());
+    private void notifyStatusChange(WorkOrder workOrder) {
+        UUID tenantId = workOrder.getTenantId();
+        String code = workOrder.getCode();
+
+        switch (workOrder.getStatus()) {
+            case COMPLETED -> notificationService.notifyRoles(
+                    tenantId,
+                    List.of(UserRole.OWNER),
+                    "Chờ khách xác nhận: " + code,
+                    "Kỹ thuật viên đã hoàn thành công việc. Kỹ thuật viên được giao hoặc Owner có thể mở phiếu và bấm Khách xác nhận sau khi khách đồng ý kết quả."
+            );
+            case WAITING_FOR_PARTS -> notificationService.notifyRoles(
+                    tenantId,
+                    List.of(UserRole.DISPATCHER),
+                    "Cần xử lý phụ tùng: " + code,
+                    "Kỹ thuật viên đang chờ vật tư để tiếp tục. Kiểm tra phiếu và phối hợp xử lý phụ tùng."
+            );
+            case REOPENED -> {
+                notificationService.notifyRoles(
+                        tenantId,
+                        List.of(UserRole.DISPATCHER),
+                        "Cần điều phối xử lý lại: " + code,
+                        "Khách yêu cầu xử lý lại. Kiểm tra lý do và sắp xếp kỹ thuật viên hoặc lịch phù hợp."
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        "Công việc cần xử lý lại: " + code,
+                        "Phiếu đã được mở lại. Mở phiếu để xem lý do và tiếp tục xử lý theo phân công."
+                );
+            }
+            case CLOSED -> {
+                notificationService.notifyRoles(
+                        tenantId,
+                        List.of(UserRole.OWNER),
+                        "Phiếu đã đóng: " + code,
+                        "Khách đã xác nhận kết quả và phiếu đã được đóng. Mở Lịch sử phiếu nếu cần đối soát."
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        "Phiếu đã đóng: " + code,
+                        "Khách đã xác nhận kết quả và phiếu đã được đóng. Không cần tiếp tục thao tác trên công việc này."
+                );
+            }
+            case CANCELLED -> {
+                notificationService.notifyRoles(
+                        tenantId,
+                        List.of(UserRole.OWNER),
+                        "Phiếu đã hủy: " + code,
+                        "Phiếu đã được hủy. Mở Lịch sử phiếu nếu cần kiểm tra lý do và người thực hiện."
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        "Công việc đã hủy: " + code,
+                        "Phiếu này đã bị hủy. Bạn không cần tiếp tục thực hiện công việc này."
+                );
+            }
+            case CUSTOMER_ACCEPTED, ON_THE_WAY, IN_PROGRESS -> {
+                // These are expected operational steps. The actor already sees success
+                // feedback and the current status is visible in the Work Order screen.
+            }
+            default -> {
+                // Scheduling/assignment has dedicated notifications. Avoid generic
+                // "STATUS_A -> STATUS_B" messages that expose internal enum wording.
+            }
         }
     }
 
-    private static List<UserRole> dispatchRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER);
+    private void notifyAssignedTechnician(WorkOrder workOrder, String title, String message) {
+        if (workOrder.getTechnician() == null
+                || CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
+            return;
+        }
+        notificationService.create(
+                workOrder.getTenantId(),
+                workOrder.getTechnician().getUser(),
+                title,
+                message
+        );
+    }
+
+    private static List<UserRole> dispatcherRoles() {
+        return List.of(UserRole.DISPATCHER);
     }
 
     private static WorkOrderHistoryResponse toHistory(WorkOrderStatusHistory h) {
@@ -359,13 +462,21 @@ public class WorkOrderService {
     }
 
     public static WorkOrderResponse toResponse(WorkOrder w, List<WorkOrderHistoryResponse> history) {
+        return toResponse(w, history, List.of());
+    }
+
+    private static WorkOrderResponse toResponse(
+            WorkOrder w,
+            List<WorkOrderHistoryResponse> history,
+            List<WorkOrderActivityResponse> activities
+    ) {
         String assetLabel = w.getAsset() == null ? null : assetLabel(w.getAsset());
         return new WorkOrderResponse(w.getId(), w.getCode(), w.getServiceRequest() == null ? null : w.getServiceRequest().getId(),
                 w.getCustomer().getId(), w.getCustomer().getName(), w.getAsset() == null ? null : w.getAsset().getId(), assetLabel,
                 w.getTechnician() == null ? null : w.getTechnician().getId(),
                 w.getTechnician() == null ? null : w.getTechnician().getUser().getDisplayName(),
                 w.getSummary(), w.getDescription(), w.getPriority(), w.getStatus(), w.getScheduledStart(), w.getScheduledEnd(),
-                w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history);
+                w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history, activities);
     }
 
     private static String assetLabel(Asset asset) {

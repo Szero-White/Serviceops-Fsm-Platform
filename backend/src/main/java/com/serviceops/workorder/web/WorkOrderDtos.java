@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +27,29 @@ public final class WorkOrderDtos {
             @Size(max = 1000) String note,
             @Size(max = 5000) String diagnosis,
             @Size(max = 5000) String resolution
+    ) {
+    }
+
+    public enum WorkOrderActivityType {
+        STATUS_CHANGE,
+        PART_CONSUMED,
+        PART_RETURNED
+    }
+
+    public record WorkOrderActivityResponse(
+            UUID id,
+            WorkOrderActivityType type,
+            WorkOrderStatus status,
+            String note,
+            String actor,
+            String actorDisplayName,
+            String actorRole,
+            UUID sparePartId,
+            String sparePartSku,
+            String sparePartName,
+            String unit,
+            BigDecimal quantity,
+            Instant createdAt
     ) {
     }
 
@@ -59,7 +83,8 @@ public final class WorkOrderDtos {
             String resolution,
             Instant completedAt,
             Instant createdAt,
-            List<WorkOrderHistoryResponse> history
+            List<WorkOrderHistoryResponse> history,
+            List<WorkOrderActivityResponse> activities
     ) {
     }
 }

@@ -1,7 +1,8 @@
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Timeline, Typography } from 'antd'
+import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -14,6 +15,7 @@ import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 import { workOrdersApi } from '../api'
+import { WorkOrderActivityTimeline } from '../components/WorkOrderActivityTimeline'
 
 const historyStatusOptions: Array<{ value: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>; label: string }> = [
   { value: 'CLOSED', label: 'Đã đóng' },
@@ -22,14 +24,23 @@ const historyStatusOptions: Array<{ value: Extract<WorkOrderStatus, 'CLOSED' | '
 
 export function WorkOrderHistoryPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const canDelete = user?.role === 'OWNER'
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>>()
-  const [selectedId, setSelectedId] = useState<string>()
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const { message } = App.useApp()
   const queryClient = useQueryClient()
+
+  const selectHistoryWorkOrder = (id?: string) => {
+    setSelectedId(id)
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('open', id)
+    else next.delete('open')
+    setSearchParams(next, { replace: true })
+  }
 
   const historyQuery = useQuery({
     queryKey: ['work-order-history', { search, status, page, size: LIST_PAGE_SIZE }],
@@ -48,17 +59,19 @@ export function WorkOrderHistoryPage() {
     }
   }, [data, page])
 
-  const { data: detail, isLoading: detailLoading } = useQuery({
+  const detailQuery = useQuery({
     queryKey: ['work-order', selectedId],
     queryFn: () => workOrdersApi.get(selectedId!),
     enabled: Boolean(selectedId),
   })
+  const detail = detailQuery.data
+  const detailLoading = detailQuery.isLoading
 
   const remove = useMutation({
     mutationFn: (id: string) => workOrdersApi.deleteFromHistory(id),
     onSuccess: () => {
       message.success('Đã xóa phiếu khỏi lịch sử tra cứu')
-      setSelectedId(undefined)
+      selectHistoryWorkOrder(undefined)
       queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['audit'] })
@@ -122,7 +135,7 @@ export function WorkOrderHistoryPage() {
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phiếu`,
         }}
         onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
-        onRow={(record) => ({ onDoubleClick: () => setSelectedId(record.id) })}
+        onRow={(record) => ({ onDoubleClick: () => selectHistoryWorkOrder(record.id) })}
         locale={{ emptyText: <Empty description={historyQuery.isError ? 'Không thể tải dữ liệu lịch sử phiếu' : 'Chưa có phiếu lịch sử phù hợp'} /> }}
         columns={[
           {
@@ -157,7 +170,7 @@ export function WorkOrderHistoryPage() {
             width: canDelete ? 168 : 116,
             render: (_, record) => (
               <Space size={4}>
-                <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => setSelectedId(record.id)} />
+                <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => selectHistoryWorkOrder(record.id)} />
                 {record.status === 'CLOSED' && (
                   <Button aria-label="Tải hóa đơn" type="text" icon={<DownloadOutlined />} onClick={() => exportInvoice(record)} />
                 )}
@@ -188,7 +201,7 @@ export function WorkOrderHistoryPage() {
           </div>
         ) : 'Chi tiết phiếu lịch sử'}
         open={Boolean(selectedId)}
-        onClose={() => setSelectedId(undefined)}
+        onClose={() => selectHistoryWorkOrder(undefined)}
         width={720}
         loading={detailLoading}
         extra={detail ? (
@@ -211,7 +224,13 @@ export function WorkOrderHistoryPage() {
           </Space>
         ) : undefined}
       >
-        {detail ? (
+        {detailQuery.isError ? (
+          <QueryErrorAlert
+            title="Chưa tải được chi tiết phiếu lịch sử"
+            error={detailQuery.error}
+            onRetry={() => detailQuery.refetch()}
+          />
+        ) : detail ? (
           <Space direction="vertical" size={24} style={{ width: '100%' }}>
             <Descriptions className="detail-descriptions" column={2} bordered size="small">
               <Descriptions.Item label="Trạng thái"><StatusTag status={detail.status} /></Descriptions.Item>
@@ -227,18 +246,11 @@ export function WorkOrderHistoryPage() {
 
             <section className="detail-section">
               <h3 className="detail-section-title">Tiến trình xử lý</h3>
-              {detail.history?.length ? (
-                <Timeline className="detail-timeline" items={detail.history.map((item) => ({
-                  color: item.toStatus === 'CANCELLED' ? '#9c5050' : item.toStatus === 'CLOSED' || item.toStatus === 'COMPLETED' ? '#4b7968' : '#47789f',
-                  children: (
-                    <div className="timeline-entry">
-                      <div className="timeline-entry-head"><StatusTag status={item.toStatus} /><Typography.Text className="timeline-actor">{item.changedBy}</Typography.Text></div>
-                      <div className="timeline-note">{item.note ?? 'Không có ghi chú'}</div>
-                      <Typography.Text className="timeline-time">{formatDateTime(item.createdAt)}</Typography.Text>
-                    </div>
-                  ),
-                }))} />
-              ) : <Empty description="Chưa có lịch sử trạng thái" />}
+              <WorkOrderActivityTimeline
+                activities={detail.activities}
+                history={detail.history}
+                emptyDescription="Chưa có tiến trình xử lý"
+              />
             </section>
           </Space>
         ) : null}

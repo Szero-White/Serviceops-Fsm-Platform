@@ -5,20 +5,26 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
-import { Button, Descriptions, Drawer, Empty, Input, Popconfirm, Space, Tabs, Timeline, Typography, Upload } from 'antd'
+import { Button, Descriptions, Drawer, Input, Popconfirm, Space, Tabs, Typography, Upload } from 'antd'
 import { AttachmentList } from '../../attachments/components/AttachmentList'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { AttachmentItem, WorkOrder, WorkOrderStatus } from '../../../types'
 import { useState } from 'react'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
-import { TRANSITION_LABELS } from '../model/workOrderPresentation'
+import { canConsumePartInStatus, TRANSITION_LABELS } from '../model/workOrderPresentation'
 import type { WorkOrderPermissions } from '../model/workOrderPermissions'
+import { WorkOrderActivityTimeline, workOrderActivityCount } from './WorkOrderActivityTimeline'
 
 export function WorkOrderDetailDrawer({
   workOrder,
   attachments,
   open,
   loading,
+  error,
+  onRetry,
+  attachmentsError,
+  onRetryAttachments,
   permissions,
   transitions,
   transitionPending,
@@ -34,6 +40,10 @@ export function WorkOrderDetailDrawer({
   attachments?: AttachmentItem[]
   open: boolean
   loading: boolean
+  error?: unknown
+  onRetry: () => void
+  attachmentsError?: unknown
+  onRetryAttachments: () => void
   permissions: WorkOrderPermissions
   transitions: WorkOrderStatus[]
   transitionPending: boolean
@@ -65,47 +75,75 @@ export function WorkOrderDetailDrawer({
       loading={loading}
       extra={canScheduleCurrent ? <Button type="primary" icon={<CalendarOutlined />} onClick={onSchedule}>Phân công / xếp lịch</Button> : undefined}
     >
-      {workOrder ? (
+      {error ? (
+        <QueryErrorAlert
+          title="Chưa tải được chi tiết phiếu công việc"
+          error={error}
+          onRetry={onRetry}
+        />
+      ) : workOrder ? (
         <>
           <div className="work-order-actions">
             <Space wrap>
-              {permissions.canTransition && transitions.map((target) => target === 'COMPLETED' ? (
-                <Button key={target} type="primary" icon={<CheckCircleOutlined />} onClick={onComplete}>{TRANSITION_LABELS[target]}</Button>
-              ) : target === 'CANCELLED' ? (
-                <Popconfirm
-                  key={target}
-                  title="Huỷ phiếu công việc này?"
-                  description={(
-                    <Space direction="vertical" size={8}>
-                      <Typography.Text type="secondary">Lý do hủy sẽ được lưu vào lịch sử phiếu.</Typography.Text>
-                      <Input.TextArea
-                        value={cancelReason}
-                        onChange={(event) => setCancelReason(event.target.value)}
-                        placeholder="Ví dụ: Khách hàng thông báo thiết bị đã hoạt động bình thường và không còn nhu cầu dịch vụ."
-                        autoSize={{ minRows: 3, maxRows: 5 }}
-                        maxLength={1000}
-                        showCount
-                      />
-                    </Space>
-                  )}
-                  okText="Xác nhận hủy"
-                  cancelText="Giữ lại"
-                  okButtonProps={{ danger: true, disabled: !cancelReason.trim(), loading: transitionPending }}
-                  onConfirm={() => {
-                    const reason = cancelReason.trim()
-                    if (!reason) return
-                    onTransition(target, reason)
-                    setCancelReason('')
-                  }}
-                  onCancel={() => setCancelReason('')}
-                >
-                  <Button danger>{TRANSITION_LABELS[target]}</Button>
-                </Popconfirm>
-              ) : (
-                <Button key={target} onClick={() => onTransition(target)} loading={transitionPending}>{TRANSITION_LABELS[target]}</Button>
-              ))}
-              {permissions.canConsumePart && !['CLOSED', 'CANCELLED'].includes(workOrder.status) && (
+              {permissions.canTransition && transitions
+                .filter((target) => target !== 'CUSTOMER_ACCEPTED' && target !== 'CLOSED')
+                .map((target) => target === 'COMPLETED' ? (
+                  <Button key={target} type="primary" icon={<CheckCircleOutlined />} onClick={onComplete}>{TRANSITION_LABELS[target]}</Button>
+                ) : target === 'CANCELLED' ? (
+                  <Popconfirm
+                    key={target}
+                    title="Huỷ phiếu công việc này?"
+                    description={(
+                      <Space direction="vertical" size={8}>
+                        <Typography.Text type="secondary">Lý do hủy sẽ được lưu vào lịch sử phiếu.</Typography.Text>
+                        <Input.TextArea
+                          value={cancelReason}
+                          onChange={(event) => setCancelReason(event.target.value)}
+                          placeholder="Ví dụ: Khách hàng thông báo thiết bị đã hoạt động bình thường và không còn nhu cầu dịch vụ."
+                          autoSize={{ minRows: 3, maxRows: 5 }}
+                          maxLength={1000}
+                          showCount
+                        />
+                      </Space>
+                    )}
+                    okText="Xác nhận hủy"
+                    cancelText="Giữ lại"
+                    okButtonProps={{ danger: true, disabled: !cancelReason.trim(), loading: transitionPending }}
+                    onConfirm={() => {
+                      const reason = cancelReason.trim()
+                      if (!reason) return
+                      onTransition(target, reason)
+                      setCancelReason('')
+                    }}
+                    onCancel={() => setCancelReason('')}
+                  >
+                    <Button danger>{TRANSITION_LABELS[target]}</Button>
+                  </Popconfirm>
+                ) : (
+                  <Button key={target} onClick={() => onTransition(target)} loading={transitionPending}>{TRANSITION_LABELS[target]}</Button>
+                ))}
+              {permissions.canConsumePart && canConsumePartInStatus(workOrder.status) && (
                 <Button icon={<ToolOutlined />} onClick={onConsumePart}>Dùng phụ tùng</Button>
+              )}
+              {permissions.canTransition && transitions.includes('CUSTOMER_ACCEPTED') && (
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  loading={transitionPending}
+                  onClick={() => onTransition('CUSTOMER_ACCEPTED')}
+                >
+                  {TRANSITION_LABELS.CUSTOMER_ACCEPTED}
+                </Button>
+              )}
+              {permissions.canTransition && transitions.includes('CLOSED') && (
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  loading={transitionPending}
+                  onClick={() => onTransition('CLOSED')}
+                >
+                  {TRANSITION_LABELS.CLOSED}
+                </Button>
               )}
               <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
                 <Button icon={<CloudUploadOutlined />}>Tải ảnh / PDF</Button>
@@ -133,24 +171,24 @@ export function WorkOrderDetailDrawer({
             },
             {
               key: 'timeline',
-              label: `Lịch sử (${workOrder.history?.length ?? 0})`,
-              children: workOrder.history?.length ? (
-                <Timeline className="detail-timeline" items={workOrder.history.map((item) => ({
-                  color: item.toStatus === 'CANCELLED' ? '#9c5050' : item.toStatus === 'COMPLETED' || item.toStatus === 'CLOSED' ? '#4b7968' : '#47789f',
-                  children: (
-                    <div className="timeline-entry">
-                      <div className="timeline-entry-head"><StatusTag status={item.toStatus} /><Typography.Text className="timeline-actor">{item.changedBy}</Typography.Text></div>
-                      <div className="timeline-note">{item.note ?? 'Không có ghi chú'}</div>
-                      <Typography.Text className="timeline-time">{formatDateTime(item.createdAt)}</Typography.Text>
-                    </div>
-                  ),
-                }))} />
-              ) : <Empty description="Chưa có lịch sử" />,
+              label: `Tiến trình (${workOrderActivityCount(workOrder.activities, workOrder.history)})`,
+              children: (
+                <WorkOrderActivityTimeline
+                  activities={workOrder.activities}
+                  history={workOrder.history}
+                />
+              ),
             },
             {
               key: 'attachments',
               label: `Tệp đính kèm (${attachments?.length ?? 0})`,
-              children: <AttachmentList attachments={attachments} onChanged={onAttachmentsChanged} />,
+              children: attachmentsError ? (
+                <QueryErrorAlert
+                  title="Chưa tải được tệp đính kèm"
+                  error={attachmentsError}
+                  onRetry={onRetryAttachments}
+                />
+              ) : <AttachmentList attachments={attachments} onChanged={onAttachmentsChanged} />,
             },
           ]} />
         </>

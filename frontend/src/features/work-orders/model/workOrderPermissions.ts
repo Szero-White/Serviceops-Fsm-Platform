@@ -8,8 +8,8 @@ export type WorkOrderPermissions = {
 
 export function workOrderPermissions(role?: UserRole): WorkOrderPermissions {
   return {
-    canSchedule: role ? ['OWNER', 'DISPATCHER'].includes(role) : false,
+    canSchedule: role === 'DISPATCHER',
     canTransition: role ? ['OWNER', 'CUSTOMER_SERVICE', 'DISPATCHER', 'TECHNICIAN'].includes(role) : false,
-    canConsumePart: role ? ['OWNER', 'TECHNICIAN'].includes(role) : false,
+    canConsumePart: role === 'TECHNICIAN',
   }
 }

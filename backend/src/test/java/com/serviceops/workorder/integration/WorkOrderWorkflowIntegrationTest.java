@@ -131,16 +131,14 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
                 "diagnosis", "Integration test diagnosis",
                 "resolution", "Integration test resolution"
         ));
-        assertForbiddenTechnicianTransition(workOrderId, technicianToken, "CUSTOMER_ACCEPTED", "COMPLETED");
-        assertForbiddenTechnicianTransition(workOrderId, technicianToken, "REOPENED", "COMPLETED");
+        assertTransition(workOrderId, technicianToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
 
         String ownerToken = login("owner", "123456");
-        assertTransition(workOrderId, ownerToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
         ResponseEntity<Map<String, Object>> closed = assertTransition(
                 workOrderId,
                 ownerToken,
                 "CLOSED",
-                Map.of("note", "Workflow closed")
+                Map.of("note", "Workflow closed by owner override")
         );
         assertThat(closed.getBody()).isNotNull();
         assertThat(closed.getBody().get("status")).isEqualTo("CLOSED");

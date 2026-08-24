@@ -83,7 +83,7 @@ class WorkOrderInvoiceReturnTest {
         return new WorkOrderResponse(
                 id, "WO-INVOICE-RETURN", null, UUID.randomUUID(), "Customer", null, null, null, null,
                 "Invoice return test", null, Priority.NORMAL, WorkOrderStatus.CLOSED,
-                null, null, null, null, null, Instant.now(), List.of()
+                null, null, null, null, null, Instant.now(), List.of(), List.of()
         );
     }
 
