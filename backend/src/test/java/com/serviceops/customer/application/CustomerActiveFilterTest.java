@@ -26,6 +26,8 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,7 +58,7 @@ class CustomerActiveFilterTest {
                 notificationService
         );
         authenticate();
-        when(repository.search(eq(TENANT_ID), eq(Boolean.TRUE), eq(""), any(Pageable.class)))
+        when(repository.search(eq(TENANT_ID), nullable(Boolean.class), eq(""), any(Pageable.class)))
                 .thenReturn(Page.<Customer>empty());
     }
 
@@ -70,6 +72,20 @@ class CustomerActiveFilterTest {
         service.search("", true, 0, 100);
 
         verify(repository).search(eq(TENANT_ID), eq(Boolean.TRUE), eq(""), any(Pageable.class));
+    }
+
+    @Test
+    void customerManagementCanRequestOnlyInactiveCustomers() {
+        service.search("", false, 0, 20);
+
+        verify(repository).search(eq(TENANT_ID), eq(Boolean.FALSE), eq(""), any(Pageable.class));
+    }
+
+    @Test
+    void customerManagementCanRequestAllStatuses() {
+        service.search("", null, 0, 20);
+
+        verify(repository).search(eq(TENANT_ID), isNull(), eq(""), any(Pageable.class));
     }
 
     private static void authenticate() {

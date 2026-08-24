@@ -25,8 +25,9 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | TENANT-01 | Truy cập ID không thuộc tenant | Không trả dữ liệu |
 | CUS-01 | Tạo khách hàng hợp lệ | Khách hàng xuất hiện trong danh sách |
 | CUS-02 | Chuyển khách hàng sang Ngừng hoạt động rồi mở form Tiếp nhận yêu cầu | Khách vẫn còn trong trang Khách hàng/lịch sử nhưng không xuất hiện trong selector tạo Service Request mới |
-| CUS-03 | Gọi API trực tiếp tạo Service Request với customerId đã ngừng hoạt động | HTTP 409 `CUSTOMER_INACTIVE`; không tạo record mới |
-| CUS-04 | Chỉnh sửa Service Request đang OPEN đã tồn tại trước khi khách bị ngừng hoạt động, giữ nguyên customerId | Cho phép cập nhật nội dung hiện hữu; không phá hồ sơ đang xử lý |
+| CUS-03 | Trên trang Khách hàng, chuyển bộ lọc giữa Tất cả trạng thái / Hoạt động / Ngừng hoạt động | Danh sách và tổng số hồ sơ thay đổi đúng theo filter; ô tìm kiếm tiếp tục kết hợp với filter và phân trang quay về trang 1 |
+| CUS-04 | Gọi API trực tiếp tạo Service Request với customerId đã ngừng hoạt động | HTTP 409 `CUSTOMER_INACTIVE`; không tạo record mới |
+| CUS-05 | Chỉnh sửa Service Request đang OPEN đã tồn tại trước khi khách bị ngừng hoạt động, giữ nguyên customerId | Cho phép cập nhật nội dung hiện hữu; không phá hồ sơ đang xử lý |
 | AST-01 | Tạo thiết bị với serial mới | Thiết bị liên kết đúng khách hàng |
 | AST-02 | Mở form Thêm thiết bị sau khi khách hàng đã Ngừng hoạt động | Khách inactive không xuất hiện trong selector tạo mới |
 | AST-03 | Gọi API/import tạo Asset mới cho khách inactive | Bị từ chối `CUSTOMER_INACTIVE` hoặc row import không hợp lệ; Asset cũ vẫn giữ nguyên |
