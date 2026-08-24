@@ -125,8 +125,8 @@ public class DemoDataSeeder implements ApplicationRunner {
         Notification notification = new Notification();
         notification.setTenantId(tenant.getId());
         notification.setRecipient(technicianUser);
-        notification.setTitle("Công việc mới: " + wo1.getCode());
-        notification.setMessage("Bạn được phân công kiểm tra máy lạnh tại Công ty TNHH An Phát.");
+        notification.setTitle("Bạn được giao công việc mới: " + wo1.getCode());
+        notification.setMessage("Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện.");
         notificationRepository.save(notification);
 
         auditService.recordAs(tenant.getId(), "system", "SEED", "SYSTEM", tenant.getId(), "Khởi tạo dữ liệu demo local-first");

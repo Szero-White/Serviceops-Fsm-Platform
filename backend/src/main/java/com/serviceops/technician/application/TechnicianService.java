@@ -76,8 +76,8 @@ public class TechnicianService {
         notificationService.notifyRoles(
                 CurrentUser.tenantId(),
                 workforceRoles(),
-                "Hồ sơ kỹ thuật viên được cập nhật",
-                user.getDisplayName()
+                "Thông tin kỹ thuật viên đã thay đổi: " + user.getDisplayName(),
+                "Kiểm tra kỹ năng, liên hệ và trạng thái hoạt động trước khi phân công công việc."
         );
 
         return toResponse(technician);

@@ -52,7 +52,12 @@ public class ServiceChannelService {
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         repository.save(channel);
         auditService.record("CREATE", "SERVICE_CHANNEL", channel.getId(), "Tạo kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(tenantId, channelRoles(), "Kênh tiếp nhận mới: " + channel.getCode(), channel.getName());
+        notificationService.notifyRoles(
+                tenantId,
+                channelRoles(),
+                "Đã thêm kênh tiếp nhận: " + channel.getCode(),
+                "Tên kênh: " + channel.getName() + ". Kênh này có thể được dùng khi tạo yêu cầu dịch vụ."
+        );
         return toResponse(channel);
     }
 
@@ -62,7 +67,12 @@ public class ServiceChannelService {
         guardProtectedDemoChannel(channel);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(CurrentUser.tenantId(), channelRoles(), "Kênh tiếp nhận được cập nhật: " + channel.getCode(), channel.getName());
+        notificationService.notifyRoles(
+                CurrentUser.tenantId(),
+                channelRoles(),
+                "Thông tin kênh tiếp nhận đã thay đổi: " + channel.getCode(),
+                "Tên kênh: " + channel.getName() + ". Mở Kênh tiếp nhận để xem cấu hình mới."
+        );
         return toResponse(channel);
     }
 
@@ -76,7 +86,12 @@ public class ServiceChannelService {
         }
         repository.delete(channel);
         auditService.record("DELETE", "SERVICE_CHANNEL", channel.getId(), "Xóa kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(CurrentUser.tenantId(), channelRoles(), "Kênh tiếp nhận đã xoá: " + channel.getCode(), channel.getName());
+        notificationService.notifyRoles(
+                CurrentUser.tenantId(),
+                channelRoles(),
+                "Đã xóa kênh tiếp nhận: " + channel.getCode(),
+                "Tên kênh: " + channel.getName() + "."
+        );
     }
 
     public ServiceChannel requireActive(UUID tenantId, String code) {

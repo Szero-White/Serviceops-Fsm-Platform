@@ -37,6 +37,11 @@ public class NotificationController {
         return service.markRead(id);
     }
 
+    @PatchMapping("/{id}/unread")
+    public NotificationResponse markUnread(@PathVariable UUID id) {
+        return service.markUnread(id);
+    }
+
     public record NotificationResponse(UUID id, String title, String message, Instant readAt, Instant createdAt) {
     }
 }

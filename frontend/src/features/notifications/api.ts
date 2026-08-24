@@ -5,4 +5,5 @@ export const notificationsApi = {
   list: (page = 0, size = 30, unreadOnly = false) => http.get<PageResponse<NotificationItem>>('/notifications', { params: { page, size, unreadOnly } }).then((response) => response.data),
   unreadCount: () => http.get<{ count: number }>('/notifications/unread-count').then((response) => response.data.count),
   markRead: (id: string) => http.patch<NotificationItem>(`/notifications/${id}/read`).then((response) => response.data),
+  markUnread: (id: string) => http.patch<NotificationItem>(`/notifications/${id}/unread`).then((response) => response.data),
 }

@@ -59,7 +59,12 @@ public class AttachmentService {
         attachment.setUploadedBy(CurrentUser.username());
         repository.save(attachment);
         auditService.record("UPLOAD_FILE", normalizedType, referenceId, "Tải file " + attachment.getOriginalFilename());
-        notificationService.notifyRoles(tenantId, notificationRoles(normalizedType), "Tệp đính kèm mới", attachment.getOriginalFilename());
+        notificationService.notifyRoles(
+                tenantId,
+                notificationRoles(normalizedType),
+                "Có tệp mới trong " + referenceTypeLabel(normalizedType),
+                "Tệp \"" + attachment.getOriginalFilename() + "\" vừa được thêm. Mở " + referenceTypeLabel(normalizedType) + " để xem."
+        );
         return toResponse(attachment);
     }
 
@@ -219,6 +224,15 @@ public class AttachmentService {
             throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không được chứa ký tự điều khiển");
         }
         return normalized;
+    }
+
+    private static String referenceTypeLabel(String referenceType) {
+        return switch (referenceType) {
+            case "WORK_ORDER" -> "phiếu công việc";
+            case "SERVICE_REQUEST" -> "yêu cầu dịch vụ";
+            case "ASSET" -> "thiết bị";
+            default -> "đối tượng liên quan";
+        };
     }
 
     private static List<UserRole> notificationRoles(String referenceType) {

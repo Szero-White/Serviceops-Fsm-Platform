@@ -65,7 +65,12 @@ public class CustomerService {
         apply(customer, request, code);
         repository.save(customer);
         auditService.record("CREATE", "CUSTOMER", customer.getId(), "Tạo khách hàng " + customer.getCode());
-        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng mới: " + customer.getCode(), customer.getName());
+        notificationService.notifyRoles(
+                tenantId,
+                customerRoles(),
+                "Đã thêm khách hàng: " + customer.getCode(),
+                "Tên khách hàng: " + customer.getName() + ". Hồ sơ đã sẵn sàng để sử dụng."
+        );
         return toResponse(customer);
     }
 
@@ -78,7 +83,12 @@ public class CustomerService {
         }
         apply(customer, request, code);
         auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + customer.getCode());
-        notificationService.notifyRoles(CurrentUser.tenantId(), customerRoles(), "Khách hàng được cập nhật: " + customer.getCode(), customer.getName());
+        notificationService.notifyRoles(
+                CurrentUser.tenantId(),
+                customerRoles(),
+                "Thông tin khách hàng đã thay đổi: " + customer.getCode(),
+                "Tên khách hàng: " + customer.getName() + ". Mở Khách hàng để xem thông tin mới."
+        );
         return toResponse(customer);
     }
 
@@ -94,7 +104,12 @@ public class CustomerService {
         }
         repository.delete(customer);
         auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + customer.getCode());
-        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng đã xoá: " + customer.getCode(), customer.getName());
+        notificationService.notifyRoles(
+                tenantId,
+                customerRoles(),
+                "Đã xóa khách hàng: " + customer.getCode(),
+                "Tên khách hàng: " + customer.getName() + "."
+        );
     }
 
     @Transactional(readOnly = true)
@@ -136,7 +151,12 @@ public class CustomerService {
         }
 
         auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khách hàng từ CSV");
-        notificationService.notifyRoles(tenantId, customerRoles(), "Đã import danh sách khách hàng", validRows + " hồ sơ mới được thêm vào hệ thống");
+        notificationService.notifyRoles(
+                tenantId,
+                customerRoles(),
+                "Đã thêm khách hàng từ tệp",
+                validRows + " hồ sơ khách hàng mới đã được thêm vào hệ thống."
+        );
         return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 

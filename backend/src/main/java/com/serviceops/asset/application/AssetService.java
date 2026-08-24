@@ -80,7 +80,12 @@ public class AssetService {
         repository.save(asset);
         String label = assetDisplayLabel(asset);
         auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị " + label);
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị mới: " + label, customer.getName());
+        notificationService.notifyRoles(
+                tenantId,
+                assetRoles(),
+                "Đã thêm thiết bị: " + label,
+                "Khách hàng: " + customer.getName() + ". Thiết bị đã sẵn sàng để gắn vào yêu cầu dịch vụ."
+        );
         return toResponse(asset);
     }
 
@@ -111,7 +116,12 @@ public class AssetService {
         apply(asset, request, serial);
         String label = assetDisplayLabel(asset);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị " + label);
-        notificationService.notifyRoles(CurrentUser.tenantId(), assetRoles(), "Thiết bị được cập nhật: " + label, customer.getName());
+        notificationService.notifyRoles(
+                CurrentUser.tenantId(),
+                assetRoles(),
+                "Thông tin thiết bị đã thay đổi: " + label,
+                "Khách hàng: " + customer.getName() + ". Mở Thiết bị để xem thông tin mới."
+        );
         return toResponse(asset);
     }
 
@@ -133,7 +143,12 @@ public class AssetService {
         String label = assetDisplayLabel(asset);
         repository.delete(asset);
         auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị " + label);
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + label, asset.getCustomer().getName());
+        notificationService.notifyRoles(
+                tenantId,
+                assetRoles(),
+                "Đã xóa thiết bị: " + label,
+                "Khách hàng: " + asset.getCustomer().getName() + "."
+        );
     }
 
     @Transactional(readOnly = true)
@@ -175,7 +190,12 @@ public class AssetService {
         }
 
         auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiết bị từ CSV");
-        notificationService.notifyRoles(tenantId, assetRoles(), "Đã import danh sách thiết bị", validRows + " thiết bị mới được thêm vào hệ thống");
+        notificationService.notifyRoles(
+                tenantId,
+                assetRoles(),
+                "Đã thêm thiết bị từ tệp",
+                validRows + " thiết bị mới đã được thêm vào hệ thống."
+        );
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
