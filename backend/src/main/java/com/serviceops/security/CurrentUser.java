@@ -31,6 +31,16 @@ public final class CurrentUser {
         return jwt().getSubject();
     }
 
+    public static String displayName() {
+        String displayName = jwt().getClaimAsString("displayName");
+        return displayName == null || displayName.isBlank() ? username() : displayName;
+    }
+
+    public static String primaryRole() {
+        List<String> roles = jwt().getClaimAsStringList("roles");
+        return roles == null || roles.isEmpty() ? null : roles.getFirst();
+    }
+
     public static boolean hasRole(String role) {
         List<String> roles = jwt().getClaimAsStringList("roles");
         return roles != null && roles.contains(role);

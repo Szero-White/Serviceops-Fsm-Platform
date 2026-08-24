@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, DeleteOutlined, DownOutlined, DownloadOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import { useEffect, useState } from 'react'
@@ -13,6 +13,7 @@ import type { SparePart, SparePartImportResult, SparePartImportRowResult } from 
 import { formatCompactDecimalInput, formatCurrency, formatDateTime, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -34,11 +35,14 @@ export function InventoryPage() {
   const active = activeFilter === 'all' ? undefined : activeFilter === 'active'
   const [createOpen, setCreateOpen] = useState(false)
   const [importing, setImporting] = useState<SparePart>()
+  const [editingReorderLevel, setEditingReorderLevel] = useState<SparePart>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<SparePartImportResult>()
   const [createForm] = Form.useForm()
-  const [importForm] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
+  const [importForm] = Form.useForm<{ quantity: number; note: string }>()
+  const [reorderLevelForm] = Form.useForm<{ reorderLevel: number }>()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const inventoryQuery = useQuery({
@@ -60,6 +64,8 @@ export function InventoryPage() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['spare-parts'] })
+    queryClient.invalidateQueries({ queryKey: ['stocktake-parts'] })
+    queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
 
@@ -69,6 +75,23 @@ export function InventoryPage() {
       message.success('Đã tạo phụ tùng')
       setCreateOpen(false)
       createForm.resetFields()
+      refresh()
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const updateReorderLevel = useMutation({
+    mutationFn: (values: { reorderLevel: number }) => inventoryApi.updateReorderLevel(editingReorderLevel!.id, values.reorderLevel),
+    onSuccess: (part) => {
+      const isLowStock = part.active && Number(part.stockQuantity) <= Number(part.reorderLevel)
+      notification.success({
+        message: 'Đã cập nhật ngưỡng tồn tối thiểu',
+        description: isLowStock
+          ? `${part.name} (${part.sku}) hiện còn ${formatQuantityWithUnit(part.stockQuantity, part.unit)}, đã chạm hoặc thấp hơn ngưỡng ${formatQuantityWithUnit(part.reorderLevel, part.unit)}.`
+          : `${part.name} (${part.sku}) · Ngưỡng mới ${formatQuantityWithUnit(part.reorderLevel, part.unit)}.`,
+      })
+      setEditingReorderLevel(undefined)
+      reorderLevelForm.resetFields()
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -213,7 +236,7 @@ export function InventoryPage() {
       <PageHeader
         eyebrow="Quản lý tồn kho"
         title="Kho phụ tùng"
-        description="Theo dõi tồn kho, mức đặt hàng và nhập bổ sung phụ tùng phục vụ phiếu công việc."
+        description="Theo dõi tồn kho, ngưỡng tồn tối thiểu và nhập bổ sung phụ tùng phục vụ phiếu công việc."
         actions={inventoryActions}
         meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} SKU`}</MetaBadge><MetaBadge tone={search || activeFilter !== 'all' ? 'info' : 'neutral'}>{activeFilter === 'active' ? 'Đang sử dụng' : activeFilter === 'inactive' ? 'Ngừng sử dụng' : 'Tất cả phụ tùng'}</MetaBadge></>}
       />
@@ -245,7 +268,7 @@ export function InventoryPage() {
         loading={isLoading || isFetching}
         dataSource={inventoryQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
-        scroll={{ x: 980 }}
+        scroll={{ x: 1120 }}
         pagination={{
           current: page + 1,
           pageSize: LIST_PAGE_SIZE,
@@ -278,7 +301,7 @@ export function InventoryPage() {
               </Space>
             ),
           },
-          { title: 'Mức đặt hàng', dataIndex: 'reorderLevel', width: 150, render: (value, record) => formatQuantityWithUnit(value, record.unit) },
+          { title: 'Ngưỡng tồn tối thiểu', dataIndex: 'reorderLevel', width: 190, render: (value, record) => formatQuantityWithUnit(value, record.unit) },
           { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, render: formatCurrency },
           {
             title: 'Trạng thái',
@@ -292,7 +315,7 @@ export function InventoryPage() {
           { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
           ...(canManageStock ? [{
             title: 'Thao tác',
-            width: 360,
+            width: 480,
             fixed: 'right' as const,
             render: (_: unknown, record: SparePart) => {
               const hasStock = Number(record.stockQuantity) !== 0
@@ -304,6 +327,16 @@ export function InventoryPage() {
                     onClick={() => { setImporting(record); importForm.setFieldsValue({ note: 'Nhập bổ sung kho' }) }}
                   >
                     Nhập kho
+                  </Button>
+
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditingReorderLevel(record)
+                      reorderLevelForm.setFieldsValue({ reorderLevel: record.reorderLevel })
+                    }}
+                  >
+                    Sửa ngưỡng
                   </Button>
 
                   {record.active ? (
@@ -350,21 +383,56 @@ export function InventoryPage() {
         ]}
       />
 
-      <Modal title="Thêm phụ tùng" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} confirmLoading={create.isPending} width={680} destroyOnHidden>
-        <Form form={createForm} layout="vertical" onFinish={(values) => create.mutate(values)} requiredMark={false}>
+      <Modal title="Thêm phụ tùng" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()} confirmLoading={create.isPending} okText="Thêm phụ tùng" width={680} destroyOnHidden>
+        <Form form={createForm} layout="vertical" onFinish={(values) => create.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="SKU" name="sku" rules={[{ required: true, message: 'Nhập SKU' }]}><Input /></Form.Item>
             <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true, message: 'Nhập tên phụ tùng' }]}><Input /></Form.Item>
             <Form.Item label="Đơn vị" name="unit" rules={[{ required: true, message: 'Nhập đơn vị' }]}><Input /></Form.Item>
             <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item label="Mức đặt hàng lại" name="reorderLevel" rules={[{ required: true, message: 'Nhập mức đặt hàng' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Ngưỡng tồn tối thiểu" name="reorderLevel" rules={[{ required: true, message: 'Nhập ngưỡng tồn tối thiểu' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
             <Form.Item label="Đơn giá" name="unitPrice" rules={[{ required: true, message: 'Nhập đơn giá' }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} addonAfter="VND" /></Form.Item>
           </div>
         </Form>
       </Modal>
 
-      <Modal title={`Nhập kho · ${importing?.sku ?? ''}`} open={Boolean(importing)} onCancel={() => setImporting(undefined)} onOk={() => importForm.submit()} confirmLoading={importStock.isPending} destroyOnHidden>
-        <Form form={importForm} layout="vertical" onFinish={(values) => importStock.mutate(values)} requiredMark={false}>
+      <Modal
+        title={`Ngưỡng tồn tối thiểu · ${editingReorderLevel?.sku ?? ''}`}
+        open={Boolean(editingReorderLevel)}
+        onCancel={() => { setEditingReorderLevel(undefined); reorderLevelForm.resetFields() }}
+        onOk={() => reorderLevelForm.submit()}
+        confirmLoading={updateReorderLevel.isPending}
+        okText="Lưu ngưỡng"
+        destroyOnHidden
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="Ngưỡng tồn tối thiểu là mốc cảnh báo, không phải số lượng đặt mua."
+          description={editingReorderLevel
+            ? `Tồn hiện tại: ${formatQuantityWithUnit(editingReorderLevel.stockQuantity, editingReorderLevel.unit)}. Khi tồn chạm hoặc thấp hơn ngưỡng này, phụ tùng được xem là tồn thấp.`
+            : undefined}
+          style={{ marginBottom: 16 }}
+        />
+        <Form form={reorderLevelForm} layout="vertical" onFinish={(values) => updateReorderLevel.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
+          <Form.Item
+            label="Ngưỡng tồn tối thiểu"
+            name="reorderLevel"
+            rules={[{ required: true, message: 'Nhập ngưỡng tồn tối thiểu' }]}
+          >
+            <InputNumber
+              min={0}
+              precision={3}
+              formatter={formatCompactDecimalInput}
+              style={{ width: '100%' }}
+              addonAfter={editingReorderLevel?.unit}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title={`Nhập kho · ${importing?.sku ?? ''}`} open={Boolean(importing)} onCancel={() => setImporting(undefined)} onOk={() => importForm.submit()} confirmLoading={importStock.isPending} okText="Xác nhận nhập kho" destroyOnHidden>
+        <Form form={importForm} layout="vertical" onFinish={(values) => importStock.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <Form.Item label="Số lượng" name="quantity" rules={[{ required: true, message: 'Nhập số lượng' }]}><InputNumber min={0.001} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} addonAfter={importing?.unit} /></Form.Item>
           <Form.Item label="Ghi chú" name="note" rules={[{ required: true, message: 'Nhập ghi chú' }]}><Input /></Form.Item>
         </Form>

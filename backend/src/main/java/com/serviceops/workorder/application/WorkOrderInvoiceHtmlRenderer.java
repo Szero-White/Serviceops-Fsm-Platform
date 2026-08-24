@@ -1,6 +1,6 @@
 package com.serviceops.workorder.application;
 
-import com.serviceops.inventory.domain.InventoryTransaction;
+import com.serviceops.inventory.domain.InventoryPartUsage;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -25,7 +25,7 @@ public class WorkOrderInvoiceHtmlRenderer {
     private static final String TEMPLATE_PATH = "templates/work-order-invoice.html";
     private final String invoiceTemplate = loadTemplate();
 
-    public String render(WorkOrderResponse workOrder, List<InventoryTransaction> consumedParts) {
+    public String render(WorkOrderResponse workOrder, List<InventoryPartUsage> consumedParts) {
         BigDecimal partsTotal = consumedParts.stream()
                 .map(this::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -66,7 +66,7 @@ public class WorkOrderInvoiceHtmlRenderer {
         }
     }
 
-    private String renderRows(List<InventoryTransaction> consumedParts) {
+    private String renderRows(List<InventoryPartUsage> consumedParts) {
         if (consumedParts.isEmpty()) {
             return """
                     <tr>
@@ -77,7 +77,7 @@ public class WorkOrderInvoiceHtmlRenderer {
 
         StringBuilder rows = new StringBuilder();
         int index = 1;
-        for (InventoryTransaction tx : consumedParts) {
+        for (InventoryPartUsage usage : consumedParts) {
             rows.append("""
                     <tr>
                       <td>%d</td>
@@ -91,12 +91,12 @@ public class WorkOrderInvoiceHtmlRenderer {
                     </tr>
                     """.formatted(
                     index++,
-                    escape(tx.getSparePart().getName()),
-                    escape(tx.getSparePart().getSku()),
-                    formatNumber(tx.getQuantity()),
-                    escape(tx.getSparePart().getUnit()),
-                    formatMoney(tx.getSparePart().getUnitPrice()),
-                    formatMoney(amount(tx))
+                    escape(usage.sparePart().getName()),
+                    escape(usage.sparePart().getSku()),
+                    formatNumber(usage.quantity()),
+                    escape(usage.sparePart().getUnit()),
+                    formatMoney(usage.sparePart().getUnitPrice()),
+                    formatMoney(amount(usage))
             ));
         }
         return rows.toString();
@@ -123,8 +123,8 @@ public class WorkOrderInvoiceHtmlRenderer {
         return value == null ? "Không có dữ liệu" : DATE_TIME_FORMATTER.format(value);
     }
 
-    private BigDecimal amount(InventoryTransaction tx) {
-        return tx.getSparePart().getUnitPrice().multiply(tx.getQuantity()).setScale(0, RoundingMode.HALF_UP);
+    private BigDecimal amount(InventoryPartUsage usage) {
+        return usage.sparePart().getUnitPrice().multiply(usage.quantity()).setScale(0, RoundingMode.HALF_UP);
     }
 
     private static String formatMoney(BigDecimal value) {

@@ -15,6 +15,8 @@ export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
   '/work-order-history': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'],
   '/technicians': ['OWNER', 'DISPATCHER'],
   '/inventory': ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'],
+  '/inventory-stocktake': ['OWNER', 'WAREHOUSE_STAFF'],
+  '/inventory-movements': ['OWNER', 'WAREHOUSE_STAFF'],
   '/audit': ['OWNER', 'DISPATCHER'],
 }
 
