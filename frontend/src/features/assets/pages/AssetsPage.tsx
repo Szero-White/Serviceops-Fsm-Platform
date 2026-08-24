@@ -57,6 +57,17 @@ export function AssetsPage() {
   }, [data, page])
   const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
 
+  const refreshRelatedViews = () => {
+    queryClient.invalidateQueries({ queryKey: ['assets'] })
+    queryClient.invalidateQueries({ queryKey: ['service-requests'] })
+    queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
       const payload = {
@@ -72,8 +83,7 @@ export function AssetsPage() {
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -82,8 +92,7 @@ export function AssetsPage() {
     mutationFn: (id: string) => assetsApi.delete(id),
     onSuccess: () => {
       message.success('Đã xoá thiết bị')
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -110,8 +119,7 @@ export function AssetsPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
-        queryClient.invalidateQueries({ queryKey: ['assets'] })
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+        refreshRelatedViews()
       }
     },
     onError: (error) => message.error(apiErrorMessage(error)),

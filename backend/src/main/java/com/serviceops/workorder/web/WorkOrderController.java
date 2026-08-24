@@ -29,6 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/work-orders")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
 public class WorkOrderController {
     private final WorkOrderService service;
     private final WorkOrderInvoiceService invoiceService;
@@ -86,7 +87,7 @@ public class WorkOrderController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
+    @PreAuthorize("hasRole('OWNER')")
     public void deleteFromHistory(@PathVariable UUID id) {
         service.deleteFromHistory(id);
     }

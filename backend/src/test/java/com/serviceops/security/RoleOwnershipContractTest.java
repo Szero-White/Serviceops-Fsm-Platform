@@ -3,7 +3,9 @@ package com.serviceops.security;
 import com.serviceops.ai.web.AiController;
 import com.serviceops.asset.web.AssetController;
 import com.serviceops.customer.web.CustomerController;
+import com.serviceops.dashboard.web.DashboardController;
 import com.serviceops.servicerequest.web.ServiceRequestController;
+import com.serviceops.technician.web.TechnicianController;
 import com.serviceops.workorder.web.WorkOrderController;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +19,7 @@ class RoleOwnershipContractTest {
 
     private static final String MASTER_DATA_READ = "hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')";
     private static final String INTAKE_OWNERS = "hasAnyRole('OWNER','CUSTOMER_SERVICE')";
+    private static final String OPERATIONAL_WORK_ORDER_READ = "hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')";
 
     @Test
     void dispatcherCanReadCustomerAndAssetMasterDataButCannotOwnTheirWrites() {
@@ -37,6 +40,7 @@ class RoleOwnershipContractTest {
 
     @Test
     void workOrdersCanOnlyBeCreatedFromServiceRequestsAndCustomerServiceKeepsCancellationAccess() {
+        assertClassAuthorization(WorkOrderController.class, OPERATIONAL_WORK_ORDER_READ);
         assertThat(Arrays.stream(WorkOrderController.class.getDeclaredMethods()).map(Method::getName))
                 .doesNotContain("create");
 
@@ -51,6 +55,18 @@ class RoleOwnershipContractTest {
                 "transition",
                 "hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')"
         );
+        assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
+    }
+
+    @Test
+    void dispatcherCanReadTechnicianProfilesButOnlyOwnerCanEditThem() {
+        assertClassAuthorization(TechnicianController.class, "hasAnyRole('OWNER','DISPATCHER')");
+        assertMethodAuthorization(TechnicianController.class, "updateProfile", "hasRole('OWNER')");
+    }
+
+    @Test
+    void operationalDashboardExcludesWarehouse() {
+        assertClassAuthorization(DashboardController.class, OPERATIONAL_WORK_ORDER_READ);
     }
 
     private static void assertClassAuthorization(Class<?> controller, String expected) {

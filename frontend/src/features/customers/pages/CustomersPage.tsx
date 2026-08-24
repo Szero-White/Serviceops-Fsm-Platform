@@ -46,6 +46,17 @@ export function CustomersPage() {
     }
   }, [data, page])
 
+  const refreshRelatedViews = () => {
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+    queryClient.invalidateQueries({ queryKey: ['service-requests'] })
+    queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => editing ? customersApi.update(editing.id, values) : customersApi.create(values),
     onSuccess: () => {
@@ -53,8 +64,7 @@ export function CustomersPage() {
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -63,8 +73,7 @@ export function CustomersPage() {
     mutationFn: (id: string) => customersApi.delete(id),
     onSuccess: () => {
       message.success('Đã xoá khách hàng')
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -91,8 +100,7 @@ export function CustomersPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
-        queryClient.invalidateQueries({ queryKey: ['customers'] })
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+        refreshRelatedViews()
       }
     },
     onError: (error) => message.error(apiErrorMessage(error)),

@@ -22,7 +22,7 @@ const historyStatusOptions: Array<{ value: Extract<WorkOrderStatus, 'CLOSED' | '
 
 export function WorkOrderHistoryPage() {
   const { user } = useAuth()
-  const canDelete = ['OWNER', 'DISPATCHER'].includes(user?.role ?? '')
+  const canDelete = user?.role === 'OWNER'
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())

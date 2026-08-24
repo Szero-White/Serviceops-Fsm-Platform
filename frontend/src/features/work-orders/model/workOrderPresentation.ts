@@ -53,6 +53,7 @@ const ROLE_ALLOWED_TRANSITIONS: Partial<Record<UserRole, ReadonlySet<WorkOrderSt
     'COMPLETED',
   ]),
   CUSTOMER_SERVICE: new Set(['CANCELLED']),
+  DISPATCHER: new Set(['CANCELLED']),
 }
 
 export function availableWorkOrderTransitions(status: WorkOrderStatus, role?: UserRole): WorkOrderStatus[] {

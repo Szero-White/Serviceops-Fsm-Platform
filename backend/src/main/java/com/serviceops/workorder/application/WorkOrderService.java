@@ -49,6 +49,9 @@ public class WorkOrderService {
     private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
             WorkOrderStatus.CANCELLED
     );
+    private static final Set<WorkOrderStatus> DISPATCHER_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CANCELLED
+    );
 
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
@@ -129,7 +132,7 @@ public class WorkOrderService {
             throw BusinessException.badRequest("INVALID_APPOINTMENT_TIME", "Thời gian kết thúc phải sau thời gian bắt đầu");
         }
         UUID tenantId = CurrentUser.tenantId();
-        WorkOrder workOrder = require(id);
+        WorkOrder workOrder = requireForUpdate(id);
         TechnicianProfile technician = technicianRepository.findForUpdate(request.technicianId(), tenantId)
                 .orElseThrow(() -> BusinessException.notFound("TECHNICIAN_NOT_FOUND", "Không tìm thấy kỹ thuật viên"));
         if (!technician.isActive()
@@ -142,6 +145,16 @@ public class WorkOrderService {
             throw BusinessException.conflict("TECHNICIAN_SCHEDULE_CONFLICT", "Kỹ thuật viên đã có công việc trùng thời gian");
         }
 
+        Appointment existingAppointment = appointmentRepository
+                .findByTenantIdAndWorkOrderId(tenantId, workOrder.getId())
+                .orElse(null);
+        TechnicianProfile previousTechnician = existingAppointment == null
+                ? workOrder.getTechnician()
+                : existingAppointment.getTechnician();
+        Instant previousStart = existingAppointment == null ? workOrder.getScheduledStart() : existingAppointment.getStartTime();
+        Instant previousEnd = existingAppointment == null ? workOrder.getScheduledEnd() : existingAppointment.getEndTime();
+        boolean reschedule = existingAppointment != null;
+
         WorkOrderStatus previous = workOrder.getStatus();
         try {
             workOrder.schedule(technician, request.startTime(), request.endTime());
@@ -151,7 +164,7 @@ public class WorkOrderService {
             throw BusinessException.conflict("INVALID_STATUS_TRANSITION", ex.getMessage());
         }
 
-        Appointment appointment = appointmentRepository.findByTenantIdAndWorkOrderId(tenantId, workOrder.getId()).orElseGet(Appointment::new);
+        Appointment appointment = existingAppointment == null ? new Appointment() : existingAppointment;
         if (appointment.getId() == null) {
             appointment.setTenantId(tenantId);
             appointment.setWorkOrder(workOrder);
@@ -162,16 +175,53 @@ public class WorkOrderService {
         appointment.setStatus(AppointmentStatus.ACTIVE);
         appointmentRepository.save(appointment);
 
-        addHistory(workOrder, previous, workOrder.getStatus(), "Phân công cho " + technician.getUser().getDisplayName());
-        auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technician.getUser().getDisplayName());
-        notificationService.create(tenantId, technician.getUser(), "Công việc mới: " + workOrder.getCode(), "Bạn được phân công: " + workOrder.getSummary());
-        notificationService.notifyRoles(tenantId, dispatchRoles(), "Đã phân công " + workOrder.getCode(), technician.getUser().getDisplayName() + " phụ trách: " + workOrder.getSummary());
+        String technicianName = technician.getUser().getDisplayName();
+        if (previous != workOrder.getStatus()) {
+            addHistory(workOrder, previous, workOrder.getStatus(), "Phân công cho " + technicianName);
+        }
+
+        if (reschedule) {
+            String previousTechnicianName = previousTechnician == null
+                    ? "Chưa phân công"
+                    : previousTechnician.getUser().getDisplayName();
+            String details = "Điều chỉnh lịch " + workOrder.getCode()
+                    + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
+                    + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]";
+            auditService.record("RESCHEDULE", "WORK_ORDER", workOrder.getId(), details);
+
+            if (previousTechnician != null
+                    && !previousTechnician.getId().equals(technician.getId())) {
+                notificationService.create(
+                        tenantId,
+                        previousTechnician.getUser(),
+                        "Công việc đã được điều phối lại: " + workOrder.getCode(),
+                        "Phiếu " + workOrder.getCode() + " không còn trong lịch của bạn"
+                );
+            }
+
+            notificationService.create(
+                    tenantId,
+                    technician.getUser(),
+                    "Lịch công việc được cập nhật: " + workOrder.getCode(),
+                    "Lịch mới: " + request.startTime() + " - " + request.endTime()
+            );
+            notificationService.notifyRoles(
+                    tenantId,
+                    dispatchRoles(),
+                    "Đã điều chỉnh lịch " + workOrder.getCode(),
+                    technicianName + " · " + request.startTime() + " - " + request.endTime()
+            );
+        } else {
+            auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technicianName);
+            notificationService.create(tenantId, technician.getUser(), "Công việc mới: " + workOrder.getCode(), "Bạn được phân công: " + workOrder.getSummary());
+            notificationService.notifyRoles(tenantId, dispatchRoles(), "Đã phân công " + workOrder.getCode(), technicianName + " phụ trách: " + workOrder.getSummary());
+        }
         return get(id);
     }
 
     @Transactional
     public WorkOrderResponse transition(UUID id, TransitionWorkOrder request) {
-        WorkOrder workOrder = require(id);
+        WorkOrder workOrder = requireForUpdate(id);
         ensureTechnicianCanAccess(workOrder);
         ensureRoleCanTransition(request);
         WorkOrderStatus previous = workOrder.getStatus();
@@ -233,6 +283,16 @@ public class WorkOrderService {
             return;
         }
 
+        if (CurrentUser.hasRole("DISPATCHER")) {
+            if (!DISPATCHER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Điều phối viên chỉ được hủy phiếu công việc theo nghiệp vụ điều phối"
+                );
+            }
+            return;
+        }
+
         if (CurrentUser.hasRole("CUSTOMER_SERVICE")) {
             if (!CUSTOMER_SERVICE_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
@@ -247,6 +307,11 @@ public class WorkOrderService {
                 );
             }
         }
+    }
+
+    private WorkOrder requireForUpdate(UUID id) {
+        return repository.findForUpdate(id, CurrentUser.tenantId())
+                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
     }
 
     private WorkOrder require(UUID id) {

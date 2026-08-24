@@ -54,6 +54,7 @@ export function TechniciansPage() {
   const pausedCount = data.length - activeCount
   const skilledCount = data.filter((technician) => technician.skills?.trim()).length
   const canManageAccounts = user?.role === 'OWNER'
+  const canManageProfiles = user?.role === 'OWNER'
 
   const updateProfile = useMutation({
     mutationFn: (values: TechnicianProfileValues) => {
@@ -68,6 +69,11 @@ export function TechniciansPage() {
       setEditing(undefined)
       form.resetFields()
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -162,8 +168,8 @@ export function TechniciansPage() {
           },
           {
             title: '',
-            width: 64,
-            render: (_, record) => (
+            width: canManageProfiles ? 64 : 24,
+            render: (_, record) => canManageProfiles ? (
               <Button
                 aria-label="Sửa hồ sơ kỹ thuật viên"
                 type="text"
@@ -172,7 +178,7 @@ export function TechniciansPage() {
                 title={record.protectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
                 onClick={() => showEdit(record)}
               />
-            ),
+            ) : null,
           },
         ]}
       />

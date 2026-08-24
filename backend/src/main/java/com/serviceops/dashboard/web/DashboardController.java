@@ -4,6 +4,7 @@ import com.serviceops.common.domain.Priority;
 import com.serviceops.dashboard.application.DashboardService;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
 public class DashboardController {
     private final DashboardService service;
 
@@ -29,11 +31,16 @@ public class DashboardController {
             long openServiceRequests,
             long activeTechnicians,
             long openWorkOrders,
+            long scheduledWorkOrders,
             long assignedWorkOrders,
+            long onTheWayWorkOrders,
             long inProgressWorkOrders,
             long waitingForPartsWorkOrders,
             long completedWorkOrders,
+            long customerAcceptedWorkOrders,
             long closedWorkOrders,
+            long reopenedWorkOrders,
+            long cancelledWorkOrders,
             long lowStockParts,
             List<RecentWorkOrder> recentWorkOrders
     ) {

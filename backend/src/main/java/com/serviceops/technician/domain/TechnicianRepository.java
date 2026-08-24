@@ -31,6 +31,10 @@ public interface TechnicianRepository extends JpaRepository<TechnicianProfile, U
     Optional<TechnicianProfile> findByTenantIdAndUserId(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from TechnicianProfile t join fetch t.user where t.tenantId = :tenantId and t.user.id = :userId")
+    Optional<TechnicianProfile> findByTenantIdAndUserIdForUpdate(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from TechnicianProfile t join fetch t.user where t.id = :id and t.tenantId = :tenantId")
     Optional<TechnicianProfile> findForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 

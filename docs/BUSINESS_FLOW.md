@@ -7,7 +7,7 @@ Customer/CSKH tạo Service Request
         ↓
 Xác thực khách hàng + thiết bị + mức ưu tiên
         ↓
-Chuyển thành Work Order
+Customer Service/Owner chuyển Service Request thành Work Order
         ↓
 Dispatcher chọn kỹ thuật viên và khung giờ
         ↓
@@ -17,10 +17,14 @@ Technician: ON_THE_WAY → IN_PROGRESS
         ↓
 Ghi chẩn đoán, giải pháp, phụ tùng và file minh chứng
         ↓
-COMPLETED → CUSTOMER_ACCEPTED → CLOSED
+COMPLETED
         ↓
-Dashboard + lịch sử + audit được cập nhật
+Owner: CUSTOMER_ACCEPTED → CLOSED
+        ↓
+Dashboard + lịch sử + audit + notification được cập nhật
 ```
+
+Work Order public flow **không có generic direct-create API**. Nguồn tạo chuẩn là `Service Request → Work Order`; demo seed cũng giữ source Service Request cho các Work Order mẫu.
 
 ## 2. State transition
 
@@ -35,11 +39,25 @@ Nhánh:
 
 ```text
 IN_PROGRESS → WAITING_FOR_PARTS → IN_PROGRESS
-COMPLETED/CUSTOMER_ACCEPTED → REOPENED → IN_PROGRESS
-OPEN/SCHEDULED/ASSIGNED/ON_THE_WAY/IN_PROGRESS → CANCELLED
+COMPLETED/CUSTOMER_ACCEPTED → REOPENED → IN_PROGRESS hoặc SCHEDULED
+CANCELLED → REOPENED (management-controlled)
 ```
 
-Chuyển trạng thái không hợp lệ trả `409 INVALID_STATUS_TRANSITION`.
+Các trạng thái active có thể hủy theo policy:
+
+```text
+OPEN / SCHEDULED / ASSIGNED / ON_THE_WAY /
+IN_PROGRESS / WAITING_FOR_PARTS / REOPENED → CANCELLED
+```
+
+Role ownership của transition:
+
+- `TECHNICIAN`: `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED` trên Work Order được giao cho chính mình.
+- `CUSTOMER_SERVICE`: `CANCELLED` khi khách thay đổi nhu cầu; yêu cầu lý do hủy.
+- `DISPATCHER`: điều phối/schedule/reschedule và operational cancellation; không thực hiện field progress, customer acceptance, close hoặc reopen.
+- `OWNER`: management transitions/override được phép bởi state machine, bao gồm acceptance/close/reopen.
+
+Transition không hợp lệ về state trả `409 INVALID_STATUS_TRANSITION`; transition đúng state nhưng sai role trả `403 WORK_ORDER_TRANSITION_FORBIDDEN`.
 
 ## 3. Quy tắc xếp lịch
 
@@ -49,27 +67,37 @@ Hai khoảng thời gian chồng lấn khi:
 newStart < existingEnd AND newEnd > existingStart
 ```
 
-Khi hai điều phối viên gửi request đồng thời, pessimistic lock trên technician làm tuần tự hóa thao tác. Request thứ hai sẽ nhìn thấy appointment vừa commit và nhận `409 TECHNICIAN_SCHEDULE_CONFLICT`.
+Khi hai điều phối viên gửi request đồng thời, pessimistic lock trên technician làm tuần tự hóa thao tác. Request thứ hai nhìn thấy appointment vừa commit và nhận `409 TECHNICIAN_SCHEDULE_CONFLICT`.
+
+Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn role `TECHNICIAN` không thể nhận lịch mới. Owner cũng không được tạm ngưng account/profile kỹ thuật viên khi còn Work Order operational đang gán cho người đó; phải điều phối lại hoặc hủy công việc trước.
 
 ## 4. Quy tắc tồn kho
 
 - Số lượng phải lớn hơn 0.
-- Work order đóng/hủy không được dùng thêm phụ tùng.
-- Kỹ thuật viên chỉ được dùng phụ tùng cho work order của mình.
-- Mỗi thay đổi tạo một dòng `inventory_transactions` với `balance_after`.
-- Không sửa stock bằng API CRUD tùy ý.
+- Work Order `CLOSED`/`CANCELLED` không được dùng thêm phụ tùng.
+- Technician chỉ consume phụ tùng cho Work Order được giao cho mình.
+- Warehouse quản lý catalog/import/lifecycle stock nhưng không consume thay Technician trong operational Work Order flow.
+- Mỗi thay đổi tạo `inventory_transactions` với `balance_after`.
+- Locking + validation + transaction ngăn stock âm khi consume đồng thời.
 
 ## 5. Quyền thao tác
 
-- OWNER: quản trị người dùng, cấu hình kênh tiếp nhận, giám sát toàn hệ thống và các thao tác quản lý/override được ủy quyền.
-- DISPATCHER: xem customer/asset để phục vụ điều phối; theo dõi work order, kỹ thuật viên, phân công, xếp lịch/reschedule và nghiệp vụ điều phối được phép. Không tiếp nhận Service Request và không tạo Work Order trực tiếp.
-- CUSTOMER_SERVICE: quản lý customer/asset, tiếp nhận/chỉnh sửa/hủy Service Request, chuyển Service Request sang điều phối và hủy Work Order đang hoạt động khi khách thay đổi nhu cầu theo policy.
-- TECHNICIAN: xem/cập nhật công việc được giao, upload minh chứng và ghi nhận phụ tùng sử dụng cho chính công việc được giao.
-- WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, tồn kho và vòng đời phụ tùng; không sở hữu luồng Work Order.
+- `OWNER`: quản trị người dùng, cấu hình kênh tiếp nhận, hồ sơ kỹ thuật viên, dashboard, audit, visibility toàn hệ thống và management actions.
+- `DISPATCHER`: Customer/Asset read-only; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation; xem lịch sử/audit. Không tiếp nhận Service Request, không sửa hồ sơ kỹ thuật viên, không nghiệm thu/close/reopen.
+- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; hủy Work Order active theo policy.
+- `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; consume spare part cho chính job.
+- `WAREHOUSE_STAFF`: `/inventory` và API kho; không có Work Order operational API hoặc operational dashboard.
 
+## 6. Delete / cancel / deactivate
 
-## Workspace theo vai trò
+- Service Request và Work Order nghiệp vụ ưu tiên state (`CANCELLED`) thay cho hard delete khi đã có lịch sử vận hành.
+- Work Order `CLOSED`/`CANCELLED` chỉ Owner được ẩn khỏi lịch sử tra cứu; audit vẫn được giữ.
+- Asset/Service Request chưa có operational reference vẫn không được hard-delete nếu còn attachment; phải xử lý attachment trước để tránh orphan metadata/file.
+- Technician có assignment operational không được deactivate.
 
-- Dispatcher/OWNER dùng **Lịch điều phối** để nhìn toàn đội, xử lý hàng đợi và thay đổi phân công.
-- TECHNICIAN dùng **Lịch của tôi**. Backend lấy `userId` từ JWT, ánh xạ sang `technician_profiles.user_id` và chỉ trả appointment của hồ sơ đó.
-- Hai kỹ thuật viên cùng role vẫn là hai tài khoản riêng; role xác định quyền, còn `UserAccount` xác định danh tính và audit accountability.
+## 7. Workspace theo vai trò
+
+- Owner/Dispatcher dùng **Lịch điều phối**.
+- Technician dùng **Lịch của tôi**; backend suy ra `TechnicianProfile` từ JWT `userId`, client không gửi `technicianId`.
+- Warehouse đăng nhập/điều hướng mặc định vào **Kho phụ tùng**, không vào operational dashboard.
+- Hai Technician cùng role vẫn là hai identity riêng; role quyết định quyền, `UserAccount` quyết định ownership/audit accountability.

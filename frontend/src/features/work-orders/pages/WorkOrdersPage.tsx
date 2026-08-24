@@ -95,6 +95,9 @@ export function WorkOrdersPage() {
   const refreshOperations = () => {
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
     queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['audit'] })
   }

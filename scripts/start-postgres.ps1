@@ -1,7 +1,13 @@
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path "$PSScriptRoot\.."
+
 Push-Location $root
-if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env" }
-docker compose -f docker-compose.local.yml up -d
-docker compose -f docker-compose.local.yml ps
-Pop-Location
+try {
+    if (-not (Test-Path ".env")) {
+        Copy-Item ".env.example" ".env"
+    }
+    docker compose -f docker-compose.local.yml up -d --wait
+    docker compose -f docker-compose.local.yml ps
+} finally {
+    Pop-Location
+}

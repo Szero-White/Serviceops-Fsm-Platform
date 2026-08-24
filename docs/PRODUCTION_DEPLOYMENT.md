@@ -79,7 +79,7 @@ On a single VM, expose only what is required (normally SSH and HTTP/HTTPS), use 
 
 Authorization and business invariants remain enforced exactly as in non-demo mode. Set `DEMO_MODE=false` for a private deployment that does not need seeded-data protection.
 
-Known seeded demo accounts are re-synchronized to the configured `DEMO_PASSWORD` when the demo profile starts. This prevents a reused local demo volume from silently retaining the local `123456` password.
+Known seeded demo accounts are re-synchronized to the configured `DEMO_PASSWORD` when the demo profile starts. This prevents a reused demo volume from silently retaining a password from an earlier local/demo run.
 
 Set `DEMO_MODE=false` and omit the `demo` profile to restore normal production behavior.
 

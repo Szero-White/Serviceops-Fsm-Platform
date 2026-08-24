@@ -8,6 +8,7 @@ import com.serviceops.asset.web.AssetDtos.AssetImportResult;
 import com.serviceops.asset.web.AssetDtos.AssetImportRowResult;
 import com.serviceops.asset.web.AssetDtos.AssetRequest;
 import com.serviceops.asset.web.AssetDtos.AssetResponse;
+import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
@@ -42,6 +43,7 @@ public class AssetService {
     private final CustomerRepository customerRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final AttachmentRepository attachmentRepository;
     private final AssetCsvService csvService;
     private final AuditService auditService;
     private final NotificationService notificationService;
@@ -121,6 +123,12 @@ public class AssetService {
         long workOrderCount = workOrderRepository.countByTenantIdAndAssetId(tenantId, id);
         if (serviceRequestCount > 0 || workOrderCount > 0) {
             throw BusinessException.conflict("ASSET_IN_USE", "Không thể xóa thiết bị đang được sử dụng");
+        }
+        if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(tenantId, "ASSET", id)) {
+            throw BusinessException.conflict(
+                    "ASSET_HAS_ATTACHMENTS",
+                    "Không thể xóa thiết bị khi còn file đính kèm; hãy xóa file đính kèm trước"
+            );
         }
         String label = assetDisplayLabel(asset);
         repository.delete(asset);

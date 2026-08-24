@@ -51,11 +51,16 @@ public class DashboardService {
             return new DashboardResponse(
                     0, 0, 0, 0,
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.OPEN),
+                    workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.SCHEDULED),
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.ASSIGNED),
+                    workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.ON_THE_WAY),
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.IN_PROGRESS),
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.WAITING_FOR_PARTS),
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.COMPLETED),
+                    workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.CUSTOMER_ACCEPTED),
                     workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.CLOSED),
+                    workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.REOPENED),
+                    workOrderRepository.countByTenantIdAndTechnicianUserIdAndStatus(tenantId, userId, WorkOrderStatus.CANCELLED),
                     0,
                     recent
             );
@@ -67,11 +72,16 @@ public class DashboardService {
                 serviceRequestRepository.countByTenantIdAndStatus(tenantId, ServiceRequestStatus.OPEN),
                 technicianRepository.countByTenantIdAndActiveTrue(tenantId),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.OPEN),
+                workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.SCHEDULED),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.ASSIGNED),
+                workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.ON_THE_WAY),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.IN_PROGRESS),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.WAITING_FOR_PARTS),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.COMPLETED),
+                workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.CUSTOMER_ACCEPTED),
                 workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.CLOSED),
+                workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.REOPENED),
+                workOrderRepository.countByTenantIdAndStatus(tenantId, WorkOrderStatus.CANCELLED),
                 sparePartRepository.countLowStock(tenantId),
                 recent
         );

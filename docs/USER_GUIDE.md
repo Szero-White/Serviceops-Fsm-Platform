@@ -7,7 +7,7 @@
 - `customer-service`: tạo khách hàng, thiết bị và yêu cầu dịch vụ.
 - `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch và công việc được giao cho chính mình.
 - `technician-2`: tài khoản cá nhân của Võ Hoàng; dùng để kiểm tra dữ liệu lịch không bị lẫn giữa kỹ thuật viên.
-- `warehouse`: tạo phụ tùng và nhập kho.
+- `warehouse`: vào thẳng **Kho phụ tùng**, quản lý catalog/import/lifecycle stock; không có Work Order operational dashboard.
 
 Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`. Đây chỉ là credential demo; production secrets phải được cấu hình riêng.
 
@@ -49,18 +49,19 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 - Work order phải đi đúng vòng đời; không thể nhảy trạng thái tùy ý.
 - Work order đã đóng hoặc hủy không được dùng thêm phụ tùng.
 - Mỗi kỹ thuật viên có tài khoản riêng liên kết 1-1 với `technician_profile`; lịch cá nhân được backend suy ra từ JWT và không thể đổi ID để xem lịch người khác.
-- Kỹ thuật viên không thể xem dữ liệu khách hàng hoặc phiếu của người khác.
-- Kỹ thuật viên chỉ cập nhật tiến độ thực hiện (`ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`). Customer Service có thể hủy phiếu đang hoạt động khi khách thay đổi nhu cầu; các transition quản lý khác tuân theo policy backend.
+- Kỹ thuật viên chỉ nhận thông tin khách hàng cần thiết trong Work Order được giao; không thể dùng Work Order/My Schedule để đọc job của kỹ thuật viên khác.
+- Kỹ thuật viên chỉ cập nhật tiến độ thực hiện (`ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`). Customer Service có thể hủy phiếu active khi khách đổi nhu cầu; Dispatcher chỉ điều phối/schedule/reschedule và operational cancellation; acceptance/close/reopen thuộc Owner/management policy.
+- Username tài khoản được cố định sau khi tạo để giữ ổn định audit/ownership; Owner vẫn có thể đổi họ tên hiển thị, mật khẩu và trạng thái tài khoản theo policy.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
 - File local chỉ chấp nhận JPG, PNG, WEBP và PDF, tối đa 10 MB.
 
 ## 4. Reset dữ liệu demo
 
-Nếu dùng PostgreSQL qua Docker:
+Nếu dùng PostgreSQL qua Docker và **thật sự muốn xóa toàn bộ dữ liệu local**:
 
 ```powershell
 docker compose -f docker-compose.local.yml down -v
 docker compose -f docker-compose.local.yml up -d
 ```
 
-Sau đó khởi động lại backend; Flyway tạo schema và profile `local` seed lại dữ liệu.
+`down -v` xóa cả PostgreSQL volume; không dùng cách này chỉ để dọn vài record E2E/UAT. Sau reset, khởi động backend với `DEMO_PASSWORD=Demo@2026` để seed lại cùng credential với frontend.

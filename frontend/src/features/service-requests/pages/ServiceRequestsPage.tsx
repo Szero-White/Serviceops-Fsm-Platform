@@ -78,6 +78,7 @@ export function ServiceRequestsPage() {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['service-requests'] })
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
 

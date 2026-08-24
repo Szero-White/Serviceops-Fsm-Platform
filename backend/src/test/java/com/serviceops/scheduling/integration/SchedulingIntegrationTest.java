@@ -226,12 +226,20 @@ class SchedulingIntegrationTest extends AbstractPostgresIntegrationTest {
         technicianRepository.saveAndFlush(technician);
 
         String dispatcherToken = login("dispatcher", "123456");
-        ResponseEntity<String> reactivate = putJson(
+        ResponseEntity<String> dispatcherReactivate = putJson(
                 "/api/v1/technicians/" + technician.getId(),
                 dispatcherToken,
                 Map.of("phone", "0900000000", "skills", "Integration test", "active", true)
         );
-        assertThat(reactivate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(dispatcherReactivate.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String ownerToken = login("owner", "123456");
+        ResponseEntity<String> ownerReactivate = putJson(
+                "/api/v1/technicians/" + technician.getId(),
+                ownerToken,
+                Map.of("phone", "0900000000", "skills", "Integration test", "active", true)
+        );
+        assertThat(ownerReactivate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 
         Customer customer = anyCustomerFor(owner);
         WorkOrder workOrder = workOrder(

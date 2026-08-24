@@ -104,6 +104,7 @@ export function ScheduleBoardPage() {
       setSelectedWorkOrder(undefined)
       scheduleForm.resetFields()
       queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['work-orders'] })
       queryClient.invalidateQueries({ queryKey: ['work-order'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })

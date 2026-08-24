@@ -106,6 +106,11 @@ export function UsersPage() {
       form.resetFields()
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -117,6 +122,11 @@ export function UsersPage() {
       message.success('Đã xoá người dùng')
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -263,8 +273,8 @@ export function UsersPage() {
                 onBlur={(event) => !editing && !form.getFieldValue('username') && form.setFieldValue('username', usernameFromName(event.target.value))}
               />
             </Form.Item>
-            <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
-              <Input placeholder="le.thu.dieu.phoi" />
+            <Form.Item label={editing ? 'Tên đăng nhập (không thể thay đổi)' : 'Tên đăng nhập'} name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
+              <Input placeholder="le.thu.dieu.phoi" disabled={Boolean(editing)} />
             </Form.Item>
             <Form.Item label={editing ? 'Vai trò (không thể thay đổi)' : 'Vai trò'} name="role" rules={[{ required: true, message: 'Chọn vai trò' }]}>
               <Select options={roleOptions} disabled={Boolean(editing)} />

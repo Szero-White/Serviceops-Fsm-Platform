@@ -35,11 +35,19 @@ export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
   dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
   'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history'],
   technician: ['/', '/work-orders', '/my-schedule', '/work-order-history', '/inventory'],
-  warehouse: ['/', '/inventory'],
+  warehouse: ['/inventory'],
 }
 
 export function dashboardHeading(username: DemoUser) {
   return username === 'technician' ? 'Tổng quan công việc của tôi' : 'Tổng quan vận hành'
+}
+
+export function defaultRoute(username: DemoUser) {
+  return username === 'warehouse' ? '/inventory' : '/'
+}
+
+export function defaultHeading(username: DemoUser) {
+  return username === 'warehouse' ? ROUTES['/inventory'] : dashboardHeading(username)
 }
 
 export function watchRuntime(page: Page) {
@@ -69,8 +77,8 @@ export async function login(page: Page, username: DemoUser) {
   await page.getByLabel('Tên đăng nhập').fill(username)
   await page.getByLabel('Mật khẩu').fill(DEMO_PASSWORD)
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
-  await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { level: 1, name: dashboardHeading(username) })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`${defaultRoute(username).replace('/', '\\/')}$`))
+  await expect(page.getByRole('heading', { level: 1, name: defaultHeading(username) })).toBeVisible()
 }
 
 export async function apiJson<T>(page: Page, method: HttpMethod, path: string, payload?: unknown): Promise<ApiResult<T>> {

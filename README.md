@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml)
 
-**Live demo:** _Coming soon — add the deployed URL here before sharing the portfolio._
+**Live demo:** Not deployed publicly yet. The repository includes a complete local setup and production-like Docker validation path.
 
 ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
 
@@ -213,7 +213,7 @@ The role-aware AI help assistant is constrained to product guidance and does not
 - Optimistic concurrency conflicts mapped to HTTP `409 CONCURRENT_MODIFICATION`.
 - Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied technician ID.
 - Technician field transitions are limited to `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`.
-- Management transitions such as `CANCELLED`, `CUSTOMER_ACCEPTED`, `CLOSED` and `REOPENED` remain restricted to management roles.
+- Customer acceptance, closure and reopen remain management-controlled; cancellation is available only to explicitly authorized operational roles according to policy.
 - Scheduling conflicts use locking plus overlap detection.
 - Inventory consumption prevents negative stock.
 - Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
@@ -236,44 +236,70 @@ The current Playwright suite contains **11 browser tests across 3 spec files** a
 - Warehouse spare-part creation and stock import;
 - Customer Service request intake and Service Request → Work Order conversion;
 - Technician UI transition restrictions;
-- backend rejection of unauthorized Technician management transitions.
+- backend rejection of unauthorized Technician and Dispatcher transitions;
+- Warehouse frontend route isolation from Work Order and operational dashboard data.
 
-See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the current verified baseline.
+Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
+
+See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the previous verified baseline and the revalidation required after the current release-consistency patch.
 
 ## Run locally
 
 ### Prerequisites
 
+Required:
+
 - Java JDK 21
 - Node.js 22 LTS + npm
-- PostgreSQL 17
 - Git
 
-Docker Desktop is optional for daily development when PostgreSQL already runs natively.
+Choose one PostgreSQL option:
 
-For a reproducible setup, follow [RUN_LOCAL.md](RUN_LOCAL.md). It uses repository-relative commands and the disposable local credentials documented in `.env.example`; production credentials must be supplied separately.
+- PostgreSQL 17 installed locally; or
+- Docker Desktop for the repository-managed PostgreSQL 17 container.
 
-After PostgreSQL is ready, start the backend from the repository root:
+### First-time setup
 
-```powershell
-cd backend
-$env:POSTGRES_HOST="localhost"
-$env:POSTGRES_PORT="5432"
-$env:POSTGRES_DB="serviceops"
-$env:POSTGRES_USER="serviceops"
-$env:POSTGRES_PASSWORD="serviceops"
-$env:DEMO_PASSWORD="Demo@2026"
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
-```
-
-In a second terminal:
+From the repository root, create your local environment file:
 
 ```powershell
-cd frontend
 Copy-Item .env.example .env
-npm ci
-npm run dev
 ```
+
+The committed example uses disposable local values:
+
+```text
+POSTGRES_DB=serviceops
+POSTGRES_USER=serviceops
+POSTGRES_PASSWORD=serviceops
+DEMO_PASSWORD=Demo@2026
+```
+
+If your existing native PostgreSQL uses different credentials, edit only your local `.env` file. `.env` is ignored by Git.
+
+For the shortest first run with Docker Desktop, the next command creates/starts PostgreSQL and launches both application terminals:
+
+```powershell
+.\scripts\dev-start.ps1 -StartPostgres
+```
+
+If you use native PostgreSQL, create the `serviceops` database/user once (or point `.env` at your existing database); the exact SQL is in [RUN_LOCAL.md](RUN_LOCAL.md).
+
+### Daily quick start — backend + frontend together
+
+If PostgreSQL is already running:
+
+```powershell
+.\scripts\dev-start.ps1
+```
+
+If you use Docker Desktop and want the script to start the repository PostgreSQL container first:
+
+```powershell
+.\scripts\dev-start.ps1 -StartPostgres
+```
+
+`dev-start.ps1` is repository-relative: it works regardless of where the repository was cloned. It opens separate backend and frontend terminals, passes the same `DEMO_PASSWORD` to both sides, and runs `npm ci` automatically when `frontend/node_modules` does not exist.
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 
@@ -283,7 +309,7 @@ Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 | Swagger UI | `http://localhost:8080/swagger-ui.html` |
 | Health | `http://localhost:8080/actuator/health` |
 
-More local setup and troubleshooting notes are in [RUN_LOCAL.md](RUN_LOCAL.md).
+For manual backend/frontend startup, native PostgreSQL setup and troubleshooting, see [RUN_LOCAL.md](RUN_LOCAL.md).
 
 ## Production-like validation
 
@@ -320,7 +346,11 @@ frontend/                 React operations console
   src/features/           Feature-oriented frontend modules
   e2e/                    Playwright browser E2E
 
-scripts/production/       Backup and guarded restore utilities
+scripts/                  Local developer helpers
+  dev-start.ps1           One-command backend + frontend startup
+  start-postgres.ps1      Optional local PostgreSQL container startup
+  check-local.ps1         Local backend/frontend verification
+  production/             Backup and guarded restore utilities
 docs/                     Architecture, security, business and operations docs
 .github/workflows/        CI pipeline
 docker-compose.local.yml  Optional local PostgreSQL container
