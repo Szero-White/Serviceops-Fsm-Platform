@@ -37,6 +37,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -64,6 +65,12 @@ public class WorkOrderService {
     );
     private static final Set<WorkOrderStatus> DISPATCHER_ALLOWED_TRANSITIONS = EnumSet.of(
             WorkOrderStatus.CANCELLED
+    );
+    private static final Set<WorkOrderStatus> DISPATCHABLE_STATUSES = EnumSet.of(
+            WorkOrderStatus.OPEN,
+            WorkOrderStatus.SCHEDULED,
+            WorkOrderStatus.ASSIGNED,
+            WorkOrderStatus.REOPENED
     );
 
     private final WorkOrderRepository repository;
@@ -96,7 +103,12 @@ public class WorkOrderService {
         List<WorkOrderHistoryResponse> history = statusHistory.stream()
                 .map(WorkOrderService::toHistory)
                 .toList();
-        List<WorkOrderActivityResponse> activities = WorkOrderActivityMapper.merge(statusHistory, partTransactions);
+        var dispatchEvents = auditService.findEntityEvents(id, "WORK_ORDER", List.of("RESCHEDULE"));
+        List<WorkOrderActivityResponse> activities = WorkOrderActivityMapper.merge(
+                statusHistory,
+                partTransactions,
+                dispatchEvents
+        );
         return toResponse(workOrder, history, activities);
     }
 
@@ -152,18 +164,22 @@ public class WorkOrderService {
         if (!request.endTime().isAfter(request.startTime())) {
             throw BusinessException.badRequest("INVALID_APPOINTMENT_TIME", "Thời gian kết thúc phải sau thời gian bắt đầu");
         }
+
         UUID tenantId = CurrentUser.tenantId();
         WorkOrder workOrder = requireForUpdate(id);
+        if (!DISPATCHABLE_STATUSES.contains(workOrder.getStatus())) {
+            throw BusinessException.conflict(
+                    "WORK_ORDER_ALREADY_STARTED",
+                    "Chỉ có thể điều phối lại trước khi kỹ thuật viên bắt đầu di chuyển hoặc thực hiện công việc"
+            );
+        }
+
         TechnicianProfile technician = technicianRepository.findForUpdate(request.technicianId(), tenantId)
                 .orElseThrow(() -> BusinessException.notFound("TECHNICIAN_NOT_FOUND", "Không tìm thấy kỹ thuật viên"));
         if (!technician.isActive()
                 || !technician.getUser().isActive()
                 || technician.getUser().getRole() != UserRole.TECHNICIAN) {
             throw BusinessException.conflict("TECHNICIAN_INACTIVE", "Kỹ thuật viên đang ngừng hoạt động hoặc tài khoản không còn hiệu lực");
-        }
-        boolean overlap = appointmentRepository.existsOverlap(tenantId, technician.getId(), request.startTime(), request.endTime(), AppointmentStatus.ACTIVE, workOrder.getId());
-        if (overlap) {
-            throw BusinessException.conflict("TECHNICIAN_SCHEDULE_CONFLICT", "Kỹ thuật viên đã có công việc trùng thời gian");
         }
 
         Appointment existingAppointment = appointmentRepository
@@ -174,9 +190,38 @@ public class WorkOrderService {
                 : existingAppointment.getTechnician();
         Instant previousStart = existingAppointment == null ? workOrder.getScheduledStart() : existingAppointment.getStartTime();
         Instant previousEnd = existingAppointment == null ? workOrder.getScheduledEnd() : existingAppointment.getEndTime();
-        boolean reschedule = existingAppointment != null;
 
-        WorkOrderStatus previous = workOrder.getStatus();
+        boolean previouslyDispatched = previousTechnician != null || previousStart != null || previousEnd != null;
+        boolean technicianChanged = previousTechnician != null && !previousTechnician.getId().equals(technician.getId());
+        boolean scheduleChanged = !Objects.equals(previousStart, request.startTime())
+                || !Objects.equals(previousEnd, request.endTime());
+        boolean dispatchChanged = technicianChanged || scheduleChanged;
+
+        if (previouslyDispatched && !dispatchChanged) {
+            return get(id);
+        }
+
+        String reason = blankToNull(request.reason());
+        if (previouslyDispatched && reason == null) {
+            throw BusinessException.badRequest(
+                    "WORK_ORDER_REDISPATCH_REASON_REQUIRED",
+                    "Phải nhập lý do khi điều phối lại kỹ thuật viên hoặc lịch thực hiện"
+            );
+        }
+
+        boolean overlap = appointmentRepository.existsOverlap(
+                tenantId,
+                technician.getId(),
+                request.startTime(),
+                request.endTime(),
+                AppointmentStatus.ACTIVE,
+                workOrder.getId()
+        );
+        if (overlap) {
+            throw BusinessException.conflict("TECHNICIAN_SCHEDULE_CONFLICT", "Kỹ thuật viên đã có công việc trùng thời gian");
+        }
+
+        WorkOrderStatus previousStatus = workOrder.getStatus();
         try {
             workOrder.schedule(technician, request.startTime(), request.endTime());
         } catch (IllegalArgumentException ex) {
@@ -197,46 +242,61 @@ public class WorkOrderService {
         appointmentRepository.save(appointment);
 
         String technicianName = technician.getUser().getDisplayName();
-        if (previous != workOrder.getStatus()) {
-            addHistory(workOrder, previous, workOrder.getStatus(), "Phân công cho " + technicianName);
+        if (previousStatus != workOrder.getStatus()) {
+            addHistory(workOrder, previousStatus, workOrder.getStatus(), "Phân công cho " + technicianName);
         }
 
-        if (reschedule) {
+        if (previouslyDispatched) {
             String previousTechnicianName = previousTechnician == null
                     ? "Chưa phân công"
                     : previousTechnician.getUser().getDisplayName();
-            String details = "Điều chỉnh lịch " + workOrder.getCode()
-                    + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
-                    + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]";
+            String dispatchActor = dispatchActorLabel();
+            String details = technicianChanged
+                    ? dispatchActor + " đã điều phối lại kỹ thuật viên từ " + previousTechnicianName + " sang " + technicianName
+                            + ". Lý do: " + reason
+                    : dispatchActor + " đã điều chỉnh lịch thực hiện cho " + technicianName + ". Lý do: " + reason;
             auditService.record("RESCHEDULE", "WORK_ORDER", workOrder.getId(), details);
 
-            if (previousTechnician != null
-                    && !previousTechnician.getId().equals(technician.getId())) {
+            if (technicianChanged && previousTechnician != null) {
                 notificationService.create(
                         tenantId,
                         previousTechnician.getUser(),
-                        "Lịch làm việc đã thay đổi: " + workOrder.getCode(),
-                        "Bạn không còn được phân công phiếu này. Kiểm tra Lịch của tôi để cập nhật kế hoạch."
+                        "Công việc đã được điều chuyển: " + workOrder.getCode(),
+                        "Phiếu đã được chuyển sang " + technicianName
+                                + ". Bạn không cần tiếp tục xử lý phiếu này; kiểm tra Lịch của tôi để cập nhật kế hoạch."
+                );
+                notificationService.create(
+                        tenantId,
+                        technician.getUser(),
+                        "Bạn được phân công tiếp nhận: " + workOrder.getCode(),
+                        dispatchActor
+                                + " đã chuyển phiếu này cho bạn. Mở phiếu để xem khách hàng, nội dung và lịch thực hiện mới."
+                );
+            } else {
+                notificationService.create(
+                        tenantId,
+                        technician.getUser(),
+                        "Lịch thực hiện đã được cập nhật: " + workOrder.getCode(),
+                        dispatchActor
+                                + " đã cập nhật lịch của phiếu. Mở Lịch của tôi để xem thời gian thực hiện mới."
                 );
             }
-
-            notificationService.create(
-                    tenantId,
-                    technician.getUser(),
-                    "Lịch làm việc đã thay đổi: " + workOrder.getCode(),
-                    "Thời gian thực hiện đã được điều chỉnh. Mở Lịch của tôi để xem lịch mới."
-            );
-            // Dispatcher already receives immediate success feedback in the UI.
-            // Do not duplicate the same action as a bell notification.
         } else {
-            auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technicianName);
+            auditService.record(
+                    "ASSIGN",
+                    "WORK_ORDER",
+                    workOrder.getId(),
+                    "Phân công " + workOrder.getCode() + " cho " + technicianName
+            );
             notificationService.create(
                     tenantId,
                     technician.getUser(),
                     "Bạn được giao công việc mới: " + workOrder.getCode(),
-                    "Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện."
+                    dispatchActorLabel()
+                            + " đã chuyển thông tin phiếu đến bạn. Mở phiếu để xem khách hàng, nội dung và thời gian thực hiện."
             );
         }
+
         return get(id);
     }
 
@@ -371,6 +431,11 @@ public class WorkOrderService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String dispatchActorLabel() {
+        String roleLabel = CurrentUser.hasRole("OWNER") ? "Chủ sở hữu" : "Điều phối viên";
+        return roleLabel + " " + CurrentUser.displayName();
     }
 
     private void notifyStatusChange(WorkOrder workOrder) {

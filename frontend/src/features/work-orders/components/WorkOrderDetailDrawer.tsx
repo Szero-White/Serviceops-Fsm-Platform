@@ -73,7 +73,11 @@ export function WorkOrderDetailDrawer({
       onClose={onClose}
       width={720}
       loading={loading}
-      extra={canScheduleCurrent ? <Button type="primary" icon={<CalendarOutlined />} onClick={onSchedule}>Phân công / xếp lịch</Button> : undefined}
+      extra={canScheduleCurrent ? (
+        <Button type="primary" icon={<CalendarOutlined />} onClick={onSchedule}>
+          {workOrder?.technicianId ? 'Điều phối lại' : 'Phân công / xếp lịch'}
+        </Button>
+      ) : undefined}
     >
       {error ? (
         <QueryErrorAlert
@@ -163,6 +167,12 @@ export function WorkOrderDetailDrawer({
                   <Descriptions.Item label="Thiết bị">{workOrder.assetLabel ?? 'Chưa xác định'}</Descriptions.Item>
                   <Descriptions.Item label="Kỹ thuật viên">{workOrder.technicianName ?? 'Chưa phân công'}</Descriptions.Item>
                   <Descriptions.Item label="Lịch hẹn">{formatDateTime(workOrder.scheduledStart)} - {formatDateTime(workOrder.scheduledEnd)}</Descriptions.Item>
+                  {workOrder.status === 'ASSIGNED' ? (
+                    <Descriptions.Item label="Bước tiếp theo" span={2}>
+                      Đang chờ kỹ thuật viên được phân công bắt đầu di chuyển hoặc thực hiện công việc.
+                      Điều phối viên hoặc Owner có thể điều phối lại trước khi kỹ thuật viên bắt đầu.
+                    </Descriptions.Item>
+                  ) : null}
                   <Descriptions.Item label="Mô tả" span={2}>{workOrder.description ?? EMPTY_VALUE}</Descriptions.Item>
                   <Descriptions.Item label="Chẩn đoán" span={2}>{workOrder.diagnosis ?? EMPTY_VALUE}</Descriptions.Item>
                   <Descriptions.Item label="Giải pháp" span={2}>{workOrder.resolution ?? EMPTY_VALUE}</Descriptions.Item>

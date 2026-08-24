@@ -75,6 +75,8 @@ Khi hai điều phối viên gửi request đồng thời, pessimistic lock trê
 
 Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn role `TECHNICIAN` không thể nhận lịch mới. Owner cũng không được tạm ngưng account/profile kỹ thuật viên khi còn Work Order operational đang gán cho người đó; phải điều phối lại hoặc hủy công việc trước.
 
+Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/lịch khi phiếu vẫn ở `OPEN`, `SCHEDULED`, `ASSIGNED` hoặc `REOPENED`, tức trước khi kỹ thuật viên bắt đầu di chuyển/thực hiện. Điều phối lại bắt buộc có lý do, được ghi audit `RESCHEDULE` và xuất hiện trong tab **Tiến trình** như một activity điều phối riêng. Nếu đổi kỹ thuật viên, người cũ nhận thông báo đã được điều chuyển khỏi phiếu và người mới nhận thông báo công việc mới; nếu chỉ đổi lịch, kỹ thuật viên hiện tại nhận lịch cập nhật. Khi WO đã `ON_THE_WAY` hoặc `IN_PROGRESS`, endpoint schedule/reschedule từ chối để tránh bàn giao ngầm trong khi field work đang diễn ra.
+
 ## 4. Quy tắc tồn kho
 
 - Số lượng phải lớn hơn 0.
@@ -90,7 +92,7 @@ Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn 
 
 ## 5. Quyền thao tác
 
-- `OWNER`: quản trị tài khoản/cấu hình và giám sát dashboard, Work Order, lịch sử, audit; trong operational Work Order flow là read-only.
+- `OWNER`: quản trị tài khoản/cấu hình và có quyền quản lý trên các module nghiệp vụ dành cho Owner: Customer/Asset, Service Request (kể cả chuyển sang Work Order), Channel, điều phối, kỹ thuật viên, kho/kiểm kê/lịch sử biến động, Work Order history và audit. Trong Work Order, Owner là admin override cho điều phối và hậu xử lý nhưng không giả lập field progress hoặc consume phụ tùng thay Technician.
 - `DISPATCHER`: Customer/Asset read-only; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation; xem lịch sử/audit. Không tiếp nhận Service Request hoặc xác nhận/đóng phiếu.
 - `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
 - `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; consume spare part cho chính job; sau `COMPLETED` có thể ghi nhận Khách xác nhận, Đóng phiếu hoặc Mở lại cùng job trước khi đóng.
@@ -113,6 +115,13 @@ Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn 
 - Hai Technician cùng role vẫn là hai identity riêng; role quyết định quyền, `UserAccount` quyết định ownership/audit accountability.
 
 - Inventory movement history snapshots actor name/role and requires a purpose when parts are consumed for a Work Order.
+
+### Trợ lý AI theo vai trò
+
+- Role của AI Help được backend suy ra từ JWT; client không được tự chọn role để mở rộng phạm vi hướng dẫn.
+- Câu hỏi tổng quát như “Tôi được làm gì?” trả overview đúng workspace của role hiện tại. OWNER được mô tả toàn bộ phạm vi quản trị; các role khác chỉ nhận hướng dẫn thuộc trách nhiệm được cấp.
+- Knowledge base tách nghiệp vụ dễ nhầm quyền: Dispatcher có điều phối/reschedule nhưng không User Management/Service Request intake/kho; Customer Service có intake/convert/follow-up nhưng không điều phối/accept/close; Technician chỉ job được giao/My Schedule/phụ tùng cho job, không quản trị kho; Warehouse không có operational Work Order/dashboard.
+- AI chỉ hướng dẫn thao tác; không đọc runtime database và không tự thực hiện mutation.
 
 ## 8. Chính sách phản hồi người dùng và notification
 

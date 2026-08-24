@@ -5,6 +5,8 @@ import com.serviceops.asset.web.AssetController;
 import com.serviceops.customer.web.CustomerController;
 import com.serviceops.dashboard.web.DashboardController;
 import com.serviceops.inventory.web.InventoryController;
+import com.serviceops.identity.web.UserManagementController;
+import com.serviceops.servicerequest.web.ServiceChannelController;
 import com.serviceops.servicerequest.web.ServiceRequestController;
 import com.serviceops.technician.web.TechnicianController;
 import com.serviceops.workorder.web.WorkOrderController;
@@ -21,6 +23,18 @@ class RoleOwnershipContractTest {
     private static final String MASTER_DATA_READ = "hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')";
     private static final String INTAKE_OWNERS = "hasAnyRole('OWNER','CUSTOMER_SERVICE')";
     private static final String OPERATIONAL_WORK_ORDER_READ = "hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')";
+
+    @Test
+    void ownerKeepsAdministrativeCoverageWithoutImpersonatingTechnicianOnlyExecution() {
+        assertClassAuthorization(UserManagementController.class, "hasRole('OWNER')");
+        assertClassAuthorization(ServiceRequestController.class, INTAKE_OWNERS);
+        assertClassAuthorization(ServiceChannelController.class, INTAKE_OWNERS);
+        assertMethodAuthorization(WorkOrderController.class, "convert", INTAKE_OWNERS);
+        assertMethodAuthorization(WorkOrderController.class, "schedule", "hasAnyRole('OWNER','DISPATCHER')");
+        assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
+        assertMethodAuthorization(InventoryController.class, "stocktake", "hasAnyRole('OWNER','WAREHOUSE_STAFF')");
+        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
+    }
 
     @Test
     void dispatcherCanReadCustomerAndAssetMasterDataButCannotOwnTheirWrites() {
@@ -45,11 +59,11 @@ class RoleOwnershipContractTest {
         assertThat(Arrays.stream(WorkOrderController.class.getDeclaredMethods()).map(Method::getName))
                 .doesNotContain("create");
 
-        assertMethodAuthorization(WorkOrderController.class, "convert", "hasRole('CUSTOMER_SERVICE')");
+        assertMethodAuthorization(WorkOrderController.class, "convert", INTAKE_OWNERS);
         assertMethodAuthorization(
                 WorkOrderController.class,
                 "schedule",
-                "hasRole('DISPATCHER')"
+                "hasAnyRole('OWNER','DISPATCHER')"
         );
         assertMethodAuthorization(
                 WorkOrderController.class,

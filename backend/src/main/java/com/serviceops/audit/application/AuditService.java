@@ -43,6 +43,19 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
+    public List<AuditLog> findEntityEvents(UUID entityId, String entityType, List<String> actions) {
+        if (entityId == null || actions == null || actions.isEmpty()) {
+            return List.of();
+        }
+        return repository.findByTenantIdAndEntityTypeAndEntityIdAndActionInOrderByCreatedAtAsc(
+                CurrentUser.tenantId(),
+                entityType,
+                entityId,
+                actions
+        );
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<AuditResponse> list(
             int page,
             int size,

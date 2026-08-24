@@ -41,13 +41,19 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SCH-05 | Technician mở `Lịch của tôi` | Chỉ thấy appointment gắn với technician profile của tài khoản đang đăng nhập |
 | SCH-06 | Đăng nhập hai tài khoản technician khác nhau | Hai lịch cá nhân không lẫn dữ liệu; client không truyền technicianId |
 | SCH-07 | Owner tạm ngưng technician/profile đang còn Work Order operational | HTTP 409 `TECHNICIAN_ACTIVE_ASSIGNMENTS`; phải điều phối lại/hủy job trước |
-| SCH-08 | Reschedule một appointment đã tồn tại | Schedule/My Schedule cập nhật lịch mới; audit action là `RESCHEDULE`, không tạo timeline trạng thái `ASSIGNED → ASSIGNED` giả |
+| SCH-08 | Điều phối lại lịch của appointment đã tồn tại trước khi technician bắt đầu | Bắt buộc nhập lý do; Schedule/My Schedule cập nhật lịch mới; audit action `RESCHEDULE`; tab Tiến trình có activity **Đã điều phối lại** |
+| SCH-09 | Dispatcher đổi technician khi WO còn ASSIGNED | Technician cũ nhận thông báo đã điều chuyển, technician mới nhận công việc; WO vẫn ASSIGNED; Tiến trình ghi rõ người cũ → người mới và lý do |
+| SCH-10 | Dispatcher/Owner thử điều phối lại khi WO đã ON_THE_WAY/IN_PROGRESS | HTTP 409 `WORK_ORDER_ALREADY_STARTED`; không đổi technician/lịch, không tạo audit/notification |
 | WO-02 | Chuyển trạng thái hợp lệ | Timeline lưu người thao tác và thời gian |
 | WO-03 | Nhảy trạng thái không hợp lệ | HTTP 409 INVALID_STATUS_TRANSITION |
 | WO-03A | Customer Service thử `CANCELLED → REOPENED` | HTTP 409 `INVALID_STATUS_TRANSITION`; phiếu giữ `CANCELLED`; nếu khách có nhu cầu mới thì tạo yêu cầu/phiếu mới |
 | WO-04 | Technician bấm Hoàn thành nhưng bỏ trống Chẩn đoán hoặc Giải pháp | Form đánh dấu trường lỗi, cuộn tới lỗi đầu tiên và hiện cảnh báo rõ; không gọi API, không đổi trạng thái |
 | WO-05 | Technician nhập đủ Chẩn đoán + Giải pháp rồi hoàn thành | WO chuyển COMPLETED; người thao tác thấy phản hồi thành công và nút **Khách xác nhận**; Owner nhận notification **Chờ khách xác nhận: WO-...** như fallback |
 | USER-01 | Owner sửa user và thử đổi username | Bị chặn `USER_USERNAME_CHANGE_BLOCKED`; username lịch sử/ownership giữ ổn định |
+| USER-02 | Owner đổi bộ lọc Người dùng giữa Tất cả trạng thái / Hoạt động / Tạm ngưng, đồng thời nhập từ khóa tìm kiếm | Danh sách áp đồng thời search + trạng thái; đổi filter/search quay về page 1; metric tổng vẫn phản ánh toàn bộ tenant |
+| USER-03 | Owner tạo/cập nhật user | Success feedback ghi rõ tên, vai trò và trạng thái tài khoản; audit USER_ACCOUNT ghi trạng thái sau thao tác |
+| OWNER-01 | Owner mở Service Request OPEN và bấm Chuyển sang điều phối | Cho phép như Customer Service; tạo đúng Work Order, không bypass guard customer/asset/state |
+| OWNER-02 | Owner duyệt các workspace `/users`, Customer/Asset, Service Request/Channel, Work Order/Schedule/History, Technician, Inventory/Stocktake/Movements và Audit | Các trang quản trị của Owner truy cập được; My Schedule và Technician-only CONSUME vẫn không biến thành admin impersonation |
 | DASH-01 | Có WO ở SCHEDULED/ON_THE_WAY/REOPENED/CUSTOMER_ACCEPTED rồi mở dashboard | Tỷ lệ hoàn tất tính đủ các trạng thái active/completed chính, không bỏ sót các state này |
 | INV-01 | Nhập kho số lượng dương | Tồn và ledger tăng đúng |
 | INV-02 | Dùng phụ tùng đủ tồn | Tồn giảm, ledger gắn work order |
@@ -87,7 +93,10 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-NOTIF-05 | Mở notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI hiển thị **Bạn được giao công việc mới: WO-...** và hướng dẫn mở phiếu; không dùng summary/test text làm nội dung chính |
 | NOTIF-01 | Mark Read/Unread một notification khi API thành công | Dòng và badge/tab Chưa đọc cập nhật ngay sau invalidate |
 | NOTIF-02 | Làm API Mark Read/Unread lỗi | Hiện thông báo lỗi; nút không bị treo; trạng thái hiển thị không giả vờ đã đổi |
-| AI-01 | Technician/Warehouse mở Trợ lý AI và gửi câu hỏi hướng dẫn | Nhận hướng dẫn phù hợp role, không bị HTTP 403 |
+| AI-01 | Mỗi role hỏi “Trong vai trò này tôi được làm những gì?” | AI trả overview đúng role lấy từ backend/JWT; OWNER thấy phạm vi quản trị rộng, các role khác chỉ thấy chức năng được giao |
 | AI-02 | Warehouse hỏi về kiểm kê, lịch sử biến động và hoàn trả phụ tùng | AI điều hướng lần lượt tới `/inventory-stocktake` hoặc `/inventory-movements`; không gợi ý operational dashboard/Work Order route |
+| AI-03 | Dispatcher hỏi quản trị user/kho hoặc Technician hỏi sửa ngưỡng/kiểm kê | AI từ chối là ngoài phạm vi thay vì hướng dẫn thao tác của role khác |
+| AI-04 | Dispatcher hỏi điều phối lại kỹ thuật viên trước khi bắt đầu | AI hướng dẫn reason + notification/timeline và nêu rõ không reschedule khi WO đã `ON_THE_WAY`/`IN_PROGRESS` |
+| AI-05 | Customer Service hỏi chung về hậu xử lý | AI hướng dẫn intake/convert/reopen/cancel theo role, không khẳng định CS được Khách xác nhận/Đóng phiếu |
 | BUILD-01 | Chạy backend test | Build success |
 | BUILD-02 | Chạy frontend lint/build | Build success |

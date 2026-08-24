@@ -222,4 +222,163 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().route()).isEqualTo("/inventory");
     }
 
+
+    @Test
+    void ownerGenericQuestionReturnsBroadOwnerCapabilityOverview() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("OWNER", "Quản trị hệ thống", "/");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Với quyền Chủ sở hữu, tôi có thể làm những gì trong hệ thống?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/");
+        assertThat(decision.topic().answer())
+                .contains("quản trị người dùng")
+                .contains("yêu cầu dịch vụ")
+                .contains("điều phối")
+                .contains("kiểm kê")
+                .contains("audit")
+                .contains("không giả lập field progress");
+    }
+
+    @Test
+    void dispatcherGenericQuestionReturnsDispatcherOnlyOverview() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Trong vai trò này tôi được làm những gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/work-orders");
+        assertThat(decision.topic().answer())
+                .contains("phân công")
+                .contains("điều phối lại")
+                .contains("không quản trị tài khoản")
+                .contains("không thao tác kho");
+    }
+
+    @Test
+    void dispatcherRedispatchQuestionMapsToScheduleAndExplainsBoundary() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Kỹ thuật viên chưa bắt đầu, tôi muốn đổi kỹ thuật viên và đổi lịch thì làm sao?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/schedule");
+        assertThat(decision.topic().answer())
+                .contains("Điều phối lại")
+                .contains("lý do")
+                .contains("ON_THE_WAY")
+                .contains("IN_PROGRESS");
+    }
+
+    @Test
+    void customerServiceGenericQuestionDoesNotClaimAcceptanceOrCloseOwnership() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("CUSTOMER_SERVICE", "Chăm sóc khách hàng", "/service-requests");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Trong vai trò này tôi được làm những gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().answer())
+                .contains("chuyển yêu cầu")
+                .contains("không phân công kỹ thuật viên")
+                .contains("không Khách xác nhận/Đóng phiếu");
+    }
+
+    @Test
+    void technicianInventoryManagementQuestionIsBlockedInsteadOfLeakingWarehouseActions() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi muốn sửa ngưỡng tồn tối thiểu và kiểm kê điều chỉnh kho",
+                context
+        );
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.refusalReason()).contains("ngoài phạm vi");
+    }
+
+    @Test
+    void technicianPartQuestionOnlyExplainsAssignedJobUsage() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi xem phụ tùng và ghi vật tư dùng cho công việc được giao như thế nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().answer())
+                .contains("Work Order được giao")
+                .contains("không nhập kho")
+                .contains("không sửa ngưỡng tồn");
+    }
+
+    @Test
+    void technicianGenericQuestionReturnsAssignedWorkOverviewOnly() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi mới làm Kỹ thuật viên, trong vai trò này tôi được làm những gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().answer())
+                .contains("công việc được giao")
+                .contains("Lịch của tôi")
+                .contains("không quản trị người dùng")
+                .contains("nghiệp vụ quản trị kho");
+    }
+
+    @Test
+    void warehouseGenericStartQuestionReturnsWarehouseOverviewInsteadOfDashboardDenial() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi mới làm kho, tôi nên bắt đầu từ đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().answer())
+                .contains("nghiệp vụ kho")
+                .contains("không có quyền thao tác Work Order hiện trường");
+    }
+
+    @Test
+    void roleKnowledgeBaseKeepsManagementInstructionsInsideAuthorizedRoles() {
+        String ownerKnowledge = AiHelpKnowledgeBase.knowledgeBase("OWNER");
+        String technicianKnowledge = AiHelpKnowledgeBase.knowledgeBase("TECHNICIAN");
+        String warehouseKnowledge = AiHelpKnowledgeBase.knowledgeBase("WAREHOUSE_STAFF");
+
+        assertThat(ownerKnowledge)
+                .contains("Người dùng")
+                .contains("Tất cả trạng thái / Hoạt động / Tạm ngưng")
+                .contains("Điều phối và xếp lịch")
+                .contains("Kiểm kê tồn kho")
+                .contains("Nhật ký hệ thống");
+        assertThat(technicianKnowledge)
+                .contains("Phụ tùng cho công việc được giao")
+                .doesNotContain("Tạo hoặc cập nhật tài khoản")
+                .doesNotContain("Dùng Sửa ngưỡng");
+        assertThat(warehouseKnowledge)
+                .contains("Kiểm kê tồn kho")
+                .contains("Lịch sử biến động kho")
+                .doesNotContain("Người dùng (/users)")
+                .doesNotContain("Điều phối và xếp lịch");
+    }
+
 }

@@ -1,4 +1,4 @@
-import { RollbackOutlined, ToolOutlined } from '@ant-design/icons'
+import { CalendarOutlined, RollbackOutlined, ToolOutlined } from '@ant-design/icons'
 import { Empty, Space, Timeline, Typography } from 'antd'
 import { StatusTag } from '../../../components/StatusTag'
 import type { WorkOrderActivity, WorkOrderHistory } from '../../../types'
@@ -58,6 +58,25 @@ export function WorkOrderActivityTimeline({
                   <Typography.Text className="timeline-actor">{activityActor(activity)}</Typography.Text>
                 </div>
                 <div className="timeline-note">{activity.note ?? 'Không có ghi chú'}</div>
+                <Typography.Text className="timeline-time">{formatDateTime(activity.createdAt)}</Typography.Text>
+              </div>
+            ),
+          }
+        }
+
+        if (activity.type === 'DISPATCH_UPDATED') {
+          return {
+            color: '#47789f',
+            children: (
+              <div className="timeline-entry">
+                <div className="timeline-entry-head">
+                  <Space size={6}>
+                    <CalendarOutlined />
+                    <Typography.Text strong>Đã điều phối lại</Typography.Text>
+                  </Space>
+                  <Typography.Text className="timeline-actor">{activityActor(activity)}</Typography.Text>
+                </div>
+                <div className="timeline-note">{activity.note ?? 'Thông tin phân công hoặc lịch thực hiện đã được cập nhật.'}</div>
                 <Typography.Text className="timeline-time">{formatDateTime(activity.createdAt)}</Typography.Text>
               </div>
             ),

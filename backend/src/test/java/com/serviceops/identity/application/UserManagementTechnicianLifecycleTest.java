@@ -118,7 +118,7 @@ class UserManagementTechnicianLifecycleTest {
 
         assertThat(technicianUser.isActive()).isFalse();
         assertThat(technician.isActive()).isFalse();
-        verify(auditService).record("UPDATE", "USER_ACCOUNT", USER_ID, "Cập nhật người dùng field-tech");
+        verify(auditService).record("UPDATE", "USER_ACCOUNT", USER_ID, "Cập nhật người dùng field-tech · trạng thái Hoạt động -> Tạm ngưng");
     }
 
     @Test

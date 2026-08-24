@@ -23,7 +23,7 @@ export interface WorkOrderHistory {
   createdAt: string
 }
 
-export type WorkOrderActivityType = 'STATUS_CHANGE' | 'PART_CONSUMED' | 'PART_RETURNED'
+export type WorkOrderActivityType = 'STATUS_CHANGE' | 'DISPATCH_UPDATED' | 'PART_CONSUMED' | 'PART_RETURNED'
 
 export interface WorkOrderActivity {
   id: string

@@ -18,7 +18,8 @@ public final class WorkOrderDtos {
     public record ScheduleWorkOrder(
             @NotNull UUID technicianId,
             @NotNull @Future Instant startTime,
-            @NotNull @Future Instant endTime
+            @NotNull @Future Instant endTime,
+            @Size(max = 500) String reason
     ) {
     }
 
@@ -32,6 +33,7 @@ public final class WorkOrderDtos {
 
     public enum WorkOrderActivityType {
         STATUS_CHANGE,
+        DISPATCH_UPDATED,
         PART_CONSUMED,
         PART_RETURNED
     }

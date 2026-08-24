@@ -26,6 +26,10 @@ final class AiHelpKnowledgeBase {
             );
         }
 
+        if (isRoleOverviewRequest(normalizedQuestion)) {
+            return ScopeDecision.allowed(roleOverview(context.role()));
+        }
+
         // User/role administration is an OWNER-only capability. Keep this as an
         // explicit backend guard so English wording or mixed-language prompts cannot
         // be reinterpreted by Gemini as technician assignment or another allowed topic.
@@ -34,6 +38,15 @@ final class AiHelpKnowledgeBase {
                     defaultTopic(context.role()),
                     "Nội dung quản lý tài khoản và phân quyền nằm ngoài phạm vi của vai trò "
                             + context.roleLabel() + "."
+            );
+        }
+
+        if (!List.of("OWNER", "WAREHOUSE_STAFF").contains(context.role())
+                && isInventoryAdministrationRequest(normalizedQuestion)) {
+            return ScopeDecision.denied(
+                    defaultTopic(context.role()),
+                    "Nội dung quản trị kho nằm ngoài phạm vi của vai trò " + context.roleLabel()
+                            + ". Kỹ thuật viên chỉ được xem phụ tùng và ghi nhận vật tư cho Work Order được giao."
             );
         }
 
@@ -67,6 +80,10 @@ final class AiHelpKnowledgeBase {
         String normalizedQuestion = normalize(question);
         String currentPath = context.currentPath();
 
+        if (isRoleOverviewRequest(normalizedQuestion)) {
+            return roleOverview(context.role());
+        }
+
         if (isFormFeedbackRequest(normalizedQuestion) && topicFormFeedback().allowedRoles().contains(context.role())) {
             return topicFormFeedback();
         }
@@ -84,13 +101,17 @@ final class AiHelpKnowledgeBase {
 
     static String knowledgeBase(String role) {
         String roleGuide = roleGuide(role);
+        HelpTopic overview = roleOverview(role);
         String topics = TOPICS.stream()
                 .filter(topic -> topic.allowedRoles().contains(role))
                 .map(topic -> "- " + topic.name() + " (" + topic.route() + "): " + topic.answer()
                         + " Các bước: " + String.join(" > ", topic.steps()))
                 .reduce("", (left, right) -> left + "\n" + right);
 
-        return roleGuide + "\n" + topics;
+        return roleGuide
+                + "\n- " + overview.name() + " (" + overview.route() + "): " + overview.answer()
+                + " Các bước: " + String.join(" > ", overview.steps())
+                + "\n" + topics;
     }
 
     static String safeRoute(String role, String candidateRoute, HelpTopic fallbackTopic) {
@@ -133,24 +154,83 @@ final class AiHelpKnowledgeBase {
 
     private static String roleGuide(String role) {
         return switch (role) {
-            case "OWNER" -> "Phạm vi OWNER: quản trị hệ thống và giám sát toàn cục; với Work Order có quyền quản trị ghi nhận Khách xác nhận, Đóng phiếu, Mở lại khi cần và Hủy phiếu theo state machine.";
-            case "DISPATCHER" -> "Phạm vi DISPATCHER: theo dõi phiếu công việc đã được chuyển sang điều phối, phân công/xếp lịch kỹ thuật viên và theo dõi audit được phép.";
-            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ và tiếp nhận phản hồi sau dịch vụ; có thể mở lại hoặc hủy Work Order khi khách thay đổi nhu cầu, nhưng không ghi nhận Khách xác nhận/Đóng phiếu.";
-            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: phiếu được giao, lịch của tôi, tiến độ/chẩn đoán/giải pháp, phụ tùng; sau khi hoàn thành có thể ghi nhận Khách xác nhận và Đóng phiếu cho chính job được giao, hoặc Mở lại trước khi đóng nếu khách báo lỗi vẫn còn.";
-            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, kiểm kê/điều chỉnh tồn, hoàn trả phụ tùng theo Work Order và tra cứu lịch sử biến động kho.";
+            case "OWNER" -> "Phạm vi OWNER: quản trị và giám sát toàn hệ thống trong các màn hình dành cho Owner. Owner có thể quản lý người dùng, dữ liệu nền, yêu cầu dịch vụ, điều phối, kho và audit; với Work Order có admin override cho điều phối và hậu xử lý. Owner không giả lập tiến độ hiện trường, không consume phụ tùng thay Technician và không dùng Lịch của tôi của một Technician.";
+            case "DISPATCHER" -> "Phạm vi DISPATCHER: đọc dữ liệu khách hàng/thiết bị cần cho điều phối, theo dõi Work Order, phân công hoặc điều phối lại kỹ thuật viên/lịch trước khi field work bắt đầu, operational cancellation và audit. Không quản trị tài khoản, không tiếp nhận Service Request và không thao tác kho.";
+            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, chuyển yêu cầu đủ thông tin sang Work Order và tiếp nhận phản hồi sau dịch vụ; có thể mở lại hoặc hủy Work Order khi khách thay đổi nhu cầu, nhưng không phân công kỹ thuật viên, không ghi nhận Khách xác nhận/Đóng phiếu và không quản trị kho/người dùng.";
+            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: chỉ Work Order được giao, Lịch của tôi, tiến độ/chẩn đoán/giải pháp, bằng chứng và phụ tùng dùng cho chính job; sau khi hoàn thành có thể ghi nhận Khách xác nhận và Đóng phiếu cho job được giao, hoặc Mở lại trước khi đóng nếu cùng sự cố còn tồn tại. Không quản trị người dùng, khách hàng, điều phối hoặc nghiệp vụ quản trị kho.";
+            case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: danh mục phụ tùng, nhập kho, ngưỡng tồn, kiểm kê/điều chỉnh, hoàn trả và lịch sử biến động. Không có Work Order operational, Customer/Asset, User Management hoặc dashboard vận hành.";
             default -> "Chỉ hướng dẫn các chức năng ServiceOps mà tài khoản hiện tại được phép sử dụng.";
         };
     }
 
     private static HelpTopic defaultTopic(String role) {
+        return roleOverview(role);
+    }
+
+    private static HelpTopic roleOverview(String role) {
         return switch (role) {
-            case "OWNER" -> topicDashboard();
-            case "DISPATCHER" -> topicWorkOrders();
-            case "CUSTOMER_SERVICE" -> topicServiceRequests();
-            case "TECHNICIAN" -> topicTechnicianWork();
-            case "WAREHOUSE_STAFF" -> topicInventory();
-            default -> topicDashboard();
+            case "OWNER" -> new HelpTopic(
+                    "Phạm vi Chủ sở hữu",
+                    "/",
+                    List.of("OWNER"),
+                    List.of(),
+                    "Bạn có thể quản trị người dùng; khách hàng và thiết bị; tiếp nhận/chuyển yêu cầu dịch vụ; cấu hình kênh tiếp nhận; theo dõi, điều phối và hậu xử lý Work Order; quản lý đội ngũ kỹ thuật; quản lý kho, kiểm kê và lịch sử biến động; xem dashboard, notification và audit. Các guard an toàn vẫn được giữ: không tự tạm ngưng/xóa tài khoản đang đăng nhập, không làm mất Owner cuối cùng, không sửa tài khoản demo cố định, không giả lập field progress hoặc consume phụ tùng thay Technician.",
+                    List.of("Bắt đầu ở Tổng quan để xem tình trạng vận hành", "Mở Người dùng để quản lý tài khoản và lọc Đang hoạt động/Tạm ngưng", "Dùng Khách hàng, Thiết bị và Yêu cầu dịch vụ cho dữ liệu đầu vào", "Dùng Phiếu công việc/Lịch điều phối để quản trị điều phối và hậu xử lý", "Dùng Kho phụ tùng, Kiểm kê và Lịch sử biến động cho tồn kho", "Dùng Nhật ký hệ thống và chuông thông báo để truy vết việc quan trọng")
+            );
+            case "DISPATCHER" -> new HelpTopic(
+                    "Phạm vi Điều phối viên",
+                    "/work-orders",
+                    List.of("DISPATCHER"),
+                    List.of(),
+                    "Bạn tập trung vào Work Order đã chuyển sang điều phối: xem dữ liệu liên quan, phân công kỹ thuật viên, xếp lịch hoặc điều phối lại trước khi công việc bắt đầu, theo dõi lịch và xử lý hủy vận hành khi cần. Bạn không quản trị tài khoản, không tiếp nhận Service Request và không thao tác kho.",
+                    List.of("Mở Phiếu công việc để xem hàng việc", "Mở Lịch điều phối để phân công hoặc điều phối lại", "Kiểm tra đội ngũ kỹ thuật trước khi chọn người", "Dùng Nhật ký hệ thống khi cần truy vết thay đổi")
+            );
+            case "CUSTOMER_SERVICE" -> new HelpTopic(
+                    "Phạm vi Chăm sóc khách hàng",
+                    "/service-requests",
+                    List.of("CUSTOMER_SERVICE"),
+                    List.of(),
+                    "Bạn quản lý khách hàng và thiết bị, tiếp nhận/cập nhật yêu cầu dịch vụ, chọn kênh tiếp nhận và chuyển yêu cầu đủ thông tin sang Work Order. Sau dịch vụ, bạn tiếp nhận phản hồi để mở lại hoặc hủy theo policy; không phân công kỹ thuật viên, không Khách xác nhận/Đóng phiếu và không quản trị người dùng/kho.",
+                    List.of("Kiểm tra hoặc tạo Khách hàng", "Gắn đúng Thiết bị", "Tiếp nhận Yêu cầu dịch vụ", "Chuyển yêu cầu đủ thông tin sang điều phối", "Theo dõi Work Order và tiếp nhận phản hồi sau dịch vụ")
+            );
+            case "TECHNICIAN" -> new HelpTopic(
+                    "Phạm vi Kỹ thuật viên",
+                    "/work-orders",
+                    List.of("TECHNICIAN"),
+                    List.of(),
+                    "Bạn chỉ thao tác công việc được giao cho mình: xem Lịch của tôi, cập nhật tiến độ thực tế, ghi bằng chứng/chẩn đoán/giải pháp, ghi phụ tùng đã dùng và hoàn tất hậu xử lý được phép cho chính job. Bạn không quản trị người dùng, khách hàng, điều phối hoặc nghiệp vụ quản trị kho.",
+                    List.of("Mở Lịch của tôi để xem lịch hẹn", "Mở Phiếu công việc được giao", "Cập nhật tiến độ đúng thực tế", "Ghi phụ tùng/bằng chứng khi cần", "Nhập chẩn đoán và giải pháp trước khi Hoàn thành", "Thực hiện Khách xác nhận/Đóng phiếu nếu đúng trạng thái và quyền")
+            );
+            case "WAREHOUSE_STAFF" -> new HelpTopic(
+                    "Phạm vi Nhân viên kho",
+                    "/inventory",
+                    List.of("WAREHOUSE_STAFF"),
+                    List.of(),
+                    "Bạn quản lý nghiệp vụ kho: danh mục phụ tùng, nhập kho, ngưỡng tồn tối thiểu, kiểm kê/điều chỉnh, hoàn trả theo Work Order và lịch sử biến động. Bạn không có quyền thao tác Work Order hiện trường, Customer/Asset, quản trị người dùng hoặc dashboard vận hành.",
+                    List.of("Mở Kho phụ tùng để kiểm tra tồn và ngưỡng", "Nhập kho hoặc cập nhật catalog theo quyền", "Dùng Kiểm kê tồn kho để đối soát", "Dùng Lịch sử biến động để truy vết nhập/dùng/hoàn/điều chỉnh")
+            );
+            default -> new HelpTopic("Hướng dẫn ServiceOps", "/", List.of("USER"), List.of(), "Chỉ hướng dẫn chức năng mà tài khoản hiện tại được phép sử dụng.", List.of("Mở menu được cấp quyền để bắt đầu"));
         };
+    }
+
+    private static boolean isRoleOverviewRequest(String normalizedQuestion) {
+        return containsAny(
+                normalizedQuestion,
+                "vai tro nay",
+                "quyen cua toi",
+                "toi duoc lam gi",
+                "toi duoc lam nhung gi",
+                "toi co the lam gi",
+                "toi co the lam nhung gi",
+                "toi co the quan ly",
+                "quan ly nhung chuc nang",
+                "chuc nang nao",
+                "chuc nang cua toi",
+                "pham vi cua toi",
+                "toi nen bat dau",
+                "bat dau tu dau",
+                "moi lam"
+        );
     }
 
     private static boolean isFormFeedbackRequest(String normalizedQuestion) {
@@ -229,6 +309,22 @@ final class AiHelpKnowledgeBase {
         );
     }
 
+    private static boolean isInventoryAdministrationRequest(String normalizedQuestion) {
+        return containsAnyKeyword(
+                normalizedQuestion,
+                "nhap kho",
+                "kiem ke",
+                "stocktake",
+                "dieu chinh ton",
+                "nguong ton toi thieu",
+                "reorder level",
+                "sua nguong ton",
+                "cap nhat nguong ton",
+                "hoan tra phu tung",
+                "return part"
+        );
+    }
+
     private static boolean containsAnyKeyword(String text, String... keywords) {
         for (String keyword : keywords) {
             if (containsKeyword(text, keyword)) {
@@ -269,8 +365,8 @@ final class AiHelpKnowledgeBase {
     }
 
     private static final List<HelpTopic> TOPICS = List.of(
-            topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicWorkOrders(),
-            topicTechnicianWork(), topicMySchedule(), topicTechnicians(), topicInventory(),
+            topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicWorkOrders(), topicDispatch(),
+            topicTechnicianWork(), topicTechnicianParts(), topicMySchedule(), topicTechnicians(), topicInventory(),
             topicInventoryStocktake(), topicInventoryMovements(), topicInventoryReturns(),
             topicChannelsManage(), topicChannelsReadOnly(), topicUsers(), topicAudit(), topicFormFeedback(), topicNotifications()
     );
@@ -284,8 +380,8 @@ final class AiHelpKnowledgeBase {
 
     private static HelpTopic topicServiceRequests() {
         return new HelpTopic("Yêu cầu dịch vụ", "/service-requests", List.of("OWNER", "CUSTOMER_SERVICE"),
-                List.of("yeu cau", "tiep nhan", "khach bao", "tao yeu cau", "service request", "ai goi y", "chuyen thanh phieu"),
-                "Dùng để ghi nhận sự cố khách báo trước khi đủ điều kiện chuyển thành phiếu công việc.",
+                List.of("yeu cau", "tiep nhan", "khach bao", "tao yeu cau", "service request", "ai goi y", "chuyen thanh phieu", "chuyen sang dieu phoi"),
+                "Dùng để ghi nhận sự cố khách báo trước khi đủ điều kiện chuyển thành phiếu công việc. OWNER và CUSTOMER_SERVICE đều có thể chuyển một yêu cầu hợp lệ sang Work Order; backend vẫn kiểm tra customer/asset/state để không tạo trùng hoặc sai liên kết.",
                 List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Tiếp nhận yêu cầu để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
     }
 
@@ -310,11 +406,25 @@ final class AiHelpKnowledgeBase {
                 List.of("Mở menu Phiếu công việc", "Tìm phiếu theo thông tin mà giao diện cho phép", "Mở chi tiết phiếu", "Mở tab Tiến trình để xem trạng thái và phụ tùng đã dùng/hoàn trả theo thời gian", "Thực hiện thao tác phù hợp với vai trò hiện tại", "Đối chiếu kết quả xử lý trước khi đóng phiếu"));
     }
 
+    private static HelpTopic topicDispatch() {
+        return new HelpTopic("Điều phối và xếp lịch", "/schedule", List.of("OWNER", "DISPATCHER"),
+                List.of("phan cong", "xep lich", "dieu phoi", "dieu phoi lai", "doi ky thuat vien", "doi lich", "chua bat dau", "reschedule", "reassign", "trung lich"),
+                "Dùng để phân công kỹ thuật viên và thời gian thực hiện. Sau lần phân công đầu, OWNER/DISPATCHER có thể điều phối lại kỹ thuật viên hoặc lịch khi Work Order vẫn ở OPEN, SCHEDULED, ASSIGNED hoặc REOPENED. Điều phối lại phải có lý do; nếu đổi người, kỹ thuật viên cũ và mới đều nhận thông báo phù hợp và Tiến trình ghi nhận thay đổi. Khi đã ON_THE_WAY hoặc IN_PROGRESS thì không điều phối lại bằng schedule endpoint.",
+                List.of("Mở Lịch điều phối hoặc chi tiết Phiếu công việc", "Chọn kỹ thuật viên và thời gian phù hợp", "Kiểm tra cảnh báo trùng lịch", "Nếu phiếu đã phân công nhưng chưa bắt đầu, dùng Điều phối lại", "Nhập lý do khi đổi kỹ thuật viên hoặc lịch", "Kiểm tra notification và tab Tiến trình sau khi lưu"));
+    }
+
     private static HelpTopic topicTechnicianWork() {
-        return new HelpTopic("Công việc kỹ thuật viên", "/work-orders", List.of("TECHNICIAN", "OWNER", "DISPATCHER"),
+        return new HelpTopic("Công việc kỹ thuật viên", "/work-orders", List.of("TECHNICIAN"),
                 List.of("toi la ky thuat", "viec duoc giao", "cap nhat trang thai", "chan doan", "giai phap", "viec cua toi", "dung phu tung", "phu tung da dung", "tien trinh xu ly"),
                 "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý. Phụ tùng chỉ được ghi nhận khi phiếu đang ở ASSIGNED, ON_THE_WAY, IN_PROGRESS, WAITING_FOR_PARTS hoặc REOPENED; sau COMPLETED/CUSTOMER_ACCEPTED không được phát sinh CONSUME mới. Sau khi bấm Dùng phụ tùng, giao dịch được lưu ở sổ biến động kho và đồng thời xuất hiện trong tab Tiến trình của Work Order với tên/SKU, số lượng, người thao tác, thời gian và ghi chú; RETURN của kho cũng xuất hiện trong cùng timeline. Khi hoàn thành, Chẩn đoán / nguyên nhân và Giải pháp đã thực hiện là bắt buộc. Sau COMPLETED, kỹ thuật viên được giao hoặc Owner mở chi tiết phiếu và bấm Khách xác nhận khi khách đồng ý; trạng thái sau đó cho phép Đóng phiếu. Nếu khách báo lỗi lại trước khi đóng, dùng Mở lại xử lý. CLOSED/CANCELLED là trạng thái kết thúc và sự cố phát sinh sau CLOSED phải đi qua yêu cầu/phiếu mới.",
                 List.of("Mở menu Phiếu công việc", "Tìm phiếu được giao cho bạn", "Mở chi tiết phiếu", "Cập nhật trạng thái theo tiến độ thực tế", "Khi dùng phụ tùng, mở tab Tiến trình để kiểm tra tên/SKU, số lượng và thời điểm đã ghi nhận", "Khi bấm Hoàn thành, nhập đủ Chẩn đoán / nguyên nhân và Giải pháp đã thực hiện", "Sau khi khách đồng ý, bấm Khách xác nhận cạnh Tải ảnh / PDF", "Bấm Đóng phiếu để chuyển sang Lịch sử phiếu", "Nếu khách báo lỗi trước khi đóng, dùng Mở lại xử lý", "Đính kèm ảnh/PDF minh chứng nếu có"));
+    }
+
+    private static HelpTopic topicTechnicianParts() {
+        return new HelpTopic("Phụ tùng cho công việc được giao", "/inventory", List.of("TECHNICIAN"),
+                List.of("phu tung", "ton kho", "inventory", "sku", "dung phu tung", "consume part", "vat tu"),
+                "Kỹ thuật viên được xem danh mục/tồn phụ tùng cần thiết cho công việc và ghi nhận CONSUME từ Work Order được giao khi trạng thái cho phép. Kỹ thuật viên không nhập kho, không sửa ngưỡng tồn, không kiểm kê/điều chỉnh và không hoàn trả thay Warehouse.",
+                List.of("Mở Work Order được giao", "Kiểm tra phụ tùng cần dùng và tồn hiện tại", "Dùng thao tác Dùng phụ tùng trong trạng thái được phép", "Nhập số lượng và mục đích sử dụng", "Mở tab Tiến trình để kiểm tra giao dịch đã ghi"));
     }
 
     private static HelpTopic topicMySchedule() {
@@ -332,10 +442,10 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicInventory() {
-        return new HelpTopic("Kho phụ tùng", "/inventory", List.of("OWNER", "WAREHOUSE_STAFF", "TECHNICIAN"),
+        return new HelpTopic("Kho phụ tùng", "/inventory", List.of("OWNER", "WAREHOUSE_STAFF"),
                 List.of("kho", "phu tung", "ton kho", "nhap kho", "het ton", "inventory", "sku", "muc dat hang", "nguong ton toi thieu", "reorder level"),
-                "Dùng để xem danh mục phụ tùng và tồn hiện tại. Ngưỡng tồn tối thiểu là mốc cảnh báo tồn thấp, không phải số lượng đặt mua. OWNER/WAREHOUSE_STAFF có thể chỉnh ngưỡng tại Kho phụ tùng; nếu ngưỡng mới làm tồn hiện tại chuyển sang trạng thái tồn thấp, hệ thống phát cảnh báo sau commit cho các Owner/Warehouse liên quan. TECHNICIAN chỉ dùng phần được phép trong luồng công việc.",
-                List.of("Mở menu Kho phụ tùng", "Tìm phụ tùng theo SKU hoặc tên", "Kiểm tra tồn hiện tại và ngưỡng tồn tối thiểu", "OWNER/WAREHOUSE_STAFF dùng Sửa ngưỡng khi cần thay đổi mốc cảnh báo", "Nếu tồn chạm hoặc thấp hơn ngưỡng, kiểm tra cảnh báo tồn thấp", "Dùng Kiểm kê tồn kho hoặc Lịch sử biến động khi cần đối soát"));
+                "Dùng để quản lý danh mục phụ tùng và tồn hiện tại. Ngưỡng tồn tối thiểu là mốc cảnh báo tồn thấp, không phải số lượng đặt mua. OWNER/WAREHOUSE_STAFF có thể quản lý catalog, nhập kho và chỉnh ngưỡng; nếu ngưỡng mới làm tồn hiện tại chuyển sang trạng thái tồn thấp, hệ thống phát cảnh báo sau commit cho các Owner/Warehouse liên quan.",
+                List.of("Mở menu Kho phụ tùng", "Tìm phụ tùng theo SKU hoặc tên", "Kiểm tra tồn hiện tại và ngưỡng tồn tối thiểu", "Tạo/cập nhật catalog hoặc nhập kho theo quyền", "Dùng Sửa ngưỡng khi cần thay đổi mốc cảnh báo", "Nếu tồn chạm hoặc thấp hơn ngưỡng, kiểm tra cảnh báo tồn thấp", "Dùng Kiểm kê tồn kho hoặc Lịch sử biến động khi cần đối soát"));
     }
 
     private static HelpTopic topicInventoryStocktake() {
@@ -381,8 +491,8 @@ final class AiHelpKnowledgeBase {
                         "create new user", "create a new user", "create account", "create an account",
                         "assign role", "assign roles", "permission", "permissions"
                 ),
-                "OWNER dùng trang này để quản lý tài khoản, vai trò và trạng thái truy cập của nhân viên.",
-                List.of("Mở menu Người dùng", "Tìm tài khoản cần quản lý", "Tạo hoặc cập nhật tài khoản theo chính sách nội bộ", "Chọn đúng vai trò theo trách nhiệm", "Tắt tài khoản khi không còn quyền truy cập"));
+                "OWNER dùng trang này để quản lý tài khoản, vai trò và trạng thái truy cập của nhân viên. Bộ lọc Tất cả trạng thái / Hoạt động / Tạm ngưng kết hợp với ô tìm kiếm để rà nhanh tài khoản. Username và role được cố định sau khi tạo để giữ audit/ownership; Owner vẫn được đổi họ tên, mật khẩu và trạng thái theo guard an toàn.",
+                List.of("Mở menu Người dùng", "Dùng ô tìm kiếm và bộ lọc trạng thái để tìm tài khoản", "Tạo hoặc cập nhật tài khoản theo chính sách nội bộ", "Chọn đúng vai trò khi tạo mới", "Tạm ngưng tài khoản khi không còn quyền truy cập", "Không tắt chính tài khoản đang đăng nhập hoặc Owner cuối cùng"));
     }
 
     private static HelpTopic topicAudit() {

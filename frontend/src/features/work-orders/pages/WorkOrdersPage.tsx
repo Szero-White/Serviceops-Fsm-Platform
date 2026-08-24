@@ -121,13 +121,31 @@ export function WorkOrdersPage() {
       technicianId: values.technicianId,
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
+      reason: values.reason?.trim() || undefined,
     }),
     onSuccess: (workOrder, values) => {
       const technicianName = technicians?.find((technician) => technician.id === values.technicianId)?.name ?? workOrder.technicianName ?? 'Kỹ thuật viên'
-      notification.success({
-        message: `Đã phân công · ${workOrder.code}`,
-        description: `${technicianName} · ${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`,
-      })
+      const previousTechnicianName = detail?.technicianName
+      const technicianChanged = Boolean(detail?.technicianId && detail.technicianId !== values.technicianId)
+      const redispatched = Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd)
+      const scheduleText = `${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`
+
+      if (technicianChanged) {
+        notification.success({
+          message: `Đã điều phối lại · ${workOrder.code}`,
+          description: `Đã chuyển từ ${previousTechnicianName ?? 'kỹ thuật viên trước'} sang ${technicianName} · Kỹ thuật viên hiện trường. Kỹ thuật viên mới đã được thông báo · ${scheduleText}.`,
+        })
+      } else if (redispatched) {
+        notification.success({
+          message: `Đã cập nhật lịch · ${workOrder.code}`,
+          description: `${technicianName} · Kỹ thuật viên hiện trường đã nhận thông báo lịch mới · ${scheduleText}.`,
+        })
+      } else {
+        notification.success({
+          message: `Đã chuyển thông tin đến ${technicianName}`,
+          description: `${workOrder.code} · Kỹ thuật viên hiện trường · ${scheduleText}. Phiếu đang chờ kỹ thuật viên tiếp nhận và bắt đầu công việc.`,
+        })
+      }
       setScheduleOpen(false)
       scheduleForm.resetFields()
       refreshOperations()
@@ -206,6 +224,23 @@ export function WorkOrdersPage() {
     }
   }
 
+  const submitSchedule = (values: ScheduleWorkOrderValues) => {
+    const sameTechnician = detail?.technicianId === values.technicianId
+    const sameSchedule = Boolean(
+      detail?.scheduledStart
+      && detail?.scheduledEnd
+      && dayjs(detail.scheduledStart).valueOf() === values.period[0].valueOf()
+      && dayjs(detail.scheduledEnd).valueOf() === values.period[1].valueOf(),
+    )
+
+    if (sameTechnician && sameSchedule) {
+      message.info('Chưa có thay đổi kỹ thuật viên hoặc thời gian thực hiện')
+      return
+    }
+
+    schedule.mutate(values)
+  }
+
   const openSchedule = () => {
     if (techniciansQuery.isError) {
       message.error('Chưa tải được danh sách kỹ thuật viên. Vui lòng thử lại.')
@@ -218,6 +253,7 @@ export function WorkOrdersPage() {
       period: detail.scheduledStart && detail.scheduledEnd
         ? [dayjs(detail.scheduledStart), dayjs(detail.scheduledEnd)]
         : undefined,
+      reason: undefined,
     })
     setScheduleOpen(true)
   }
@@ -291,7 +327,15 @@ export function WorkOrdersPage() {
       />
 
       <WorkOrderDialogs
-        schedule={{ open: scheduleOpen, form: scheduleForm, pending: schedule.isPending, onClose: () => setScheduleOpen(false), onSubmit: (values) => schedule.mutate(values) }}
+        schedule={{
+          open: scheduleOpen,
+          form: scheduleForm,
+          pending: schedule.isPending,
+          redispatching: Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd),
+          currentTechnicianName: detail?.technicianName,
+          onClose: () => setScheduleOpen(false),
+          onSubmit: submitSchedule,
+        }}
         complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, onClose: () => setCompleteOpen(false), onSubmit: (values) => complete.mutate(values) }}
         consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
         technicians={technicians}

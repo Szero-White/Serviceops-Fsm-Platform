@@ -2,7 +2,7 @@
 
 ## 1. Chọn tài khoản theo vai trò
 
-- `owner`: xem toàn hệ thống, dùng khi demo tổng thể.
+- `owner`: quản trị tổng thể các module được cấp: người dùng, Customer/Asset, Service Request, kênh, Work Order/điều phối, đội kỹ thuật, kho/kiểm kê/lịch sử biến động và audit; không giả lập tiến độ hiện trường hoặc consume thay Technician.
 - `dispatcher`: quản lý bảng điều phối tuần, gán kỹ thuật viên và xếp lịch work order.
 - `customer-service`: tạo khách hàng, thiết bị và yêu cầu dịch vụ.
 - `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch và công việc được giao cho chính mình.
@@ -68,7 +68,8 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 - Mỗi kỹ thuật viên có tài khoản riêng liên kết 1-1 với `technician_profile`; lịch cá nhân được backend suy ra từ JWT và không thể đổi ID để xem lịch người khác.
 - Kỹ thuật viên chỉ nhận thông tin khách hàng cần thiết trong Work Order được giao; không thể dùng Work Order/My Schedule để đọc job của kỹ thuật viên khác.
 - Kỹ thuật viên chỉ thao tác Work Order được giao: tiến độ hiện trường và, sau `COMPLETED`, **Khách xác nhận / Đóng phiếu / Mở lại** trước khi đóng. Owner có admin override cho các bước hậu xử lý và hủy. Customer Service tiếp nhận follow-up để mở lại/hủy khi khách thay đổi nhu cầu. Dispatcher phụ trách điều phối/schedule/reschedule và operational cancellation.
-- Username tài khoản được cố định sau khi tạo để giữ ổn định audit/ownership; Owner vẫn có thể đổi họ tên hiển thị, mật khẩu và trạng thái tài khoản theo policy.
+- Username tài khoản được cố định sau khi tạo để giữ ổn định audit/ownership; Owner vẫn có thể đổi họ tên hiển thị, mật khẩu và trạng thái tài khoản theo policy. Trang **Người dùng** có bộ lọc **Tất cả trạng thái / Hoạt động / Tạm ngưng** kết hợp với tìm kiếm; các guard self-disable, last-owner và demo account vẫn bắt buộc.
+- **Trợ lý AI** tự dùng role của tài khoản đang đăng nhập. Có thể hỏi tổng quát “Trong vai trò này tôi được làm gì?” để nhận overview; sau đó hỏi sâu từng chức năng. AI không mở rộng sang quyền role khác: ví dụ Dispatcher không được hướng dẫn quản trị user/kho, Technician không được hướng dẫn kiểm kê/sửa ngưỡng, Warehouse không được hướng dẫn Work Order hiện trường.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
 - File local chỉ chấp nhận JPG, PNG, WEBP và PDF, tối đa 10 MB.
 

@@ -104,8 +104,8 @@ TECHNICIAN read được giới hạn tiếp theo ở service/repository vào Wo
 
 Mutations:
 
-- `POST /work-orders/from-service-request/{serviceRequestId}` — CUSTOMER_SERVICE
-- `POST /work-orders/{id}/schedule` — DISPATCHER
+- `POST /work-orders/from-service-request/{serviceRequestId}` — OWNER / CUSTOMER_SERVICE
+- `POST /work-orders/{id}/schedule` — OWNER/DISPATCHER; lần phân công đầu không cần `reason`, nhưng mọi lần điều phối lại kỹ thuật viên/lịch phải gửi `reason` (tối đa 500 ký tự). Chỉ cho phép khi WO còn `OPEN`, `SCHEDULED`, `ASSIGNED` hoặc `REOPENED`; sau khi field work bắt đầu thì bị từ chối.
 - `POST /work-orders/{id}/transition` — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN; service áp role-specific target-status policy và Technician vẫn bị giới hạn vào Work Order được giao.
 - `DELETE /work-orders/{id}` — OWNER only; chỉ soft-hide/archive Work Order `CLOSED`/`CANCELLED` khỏi history query
 
@@ -190,7 +190,7 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 ## AI assistance
 
 - `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE.
-- `POST /ai/help` — tất cả năm business roles; guidance vẫn phải tuân theo role ownership backend.
+- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; OWNER nhận overview quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress/consume thay Technician.
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. New Work Order part consumption requires a non-blank `note` describing the usage purpose.

@@ -1,5 +1,6 @@
 package com.serviceops.workorder.application;
 
+import com.serviceops.audit.domain.AuditLog;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
@@ -77,6 +78,26 @@ class WorkOrderActivityMapperTest {
         assertThat(returnActivity.quantity()).isEqualByComparingTo("1.000");
         assertThat(returnActivity.actorRole()).isEqualTo("WAREHOUSE_STAFF");
         assertThat(returnActivity.note()).isEqualTo("Trả phần chưa dùng");
+    }
+
+
+    @Test
+    void includesRedispatchAuditAsDedicatedTimelineActivity() {
+        AuditLog redispatch = new AuditLog();
+        redispatch.setId(UUID.randomUUID());
+        redispatch.setActorUsername("dispatcher");
+        redispatch.setAction("RESCHEDULE");
+        redispatch.setEntityType("WORK_ORDER");
+        redispatch.setEntityId(UUID.randomUUID());
+        redispatch.setDetails("Đã điều phối lại kỹ thuật viên từ A sang B. Lý do: đáp ứng khách hàng nhanh hơn");
+        redispatch.setCreatedAt(Instant.parse("2026-08-24T03:30:00Z"));
+
+        var activities = WorkOrderActivityMapper.merge(List.of(), List.of(), List.of(redispatch));
+
+        assertThat(activities).hasSize(1);
+        assertThat(activities.getFirst().type()).isEqualTo(WorkOrderActivityType.DISPATCH_UPDATED);
+        assertThat(activities.getFirst().actor()).isEqualTo("dispatcher");
+        assertThat(activities.getFirst().note()).contains("từ A sang B");
     }
 
     @Test

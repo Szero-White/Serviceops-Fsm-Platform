@@ -47,7 +47,7 @@ export function ServiceRequestsPage() {
   const watchedDescription = Form.useWatch('description', form)
   const { message, notification } = App.useApp()
   const { user } = useAuth()
-  const canConvert = user?.role === 'CUSTOMER_SERVICE'
+  const canConvert = user ? ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role) : false
   const queryClient = useQueryClient()
 
   const serviceRequestsQuery = useQuery({

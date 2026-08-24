@@ -1,5 +1,6 @@
 package com.serviceops.workorder.application;
 
+import com.serviceops.audit.domain.AuditLog;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.workorder.domain.WorkOrderStatusHistory;
@@ -13,9 +14,9 @@ import java.util.stream.Stream;
 /**
  * Read-model mapper for the Work Order activity timeline.
  *
- * <p>Status history and inventory transactions remain the source of truth in
- * their own modules. This mapper only combines them for presentation and does
- * not persist duplicate timeline rows.</p>
+ * <p>Status history, dispatch audit events and inventory transactions remain
+ * the source of truth in their own modules. This mapper only combines them for
+ * presentation and does not persist duplicate timeline rows.</p>
  */
 final class WorkOrderActivityMapper {
     private WorkOrderActivityMapper() {
@@ -25,14 +26,26 @@ final class WorkOrderActivityMapper {
             List<WorkOrderStatusHistory> statusHistory,
             List<InventoryTransaction> partTransactions
     ) {
+        return merge(statusHistory, partTransactions, List.of());
+    }
+
+    static List<WorkOrderActivityResponse> merge(
+            List<WorkOrderStatusHistory> statusHistory,
+            List<InventoryTransaction> partTransactions,
+            List<AuditLog> dispatchEvents
+    ) {
         Stream<WorkOrderActivityResponse> statuses = statusHistory.stream()
                 .map(WorkOrderActivityMapper::fromStatusHistory);
         Stream<WorkOrderActivityResponse> parts = partTransactions.stream()
                 .filter(transaction -> transaction.getTransactionType() == InventoryTransactionType.CONSUME
                         || transaction.getTransactionType() == InventoryTransactionType.RETURN)
                 .map(WorkOrderActivityMapper::fromPartTransaction);
+        Stream<WorkOrderActivityResponse> dispatch = dispatchEvents.stream()
+                .filter(event -> "RESCHEDULE".equals(event.getAction()))
+                .map(WorkOrderActivityMapper::fromDispatchAudit);
 
-        return Stream.concat(statuses, parts)
+        return Stream.of(statuses, dispatch, parts)
+                .flatMap(stream -> stream)
                 .sorted(Comparator.comparing(WorkOrderActivityResponse::createdAt))
                 .toList();
     }
@@ -52,6 +65,24 @@ final class WorkOrderActivityMapper {
                 null,
                 null,
                 history.getCreatedAt()
+        );
+    }
+
+    private static WorkOrderActivityResponse fromDispatchAudit(AuditLog audit) {
+        return new WorkOrderActivityResponse(
+                audit.getId(),
+                WorkOrderActivityType.DISPATCH_UPDATED,
+                null,
+                audit.getDetails(),
+                audit.getActorUsername(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                audit.getCreatedAt()
         );
     }
 

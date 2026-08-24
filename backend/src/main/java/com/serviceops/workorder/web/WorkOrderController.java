@@ -69,13 +69,13 @@ public class WorkOrderController {
     }
 
     @PostMapping("/from-service-request/{serviceRequestId}")
-    @PreAuthorize("hasRole('CUSTOMER_SERVICE')")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public WorkOrderResponse convert(@PathVariable UUID serviceRequestId) {
         return service.convertServiceRequest(serviceRequestId);
     }
 
     @PostMapping("/{id}/schedule")
-    @PreAuthorize("hasRole('DISPATCHER')")
+    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
     public WorkOrderResponse schedule(@PathVariable UUID id, @Valid @RequestBody ScheduleWorkOrder request) {
         return service.schedule(id, request);
     }
