@@ -42,8 +42,10 @@
 | Kỹ thuật viên sửa phiếu người khác | Role/assignment authorization tại service/controller |
 | Kỹ thuật viên xem lịch người khác | `/my-schedule` suy ra `TechnicianProfile` từ signed-in `userId`; client không gửi `technicianId` |
 | Double booking | Transaction + pessimistic technician lock + overlap query + concurrency test |
-| Technician tự nghiệm thu/đóng/hủy work order | Backend chỉ cho Technician cập nhật tiến độ `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`; frontend dùng cùng policy và integration test xác minh 403 cho transition ngoài ownership |
+| Technician thao tác Work Order ngoài phạm vi | Backend giới hạn Technician vào Work Order được assign; field progress và bước `CUSTOMER_ACCEPTED`/`CLOSED`/`REOPENED` chỉ áp trên chính job đó. `CANCELLED` vẫn không thuộc Technician |
 | Dispatcher thực hiện field/management transition | Service-level target-status policy chỉ cho Dispatcher operational cancellation; field progress/acceptance/close/reopen trả 403 |
+| Owner admin override Work Order | OWNER được ghi nhận `CUSTOMER_ACCEPTED`, `CLOSED`, `REOPENED`, `CANCELLED` qua service policy; không được dùng generic transition để giả lập field progress và không consume phụ tùng thay Technician |
+| Customer acceptance không có tài khoản CUSTOMER | Assigned Technician hoặc OWNER ghi nhận **Khách xác nhận** sau khi khách đồng ý ngoài hệ thống; Customer Service chỉ tiếp nhận follow-up để `REOPENED`/`CANCELLED`. Actor thật vẫn được lưu history/audit |
 | Warehouse đọc Work Order/dashboard | Controller authorization loại Warehouse khỏi Work Order và operational dashboard; frontend default workspace là `/inventory` |
 | Đổi account nhưng UI giữ cache role cũ | AuthProvider cancel/clear TanStack Query cache khi login/logout để dữ liệu identity trước không được tái sử dụng |
 | Tài khoản bị tạm ngưng nhưng JWT cũ còn hạn | JWT validator kiểm tra lại UserAccount hiện tại; inactive/deleted/stale identity bị từ chối |

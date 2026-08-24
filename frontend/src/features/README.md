@@ -11,7 +11,7 @@ The frontend follows the same business boundaries as the backend modules.
 - `service-channels`: intake channel settings API.
 - `work-orders`: dispatch, scheduling, status transition, and parts usage API.
 - `technicians`: technician profile API.
-- `inventory`: spare part and stock API.
+- `inventory`: spare-part catalog, editable minimum-stock thresholds, stocktake/reconciliation, part returns and inventory movement ledger.
 - `attachments`: upload, preview, download API, and attachment UI.
 - `audit`: audit log API.
 - `notifications`: app notification API.

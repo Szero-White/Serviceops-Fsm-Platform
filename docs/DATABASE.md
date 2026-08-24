@@ -33,6 +33,8 @@
 - `tenant_id` trên dữ liệu tenant-scoped.
 - `version` dùng cho optimistic locking ở các entity hỗ trợ concurrency.
 - Timestamp lưu theo UTC.
+- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `balance_after` giữ snapshot tồn sau mỗi movement.
+- Stocktake/return mới tái sử dụng schema ledger hiện có, không cần migration mới.
 - Flyway là nguồn schema; Hibernate dùng `ddl-auto=validate`, không auto-create production schema.
 - FK/unique/index được đặt ở database khi quan hệ là relational trực tiếp.
 - Query/service vẫn phải giữ tenant scope; FK không thay thế authorization.
