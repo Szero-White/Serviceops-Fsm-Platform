@@ -358,7 +358,7 @@ export function UsersPage() {
             <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
               <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
             </Form.Item>
-            {selectedRole === 'TECHNICIAN' && (!editing || editing.role !== 'TECHNICIAN') && (
+            {selectedRole === 'TECHNICIAN' && (
               <>
                 <Form.Item label="Điện thoại kỹ thuật viên" name="phone">
                   <Input placeholder="0909123456" />
