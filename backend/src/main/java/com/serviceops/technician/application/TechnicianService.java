@@ -5,7 +5,6 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.application.DemoAccountProtectionPolicy;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.technician.domain.TechnicianRepository;
@@ -25,7 +24,6 @@ public class TechnicianService {
     private final TechnicianRepository repository;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
-    private final NotificationService notificationService;
     private final DemoAccountProtectionPolicy demoAccountProtectionPolicy;
 
     @Transactional(readOnly = true)
@@ -73,12 +71,6 @@ public class TechnicianService {
                 technician.getId(),
                 "Cập nhật hồ sơ kỹ thuật viên " + user.getUsername()
         );
-        notificationService.notifyRoles(
-                CurrentUser.tenantId(),
-                workforceRoles(),
-                "Thông tin kỹ thuật viên đã thay đổi: " + user.getDisplayName(),
-                "Kiểm tra kỹ năng, liên hệ và trạng thái hoạt động trước khi phân công công việc."
-        );
 
         return toResponse(technician);
     }
@@ -95,9 +87,6 @@ public class TechnicianService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private static List<UserRole> workforceRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER);
-    }
 
     private TechnicianResponse toResponse(TechnicianProfile technician) {
         UserAccount user = technician.getUser();

@@ -6,6 +6,7 @@ import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -95,12 +97,7 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
                 new TransitionWorkOrder(WorkOrderStatus.CLOSED, "Đã bàn giao và kết thúc công việc", null, null)
         );
         assertThat(closed.status()).isEqualTo(WorkOrderStatus.CLOSED);
-        verify(notificationService).notifyRoles(
-                eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER)),
-                eq("Phiếu đã đóng: WO-UAT-ACCEPT-001"),
-                contains("Mở Lịch sử phiếu")
-        );
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -114,11 +111,12 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
         );
 
         assertThat(reopened.status()).isEqualTo(WorkOrderStatus.REOPENED);
+        var expectedNotification = NotificationCopy.workOrderReopenedAttention("WO-UAT-ACCEPT-001");
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.DISPATCHER)),
-                eq("Cần điều phối xử lý lại: WO-UAT-ACCEPT-001"),
-                contains("Khách yêu cầu xử lý lại")
+                eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
+                eq(expectedNotification.title()),
+                eq(expectedNotification.message())
         );
     }
 
@@ -142,7 +140,7 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
                 eq(TENANT_ID),
                 eq(technicianUser),
                 eq("Phiếu đã đóng: WO-UAT-ACCEPT-001"),
-                contains("Không cần tiếp tục thao tác")
+                contains("không cần thao tác thêm")
         );
     }
 

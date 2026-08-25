@@ -6,6 +6,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -32,7 +33,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -104,11 +104,12 @@ class WorkOrderCustomerServiceLifecycleTest {
         );
 
         assertThat(reopened.status()).isEqualTo(WorkOrderStatus.REOPENED);
+        var expectedNotification = NotificationCopy.workOrderReopenedAttention("WO-UAT-CS-001");
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.DISPATCHER)),
-                eq("Cần điều phối xử lý lại: WO-UAT-CS-001"),
-                contains("Khách yêu cầu xử lý lại")
+                eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
+                eq(expectedNotification.title()),
+                eq(expectedNotification.message())
         );
     }
 

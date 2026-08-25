@@ -6,8 +6,6 @@ import com.serviceops.attachment.web.AttachmentController.AttachmentResponse;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
@@ -35,7 +33,6 @@ public class AttachmentService {
     private final WorkOrderRepository workOrderRepository;
     private final AssetRepository assetRepository;
     private final ServiceRequestRepository serviceRequestRepository;
-    private final NotificationService notificationService;
 
     @Transactional
     public AttachmentResponse upload(String referenceType, UUID referenceId, MultipartFile file) {
@@ -59,12 +56,6 @@ public class AttachmentService {
         attachment.setUploadedBy(CurrentUser.username());
         repository.save(attachment);
         auditService.record("UPLOAD_FILE", normalizedType, referenceId, "Tải file " + attachment.getOriginalFilename());
-        notificationService.notifyRoles(
-                tenantId,
-                notificationRoles(normalizedType),
-                "Có tệp mới trong " + referenceTypeLabel(normalizedType),
-                "Tệp \"" + attachment.getOriginalFilename() + "\" vừa được thêm. Mở " + referenceTypeLabel(normalizedType) + " để xem."
-        );
         return toResponse(attachment);
     }
 
@@ -226,22 +217,6 @@ public class AttachmentService {
         return normalized;
     }
 
-    private static String referenceTypeLabel(String referenceType) {
-        return switch (referenceType) {
-            case "WORK_ORDER" -> "phiếu công việc";
-            case "SERVICE_REQUEST" -> "yêu cầu dịch vụ";
-            case "ASSET" -> "thiết bị";
-            default -> "đối tượng liên quan";
-        };
-    }
-
-    private static List<UserRole> notificationRoles(String referenceType) {
-        return switch (referenceType) {
-            case "SERVICE_REQUEST" -> List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-            case "WORK_ORDER" -> List.of(UserRole.OWNER, UserRole.DISPATCHER);
-            default -> List.of(UserRole.OWNER);
-        };
-    }
 
     private static AttachmentResponse toResponse(Attachment a) {
         return new AttachmentResponse(a.getId(), a.getOriginalFilename(), a.getContentType(), a.getFileSize(), a.getReferenceType(), a.getReferenceId(), a.getUploadedBy(), a.getCreatedAt());

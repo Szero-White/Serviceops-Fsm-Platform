@@ -41,14 +41,14 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SCH-05 | Technician mở `Lịch của tôi` | Chỉ thấy appointment gắn với technician profile của tài khoản đang đăng nhập |
 | SCH-06 | Đăng nhập hai tài khoản technician khác nhau | Hai lịch cá nhân không lẫn dữ liệu; client không truyền technicianId |
 | SCH-07 | Owner tạm ngưng technician/profile đang còn Work Order operational | HTTP 409 `TECHNICIAN_ACTIVE_ASSIGNMENTS`; phải điều phối lại/hủy job trước |
-| SCH-08 | Điều phối lại lịch của appointment đã tồn tại trước khi technician bắt đầu | Bắt buộc nhập lý do; Schedule/My Schedule cập nhật lịch mới; audit action `RESCHEDULE`; tab Tiến trình có activity **Đã điều phối lại** |
+| SCH-08 | Điều phối lại appointment đã tồn tại trước khi technician bắt đầu, từ trang Lịch điều phối hoặc chi tiết Work Order | Bắt buộc nhập lý do; đổi kỹ thuật viên, thời gian hoặc cả hai đều dùng cùng endpoint; Tiến trình ghi ngắn gọn đúng phần thay đổi, không hiển thị raw ISO `T...Z`; notification chỉ gửi kỹ thuật viên liên quan |
 | SCH-09 | Dispatcher đổi technician khi WO còn ASSIGNED | Technician cũ nhận thông báo đã điều chuyển, technician mới nhận công việc; WO vẫn ASSIGNED; Tiến trình ghi rõ người cũ → người mới và lý do |
 | SCH-10 | Dispatcher/Owner thử điều phối lại khi WO đã ON_THE_WAY/IN_PROGRESS | HTTP 409 `WORK_ORDER_ALREADY_STARTED`; không đổi technician/lịch, không tạo audit/notification |
 | WO-02 | Chuyển trạng thái hợp lệ | Timeline lưu người thao tác và thời gian |
 | WO-03 | Nhảy trạng thái không hợp lệ | HTTP 409 INVALID_STATUS_TRANSITION |
 | WO-03A | Customer Service thử `CANCELLED → REOPENED` | HTTP 409 `INVALID_STATUS_TRANSITION`; phiếu giữ `CANCELLED`; nếu khách có nhu cầu mới thì tạo yêu cầu/phiếu mới |
 | WO-04 | Technician bấm Hoàn thành nhưng bỏ trống Chẩn đoán hoặc Giải pháp | Form đánh dấu trường lỗi, cuộn tới lỗi đầu tiên và hiện cảnh báo rõ; không gọi API, không đổi trạng thái |
-| WO-05 | Technician nhập đủ Chẩn đoán + Giải pháp rồi hoàn thành | WO chuyển COMPLETED; người thao tác thấy phản hồi thành công và nút **Khách xác nhận**; Owner nhận notification **Chờ khách xác nhận: WO-...** như fallback |
+| WO-05 | Technician nhập đủ Chẩn đoán + Giải pháp rồi hoàn thành | WO chuyển COMPLETED; người thao tác thấy phản hồi thành công và nút **Khách xác nhận**; Owner không nhận chuông cho completion bình thường nhưng vẫn thấy trạng thái trên Dashboard/Work Order |
 | USER-01 | Owner sửa user và thử đổi username | Bị chặn `USER_USERNAME_CHANGE_BLOCKED`; username lịch sử/ownership giữ ổn định |
 | USER-02 | Owner đổi bộ lọc Người dùng giữa Tất cả trạng thái / Hoạt động / Tạm ngưng, đồng thời nhập từ khóa tìm kiếm | Danh sách áp đồng thời search + trạng thái; đổi filter/search quay về page 1; metric tổng vẫn phản ánh toàn bộ tenant |
 | USER-03 | Owner tạo/cập nhật user | Success feedback ghi rõ tên, vai trò và trạng thái tài khoản; audit USER_ACCOUNT ghi trạng thái sau thao tác |
@@ -57,8 +57,8 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | DASH-01 | Có WO ở SCHEDULED/ON_THE_WAY/REOPENED/CUSTOMER_ACCEPTED rồi mở dashboard | Tỷ lệ hoàn tất tính đủ các trạng thái active/completed chính, không bỏ sót các state này |
 | INV-01 | Nhập kho số lượng dương | Tồn và ledger tăng đúng |
 | INV-02 | Dùng phụ tùng đủ tồn | Tồn giảm, ledger gắn work order |
-| INV-02A | Technician bấm Dùng phụ tùng trong Work Order rồi mở tab Tiến trình | Thấy activity **Đã sử dụng phụ tùng** đúng tên/SKU, số lượng, người thao tác, thời gian và ghi chú; không cần chờ tới lúc xuất hóa đơn |
-| INV-02B | Warehouse hoàn trả một phần phụ tùng của Work Order | Tiến trình của Work Order có thêm activity **Đã hoàn trả phụ tùng** đúng số lượng, người thao tác và thời gian; invoice vẫn tính net `CONSUME - RETURN` |
+| INV-02A | Technician bấm Dùng phụ tùng trong Work Order rồi mở tab Tiến trình | Thấy activity **Đã sử dụng phụ tùng** đúng tên/SKU, số lượng, người thao tác là Technician, thời gian và ghi chú; không cần chờ tới lúc xuất hóa đơn |
+| INV-02B | Warehouse hoàn trả một phần phụ tùng của Work Order | Không thêm activity Warehouse vào tab Tiến trình operational của Work Order; RETURN xuất hiện ở Lịch sử biến động và invoice vẫn tính net `CONSUME - RETURN` |
 | INV-03 | Dùng vượt tồn | HTTP 409, tồn không thay đổi |
 | INV-03A | Technician thử Dùng phụ tùng khi WO đã `COMPLETED` hoặc `CUSTOMER_ACCEPTED` | UI không hiện nút Dùng phụ tùng; gọi API trực tiếp nhận HTTP 409 `WORK_ORDER_PART_CONSUMPTION_NOT_ALLOWED`; tồn và ledger không thay đổi |
 | INV-04 | Warehouse kiểm kê part: system 10, actual 8 | Tồn thành 8; tạo `ADJUSTMENT_OUT 2` với reason/actor và `balanceAfter=8`; Owner nhận notification chênh lệch sau commit; nếu tồn `<= reorderLevel` (ngưỡng tồn tối thiểu), Warehouse nhận cảnh báo tồn thấp |
@@ -86,11 +86,16 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-ROLE-02 | Assigned Technician mở Work Order `COMPLETED` bằng icon mắt | Có nút **Khách xác nhận** cạnh **Tải ảnh / PDF**; bấm thành công → `CUSTOMER_ACCEPTED` |
 | WO-ROLE-03 | Technician hoặc Owner mở Work Order `CUSTOMER_ACCEPTED` | Có nút **Đóng phiếu**; bấm → `CLOSED`, tự chuyển sang **Lịch sử phiếu** và mở đúng phiếu vừa đóng; nếu cùng lỗi còn tồn tại trước khi đóng thì dùng `REOPENED` |
 | WO-ROLE-04 | Mở bộ lọc trạng thái ở trang Phiếu công việc | Không có `Đã đóng/Đã hủy`; hai trạng thái terminal chỉ tra cứu ở **Lịch sử phiếu** |
-| WO-NOTIF-01 | Technician hoàn thành Work Order | Owner (trừ actor) nhận **Chờ khách xác nhận: WO-...**; Technician vừa hoàn thành dùng success feedback + action tại phiếu, không nhận chuông trùng lặp |
-| WO-NOTIF-02 | Work Order sang `WAITING_FOR_PARTS` | Dispatcher nhận **Cần xử lý phụ tùng: WO-...** |
-| WO-NOTIF-03 | Work Order `CLOSED` | Owner nhận **Phiếu đã đóng: WO-...** nếu không phải actor; assigned Technician cũng nhận khi Owner đóng |
+| WO-NOTIF-01 | Technician hoàn thành Work Order | Customer Service nhận **Phiếu đã hoàn thành: WO-...** để theo dõi phản hồi; Owner không nhận chuông cho completion bình thường |
+| WO-NOTIF-02 | Work Order sang `WAITING_FOR_PARTS` | Dispatcher nhận **Phiếu đang chờ phụ tùng: WO-...** và hướng dẫn phối hợp với kho |
+| WO-NOTIF-03 | Work Order `CLOSED` | Owner không nhận chuông cho closure bình thường; assigned Technician vẫn nhận khi người khác (ví dụ Owner) đóng phiếu thay |
+| WO-NOTIF-03A | Work Order `REOPENED` | Owner + Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Phiếu được mở lại: WO-...** nếu không phải actor |
+| WO-NOTIF-03B | Work Order `CANCELLED` | Owner (trừ actor) nhận ngoại lệ; assigned Technician nhận thông báo dừng công việc nếu không phải actor |
+| NOTIF-SPAM-01 | Customer/Asset/Service Request/Channel, Technician profile, attachment, tạo/import catalog hoặc nhập kho thay đổi bình thường | Không role nào nhận bell notification cho CRUD routine; actor thấy success/error tại màn hình và thay đổi vẫn có Audit/workspace để truy vết |
+| NOTIF-OWNER-02 | Technician consume làm stock từ trên ngưỡng xuống chạm/thấp hơn `reorderLevel`, sau đó consume tiếp khi stock vẫn thấp | Owner/Warehouse nhận cảnh báo ở lần **cross threshold**; lần consume tiếp theo không tạo low-stock notification lặp lại |
 | WO-NOTIF-04 | Mở notification cũ có title dạng `Cập nhật WO-...: ON_THE_WAY → CANCELLED` | UI hiển thị title + mô tả tiếng Việt thân thiện, không lộ enum nội bộ |
-| WO-NOTIF-05 | Mở notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI hiển thị **Bạn được giao công việc mới: WO-...** và hướng dẫn mở phiếu; không dùng summary/test text làm nội dung chính |
+| WO-NOTIF-05 | Mở notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI hiển thị **Bạn được phân công: WO-...** và hướng dẫn mở **Lịch của tôi**; không dùng summary/test text làm nội dung chính |
+| NOTIF-LEGACY-01 | Mở notification cũ có mã kênh dạng `KENH_E2E_...` | UI dùng tên kênh đọc được hoặc câu tổng quát; không đưa mã test/kỹ thuật lên title chính |
 | NOTIF-01 | Mark Read/Unread một notification khi API thành công | Dòng và badge/tab Chưa đọc cập nhật ngay sau invalidate |
 | NOTIF-02 | Làm API Mark Read/Unread lỗi | Hiện thông báo lỗi; nút không bị treo; trạng thái hiển thị không giả vờ đã đổi |
 | AI-01 | Mỗi role hỏi “Trong vai trò này tôi được làm những gì?” | AI trả overview đúng role lấy từ backend/JWT; OWNER thấy phạm vi quản trị rộng, các role khác chỉ thấy chức năng được giao |

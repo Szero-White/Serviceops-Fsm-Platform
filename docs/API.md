@@ -97,7 +97,7 @@ Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 
 - `GET /work-orders?search={text}&status={status}&page={n}&size={n}`
 - `GET /work-orders/history?search={text}&status={CLOSED|CANCELLED}&page={n}&size={n}`
-- `GET /work-orders/{id}` — detail trả cả `history` (status history tương thích cũ) và `activities` đã merge theo thời gian từ status history + inventory `CONSUME`/`RETURN`; activity phụ tùng gồm SKU/tên/đơn vị/số lượng/actor/note/time và không tạo bảng timeline duplicate.
+- `GET /work-orders/{id}` — detail trả cả `history` (status history tương thích cũ) và `activities` operational đã merge theo thời gian từ status history + audit điều phối + inventory `CONSUME` hợp lệ của `TECHNICIAN`. Warehouse `RETURN` vẫn nằm ở stock ledger và invoice net, không xuất hiện như tiến trình hiện trường của Work Order; activity phụ tùng gồm SKU/tên/đơn vị/số lượng/actor/note/time và không tạo bảng timeline duplicate.
 - `GET /work-orders/{id}/invoice` — service guard chỉ cho invoice khi Work Order `CLOSED`
 
 TECHNICIAN read được giới hạn tiếp theo ở service/repository vào Work Order được assign cho identity hiện tại.
@@ -154,9 +154,9 @@ Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 Operational consumption:
 
-- `POST /work-orders/{workOrderId}/parts/consume` — TECHNICIAN only; chỉ cho Work Order được giao cho chính kỹ thuật viên và đang ở `ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` hoặc `REOPENED`. Từ `COMPLETED` trở đi không ghi nhận CONSUME mới. Giao dịch thành công xuất hiện ngay trong `activities` của Work Order detail để UI hiển thị ở Tiến trình xử lý.
+- `POST /work-orders/{workOrderId}/parts/consume` — TECHNICIAN only; chỉ cho Work Order được giao cho chính kỹ thuật viên và đang ở `ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` hoặc `REOPENED`. Từ `COMPLETED` trở đi không ghi nhận CONSUME mới. Giao dịch thành công của Technician xuất hiện ngay trong `activities` của Work Order detail để UI hiển thị ở Tiến trình xử lý.
 
-Warehouse không consume thay technician. Warehouse chỉ xác nhận stocktake/adjustment, xem ledger và nhận part return; Work Order `CLOSED`/`CANCELLED` không nhận return mới. Invoice dùng net consumed sau RETURN.
+Warehouse không consume thay technician. Warehouse chỉ xác nhận stocktake/adjustment, xem ledger và nhận part return; Work Order `CLOSED`/`CANCELLED` không nhận return mới. RETURN là nghiệp vụ kho nên tra ở Lịch sử biến động, không được trình bày như field progress trong Tiến trình Work Order. Invoice vẫn dùng net consumed sau RETURN.
 
 ## Attachments
 
@@ -180,7 +180,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Notifications
 
-Authenticated user chỉ thao tác notification của chính identity trong tenant:
+Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận low-stock; Owner chỉ nhận attention events như `REOPENED`/`CANCELLED`, low-stock threshold crossing và stocktake discrepancy. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do CONSUME chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại ở mỗi lần consume khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
 
 - `GET /notifications`
 - `GET /notifications/unread-count`

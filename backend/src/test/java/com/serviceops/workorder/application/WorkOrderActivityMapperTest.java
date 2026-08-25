@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WorkOrderActivityMapperTest {
 
     @Test
-    void mergesStatusConsumeAndReturnIntoOneChronologicalTimeline() {
+    void keepsOperationalTimelineFocusedOnStatusAndTechnicianConsumption() {
         SparePart part = part("FILTER-AC-01", "Lưới lọc máy lạnh tiêu chuẩn", "cái");
         WorkOrderStatusHistory started = statusHistory(
                 WorkOrderStatus.IN_PROGRESS,
@@ -60,7 +60,6 @@ class WorkOrderActivityMapperTest {
         assertThat(activities).extracting(activity -> activity.type()).containsExactly(
                 WorkOrderActivityType.STATUS_CHANGE,
                 WorkOrderActivityType.PART_CONSUMED,
-                WorkOrderActivityType.PART_RETURNED,
                 WorkOrderActivityType.STATUS_CHANGE
         );
 
@@ -74,12 +73,38 @@ class WorkOrderActivityMapperTest {
         assertThat(consumeActivity.actorRole()).isEqualTo("TECHNICIAN");
         assertThat(consumeActivity.note()).isEqualTo("Lắp thay cho khách");
 
-        var returnActivity = activities.get(2);
-        assertThat(returnActivity.quantity()).isEqualByComparingTo("1.000");
-        assertThat(returnActivity.actorRole()).isEqualTo("WAREHOUSE_STAFF");
-        assertThat(returnActivity.note()).isEqualTo("Trả phần chưa dùng");
     }
 
+
+    @Test
+    void ignoresNonTechnicianConsumeAndWarehouseReturnInOperationalTimeline() {
+        SparePart part = part("SENSOR-TEMP-10K", "Cảm biến nhiệt độ 10K", "cái");
+        InventoryTransaction legacyWarehouseConsume = partTransaction(
+                part,
+                InventoryTransactionType.CONSUME,
+                "1.000",
+                "warehouse",
+                "Đặng Nam Kho",
+                "WAREHOUSE_STAFF",
+                "Legacy UAT consume",
+                "2026-08-19T09:45:00Z"
+        );
+        InventoryTransaction warehouseReturn = partTransaction(
+                part,
+                InventoryTransactionType.RETURN,
+                "1.000",
+                "warehouse",
+                "Đặng Nam Kho",
+                "WAREHOUSE_STAFF",
+                "Trả phần chưa dùng",
+                "2026-08-19T10:00:00Z"
+        );
+
+        assertThat(WorkOrderActivityMapper.merge(
+                List.of(),
+                List.of(legacyWarehouseConsume, warehouseReturn)
+        )).isEmpty();
+    }
 
     @Test
     void includesRedispatchAuditAsDedicatedTimelineActivity() {

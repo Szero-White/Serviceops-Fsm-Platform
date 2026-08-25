@@ -5,7 +5,6 @@ import com.serviceops.attachment.domain.Attachment;
 import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
@@ -49,8 +48,6 @@ class AttachmentOwnershipTest {
     private AssetRepository assetRepository;
     @Mock
     private ServiceRequestRepository serviceRequestRepository;
-    @Mock
-    private NotificationService notificationService;
 
     private AttachmentService service;
 
@@ -62,8 +59,7 @@ class AttachmentOwnershipTest {
                 auditService,
                 workOrderRepository,
                 assetRepository,
-                serviceRequestRepository,
-                notificationService
+                serviceRequestRepository
         );
         org.mockito.Mockito.lenient().when(workOrderRepository.findDetailed(WORK_ORDER_ID, TENANT_ID))
                 .thenReturn(Optional.of(new WorkOrder()));

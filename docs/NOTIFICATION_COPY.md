@@ -1,69 +1,63 @@
 # Notification Copy Catalog
 
-Mục tiêu của notification chuông là giúp người nhận hiểu ngay **chuyện gì vừa xảy ra / việc gì cần làm** và **bước tiếp theo là gì**.
+Mục tiêu của notification chuông là giúp đúng người nhận hiểu ngay **chuyện gì vừa xảy ra / việc gì cần làm** và **bước tiếp theo là gì**. Notification không thay cho Timeline hay Audit.
 
 ## Quy tắc copy
 
-- Tiêu đề ngắn, dùng ngôn ngữ nghiệp vụ người dùng nhìn thấy trên UI.
-- Mô tả nói rõ bước tiếp theo; không dùng notification như log kỹ thuật.
-- Giữ mã nghiệp vụ có ích để tra cứu (`WO-...`, SKU, mã khách hàng/kênh).
-- Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`...), chuỗi test hoặc raw summary khó hiểu làm nội dung chính.
-- Notification cũ trong database không bị rewrite; frontend chuyển các mẫu cũ sang câu thân thiện khi render.
+- Tiêu đề ngắn: sự kiện + mã nghiệp vụ cần tra cứu (`WO-...`, SKU).
+- Mô tả nói bước tiếp theo; không dùng notification như log kỹ thuật.
+- Dùng nhất quán các thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Tồn kho thấp**.
+- Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`...), raw timestamp ISO, mã test hoặc audit detail làm nội dung chính.
+- CRUD/master-data/import/attachment bình thường dùng success/error feedback tại màn hình + Audit, **không tạo bell notification**.
+- Copy runtime mới được gom về `NotificationCopy`; notification lịch sử trong database không bị rewrite, frontend chỉ chuyển các mẫu cũ sang câu dễ đọc khi render.
 
-## Audit toàn bộ nguồn tạo notification
+## Ma trận notification theo vai trò
 
-Có **34 call-site runtime** qua `NotificationService` và **1 notification demo seed**. Danh sách dưới đây bao phủ toàn bộ nguồn tạo notification có copy cố định trong source.
+| Trigger | Người nhận | Copy chuẩn / mục đích |
+|---|---|---|
+| Service Request chuyển thành Work Order | Dispatcher | **Phiếu mới chờ điều phối: WO-...** — mở Lịch điều phối để phân công |
+| Phân công lần đầu | Technician được giao | **Bạn được phân công: WO-...** — mở Lịch của tôi |
+| Đổi Technician | Technician cũ | **Bạn không còn được phân công: WO-...** — cập nhật kế hoạch |
+| Đổi Technician | Technician mới | **Bạn được phân công: WO-...** — xem lịch mới |
+| Chỉ đổi thời gian | Technician hiện tại | **Lịch làm việc đã thay đổi: WO-...** |
+| Work Order chờ phụ tùng | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** — phối hợp với kho |
+| Work Order được mở lại | Owner + Dispatcher (trừ actor) | **Phiếu cần xử lý lại: WO-...** |
+| Work Order được mở lại | Assigned Technician (nếu không phải actor) | **Phiếu được mở lại: WO-...** |
+| Technician hoàn thành Work Order | Customer Service | **Phiếu đã hoàn thành: WO-...** — theo dõi phản hồi khách hàng; không trao quyền Đóng phiếu |
+| Work Order bị hủy | Owner (trừ actor) | **Phiếu đã hủy: WO-...** |
+| Work Order bị hủy | Assigned Technician (nếu không phải actor) | **Phiếu đã hủy: WO-...** |
+| Work Order được đóng bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** |
+| Consume làm stock lần đầu chạm/thấp hơn ngưỡng | Owner + Warehouse | **Tồn kho thấp: SKU** |
+| Đổi reorder level làm stock chuyển sang thấp | Owner + Warehouse khác actor | **Tồn kho thấp: SKU** |
+| Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** |
+| Stocktake kết thúc với tồn thấp | Warehouse | **Tồn kho thấp: SKU** |
 
-| # | Module / trigger | Người nhận | Tiêu đề / ý nghĩa |
-|---|---|---|---|
-| 1 | Work Order được tạo từ Service Request | Dispatcher | `Phiếu mới cần điều phối: WO-...` |
-| 2 | Reschedule, kỹ thuật viên cũ bị gỡ khỏi phiếu | Kỹ thuật viên cũ | `Lịch làm việc đã thay đổi: WO-...` |
-| 3 | Reschedule / đổi giờ cho kỹ thuật viên hiện tại | Kỹ thuật viên | `Lịch làm việc đã thay đổi: WO-...` |
-| 4 | Phân công Work Order mới | Kỹ thuật viên | `Bạn được giao công việc mới: WO-...` |
-| 5 | Work Order `COMPLETED` | Owner (fallback, trừ actor) | `Chờ khách xác nhận: WO-...` |
-| 6 | Work Order `WAITING_FOR_PARTS` | Dispatcher | `Cần xử lý phụ tùng: WO-...` |
-| 7 | Work Order `REOPENED` | Dispatcher | `Cần điều phối xử lý lại: WO-...` |
-| 8 | Work Order `CLOSED` | Owner + assigned Technician khi không phải actor | `Phiếu đã đóng: WO-...` |
-| 9 | Work Order `CANCELLED` | Owner | `Phiếu đã hủy: WO-...` |
-| 10 | Work Order reopen/cancel cần báo kỹ thuật viên được giao | Kỹ thuật viên | `Công việc cần xử lý lại` / `Công việc đã hủy` |
-| 11 | Hồ sơ kỹ thuật viên thay đổi | Owner / Dispatcher | `Thông tin kỹ thuật viên đã thay đổi: ...` |
-| 12 | Upload attachment | Vai trò liên quan | `Có tệp mới trong phiếu công việc / yêu cầu dịch vụ / thiết bị` |
-| 13 | Tạo Service Request | Intake roles | `Yêu cầu mới cần tiếp nhận` |
-| 14 | Cập nhật Service Request | Intake roles | `Yêu cầu dịch vụ vừa được cập nhật` |
-| 15 | Hủy Service Request | Intake roles | `Yêu cầu dịch vụ đã hủy` |
-| 16 | Xóa Service Request | Intake roles | `Yêu cầu dịch vụ đã được xóa` |
-| 17 | Tạo Service Channel | Owner / Customer Service | `Đã thêm kênh tiếp nhận: ...` |
-| 18 | Cập nhật Service Channel | Owner / Customer Service | `Thông tin kênh tiếp nhận đã thay đổi: ...` |
-| 19 | Xóa Service Channel | Owner / Customer Service | `Đã xóa kênh tiếp nhận: ...` |
-| 20 | Tạo Asset | Owner / Customer Service | `Đã thêm thiết bị: ...` |
-| 21 | Cập nhật Asset | Owner / Customer Service | `Thông tin thiết bị đã thay đổi: ...` |
-| 22 | Xóa Asset | Owner / Customer Service | `Đã xóa thiết bị: ...` |
-| 23 | Import Asset | Owner / Customer Service | `Đã thêm thiết bị từ tệp` |
-| 24 | Kiểm kê có chênh lệch | Owner | `Kiểm kê có chênh lệch: SKU` |
-| 25 | Tồn thấp sau kiểm kê | Warehouse | `Cần bổ sung tồn kho sau kiểm kê: SKU` |
-| 26 | Đổi ngưỡng làm tồn chuyển sang thấp | Owner / Warehouse | `Cần kiểm tra tồn kho: SKU` |
-| 27 | Tạo phụ tùng | Owner / Warehouse | `Đã thêm phụ tùng: SKU` |
-| 28 | Nhập kho | Owner / Warehouse | `Kho vừa được bổ sung: SKU` |
-| 29 | Import danh mục phụ tùng | Owner / Warehouse | `Đã thêm phụ tùng từ tệp` |
-| 30 | Consume làm tồn chạm/thấp hơn ngưỡng | Owner / Warehouse | `Cần bổ sung tồn kho: SKU` |
-| 31 | Tạo Customer | Owner / Customer Service | `Đã thêm khách hàng: ...` |
-| 32 | Cập nhật Customer | Owner / Customer Service | `Thông tin khách hàng đã thay đổi: ...` |
-| 33 | Xóa Customer | Owner / Customer Service | `Đã xóa khách hàng: ...` |
-| 34 | Import Customer | Owner / Customer Service | `Đã thêm khách hàng từ tệp` |
-| Demo | Seed notification cho Technician | Technician demo | `Bạn được giao công việc mới: WO-...` |
+## Những việc cố ý không tạo chuông
 
-## Ví dụ trước / sau
+- Tạo/sửa/xóa/import Customer.
+- Tạo/sửa/xóa/import Asset.
+- Tạo/sửa/hủy/xóa Service Request thông thường.
+- Tạo/sửa/xóa Service Channel.
+- Cập nhật Technician profile.
+- Upload attachment.
+- Tạo/import catalog phụ tùng hoặc nhập kho bình thường.
+- Technician `ON_THE_WAY`, `IN_PROGRESS`, từng lần CONSUME bình thường, `CUSTOMER_ACCEPTED`.
+- Owner không nhận completion/closure bình thường.
 
-Trước:
+Các việc này đã có workspace, Timeline, Inventory Movements hoặc Audit phù hợp. Đưa chúng vào chuông chỉ tạo nhiễu.
 
-`Công việc mới: WO-2026-001010`
+## Legacy display
 
-`Bạn được phân công: Technician policy E2E 76154627`
+Ví dụ dữ liệu cũ:
 
-Sau:
+`Có phiếu mới chờ điều phối: WO-2026-001010`
 
-`Bạn được giao công việc mới: WO-2026-001010`
+`Technician policy E2E 76154627`
 
-`Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện.`
+Frontend hiển thị:
 
-Người dùng không cần hiểu tên test, enum hoặc implementation detail để biết mình phải làm gì.
+`Phiếu mới chờ điều phối: WO-2026-001010`
+
+`Mở Lịch điều phối để phân công kỹ thuật viên.`
+
+Tương tự, notification kênh cũ có title chứa mã kiểu `KENH_E2E_...` sẽ ưu tiên tên kênh trong mô tả hoặc câu tổng quát, không đưa mã test/kỹ thuật lên title chính.

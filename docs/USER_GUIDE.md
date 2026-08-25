@@ -35,7 +35,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 3. Mở **Phiếu công việc**; chỉ các work order được giao cho tài khoản này mới xuất hiện.
 4. Chuyển trạng thái lần lượt `ON_THE_WAY` và `IN_PROGRESS`.
 5. Upload ảnh/PDF minh chứng.
-6. Ghi nhận phụ tùng đã sử dụng. Hệ thống không cho số lượng tồn âm; sau khi ghi nhận thành công, mở tab **Tiến trình** của phiếu để thấy ngay tên/SKU, số lượng, người thao tác, thời gian và ghi chú của phụ tùng đã dùng.
+6. Ghi nhận phụ tùng đã sử dụng. Hệ thống không cho số lượng tồn âm; sau khi ghi nhận thành công, mở tab **Tiến trình** của phiếu để thấy ngay tên/SKU, số lượng, Technician thực hiện, thời gian và ghi chú của phụ tùng đã dùng.
 7. Nhập chẩn đoán và giải pháp, sau đó chuyển sang `COMPLETED`.
 
 
@@ -44,7 +44,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 1. Đăng nhập `warehouse`.
 2. Mở **Lịch sử biến động** để xem giao dịch `CONSUME` vừa phát sinh từ Work Order.
 3. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Đây là mốc cảnh báo tồn thấp, không phải số lượng đặt mua; thay đổi được audit và nếu ngưỡng mới làm tồn hiện tại mới rơi vào trạng thái tồn thấp thì hệ thống phát notification sau commit.
-4. Nếu kỹ thuật viên trả lại phần chưa dùng, bấm **Hoàn trả**, nhập số lượng và lý do; backend chặn tổng RETURN vượt tổng CONSUME của cùng part/Work Order. Giao dịch RETURN cũng xuất hiện trong **Tiến trình** của Work Order để người xem biết số lượng nào đã được trả lại trước khi đối soát hóa đơn.
+4. Nếu kỹ thuật viên trả lại phần chưa dùng, bấm **Hoàn trả**, nhập số lượng và lý do; backend chặn tổng RETURN vượt tổng CONSUME của cùng part/Work Order. Giao dịch RETURN được theo dõi ở **Lịch sử biến động** của kho và vẫn được trừ khi đối soát hóa đơn; nó không xuất hiện như field progress trong **Tiến trình** Work Order.
 5. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tự tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Sau khi giao dịch thành công, Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn chạm hoặc thấp hơn ngưỡng tồn tối thiểu.
 6. Quay lại **Lịch sử biến động** để kiểm tra actor, thời gian, số lượng, tồn sau giao dịch và Work Order liên quan.
 
@@ -60,8 +60,8 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 ## 3. Quy tắc người dùng cần biết
 
 - Phản hồi biểu mẫu: các trường bắt buộc có dấu đánh dấu. Nếu bấm Lưu/Hoàn thành khi còn thiếu dữ liệu, hệ thống không gửi request; form cuộn tới lỗi đầu tiên và hiển thị cảnh báo ngắn để biết cần bổ sung gì. Các nút xác nhận dùng tên hành động cụ thể thay cho “Đồng ý” ở các flow chính.
-- Hoàn thành Work Order: kỹ thuật viên phải nhập **Chẩn đoán / nguyên nhân** và **Giải pháp đã thực hiện**. Thành công thì kỹ thuật viên nhận success feedback và có thể bấm **Khách xác nhận** ngay trong phiếu khi khách đồng ý; Owner nhận notification **Chờ khách xác nhận** như fallback quản trị.
-- Notification drawer: tiêu đề nói rõ **chuyện gì vừa xảy ra hoặc việc cần làm**, dòng mô tả nói **bước tiếp theo**. Ví dụ: **Bạn được giao công việc mới: WO-...** → “Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện”; **Chờ khách xác nhận** → Owner có thể mở phiếu và hỗ trợ ghi nhận nếu Technician chưa thực hiện. Mã WO/SKU được giữ để tra cứu, còn enum nội bộ, chuỗi test hoặc mô tả kỹ thuật khó hiểu không dùng làm nội dung chính. Notification cũ được giao diện đổi sang cách đọc thân thiện khi hiển thị.
+- Hoàn thành Work Order: kỹ thuật viên phải nhập **Chẩn đoán / nguyên nhân** và **Giải pháp đã thực hiện**. Thành công thì kỹ thuật viên nhận success feedback và có thể bấm **Khách xác nhận** ngay trong phiếu khi khách đồng ý; Owner theo dõi completion bình thường qua Dashboard/Work Order thay vì nhận chuông cho từng phiếu.
+- Notification drawer: tiêu đề nói rõ **chuyện gì vừa xảy ra hoặc việc cần làm**, dòng mô tả nói **bước tiếp theo**. Dispatcher nhận việc điều phối/chờ phụ tùng/mở lại; Customer Service nhận **Phiếu đã hoàn thành** để follow-up; Technician nhận phân công hoặc thay đổi trực tiếp tới lịch/job của mình; Warehouse nhận tồn kho thấp; Owner chỉ nhận ngoại lệ quản trị đáng chú ý. CRUD/master-data/import/attachment bình thường không tạo chuông. Tiến độ một Work Order xem ở **Tiến trình**, còn truy vết toàn hệ thống xem ở **Audit**. Mã WO/SKU được giữ để tra cứu; enum, raw timestamp hoặc mã test/kỹ thuật không dùng làm nội dung chính và notification cũ được giao diện đổi sang cách đọc thân thiện khi có thể.
 - Bấm biểu tượng chuông để xem; thông báo chưa đọc có nền nổi bật. Bấm dòng chưa đọc để chuyển sang đã đọc. Mỗi dòng có nút trạng thái ở ngoài cùng bên phải để chuyển Đã đọc ↔ Chưa đọc; dùng Đánh dấu chưa đọc khi cần giữ một thông báo để theo dõi lại.
 - Work order phải đi đúng vòng đời; không thể nhảy trạng thái tùy ý.
 - Work order đã đóng hoặc hủy không được dùng thêm phụ tùng.

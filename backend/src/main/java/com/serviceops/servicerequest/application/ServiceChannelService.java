@@ -2,8 +2,6 @@ package com.serviceops.servicerequest.application;
 
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.security.DemoProperties;
 import com.serviceops.servicerequest.domain.ServiceChannel;
@@ -26,7 +24,6 @@ public class ServiceChannelService {
     private final ServiceChannelRepository repository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final AuditService auditService;
-    private final NotificationService notificationService;
     private final DemoProperties demoProperties;
 
     @Transactional(readOnly = true)
@@ -52,12 +49,6 @@ public class ServiceChannelService {
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         repository.save(channel);
         auditService.record("CREATE", "SERVICE_CHANNEL", channel.getId(), "Tạo kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(
-                tenantId,
-                channelRoles(),
-                "Đã thêm kênh tiếp nhận: " + channel.getCode(),
-                "Tên kênh: " + channel.getName() + ". Kênh này có thể được dùng khi tạo yêu cầu dịch vụ."
-        );
         return toResponse(channel);
     }
 
@@ -67,12 +58,6 @@ public class ServiceChannelService {
         guardProtectedDemoChannel(channel);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(
-                CurrentUser.tenantId(),
-                channelRoles(),
-                "Thông tin kênh tiếp nhận đã thay đổi: " + channel.getCode(),
-                "Tên kênh: " + channel.getName() + ". Mở Kênh tiếp nhận để xem cấu hình mới."
-        );
         return toResponse(channel);
     }
 
@@ -86,12 +71,6 @@ public class ServiceChannelService {
         }
         repository.delete(channel);
         auditService.record("DELETE", "SERVICE_CHANNEL", channel.getId(), "Xóa kênh tiếp nhận " + channel.getCode());
-        notificationService.notifyRoles(
-                CurrentUser.tenantId(),
-                channelRoles(),
-                "Đã xóa kênh tiếp nhận: " + channel.getCode(),
-                "Tên kênh: " + channel.getName() + "."
-        );
     }
 
     public ServiceChannel requireActive(UUID tenantId, String code) {
@@ -128,9 +107,6 @@ public class ServiceChannelService {
         return code.trim().toUpperCase(Locale.ROOT);
     }
 
-    private static List<UserRole> channelRoles() {
-        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-    }
 
     private static ServiceChannelResponse toResponse(ServiceChannel channel) {
         return new ServiceChannelResponse(

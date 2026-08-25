@@ -11,7 +11,6 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
 import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -47,7 +46,6 @@ class AssetInactiveCustomerPolicyTest {
     @Mock private AttachmentRepository attachmentRepository;
     @Mock private AssetCsvService csvService;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
 
     private AssetService service;
 
@@ -60,8 +58,7 @@ class AssetInactiveCustomerPolicyTest {
                 workOrderRepository,
                 attachmentRepository,
                 csvService,
-                auditService,
-                notificationService
+                auditService
         );
         authenticate();
     }

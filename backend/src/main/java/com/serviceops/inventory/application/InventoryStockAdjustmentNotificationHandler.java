@@ -1,6 +1,7 @@
 package com.serviceops.inventory.application;
 
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Slf4j
@@ -27,12 +27,23 @@ public class InventoryStockAdjustmentNotificationHandler {
 
     private void notifyOwners(InventoryStockAdjustedEvent event) {
         try {
+            var copy = NotificationCopy.stocktakeDiscrepancy(
+                    event.sku(),
+                    event.partName(),
+                    event.systemQuantity(),
+                    event.actualQuantity(),
+                    event.difference(),
+                    event.unit(),
+                    event.actorDisplayName(),
+                    event.reason(),
+                    event.isLowStock()
+            );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),
                     List.of(UserRole.OWNER),
                     event.actorUserId(),
-                    "Kiểm kê có chênh lệch: " + event.sku(),
-                    ownerMessage(event)
+                    copy.title(),
+                    copy.message()
             );
         } catch (RuntimeException ex) {
             log.warn("Could not deliver stocktake discrepancy notification for sparePartId={}", event.sparePartId(), ex);
@@ -41,42 +52,23 @@ public class InventoryStockAdjustmentNotificationHandler {
 
     private void notifyWarehouse(InventoryStockAdjustedEvent event) {
         try {
+            var copy = NotificationCopy.lowStockAfterStocktake(
+                    event.sku(),
+                    event.partName(),
+                    event.actualQuantity(),
+                    event.unit(),
+                    event.reorderLevel()
+            );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),
                     List.of(UserRole.WAREHOUSE_STAFF),
                     null,
-                    "Cần bổ sung tồn kho sau kiểm kê: " + event.sku(),
-                    lowStockMessage(event)
+                    copy.title(),
+                    copy.message()
             );
         } catch (RuntimeException ex) {
             log.warn("Could not deliver low-stock notification after stocktake for sparePartId={}", event.sparePartId(), ex);
         }
     }
 
-    private static String ownerMessage(InventoryStockAdjustedEvent event) {
-        String message = event.partName()
-                + ": tồn hệ thống " + quantity(event.systemQuantity()) + " " + event.unit()
-                + ", thực tế " + quantity(event.actualQuantity()) + " " + event.unit()
-                + " (chênh " + signedQuantity(event.difference()) + " " + event.unit() + ")."
-                + " Người kiểm kê: " + event.actorDisplayName()
-                + ". Lý do: " + event.reason() + ".";
-        return event.isLowStock()
-                ? message + " Tồn thực tế cũng đang ở mức thấp."
-                : message;
-    }
-
-    private static String lowStockMessage(InventoryStockAdjustedEvent event) {
-        return event.partName() + " còn " + quantity(event.actualQuantity()) + " " + event.unit()
-                + "; ngưỡng tồn tối thiểu là " + quantity(event.reorderLevel()) + " " + event.unit()
-                + ". Kiểm tra và bổ sung tồn kho nếu cần.";
-    }
-
-    private static String quantity(BigDecimal value) {
-        return value.stripTrailingZeros().toPlainString();
-    }
-
-    private static String signedQuantity(BigDecimal value) {
-        String quantity = quantity(value);
-        return value.signum() > 0 ? "+" + quantity : quantity;
-    }
 }

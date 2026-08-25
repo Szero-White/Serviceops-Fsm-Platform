@@ -45,6 +45,11 @@ export function ScheduleBoardPage() {
     id: string
     code: string
     summary: string
+    technicianId?: string
+    technicianName?: string
+    startTime?: string
+    endTime?: string
+    redispatching?: boolean
   }>()
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [scheduleForm] = Form.useForm<ScheduleAppointmentValues>()
@@ -94,12 +99,22 @@ export function ScheduleBoardPage() {
       technicianId: values.technicianId,
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
+      reason: selectedWorkOrder?.redispatching ? values.reason?.trim() : undefined,
     }),
     onSuccess: (_workOrder, values) => {
       const technicianName = techniciansQuery.data?.find((technician) => technician.id === values.technicianId)?.name ?? 'Kỹ thuật viên'
+      const scheduleText = `${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`
+      const technicianChanged = Boolean(
+        selectedWorkOrder?.redispatching
+        && selectedWorkOrder.technicianId
+        && selectedWorkOrder.technicianId !== values.technicianId,
+      )
+
       notification.success({
-        message: `Đã cập nhật lịch · ${selectedWorkOrder?.code ?? 'Phiếu công việc'}`,
-        description: `${technicianName} · ${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`,
+        message: `${technicianChanged ? 'Đã điều phối lại' : selectedWorkOrder?.redispatching ? 'Đã cập nhật lịch' : 'Đã xếp lịch'} · ${selectedWorkOrder?.code ?? 'Phiếu công việc'}`,
+        description: technicianChanged
+          ? `${selectedWorkOrder?.technicianName ?? 'Kỹ thuật viên trước'} → ${technicianName} · ${scheduleText}`
+          : `${technicianName} · ${scheduleText}`,
       })
       setScheduleOpen(false)
       setSelectedWorkOrder(undefined)
@@ -115,7 +130,7 @@ export function ScheduleBoardPage() {
   })
 
   const openQueueItem = (item: DispatchQueueItem) => {
-    setSelectedWorkOrder({ id: item.workOrderId, code: item.workOrderCode, summary: item.summary })
+    setSelectedWorkOrder({ id: item.workOrderId, code: item.workOrderCode, summary: item.summary, redispatching: false })
     scheduleForm.resetFields()
     setScheduleOpen(true)
   }
@@ -125,7 +140,13 @@ export function ScheduleBoardPage() {
       id: appointment.workOrderId,
       code: appointment.workOrderCode,
       summary: appointment.summary,
+      technicianId: appointment.technicianId,
+      technicianName: appointment.technicianName,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      redispatching: true,
     })
+    scheduleForm.resetFields()
     scheduleForm.setFieldsValue({
       technicianId: appointment.technicianId,
       period: [dayjs(appointment.startTime), dayjs(appointment.endTime)],
@@ -264,6 +285,7 @@ export function ScheduleBoardPage() {
         form={scheduleForm}
         technicians={technicians}
         pending={scheduleMutation.isPending}
+        redispatching={Boolean(selectedWorkOrder?.redispatching)}
         onClose={() => {
           setScheduleOpen(false)
           setSelectedWorkOrder(undefined)

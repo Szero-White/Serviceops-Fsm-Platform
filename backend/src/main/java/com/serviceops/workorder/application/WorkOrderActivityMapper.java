@@ -15,8 +15,11 @@ import java.util.stream.Stream;
  * Read-model mapper for the Work Order activity timeline.
  *
  * <p>Status history, dispatch audit events and inventory transactions remain
- * the source of truth in their own modules. This mapper only combines them for
- * presentation and does not persist duplicate timeline rows.</p>
+ * the source of truth in their own modules. The operational Work Order timeline
+ * intentionally shows only technician CONSUME transactions; warehouse RETURN
+ * remains in the inventory ledger and invoice net calculation so dispatch users
+ * are not shown warehouse bookkeeping as field progress. This mapper only
+ * combines read models for presentation and does not persist duplicate rows.</p>
  */
 final class WorkOrderActivityMapper {
     private WorkOrderActivityMapper() {
@@ -37,8 +40,7 @@ final class WorkOrderActivityMapper {
         Stream<WorkOrderActivityResponse> statuses = statusHistory.stream()
                 .map(WorkOrderActivityMapper::fromStatusHistory);
         Stream<WorkOrderActivityResponse> parts = partTransactions.stream()
-                .filter(transaction -> transaction.getTransactionType() == InventoryTransactionType.CONSUME
-                        || transaction.getTransactionType() == InventoryTransactionType.RETURN)
+                .filter(WorkOrderActivityMapper::isTechnicianConsumption)
                 .map(WorkOrderActivityMapper::fromPartTransaction);
         Stream<WorkOrderActivityResponse> dispatch = dispatchEvents.stream()
                 .filter(event -> "RESCHEDULE".equals(event.getAction()))
@@ -48,6 +50,11 @@ final class WorkOrderActivityMapper {
                 .flatMap(stream -> stream)
                 .sorted(Comparator.comparing(WorkOrderActivityResponse::createdAt))
                 .toList();
+    }
+
+    private static boolean isTechnicianConsumption(InventoryTransaction transaction) {
+        return transaction.getTransactionType() == InventoryTransactionType.CONSUME
+                && "TECHNICIAN".equals(transaction.getActorRole());
     }
 
     private static WorkOrderActivityResponse fromStatusHistory(WorkOrderStatusHistory history) {
@@ -88,13 +95,9 @@ final class WorkOrderActivityMapper {
 
     private static WorkOrderActivityResponse fromPartTransaction(InventoryTransaction transaction) {
         var part = transaction.getSparePart();
-        WorkOrderActivityType type = transaction.getTransactionType() == InventoryTransactionType.CONSUME
-                ? WorkOrderActivityType.PART_CONSUMED
-                : WorkOrderActivityType.PART_RETURNED;
-
         return new WorkOrderActivityResponse(
                 transaction.getId(),
-                type,
+                WorkOrderActivityType.PART_CONSUMED,
                 null,
                 transaction.getNote(),
                 transaction.getCreatedBy(),

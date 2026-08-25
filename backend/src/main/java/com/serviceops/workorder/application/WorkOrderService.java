@@ -5,9 +5,11 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
+import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -150,11 +152,12 @@ public class WorkOrderService {
 
         addHistory(entity, null, WorkOrderStatus.OPEN, "Tiếp nhận từ yêu cầu dịch vụ");
         auditService.record("CREATE_FROM_SERVICE_REQUEST", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode() + " từ yêu cầu dịch vụ");
+        var dispatchNotification = NotificationCopy.workOrderNeedsDispatch(entity.getCode());
         notificationService.notifyRoles(
                 tenantId,
                 dispatcherRoles(),
-                "Phiếu mới cần điều phối: " + entity.getCode(),
-                "Mở Phiếu công việc để sắp lịch và phân công kỹ thuật viên."
+                dispatchNotification.title(),
+                dispatchNotification.message()
         );
         return toResponse(entity, List.of());
     }
@@ -251,34 +254,28 @@ public class WorkOrderService {
                     ? "Chưa phân công"
                     : previousTechnician.getUser().getDisplayName();
             String dispatchActor = dispatchActorLabel();
-            String details = technicianChanged
-                    ? dispatchActor + " đã điều phối lại kỹ thuật viên từ " + previousTechnicianName + " sang " + technicianName
-                            + ". Lý do: " + reason
-                    : dispatchActor + " đã điều chỉnh lịch thực hiện cho " + technicianName + ". Lý do: " + reason;
+            String details = "Điều chỉnh lịch " + workOrder.getCode()
+                    + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
+                    + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]"
+                    + ". Lý do: " + reason;
             auditService.record("RESCHEDULE", "WORK_ORDER", workOrder.getId(), details);
 
             if (technicianChanged && previousTechnician != null) {
-                notificationService.create(
+                createNotification(
                         tenantId,
                         previousTechnician.getUser(),
-                        "Công việc đã được điều chuyển: " + workOrder.getCode(),
-                        "Phiếu đã được chuyển sang " + technicianName
-                                + ". Bạn không cần tiếp tục xử lý phiếu này; kiểm tra Lịch của tôi để cập nhật kế hoạch."
+                        NotificationCopy.technicianTransferredAway(workOrder.getCode(), technicianName)
                 );
-                notificationService.create(
+                createNotification(
                         tenantId,
                         technician.getUser(),
-                        "Bạn được phân công tiếp nhận: " + workOrder.getCode(),
-                        dispatchActor
-                                + " đã chuyển phiếu này cho bạn. Mở phiếu để xem khách hàng, nội dung và lịch thực hiện mới."
+                        NotificationCopy.technicianTransferredTo(workOrder.getCode(), dispatchActor)
                 );
             } else {
-                notificationService.create(
+                createNotification(
                         tenantId,
                         technician.getUser(),
-                        "Lịch thực hiện đã được cập nhật: " + workOrder.getCode(),
-                        dispatchActor
-                                + " đã cập nhật lịch của phiếu. Mở Lịch của tôi để xem thời gian thực hiện mới."
+                        NotificationCopy.technicianScheduleChanged(workOrder.getCode(), dispatchActor)
                 );
             }
         } else {
@@ -288,12 +285,10 @@ public class WorkOrderService {
                     workOrder.getId(),
                     "Phân công " + workOrder.getCode() + " cho " + technicianName
             );
-            notificationService.create(
+            createNotification(
                     tenantId,
                     technician.getUser(),
-                    "Bạn được giao công việc mới: " + workOrder.getCode(),
-                    dispatchActorLabel()
-                            + " đã chuyển thông tin phiếu đến bạn. Mở phiếu để xem khách hàng, nội dung và thời gian thực hiện."
+                    NotificationCopy.technicianAssigned(workOrder.getCode(), dispatchActorLabel())
             );
         }
 
@@ -443,79 +438,66 @@ public class WorkOrderService {
         String code = workOrder.getCode();
 
         switch (workOrder.getStatus()) {
-            case COMPLETED -> notificationService.notifyRoles(
-                    tenantId,
-                    List.of(UserRole.OWNER),
-                    "Chờ khách xác nhận: " + code,
-                    "Kỹ thuật viên đã hoàn thành công việc. Kỹ thuật viên được giao hoặc Owner có thể mở phiếu và bấm Khách xác nhận sau khi khách đồng ý kết quả."
-            );
-            case WAITING_FOR_PARTS -> notificationService.notifyRoles(
+            case WAITING_FOR_PARTS -> notifyRoles(
                     tenantId,
                     List.of(UserRole.DISPATCHER),
-                    "Cần xử lý phụ tùng: " + code,
-                    "Kỹ thuật viên đang chờ vật tư để tiếp tục. Kiểm tra phiếu và phối hợp xử lý phụ tùng."
+                    NotificationCopy.workOrderWaitingForParts(code)
             );
             case REOPENED -> {
-                notificationService.notifyRoles(
+                notifyRoles(
                         tenantId,
-                        List.of(UserRole.DISPATCHER),
-                        "Cần điều phối xử lý lại: " + code,
-                        "Khách yêu cầu xử lý lại. Kiểm tra lý do và sắp xếp kỹ thuật viên hoặc lịch phù hợp."
+                        List.of(UserRole.OWNER, UserRole.DISPATCHER),
+                        NotificationCopy.workOrderReopenedAttention(code)
                 );
                 notifyAssignedTechnician(
                         workOrder,
-                        "Công việc cần xử lý lại: " + code,
-                        "Phiếu đã được mở lại. Mở phiếu để xem lý do và tiếp tục xử lý theo phân công."
+                        NotificationCopy.workOrderReopenedForTechnician(code)
                 );
             }
-            case CLOSED -> {
-                notificationService.notifyRoles(
-                        tenantId,
-                        List.of(UserRole.OWNER),
-                        "Phiếu đã đóng: " + code,
-                        "Khách đã xác nhận kết quả và phiếu đã được đóng. Mở Lịch sử phiếu nếu cần đối soát."
-                );
-                notifyAssignedTechnician(
-                        workOrder,
-                        "Phiếu đã đóng: " + code,
-                        "Khách đã xác nhận kết quả và phiếu đã được đóng. Không cần tiếp tục thao tác trên công việc này."
-                );
-            }
+            case COMPLETED -> notifyRoles(
+                    tenantId,
+                    List.of(UserRole.CUSTOMER_SERVICE),
+                    NotificationCopy.workOrderCompletedForCustomerService(code)
+            );
+            case CLOSED -> notifyAssignedTechnician(
+                    workOrder,
+                    NotificationCopy.workOrderClosedForTechnician(code)
+            );
             case CANCELLED -> {
-                notificationService.notifyRoles(
+                notifyRoles(
                         tenantId,
                         List.of(UserRole.OWNER),
-                        "Phiếu đã hủy: " + code,
-                        "Phiếu đã được hủy. Mở Lịch sử phiếu nếu cần kiểm tra lý do và người thực hiện."
+                        NotificationCopy.workOrderCancelledForOwner(code)
                 );
                 notifyAssignedTechnician(
                         workOrder,
-                        "Công việc đã hủy: " + code,
-                        "Phiếu này đã bị hủy. Bạn không cần tiếp tục thực hiện công việc này."
+                        NotificationCopy.workOrderCancelledForTechnician(code)
                 );
             }
             case CUSTOMER_ACCEPTED, ON_THE_WAY, IN_PROGRESS -> {
-                // These are expected operational steps. The actor already sees success
-                // feedback and the current status is visible in the Work Order screen.
+                // Expected operational steps stay in the Work Order timeline instead of the bell.
             }
             default -> {
                 // Scheduling/assignment has dedicated notifications. Avoid generic
-                // "STATUS_A -> STATUS_B" messages that expose internal enum wording.
+                // internal status wording in user-facing notifications.
             }
         }
     }
 
-    private void notifyAssignedTechnician(WorkOrder workOrder, String title, String message) {
+    private void notifyAssignedTechnician(WorkOrder workOrder, NotificationCopy.Copy copy) {
         if (workOrder.getTechnician() == null
                 || CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
             return;
         }
-        notificationService.create(
-                workOrder.getTenantId(),
-                workOrder.getTechnician().getUser(),
-                title,
-                message
-        );
+        createNotification(workOrder.getTenantId(), workOrder.getTechnician().getUser(), copy);
+    }
+
+    private void notifyRoles(UUID tenantId, List<UserRole> roles, NotificationCopy.Copy copy) {
+        notificationService.notifyRoles(tenantId, roles, copy.title(), copy.message());
+    }
+
+    private void createNotification(UUID tenantId, UserAccount recipient, NotificationCopy.Copy copy) {
+        notificationService.create(tenantId, recipient, copy.title(), copy.message());
     }
 
     private static List<UserRole> dispatcherRoles() {

@@ -37,13 +37,13 @@ class InventoryReorderLevelNotificationHandlerTest {
                 eq(TENANT_ID),
                 eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
                 eq(ACTOR_ID),
-                eq("Cần kiểm tra tồn kho: PART-TEST"),
+                eq("Tồn kho thấp: PART-TEST"),
                 message.capture()
         );
         assertThat(message.getValue())
                 .contains("hiện còn 5 cái")
-                .contains("ngưỡng tồn tối thiểu mới là 6 cái")
-                .contains("kiểm tra và bổ sung nếu cần");
+                .contains("ngưỡng mới là 6 cái")
+                .contains("Kiểm tra và bổ sung tồn kho");
     }
 
     @Test

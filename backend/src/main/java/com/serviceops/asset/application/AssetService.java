@@ -15,8 +15,6 @@ import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.security.CurrentUser;
@@ -46,7 +44,6 @@ public class AssetService {
     private final AttachmentRepository attachmentRepository;
     private final AssetCsvService csvService;
     private final AuditService auditService;
-    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<AssetResponse> search(String search, UUID customerId, int page, int size) {
@@ -80,12 +77,6 @@ public class AssetService {
         repository.save(asset);
         String label = assetDisplayLabel(asset);
         auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị " + label);
-        notificationService.notifyRoles(
-                tenantId,
-                assetRoles(),
-                "Đã thêm thiết bị: " + label,
-                "Khách hàng: " + customer.getName() + ". Thiết bị đã sẵn sàng để gắn vào yêu cầu dịch vụ."
-        );
         return toResponse(asset);
     }
 
@@ -122,12 +113,6 @@ public class AssetService {
         apply(asset, request, serial);
         String label = assetDisplayLabel(asset);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị " + label);
-        notificationService.notifyRoles(
-                CurrentUser.tenantId(),
-                assetRoles(),
-                "Thông tin thiết bị đã thay đổi: " + label,
-                "Khách hàng: " + customer.getName() + ". Mở Thiết bị để xem thông tin mới."
-        );
         return toResponse(asset);
     }
 
@@ -149,12 +134,6 @@ public class AssetService {
         String label = assetDisplayLabel(asset);
         repository.delete(asset);
         auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị " + label);
-        notificationService.notifyRoles(
-                tenantId,
-                assetRoles(),
-                "Đã xóa thiết bị: " + label,
-                "Khách hàng: " + asset.getCustomer().getName() + "."
-        );
     }
 
     @Transactional(readOnly = true)
@@ -196,12 +175,6 @@ public class AssetService {
         }
 
         auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiết bị từ CSV");
-        notificationService.notifyRoles(
-                tenantId,
-                assetRoles(),
-                "Đã thêm thiết bị từ tệp",
-                validRows + " thiết bị mới đã được thêm vào hệ thống."
-        );
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -319,9 +292,6 @@ public class AssetService {
         return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
     }
 
-    private static List<UserRole> assetRoles() {
-        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-    }
 
     public static AssetResponse toResponse(Asset a) {
         return new AssetResponse(a.getId(), a.getCustomer().getId(), a.getCustomer().getName(), a.getCategory(), a.getBrand(), a.getModel(), a.getSerialNumber(), a.getInstalledAt(), a.getWarrantyUntil(), a.isUnderWarranty(LocalDate.now()), a.getStatus(), a.getNotes(), a.getCreatedAt());

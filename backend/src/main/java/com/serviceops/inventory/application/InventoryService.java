@@ -23,6 +23,7 @@ import com.serviceops.inventory.web.InventoryDtos.SparePartResponse;
 import com.serviceops.inventory.web.InventoryDtos.StockAdjustmentRequest;
 import com.serviceops.inventory.web.InventoryDtos.StocktakeRequest;
 import com.serviceops.inventory.web.InventoryDtos.StocktakeResponse;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.workorder.domain.WorkOrder;
@@ -99,12 +100,6 @@ public class InventoryService {
             saveTransaction(part, null, InventoryTransactionType.IMPORT, request.initialStock(), "Tồn đầu kỳ");
         }
         auditService.record("CREATE", "SPARE_PART", part.getId(), "Tạo phụ tùng " + sku);
-        notificationService.notifyRoles(
-                tenantId,
-                warehouseRoles(),
-                "Đã thêm phụ tùng: " + part.getSku(),
-                "Tên phụ tùng: " + part.getName() + ". Kiểm tra tồn kho và ngưỡng tồn tối thiểu khi cần."
-        );
         return toResponse(part);
     }
 
@@ -154,12 +149,6 @@ public class InventoryService {
         part.addStock(request.quantity());
         saveTransaction(part, null, InventoryTransactionType.IMPORT, request.quantity(), request.note());
         auditService.record("IMPORT_STOCK", "SPARE_PART", part.getId(), "Nhập " + request.quantity() + " " + part.getUnit());
-        notificationService.notifyRoles(
-                part.getTenantId(),
-                warehouseRoles(),
-                "Kho vừa được bổ sung: " + part.getSku(),
-                "Đã nhập " + request.quantity() + " " + part.getUnit() + " của " + part.getName() + "."
-        );
         return toResponse(part);
     }
 
@@ -311,12 +300,6 @@ public class InventoryService {
         }
 
         auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phụ tùng từ CSV");
-        notificationService.notifyRoles(
-                tenantId,
-                warehouseRoles(),
-                "Đã thêm phụ tùng từ tệp",
-                validRows + " mã phụ tùng mới đã được thêm vào kho."
-        );
         return new SparePartImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -384,6 +367,7 @@ public class InventoryService {
         if (!part.isActive()) {
             throw BusinessException.conflict("SPARE_PART_INACTIVE", "Phụ tùng đã ngừng hoạt động và không thể xuất dùng");
         }
+        BigDecimal stockBeforeConsumption = part.getStockQuantity();
         try {
             part.consume(request.quantity());
         } catch (IllegalArgumentException ex) {
@@ -393,7 +377,7 @@ public class InventoryService {
         }
         saveTransaction(part, workOrder, InventoryTransactionType.CONSUME, request.quantity(), request.note());
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
-        notifyLowStockIfNeeded(part);
+        notifyLowStockIfCrossed(part, stockBeforeConsumption);
         return toResponse(part);
     }
 
@@ -407,15 +391,22 @@ public class InventoryService {
         return net.max(BigDecimal.ZERO);
     }
 
-    private void notifyLowStockIfNeeded(SparePart part) {
-        if (part.isActive() && part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0) {
+    private void notifyLowStockIfCrossed(SparePart part, BigDecimal previousStock) {
+        boolean wasLowStock = previousStock.compareTo(part.getReorderLevel()) <= 0;
+        boolean isLowStock = part.isActive() && part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0;
+        if (!wasLowStock && isLowStock) {
+            var copy = NotificationCopy.lowStock(
+                    part.getSku(),
+                    part.getName(),
+                    part.getStockQuantity(),
+                    part.getUnit(),
+                    part.getReorderLevel()
+            );
             notificationService.notifyRolesIncludingCurrentUser(
                     part.getTenantId(),
-                    warehouseRoles(),
-                    "Cần bổ sung tồn kho: " + part.getSku(),
-                    part.getName() + " còn " + part.getStockQuantity() + " " + part.getUnit()
-                            + ", đã chạm hoặc thấp hơn ngưỡng tồn tối thiểu "
-                            + part.getReorderLevel() + " " + part.getUnit() + "."
+                    List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                    copy.title(),
+                    copy.message()
             );
         }
     }
@@ -513,10 +504,6 @@ public class InventoryService {
         tx.setActorDisplayName(CurrentUser.displayName());
         tx.setActorRole(CurrentUser.primaryRole());
         transactionRepository.save(tx);
-    }
-
-    private static List<UserRole> warehouseRoles() {
-        return List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF);
     }
 
     public static SparePartResponse toResponse(SparePart p) {

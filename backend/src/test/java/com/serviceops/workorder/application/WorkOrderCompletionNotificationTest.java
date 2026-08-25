@@ -98,7 +98,7 @@ class WorkOrderCompletionNotificationTest {
     }
 
     @Test
-    void successfulCompletionNotifiesOwnerAsAcceptanceFallback() {
+    void successfulCompletionNotifiesCustomerServiceForFollowUpWithoutSpammingOwner() {
         when(repository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, USER_ID)).thenReturn(Optional.of(workOrder));
         when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
 
@@ -115,11 +115,16 @@ class WorkOrderCompletionNotificationTest {
         assertThat(response.status()).isEqualTo(WorkOrderStatus.COMPLETED);
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER)),
-                eq("Chờ khách xác nhận: WO-UAT-001"),
-                contains("bấm Khách xác nhận")
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                eq("Phiếu đã hoàn thành: WO-UAT-001"),
+                contains("Theo dõi phản hồi khách hàng")
         );
-        verify(notificationService, never()).create(eq(TENANT_ID), eq(technicianUser), anyString(), anyString());
+        verify(notificationService, never()).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.OWNER)),
+                anyString(),
+                anyString()
+        );
     }
 
     private WorkOrder inProgressWorkOrder() {

@@ -274,6 +274,19 @@
   align-items: flex-start;
 }
 
+/* Notification title weight balance */
+.notification-item-title {
+  font-weight: 400 !important;
+}
+
+.notification-item-unread .notification-item-title {
+  font-weight: 500 !important;
+}
+
+.notification-item-read .notification-item-title {
+  font-weight: 400 !important;
+}
+
 .notification-read-state-button {
   flex: 0 0 auto;
   color: var(--app-text-secondary) !important;

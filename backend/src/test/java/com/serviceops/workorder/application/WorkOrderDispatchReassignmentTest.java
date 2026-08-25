@@ -6,6 +6,7 @@ import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -152,8 +153,8 @@ class WorkOrderDispatchReassignmentTest {
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được giao công việc mới: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã chuyển thông tin phiếu đến bạn")
+                eq("Bạn được phân công: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã phân công phiếu cho bạn")
         );
     }
 
@@ -194,19 +195,22 @@ class WorkOrderDispatchReassignmentTest {
                 eq("RESCHEDULE"),
                 eq("WORK_ORDER"),
                 eq(WORK_ORDER_ID),
-                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã điều phối lại kỹ thuật viên từ Kỹ thuật viên A sang Kỹ thuật viên B")
+                org.mockito.ArgumentMatchers.argThat(details ->
+                        details.contains("Kỹ thuật viên A [2026-08-25T02:00:00Z - 2026-08-25T04:00:00Z]")
+                                && details.contains("→ Kỹ thuật viên B [2026-08-25T05:00:00Z - 2026-08-25T07:00:00Z]")
+                                && details.contains("Lý do: Kỹ thuật viên hiện tại chưa thể bắt đầu đúng lịch"))
         );
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(previousTechnician.getUser()),
-                eq("Công việc đã được điều chuyển: WO-2026-001006"),
+                eq("Bạn không còn được phân công: WO-2026-001006"),
                 org.mockito.ArgumentMatchers.contains("Kỹ thuật viên B")
         );
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được phân công tiếp nhận: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("đã chuyển phiếu này cho bạn")
+                eq("Bạn được phân công: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.contains("đã chuyển phiếu cho bạn")
         );
     }
 
@@ -247,13 +251,20 @@ class WorkOrderDispatchReassignmentTest {
                 eq("RESCHEDULE"),
                 eq("WORK_ORDER"),
                 eq(WORK_ORDER_ID),
-                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã điều chỉnh lịch thực hiện")
+                org.mockito.ArgumentMatchers.argThat(details ->
+                        details.contains("Kỹ thuật viên A [2026-08-25T02:00:00Z - 2026-08-25T04:00:00Z]")
+                                && details.contains("→ Kỹ thuật viên A [2026-08-25T06:00:00Z - 2026-08-25T08:00:00Z]")
+                                && details.contains("Lý do: Khách hàng đề nghị dời khung giờ tiếp nhận"))
+        );
+        var expectedNotification = NotificationCopy.technicianScheduleChanged(
+                "WO-2026-001006",
+                "Điều phối viên Lê Thu Điều phối"
         );
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(previousTechnician.getUser()),
-                eq("Lịch thực hiện đã được cập nhật: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("đã cập nhật lịch")
+                eq(expectedNotification.title()),
+                eq(expectedNotification.message())
         );
         verify(notificationService, never()).create(
                 eq(TENANT_ID),

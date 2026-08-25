@@ -5,7 +5,6 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.application.DemoAccountProtectionPolicy;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.technician.web.TechnicianController.TechnicianProfileRequest;
@@ -38,7 +37,6 @@ class TechnicianServiceLifecycleTest {
     @Mock private TechnicianRepository repository;
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
     @Mock private DemoAccountProtectionPolicy demoAccountProtectionPolicy;
 
     @AfterEach
@@ -71,7 +69,6 @@ class TechnicianServiceLifecycleTest {
                 repository,
                 workOrderRepository,
                 auditService,
-                notificationService,
                 demoAccountProtectionPolicy
         );
 

@@ -7,6 +7,7 @@ import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.domain.Notification;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.security.DemoProperties;
@@ -125,8 +126,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         Notification notification = new Notification();
         notification.setTenantId(tenant.getId());
         notification.setRecipient(technicianUser);
-        notification.setTitle("Bạn được giao công việc mới: " + wo1.getCode());
-        notification.setMessage("Mở phiếu để xem nội dung, khách hàng và thời gian thực hiện.");
+        var seededNotification = NotificationCopy.technicianAssigned(
+                wo1.getCode(),
+                "Điều phối viên " + dispatcher.getDisplayName()
+        );
+        notification.setTitle(seededNotification.title());
+        notification.setMessage(seededNotification.message());
         notificationRepository.save(notification);
 
         auditService.recordAs(tenant.getId(), "system", "SEED", "SYSTEM", tenant.getId(), "Khởi tạo dữ liệu demo local-first");

@@ -1,5 +1,6 @@
 import { CalendarOutlined, RollbackOutlined, ToolOutlined } from '@ant-design/icons'
 import { Empty, Space, Timeline, Typography } from 'antd'
+import dayjs from 'dayjs'
 import { StatusTag } from '../../../components/StatusTag'
 import type { WorkOrderActivity, WorkOrderHistory } from '../../../types'
 import { formatDateTime, formatQuantityWithUnit } from '../../../utils/format'
@@ -23,6 +24,79 @@ function statusColor(activity: WorkOrderActivity) {
   if (activity.status === 'CANCELLED') return '#9c5050'
   if (activity.status === 'COMPLETED' || activity.status === 'CLOSED') return '#4b7968'
   return '#47789f'
+}
+
+type DispatchSummary = {
+  title: 'Đã cập nhật lịch' | 'Đã điều phối lại'
+  previousTechnician?: string
+  technician?: string
+  previousStart?: string
+  previousEnd?: string
+  start?: string
+  end?: string
+  reason?: string
+  technicianChanged: boolean
+  scheduleChanged: boolean
+}
+
+function dispatchSummary(note?: string): DispatchSummary | undefined {
+  if (!note) return undefined
+
+  const detailed = note.match(
+    /:\s*(.*?)\s+\[(.*?)\s+-\s+(.*?)\]\s*(?:→|->)\s*(.*?)\s+\[(.*?)\s+-\s+(.*?)\](?:\.\s*Lý do:\s*(.*))?$/,
+  )
+  if (detailed) {
+    const [, previousTechnician, previousStart, previousEnd, technician, start, end, reason] = detailed
+    const technicianChanged = previousTechnician.trim() !== technician.trim()
+    const scheduleChanged = previousStart.trim() !== start.trim() || previousEnd.trim() !== end.trim()
+    return {
+      title: technicianChanged ? 'Đã điều phối lại' : 'Đã cập nhật lịch',
+      previousTechnician: previousTechnician.trim(),
+      technician: technician.trim(),
+      previousStart: previousStart.trim(),
+      previousEnd: previousEnd.trim(),
+      start: start.trim(),
+      end: end.trim(),
+      reason: reason?.trim(),
+      technicianChanged,
+      scheduleChanged,
+    }
+  }
+
+  const technicianOnly = note.match(/đã điều phối lại kỹ thuật viên từ (.*?) sang (.*?)\.\s*Lý do:\s*(.*)$/i)
+  if (technicianOnly) {
+    return {
+      title: 'Đã điều phối lại',
+      previousTechnician: technicianOnly[1].trim(),
+      technician: technicianOnly[2].trim(),
+      reason: technicianOnly[3].trim(),
+      technicianChanged: true,
+      scheduleChanged: false,
+    }
+  }
+
+  const scheduleOnly = note.match(/đã điều chỉnh lịch thực hiện cho (.*?)\.\s*Lý do:\s*(.*)$/i)
+  if (scheduleOnly) {
+    return {
+      title: 'Đã cập nhật lịch',
+      technician: scheduleOnly[1].trim(),
+      reason: scheduleOnly[2].trim(),
+      technicianChanged: false,
+      scheduleChanged: true,
+    }
+  }
+
+  return undefined
+}
+
+function formatScheduleRange(start?: string, end?: string) {
+  if (!start || !end) return undefined
+  const from = dayjs(start)
+  const to = dayjs(end)
+  if (!from.isValid() || !to.isValid()) return undefined
+  return from.isSame(to, 'day')
+    ? `${from.format('DD/MM/YYYY HH:mm')}–${to.format('HH:mm')}`
+    : `${from.format('DD/MM/YYYY HH:mm')} → ${to.format('DD/MM/YYYY HH:mm')}`
 }
 
 export function workOrderActivityCount(activities?: WorkOrderActivity[], history?: WorkOrderHistory[]) {
@@ -65,6 +139,10 @@ export function WorkOrderActivityTimeline({
         }
 
         if (activity.type === 'DISPATCH_UPDATED') {
+          const dispatch = dispatchSummary(activity.note)
+          const previousSchedule = formatScheduleRange(dispatch?.previousStart, dispatch?.previousEnd)
+          const currentSchedule = formatScheduleRange(dispatch?.start, dispatch?.end)
+
           return {
             color: '#47789f',
             children: (
@@ -72,11 +150,26 @@ export function WorkOrderActivityTimeline({
                 <div className="timeline-entry-head">
                   <Space size={6}>
                     <CalendarOutlined />
-                    <Typography.Text strong>Đã điều phối lại</Typography.Text>
+                    <Typography.Text strong>{dispatch?.title ?? 'Đã điều phối lại'}</Typography.Text>
                   </Space>
                   <Typography.Text className="timeline-actor">{activityActor(activity)}</Typography.Text>
                 </div>
-                <div className="timeline-note">{activity.note ?? 'Thông tin phân công hoặc lịch thực hiện đã được cập nhật.'}</div>
+                {dispatch?.technicianChanged ? (
+                  <div className="timeline-note">
+                    Kỹ thuật viên: {dispatch.previousTechnician} → {dispatch.technician}
+                  </div>
+                ) : dispatch?.technician ? (
+                  <div className="timeline-note">Kỹ thuật viên: {dispatch.technician}</div>
+                ) : null}
+                {dispatch?.scheduleChanged && currentSchedule ? (
+                  <div className="timeline-note">
+                    Lịch: {previousSchedule ? `${previousSchedule} → ` : ''}{currentSchedule}
+                  </div>
+                ) : null}
+                {dispatch?.reason ? <div className="timeline-note">Lý do: {dispatch.reason}</div> : null}
+                {!dispatch ? (
+                  <div className="timeline-note">Thông tin phân công hoặc lịch thực hiện đã được cập nhật.</div>
+                ) : null}
                 <Typography.Text className="timeline-time">{formatDateTime(activity.createdAt)}</Typography.Text>
               </div>
             ),

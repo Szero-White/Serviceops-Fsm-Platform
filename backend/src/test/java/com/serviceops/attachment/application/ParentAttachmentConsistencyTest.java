@@ -8,7 +8,6 @@ import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.CustomerRepository;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.application.ServiceChannelService;
 import com.serviceops.servicerequest.application.ServiceRequestService;
 import com.serviceops.servicerequest.domain.ServiceRequest;
@@ -47,7 +46,6 @@ class ParentAttachmentConsistencyTest {
     @Mock private AssetCsvService assetCsvService;
     @Mock private ServiceChannelService serviceChannelService;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
 
     @AfterEach
     void tearDown() {
@@ -73,8 +71,7 @@ class ParentAttachmentConsistencyTest {
                 workOrderRepository,
                 attachmentRepository,
                 assetCsvService,
-                auditService,
-                notificationService
+                auditService
         );
 
         assertThatThrownBy(() -> service.delete(assetId))
@@ -105,8 +102,7 @@ class ParentAttachmentConsistencyTest {
                 serviceChannelService,
                 workOrderRepository,
                 attachmentRepository,
-                auditService,
-                notificationService
+                auditService
         );
 
         assertThatThrownBy(() -> service.delete(requestId))

@@ -5,6 +5,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
 import com.serviceops.notification.application.NotificationService;
@@ -32,6 +33,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -103,6 +106,43 @@ class InventoryPartConsumptionPolicyTest {
         verify(transactionRepository, never()).save(any());
     }
 
+    @Test
+    void lowStockAlertFiresOnlyWhenConsumptionCrossesTheThreshold() {
+        WorkOrder workOrder = assignedWorkOrder(WorkOrderStatus.IN_PROGRESS, TECHNICIAN_USER_ID);
+        SparePart part = sparePart("6", "5");
+        when(workOrderRepository.findForUpdate(workOrder.getId(), TENANT_ID)).thenReturn(Optional.of(workOrder));
+        when(sparePartRepository.findForUpdate(SPARE_PART_ID, TENANT_ID)).thenReturn(Optional.of(part));
+
+        service.consume(
+                workOrder.getId(),
+                new ConsumePartRequest(SPARE_PART_ID, BigDecimal.ONE, "Dùng cho công việc")
+        );
+
+        assertThat(part.getStockQuantity()).isEqualByComparingTo("5");
+        verify(notificationService).notifyRolesIncludingCurrentUser(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
+                eq("Tồn kho thấp: PART-CONSUME"),
+                contains("ngưỡng cảnh báo là 5 cái")
+        );
+    }
+
+    @Test
+    void lowStockAlertDoesNotRepeatWhilePartRemainsBelowThreshold() {
+        WorkOrder workOrder = assignedWorkOrder(WorkOrderStatus.IN_PROGRESS, TECHNICIAN_USER_ID);
+        SparePart part = sparePart("5", "5");
+        when(workOrderRepository.findForUpdate(workOrder.getId(), TENANT_ID)).thenReturn(Optional.of(workOrder));
+        when(sparePartRepository.findForUpdate(SPARE_PART_ID, TENANT_ID)).thenReturn(Optional.of(part));
+
+        service.consume(
+                workOrder.getId(),
+                new ConsumePartRequest(SPARE_PART_ID, BigDecimal.ONE, "Dùng tiếp cho công việc")
+        );
+
+        assertThat(part.getStockQuantity()).isEqualByComparingTo("4");
+        verify(notificationService, never()).notifyRolesIncludingCurrentUser(any(), any(), any(), any());
+    }
+
     private static WorkOrder assignedWorkOrder(WorkOrderStatus status, UUID userId) {
         UserAccount user = new UserAccount();
         user.setId(userId);
@@ -125,6 +165,20 @@ class InventoryPartConsumptionPolicyTest {
         workOrder.setTechnician(technician);
         workOrder.setStatus(status);
         return workOrder;
+    }
+
+    private static SparePart sparePart(String stock, String reorderLevel) {
+        SparePart part = new SparePart();
+        part.setId(SPARE_PART_ID);
+        part.setTenantId(TENANT_ID);
+        part.setSku("PART-CONSUME");
+        part.setName("Phụ tùng test");
+        part.setUnit("cái");
+        part.setStockQuantity(new BigDecimal(stock));
+        part.setReorderLevel(new BigDecimal(reorderLevel));
+        part.setUnitPrice(new BigDecimal("10000"));
+        part.setActive(true);
+        return part;
     }
 
     private static void authenticate(String username, UUID userId, String role) {

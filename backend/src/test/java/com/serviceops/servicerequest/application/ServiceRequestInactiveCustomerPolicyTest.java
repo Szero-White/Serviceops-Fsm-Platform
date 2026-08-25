@@ -8,7 +8,6 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
 import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceChannel;
 import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -46,7 +45,6 @@ class ServiceRequestInactiveCustomerPolicyTest {
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private AttachmentRepository attachmentRepository;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
 
     private ServiceRequestService service;
 
@@ -59,8 +57,7 @@ class ServiceRequestInactiveCustomerPolicyTest {
                 serviceChannelService,
                 workOrderRepository,
                 attachmentRepository,
-                auditService,
-                notificationService
+                auditService
         );
         authenticate();
     }
