@@ -45,13 +45,18 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Chỉ đổi thời gian | Technician hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Actor + summary + khách hàng + lịch cũ → lịch mới + lý do; xem Lịch của tôi |
 | Appointment đã kết thúc, WO vẫn chưa bắt đầu | Dispatcher | **Phiếu đã quá lịch thực hiện: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; mở Lịch điều phối để xử lý |
 | Appointment đã kết thúc, WO vẫn chưa bắt đầu | Assigned Technician | **Công việc đã quá lịch: WO-...** | Summary + khách hàng + lịch đã lỡ; mở Lịch của tôi và liên hệ điều phối nếu cần |
+| Appointment quá hạn quá grace period, WO vẫn chưa bắt đầu | Customer Service | **Khách hàng có thể cần được liên hệ: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; kiểm tra phiếu và chủ động liên hệ khách nếu cần |
 | Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
 | Work Order → REOPENED | Owner + Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
+| Work Order → REOPENED bởi role khác | Customer Service | **Phiếu cần theo dõi lại: WO-...** | Actor + summary + khách hàng + lý do; theo dõi khách và phối hợp xử lý |
 | Technician → COMPLETED | Customer Service | **Cần theo dõi khách sau sửa chữa: WO-...** | Technician + summary + khách hàng; theo dõi phản hồi, reopen nếu sự cố còn |
+
+Mỗi lần `COMPLETED` là một repair cycle riêng. Notification cho Customer Service được dedupe theo chính status-history ID của lần hoàn thành đó: retry cùng một completion không tạo bản sao, nhưng `REOPENED → ... → COMPLETED` lần sau vẫn tạo một notification mới hợp lệ, kể cả khi title/body giống lần trước.
 | Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |
 | Work Order → CANCELLED | Owner, trừ actor | **Phiếu đã hủy: WO-...** | Actor + summary + khách hàng + lý do; tra Lịch sử phiếu khi cần |
 | Work Order → CANCELLED | Assigned Technician, nếu không phải actor | **Công việc đã hủy: WO-...** | Actor + summary + khách hàng + lý do; dừng job và xem Lịch của tôi |
+| Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; kiểm tra và liên hệ khách nếu cần |
 | Consume làm stock cross threshold | Owner + Warehouse | **Tồn kho thấp: SKU** | Technician + WO + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
 | Đổi reorder level làm stock thành low | Owner + Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
 | Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** | Người kiểm kê + system/actual/difference + lý do; mở Lịch sử biến động |
@@ -80,3 +85,5 @@ Dùng **Timeline** cho câu chuyện của một Work Order, **Inventory Movemen
 Các notification cũ còn giá trị hành động như assignment/reschedule/reopen/cancel vẫn được giữ. `frontend/src/features/notifications/presentation.ts` chỉ làm compatibility cho các title cũ này để tránh lộ enum hoặc chuỗi kỹ thuật. Không đặt logic legacy trong `AppLayout` và không tiếp tục mở rộng mapper bằng routine CRUD đã bị migration loại bỏ.
 
 `V8__overdue_notification_dedup.sql` bổ sung `event_key` nullable và unique theo `(tenant_id, recipient_user_id, event_key)`. Backend overdue scanner dùng key gắn với appointment + start/end window và `INSERT ... ON CONFLICT DO NOTHING`, vì vậy cùng một lịch quá hạn chỉ phát một bell cho mỗi recipient ngay cả khi scheduler chạy lặp lại.
+
+Operational overdue cho Dispatcher/Technician dùng event key hiện hữu. Customer Service escalation dùng cùng appointment window nhưng suffix riêng `:CUSTOMER_SERVICE`, vì vậy chỉ phát sau grace period và vẫn dedupe độc lập, không làm lặp alert vận hành ban đầu.

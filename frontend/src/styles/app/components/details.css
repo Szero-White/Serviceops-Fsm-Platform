@@ -127,10 +127,14 @@
   flex-wrap: wrap;
 }
 
-.timeline-actor {
+.timeline-actor-inline {
   color: var(--app-text) !important;
   font-size: var(--app-type-body) !important;
   font-weight: 500 !important;
+}
+
+.timeline-completion-details {
+  margin-top: 2px;
 }
 
 .timeline-note {

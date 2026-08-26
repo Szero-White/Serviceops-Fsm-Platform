@@ -135,6 +135,21 @@ public final class NotificationCopy {
         );
     }
 
+    public static Copy workOrderOverdueForCustomerService(
+            WorkOrderContext context,
+            String technicianName,
+            Instant scheduledStart,
+            Instant scheduledEnd
+    ) {
+        return copy(
+                "Khách hàng có thể cần được liên hệ: " + context.code(),
+                workOrderContext(context) + " đã quá lịch hẹn " + scheduleRange(scheduledStart, scheduledEnd)
+                        + " nhưng kỹ thuật viên chưa bắt đầu công việc. Kỹ thuật viên: "
+                        + fallback(technicianName, "chưa xác định")
+                        + ". Mở Phiếu công việc để kiểm tra tình trạng và chủ động liên hệ khách hàng nếu cần."
+        );
+    }
+
     public static Copy workOrderWaitingForParts(
             WorkOrderContext context,
             String technicianName,
@@ -172,6 +187,19 @@ public final class NotificationCopy {
                 actor(actorLabel) + " đã mở lại " + workOrderContext(context) + "."
                         + optionalReason(reason, "Lý do")
                         + " Mở phiếu để xem tình trạng và tiếp tục theo phân công."
+        );
+    }
+
+    public static Copy workOrderReopenedForCustomerService(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Phiếu cần theo dõi lại: " + context.code(),
+                actor(actorLabel) + " đã mở lại " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Mở Phiếu công việc để theo dõi khách hàng và phối hợp xử lý."
         );
     }
 
@@ -218,6 +246,19 @@ public final class NotificationCopy {
                 actor(actorLabel) + " đã hủy " + workOrderContext(context) + "."
                         + optionalReason(reason, "Lý do")
                         + " Bạn dừng công việc này và kiểm tra Lịch của tôi để cập nhật kế hoạch."
+        );
+    }
+
+    public static Copy workOrderCancelledForCustomerService(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Phiếu đã hủy, cần cập nhật khách hàng: " + context.code(),
+                actor(actorLabel) + " đã hủy " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Mở Phiếu công việc để kiểm tra và liên hệ khách hàng nếu cần."
         );
     }
 

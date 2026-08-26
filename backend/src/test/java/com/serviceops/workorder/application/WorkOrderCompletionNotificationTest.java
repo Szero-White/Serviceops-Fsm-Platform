@@ -17,12 +17,14 @@ import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.workorder.domain.WorkOrderStatus;
+import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,6 +53,7 @@ class WorkOrderCompletionNotificationTest {
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID WORK_ORDER_ID = UUID.randomUUID();
+    private static final UUID COMPLETION_HISTORY_ID = UUID.randomUUID();
 
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
@@ -116,6 +120,11 @@ class WorkOrderCompletionNotificationTest {
 
     @Test
     void successfulCompletionNotifiesCustomerServiceForFollowUpWithoutSpammingOwner() {
+        when(historyRepository.save(any(WorkOrderStatusHistory.class))).thenAnswer(invocation -> {
+            WorkOrderStatusHistory history = invocation.getArgument(0);
+            history.setId(COMPLETION_HISTORY_ID);
+            return history;
+        });
         when(repository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, USER_ID)).thenReturn(Optional.of(workOrder));
         when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
 
@@ -130,6 +139,18 @@ class WorkOrderCompletionNotificationTest {
         );
 
         assertThat(response.status()).isEqualTo(WorkOrderStatus.COMPLETED);
+        assertThat(response.diagnosis()).isEqualTo("Tụ khởi động suy giảm");
+        assertThat(response.resolution()).isEqualTo("Thay tụ và chạy thử ổn định");
+
+        ArgumentCaptor<WorkOrderStatusHistory> historyCaptor =
+                ArgumentCaptor.forClass(WorkOrderStatusHistory.class);
+        verify(historyRepository).save(historyCaptor.capture());
+        var completionHistory = historyCaptor.getValue();
+        assertThat(completionHistory.getToStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        assertThat(completionHistory.getDiagnosisSnapshot()).isEqualTo("Tụ khởi động suy giảm");
+        assertThat(completionHistory.getResolutionSnapshot()).isEqualTo("Thay tụ và chạy thử ổn định");
+        assertThat(completionHistory.getNote()).isEqualTo("Đã bàn giao vận hành");
+
         var expectedNotification = NotificationCopy.workOrderCompletedForCustomerService(
                 new NotificationCopy.WorkOrderContext(
                         "WO-UAT-001",
@@ -138,11 +159,18 @@ class WorkOrderCompletionNotificationTest {
                 ),
                 "Phạm Quốc Kỹ thuật"
         );
-        verify(notificationService).notifyRoles(
+        verify(notificationService).notifyRolesUnique(
                 eq(TENANT_ID),
                 eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                eq("WORK_ORDER_COMPLETED:" + COMPLETION_HISTORY_ID),
                 eq(expectedNotification.title()),
                 eq(expectedNotification.message())
+        );
+        verify(notificationService, never()).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                anyString(),
+                anyString()
         );
         verify(notificationService, never()).notifyRoles(
                 eq(TENANT_ID),

@@ -159,4 +159,40 @@ class NotificationCopyTest {
         assertThat(copy.title().length()).isLessThanOrEqualTo(180);
         assertThat(copy.message().length()).isLessThanOrEqualTo(500);
     }
+    @Test
+    void customerServiceCopiesDescribeOnlyCustomerFacingFollowUpWork() {
+        var overdue = NotificationCopy.workOrderOverdueForCustomerService(
+                WORK_ORDER,
+                "Trịnh Quốc Tiến",
+                Instant.parse("2026-08-26T03:11:00Z"),
+                Instant.parse("2026-08-26T03:12:00Z")
+        );
+        var reopened = NotificationCopy.workOrderReopenedForCustomerService(
+                WORK_ORDER,
+                "Chủ sở hữu Nguyễn An",
+                "Khách phản ánh lỗi vẫn còn"
+        );
+        var cancelled = NotificationCopy.workOrderCancelledForCustomerService(
+                WORK_ORDER,
+                "Điều phối viên Lê Thu",
+                "Khách yêu cầu hủy lịch"
+        );
+
+        assertThat(overdue.title()).isEqualTo("Khách hàng có thể cần được liên hệ: WO-2026-001010");
+        assertThat(overdue.message())
+                .contains("Trịnh Quốc Tiến")
+                .contains("26/08/2026 10:11–10:12")
+                .contains("chủ động liên hệ khách hàng");
+        assertThat(reopened.title()).isEqualTo("Phiếu cần theo dõi lại: WO-2026-001010");
+        assertThat(reopened.message())
+                .contains("Chủ sở hữu Nguyễn An")
+                .contains("Khách phản ánh lỗi vẫn còn")
+                .contains("theo dõi khách hàng");
+        assertThat(cancelled.title()).isEqualTo("Phiếu đã hủy, cần cập nhật khách hàng: WO-2026-001010");
+        assertThat(cancelled.message())
+                .contains("Điều phối viên Lê Thu")
+                .contains("Khách yêu cầu hủy lịch")
+                .contains("liên hệ khách hàng");
+    }
+
 }

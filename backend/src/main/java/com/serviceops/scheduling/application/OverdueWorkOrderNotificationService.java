@@ -18,9 +18,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OverdueWorkOrderNotificationService {
     private static final List<UserRole> DISPATCHER_ROLES = List.of(UserRole.DISPATCHER);
+    private static final List<UserRole> CUSTOMER_SERVICE_ROLES = List.of(UserRole.CUSTOMER_SERVICE);
 
     private final AppointmentRepository appointmentRepository;
     private final NotificationService notificationService;
+    private final OverdueNotificationProperties properties;
 
     @Transactional
     public int notifyOverdueAppointments(Instant now) {
@@ -63,14 +65,38 @@ public class OverdueWorkOrderNotificationService {
                     created++;
                 }
             }
+
+            if (customerServiceGraceElapsed(appointment, now)) {
+                var customerServiceCopy = NotificationCopy.workOrderOverdueForCustomerService(
+                        context,
+                        appointment.getTechnician().getUser().getDisplayName(),
+                        appointment.getStartTime(),
+                        appointment.getEndTime()
+                );
+                created += notificationService.notifyRolesUnique(
+                        workOrder.getTenantId(),
+                        CUSTOMER_SERVICE_ROLES,
+                        customerServiceEventKey(eventKey),
+                        customerServiceCopy.title(),
+                        customerServiceCopy.message()
+                );
+            }
         }
         return created;
+    }
+
+    private boolean customerServiceGraceElapsed(Appointment appointment, Instant now) {
+        return !now.isBefore(appointment.getEndTime().plus(properties.getCustomerServiceGrace()));
     }
 
     private static String overdueEventKey(Appointment appointment) {
         return "WORK_ORDER_OVERDUE:" + appointment.getId()
                 + ":" + appointment.getStartTime().getEpochSecond()
                 + ":" + appointment.getEndTime().getEpochSecond();
+    }
+
+    private static String customerServiceEventKey(String overdueEventKey) {
+        return overdueEventKey + ":CUSTOMER_SERVICE";
     }
 
     private static NotificationCopy.WorkOrderContext notificationContext(WorkOrder workOrder) {

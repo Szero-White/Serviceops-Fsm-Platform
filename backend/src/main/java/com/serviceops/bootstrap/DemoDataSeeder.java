@@ -104,18 +104,18 @@ public class DemoDataSeeder implements ApplicationRunner {
         demoDataFactory.appointment(tenant, wo2, technician2);
         demoDataFactory.appointment(tenant, wo4, technician);
 
-        demoDataFactory.history(tenant, wo1, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
-        demoDataFactory.history(tenant, wo1, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
-        demoDataFactory.history(tenant, wo2, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
-        demoDataFactory.history(tenant, wo2, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
-        demoDataFactory.history(tenant, wo2, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technician2User.getUsername());
-        demoDataFactory.history(tenant, wo2, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technician2User.getUsername());
-        demoDataFactory.history(tenant, wo3, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
-        demoDataFactory.history(tenant, wo4, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
-        demoDataFactory.history(tenant, wo4, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
-        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technicianUser.getUsername());
-        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technicianUser.getUsername());
-        demoDataFactory.history(tenant, wo4, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED, "Hoàn tất công việc", technicianUser.getUsername());
+        demoDataFactory.history(tenant, wo1, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService);
+        demoDataFactory.history(tenant, wo1, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher);
+        demoDataFactory.history(tenant, wo2, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService);
+        demoDataFactory.history(tenant, wo2, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher);
+        demoDataFactory.history(tenant, wo2, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technician2User);
+        demoDataFactory.history(tenant, wo2, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technician2User);
+        demoDataFactory.history(tenant, wo3, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService);
+        demoDataFactory.history(tenant, wo4, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService);
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher);
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technicianUser);
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technicianUser);
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED, "Hoàn tất công việc", technicianUser);
 
         demoDataFactory.sparePart(tenant, "GAS-R32-1KG", "Gas lạnh R32", "kg", new BigDecimal("12.500"), new BigDecimal("3.000"), new BigDecimal("285000"));
         demoDataFactory.sparePart(tenant, "CAP-35UF", "Tụ điện 35µF", "cái", new BigDecimal("8"), new BigDecimal("3"), new BigDecimal("145000"));
@@ -138,7 +138,16 @@ public class DemoDataSeeder implements ApplicationRunner {
         notification.setMessage(seededNotification.message());
         notificationRepository.save(notification);
 
-        auditService.recordAs(tenant.getId(), "system", "SEED", "SYSTEM", tenant.getId(), "Khởi tạo dữ liệu demo local-first");
+        auditService.recordAs(
+                tenant.getId(),
+                "system",
+                "Hệ thống",
+                "SYSTEM",
+                "SEED",
+                "SYSTEM",
+                tenant.getId(),
+                "Khởi tạo dữ liệu demo local-first"
+        );
     }
 
 }

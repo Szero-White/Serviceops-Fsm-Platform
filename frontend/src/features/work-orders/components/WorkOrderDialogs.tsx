@@ -42,7 +42,7 @@ export function WorkOrderDialogs({
     onClose: () => void
     onSubmit: (values: ScheduleWorkOrderValues) => void
   }
-  complete: { open: boolean; form: FormInstance<CompleteWorkOrderValues>; pending: boolean; onClose: () => void; onSubmit: (values: CompleteWorkOrderValues) => void }
+  complete: { open: boolean; form: FormInstance<CompleteWorkOrderValues>; pending: boolean; hasPreviousResult: boolean; onClose: () => void; onSubmit: (values: CompleteWorkOrderValues) => void }
   consume: { open: boolean; form: FormInstance<ConsumePartValues>; pending: boolean; onClose: () => void; onSubmit: (values: ConsumePartValues) => void }
   technicians?: Technician[]
   parts?: PageResponse<SparePart>
@@ -100,6 +100,11 @@ export function WorkOrderDialogs({
 
       <Modal title="Hoàn thành công việc" open={complete.open} onCancel={complete.onClose} onOk={() => complete.form.submit()} confirmLoading={complete.pending} okText="Hoàn thành công việc" width={680} destroyOnHidden>
         <Form form={complete.form} layout="vertical" onFinish={complete.onSubmit} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
+          {complete.hasPreviousResult ? (
+            <Typography.Paragraph type="secondary">
+              Kết quả xử lý gần nhất đã được điền sẵn. Giữ nguyên nếu vẫn đúng hoặc cập nhật theo lần xử lý hiện tại; mỗi lần hoàn thành sẽ được lưu riêng trong Tiến trình.
+            </Typography.Paragraph>
+          ) : null}
           <Form.Item label="Chẩn đoán / nguyên nhân" name="diagnosis" rules={[{ required: true, message: 'Vui lòng nhập chẩn đoán / nguyên nhân' }]}><Input.TextArea rows={4} /></Form.Item>
           <Form.Item label="Giải pháp đã thực hiện" name="resolution" rules={[{ required: true, message: 'Vui lòng nhập giải pháp đã thực hiện' }]}><Input.TextArea rows={4} /></Form.Item>
           <Form.Item label="Ghi chú bàn giao" name="note"><Input /></Form.Item>

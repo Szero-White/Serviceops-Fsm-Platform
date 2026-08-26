@@ -24,6 +24,8 @@ class WorkOrderActivityMapperTest {
         WorkOrderStatusHistory started = statusHistory(
                 WorkOrderStatus.IN_PROGRESS,
                 "technician",
+                "Phạm Quốc Kỹ thuật",
+                "TECHNICIAN",
                 "2026-08-24T03:23:00Z"
         );
         InventoryTransaction consumed = partTransaction(
@@ -49,8 +51,13 @@ class WorkOrderActivityMapperTest {
         WorkOrderStatusHistory completed = statusHistory(
                 WorkOrderStatus.COMPLETED,
                 "technician",
+                "Phạm Quốc Kỹ thuật",
+                "TECHNICIAN",
                 "2026-08-24T08:56:00Z"
         );
+        completed.setDiagnosisSnapshot("Tụ khởi động suy giảm");
+        completed.setResolutionSnapshot("Thay tụ và chạy thử ổn định");
+        completed.setNote("Đã bàn giao vận hành");
 
         var activities = WorkOrderActivityMapper.merge(
                 List.of(started, completed),
@@ -63,6 +70,11 @@ class WorkOrderActivityMapperTest {
                 WorkOrderActivityType.STATUS_CHANGE
         );
 
+        var statusActivity = activities.getFirst();
+        assertThat(statusActivity.actor()).isEqualTo("technician");
+        assertThat(statusActivity.actorDisplayName()).isEqualTo("Phạm Quốc Kỹ thuật");
+        assertThat(statusActivity.actorRole()).isEqualTo("TECHNICIAN");
+
         var consumeActivity = activities.get(1);
         assertThat(consumeActivity.sparePartSku()).isEqualTo("FILTER-AC-01");
         assertThat(consumeActivity.sparePartName()).isEqualTo("Lưới lọc máy lạnh tiêu chuẩn");
@@ -73,8 +85,61 @@ class WorkOrderActivityMapperTest {
         assertThat(consumeActivity.actorRole()).isEqualTo("TECHNICIAN");
         assertThat(consumeActivity.note()).isEqualTo("Lắp thay cho khách");
 
+        var completionActivity = activities.getLast();
+        assertThat(completionActivity.status()).isEqualTo(WorkOrderStatus.COMPLETED);
+        assertThat(completionActivity.diagnosis()).isEqualTo("Tụ khởi động suy giảm");
+        assertThat(completionActivity.resolution()).isEqualTo("Thay tụ và chạy thử ổn định");
+        assertThat(completionActivity.note()).isEqualTo("Đã bàn giao vận hành");
     }
 
+
+
+    @Test
+    void preservesDifferentCompletionSnapshotsAcrossReopenedRepairCycles() {
+        WorkOrderStatusHistory firstCompletion = statusHistory(
+                WorkOrderStatus.COMPLETED,
+                "technician",
+                "Phạm Quốc Kỹ thuật",
+                "TECHNICIAN",
+                "2026-08-24T08:56:00Z"
+        );
+        firstCompletion.setDiagnosisSnapshot("Hỏng van cấp nước");
+        firstCompletion.setResolutionSnapshot("Thay van cấp nước");
+        firstCompletion.setNote("Đã chạy thử một chu kỳ");
+
+        WorkOrderStatusHistory reopened = statusHistory(
+                WorkOrderStatus.REOPENED,
+                "customer-service",
+                "Trần Mai CSKH",
+                "CUSTOMER_SERVICE",
+                "2026-08-24T09:20:00Z"
+        );
+        reopened.setNote("Khách phản ánh lỗi còn tái diễn");
+
+        WorkOrderStatusHistory secondCompletion = statusHistory(
+                WorkOrderStatus.COMPLETED,
+                "technician",
+                "Phạm Quốc Kỹ thuật",
+                "TECHNICIAN",
+                "2026-08-24T10:15:00Z"
+        );
+        secondCompletion.setDiagnosisSnapshot("Relay cấp nguồn trên bo điều khiển chập chờn");
+        secondCompletion.setResolutionSnapshot("Thay relay và kiểm tra lại tín hiệu cấp nước");
+        secondCompletion.setNote("Đã test lại hai chu kỳ ổn định");
+
+        var activities = WorkOrderActivityMapper.merge(
+                List.of(firstCompletion, reopened, secondCompletion),
+                List.of()
+        );
+
+        assertThat(activities).hasSize(3);
+        assertThat(activities.get(0).diagnosis()).isEqualTo("Hỏng van cấp nước");
+        assertThat(activities.get(0).resolution()).isEqualTo("Thay van cấp nước");
+        assertThat(activities.get(0).note()).isEqualTo("Đã chạy thử một chu kỳ");
+        assertThat(activities.get(2).diagnosis()).isEqualTo("Relay cấp nguồn trên bo điều khiển chập chờn");
+        assertThat(activities.get(2).resolution()).isEqualTo("Thay relay và kiểm tra lại tín hiệu cấp nước");
+        assertThat(activities.get(2).note()).isEqualTo("Đã test lại hai chu kỳ ổn định");
+    }
 
     @Test
     void ignoresNonTechnicianConsumeAndWarehouseReturnInOperationalTimeline() {
@@ -111,6 +176,8 @@ class WorkOrderActivityMapperTest {
         AuditLog redispatch = new AuditLog();
         redispatch.setId(UUID.randomUUID());
         redispatch.setActorUsername("dispatcher");
+        redispatch.setActorDisplayName("Lê Thu Điều phối");
+        redispatch.setActorRole("DISPATCHER");
         redispatch.setAction("RESCHEDULE");
         redispatch.setEntityType("WORK_ORDER");
         redispatch.setEntityId(UUID.randomUUID());
@@ -122,6 +189,8 @@ class WorkOrderActivityMapperTest {
         assertThat(activities).hasSize(1);
         assertThat(activities.getFirst().type()).isEqualTo(WorkOrderActivityType.DISPATCH_UPDATED);
         assertThat(activities.getFirst().actor()).isEqualTo("dispatcher");
+        assertThat(activities.getFirst().actorDisplayName()).isEqualTo("Lê Thu Điều phối");
+        assertThat(activities.getFirst().actorRole()).isEqualTo("DISPATCHER");
         assertThat(activities.getFirst().note()).contains("từ A sang B");
     }
 
@@ -142,11 +211,19 @@ class WorkOrderActivityMapperTest {
         assertThat(WorkOrderActivityMapper.merge(List.of(), List.of(importTransaction))).isEmpty();
     }
 
-    private static WorkOrderStatusHistory statusHistory(WorkOrderStatus status, String actor, String createdAt) {
+    private static WorkOrderStatusHistory statusHistory(
+            WorkOrderStatus status,
+            String actor,
+            String actorDisplayName,
+            String actorRole,
+            String createdAt
+    ) {
         WorkOrderStatusHistory history = new WorkOrderStatusHistory();
         history.setId(UUID.randomUUID());
         history.setToStatus(status);
         history.setChangedBy(actor);
+        history.setActorDisplayName(actorDisplayName);
+        history.setActorRole(actorRole);
         history.setCreatedAt(Instant.parse(createdAt));
         return history;
     }

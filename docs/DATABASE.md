@@ -80,7 +80,9 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 6. `V6__inventory_transaction_actor_snapshot.sql` — snapshot actor cho inventory ledger.
 7. `V7__notification_feed_cleanup.sql` — data migration loại routine CRUD/import/generic-status bell rows của release cũ; không xóa Audit/Timeline/Inventory Movements.
 8. `V8__overdue_notification_dedup.sql` — thêm `notifications.event_key`, unique dedupe theo recipient/event và index phục vụ quét appointment quá hạn.
+9. `V9__work_order_actor_identity_snapshot.sql` — thêm snapshot `actor_display_name`/`actor_role` cho Work Order status history và audit, đồng thời backfill từ `user_accounts` để Timeline cũ hiển thị đúng người thao tác khi còn đối chiếu được.
+10. `V10__work_order_completion_snapshot.sql` — lưu `diagnosis_snapshot`/`resolution_snapshot` trên từng lần Work Order chuyển `COMPLETED`; `work_orders.diagnosis`/`resolution` vẫn là bản mới nhất, còn Timeline giữ kết quả riêng của từng repair cycle. Migration chỉ backfill lần hoàn thành gần nhất từ dữ liệu hiện có để không giả lập lịch sử cũ không thể khôi phục chính xác.
 
-V1–V7 là migration lịch sử bất biến; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
+V1–V8 là migration lịch sử bất biến; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

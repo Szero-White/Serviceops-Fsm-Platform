@@ -46,6 +46,8 @@ public final class WorkOrderDtos {
             String actor,
             String actorDisplayName,
             String actorRole,
+            String diagnosis,
+            String resolution,
             UUID sparePartId,
             String sparePartSku,
             String sparePartName,
@@ -61,6 +63,10 @@ public final class WorkOrderDtos {
             WorkOrderStatus toStatus,
             String note,
             String changedBy,
+            String actorDisplayName,
+            String actorRole,
+            String diagnosis,
+            String resolution,
             Instant createdAt
     ) {
     }

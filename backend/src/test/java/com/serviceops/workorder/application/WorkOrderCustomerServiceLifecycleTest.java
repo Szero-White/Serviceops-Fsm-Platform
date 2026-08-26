@@ -14,12 +14,14 @@ import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.workorder.domain.WorkOrderStatus;
+import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +36,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -118,6 +121,67 @@ class WorkOrderCustomerServiceLifecycleTest {
                 eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
                 eq(expectedNotification.title()),
                 eq(expectedNotification.message())
+        );
+        verify(notificationService, never()).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()
+        );
+
+        ArgumentCaptor<WorkOrderStatusHistory> historyCaptor = ArgumentCaptor.forClass(WorkOrderStatusHistory.class);
+        verify(historyRepository).save(historyCaptor.capture());
+        assertThat(historyCaptor.getValue().getChangedBy()).isEqualTo("customer-service");
+        assertThat(historyCaptor.getValue().getActorDisplayName()).isEqualTo("Lê Thu CSKH");
+        assertThat(historyCaptor.getValue().getActorRole()).isEqualTo("CUSTOMER_SERVICE");
+    }
+
+    @Test
+    void reopenByAnotherRoleCreatesCustomerServiceFollowUpNotification() {
+        authenticate(UserRole.OWNER, "owner", "Nguyễn An Owner");
+        when(repository.findDetailed(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));
+        when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
+
+        service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Khách phản hồi lỗi vẫn còn", null, null)
+        );
+
+        var expected = NotificationCopy.workOrderReopenedForCustomerService(
+                new NotificationCopy.WorkOrderContext("WO-UAT-CS-001", "Kiểm tra máy lạnh", "Khách hàng UAT"),
+                "Chủ sở hữu Nguyễn An Owner",
+                "Khách phản hồi lỗi vẫn còn"
+        );
+        verify(notificationService).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                eq(expected.title()),
+                eq(expected.message())
+        );
+    }
+
+    @Test
+    void cancellationByDispatcherCreatesCustomerServiceCustomerCommunicationNotification() {
+        workOrder.setStatus(WorkOrderStatus.ASSIGNED);
+        authenticate(UserRole.DISPATCHER, "dispatcher", "Lê Thu Điều phối");
+        when(repository.findDetailed(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));
+        when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
+
+        service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.CANCELLED, "Khách yêu cầu hủy lịch", null, null)
+        );
+
+        var expected = NotificationCopy.workOrderCancelledForCustomerService(
+                new NotificationCopy.WorkOrderContext("WO-UAT-CS-001", "Kiểm tra máy lạnh", "Khách hàng UAT"),
+                "Điều phối viên Lê Thu Điều phối",
+                "Khách yêu cầu hủy lịch"
+        );
+        verify(notificationService).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                eq(expected.title()),
+                eq(expected.message())
         );
     }
 

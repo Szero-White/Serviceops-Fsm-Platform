@@ -19,6 +19,12 @@ public class AuditLog extends TenantScopedEntity {
     @Column(name = "actor_username", nullable = false, length = 100)
     private String actorUsername;
 
+    @Column(name = "actor_display_name", length = 150)
+    private String actorDisplayName;
+
+    @Column(name = "actor_role", length = 40)
+    private String actorRole;
+
     @Column(nullable = false, length = 60)
     private String action;
 

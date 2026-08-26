@@ -191,14 +191,16 @@ public class DemoDataFactory {
         appointmentRepository.save(appointment);
     }
 
-    void history(Tenant tenant, WorkOrder wo, WorkOrderStatus from, WorkOrderStatus to, String note, String changedBy) {
+    void history(Tenant tenant, WorkOrder wo, WorkOrderStatus from, WorkOrderStatus to, String note, UserAccount actor) {
         WorkOrderStatusHistory h = new WorkOrderStatusHistory();
         h.setTenantId(tenant.getId());
         h.setWorkOrder(wo);
         h.setFromStatus(from);
         h.setToStatus(to);
         h.setNote(note);
-        h.setChangedBy(changedBy);
+        h.setChangedBy(actor.getUsername());
+        h.setActorDisplayName(actor.getDisplayName());
+        h.setActorRole(actor.getRole().name());
         historyRepository.save(h);
     }
 

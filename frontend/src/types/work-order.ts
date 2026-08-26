@@ -20,6 +20,10 @@ export interface WorkOrderHistory {
   toStatus: WorkOrderStatus
   note?: string
   changedBy: string
+  actorDisplayName?: string
+  actorRole?: UserRole | 'SYSTEM'
+  diagnosis?: string
+  resolution?: string
   createdAt: string
 }
 
@@ -33,6 +37,8 @@ export interface WorkOrderActivity {
   actor: string
   actorDisplayName?: string
   actorRole?: UserRole | 'SYSTEM'
+  diagnosis?: string
+  resolution?: string
   sparePartId?: string
   sparePartSku?: string
   sparePartName?: string

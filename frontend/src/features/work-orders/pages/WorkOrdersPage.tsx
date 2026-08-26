@@ -181,6 +181,22 @@ export function WorkOrdersPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const closeComplete = () => {
+    setCompleteOpen(false)
+    completeForm.resetFields()
+  }
+
+  const openComplete = () => {
+    if (!detail) return
+    completeForm.resetFields()
+    completeForm.setFieldsValue({
+      diagnosis: detail.diagnosis ?? '',
+      resolution: detail.resolution ?? '',
+      note: undefined,
+    })
+    setCompleteOpen(true)
+  }
+
   const complete = useMutation({
     mutationFn: (values: CompleteWorkOrderValues) => workOrdersApi.transition(selectedId!, { targetStatus: 'COMPLETED', ...values }),
     onSuccess: (workOrder) => {
@@ -188,8 +204,7 @@ export function WorkOrdersPage() {
         message: `Đã hoàn thành ${workOrder.code}`,
         description: 'Kết quả đã được lưu. Sau khi khách đồng ý, kỹ thuật viên được giao hoặc Owner có thể bấm Khách xác nhận ngay trong phiếu.',
       })
-      setCompleteOpen(false)
-      completeForm.resetFields()
+      closeComplete()
       refreshOperations()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -319,7 +334,7 @@ export function WorkOrdersPage() {
         transitionPending={transition.isPending}
         onClose={() => selectWorkOrder(undefined)}
         onSchedule={openSchedule}
-        onComplete={() => setCompleteOpen(true)}
+        onComplete={openComplete}
         onConsumePart={openConsumePart}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
         onUpload={uploadFile}
@@ -336,7 +351,7 @@ export function WorkOrdersPage() {
           onClose: () => setScheduleOpen(false),
           onSubmit: submitSchedule,
         }}
-        complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, onClose: () => setCompleteOpen(false), onSubmit: (values) => complete.mutate(values) }}
+        complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, hasPreviousResult: Boolean(detail?.diagnosis || detail?.resolution), onClose: closeComplete, onSubmit: (values) => complete.mutate(values) }}
         consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
         technicians={technicians}
         parts={parts}

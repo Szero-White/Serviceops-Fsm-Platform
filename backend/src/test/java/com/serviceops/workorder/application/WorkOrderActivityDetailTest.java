@@ -88,6 +88,8 @@ class WorkOrderActivityDetailTest {
 
         assertThat(response.history()).hasSize(1);
         assertThat(response.history().getFirst().toStatus()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
+        assertThat(response.history().getFirst().actorDisplayName()).isEqualTo("Phạm Quốc Kỹ thuật");
+        assertThat(response.history().getFirst().actorRole()).isEqualTo("TECHNICIAN");
         assertThat(response.activities()).hasSize(2);
         assertThat(response.activities()).extracting(activity -> activity.type()).containsExactly(
                 WorkOrderActivityType.STATUS_CHANGE,
@@ -122,6 +124,8 @@ class WorkOrderActivityDetailTest {
         history.setTenantId(TENANT_ID);
         history.setToStatus(WorkOrderStatus.IN_PROGRESS);
         history.setChangedBy("technician");
+        history.setActorDisplayName("Phạm Quốc Kỹ thuật");
+        history.setActorRole("TECHNICIAN");
         history.setCreatedAt(Instant.parse("2026-08-24T03:23:00Z"));
         return history;
     }

@@ -325,9 +325,14 @@ public class WorkOrderService {
             appointmentRepository.findByTenantIdAndWorkOrderId(CurrentUser.tenantId(), workOrder.getId())
                     .ifPresent(a -> a.setStatus(AppointmentStatus.CANCELLED));
         }
-        addHistory(workOrder, previous, workOrder.getStatus(), blankToNull(request.note()));
+        WorkOrderStatusHistory statusHistory = addHistory(
+                workOrder,
+                previous,
+                workOrder.getStatus(),
+                blankToNull(request.note())
+        );
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
-        notifyStatusChange(workOrder, blankToNull(request.note()));
+        notifyStatusChange(workOrder, blankToNull(request.note()), statusHistory);
         return get(id);
     }
 
@@ -430,7 +435,7 @@ public class WorkOrderService {
         return "WO-%d-%06d".formatted(year, number);
     }
 
-    private void addHistory(WorkOrder workOrder, WorkOrderStatus from, WorkOrderStatus to, String note) {
+    private WorkOrderStatusHistory addHistory(WorkOrder workOrder, WorkOrderStatus from, WorkOrderStatus to, String note) {
         WorkOrderStatusHistory history = new WorkOrderStatusHistory();
         history.setTenantId(workOrder.getTenantId());
         history.setWorkOrder(workOrder);
@@ -438,7 +443,13 @@ public class WorkOrderService {
         history.setToStatus(to);
         history.setNote(note);
         history.setChangedBy(CurrentUser.username());
-        historyRepository.save(history);
+        history.setActorDisplayName(CurrentUser.displayName());
+        history.setActorRole(CurrentUser.primaryRole());
+        if (to == WorkOrderStatus.COMPLETED) {
+            history.setDiagnosisSnapshot(workOrder.getDiagnosis());
+            history.setResolutionSnapshot(workOrder.getResolution());
+        }
+        return historyRepository.save(history);
     }
 
     private static String blankToNull(String value) {
@@ -474,7 +485,11 @@ public class WorkOrderService {
         return workOrder.getTechnician().getUser().getDisplayName();
     }
 
-    private void notifyStatusChange(WorkOrder workOrder, String note) {
+    private void notifyStatusChange(
+            WorkOrder workOrder,
+            String note,
+            WorkOrderStatusHistory statusHistory
+    ) {
         UUID tenantId = workOrder.getTenantId();
         var context = notificationContext(workOrder);
         String actorLabel = currentActorLabel();
@@ -495,19 +510,31 @@ public class WorkOrderService {
                         List.of(UserRole.OWNER, UserRole.DISPATCHER),
                         NotificationCopy.workOrderReopenedAttention(context, actorLabel, note)
                 );
+                if (!CurrentUser.hasRole("CUSTOMER_SERVICE")) {
+                    notifyRoles(
+                            tenantId,
+                            List.of(UserRole.CUSTOMER_SERVICE),
+                            NotificationCopy.workOrderReopenedForCustomerService(context, actorLabel, note)
+                    );
+                }
                 notifyAssignedTechnician(
                         workOrder,
                         NotificationCopy.workOrderReopenedForTechnician(context, actorLabel, note)
                 );
             }
-            case COMPLETED -> notifyRoles(
-                    tenantId,
-                    List.of(UserRole.CUSTOMER_SERVICE),
-                    NotificationCopy.workOrderCompletedForCustomerService(
-                            context,
-                            assignedTechnicianName(workOrder)
-                    )
-            );
+            case COMPLETED -> {
+                NotificationCopy.Copy copy = NotificationCopy.workOrderCompletedForCustomerService(
+                        context,
+                        assignedTechnicianName(workOrder)
+                );
+                notificationService.notifyRolesUnique(
+                        tenantId,
+                        List.of(UserRole.CUSTOMER_SERVICE),
+                        completionNotificationEventKey(statusHistory),
+                        copy.title(),
+                        copy.message()
+                );
+            }
             case CLOSED -> notifyAssignedTechnician(
                     workOrder,
                     NotificationCopy.workOrderClosedForTechnician(context, actorLabel)
@@ -518,6 +545,13 @@ public class WorkOrderService {
                         List.of(UserRole.OWNER),
                         NotificationCopy.workOrderCancelledForOwner(context, actorLabel, note)
                 );
+                if (!CurrentUser.hasRole("CUSTOMER_SERVICE")) {
+                    notifyRoles(
+                            tenantId,
+                            List.of(UserRole.CUSTOMER_SERVICE),
+                            NotificationCopy.workOrderCancelledForCustomerService(context, actorLabel, note)
+                    );
+                }
                 notifyAssignedTechnician(
                         workOrder,
                         NotificationCopy.workOrderCancelledForTechnician(context, actorLabel, note)
@@ -531,6 +565,15 @@ public class WorkOrderService {
                 // internal status wording in user-facing notifications.
             }
         }
+    }
+
+    private static String completionNotificationEventKey(WorkOrderStatusHistory statusHistory) {
+        if (statusHistory == null
+                || statusHistory.getToStatus() != WorkOrderStatus.COMPLETED
+                || statusHistory.getId() == null) {
+            throw new IllegalStateException("Completed work order notification requires persisted completion history");
+        }
+        return "WORK_ORDER_COMPLETED:" + statusHistory.getId();
     }
 
     private void notifyAssignedTechnician(WorkOrder workOrder, NotificationCopy.Copy copy) {
@@ -554,7 +597,18 @@ public class WorkOrderService {
     }
 
     private static WorkOrderHistoryResponse toHistory(WorkOrderStatusHistory h) {
-        return new WorkOrderHistoryResponse(h.getId(), h.getFromStatus(), h.getToStatus(), h.getNote(), h.getChangedBy(), h.getCreatedAt());
+        return new WorkOrderHistoryResponse(
+                h.getId(),
+                h.getFromStatus(),
+                h.getToStatus(),
+                h.getNote(),
+                h.getChangedBy(),
+                h.getActorDisplayName(),
+                h.getActorRole(),
+                h.getDiagnosisSnapshot(),
+                h.getResolutionSnapshot(),
+                h.getCreatedAt()
+        );
     }
 
     public static WorkOrderResponse toResponse(WorkOrder w, List<WorkOrderHistoryResponse> history) {
