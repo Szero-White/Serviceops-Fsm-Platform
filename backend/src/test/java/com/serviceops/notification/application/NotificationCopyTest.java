@@ -61,6 +61,35 @@ class NotificationCopyTest {
     }
 
     @Test
+    void overdueCopyExplainsScheduleContextAndRoutesRecipientsToTheRightScreen() {
+        var dispatcher = NotificationCopy.workOrderOverdueForDispatcher(
+                WORK_ORDER,
+                "Trịnh Quốc Tiến",
+                Instant.parse("2026-08-26T03:11:00Z"),
+                Instant.parse("2026-08-26T03:12:00Z")
+        );
+        var technician = NotificationCopy.workOrderOverdueForTechnician(
+                WORK_ORDER,
+                Instant.parse("2026-08-26T03:11:00Z"),
+                Instant.parse("2026-08-26T03:12:00Z")
+        );
+
+        assertThat(dispatcher.title()).isEqualTo("Phiếu đã quá lịch thực hiện: WO-2026-001010");
+        assertThat(dispatcher.message())
+                .contains("Trịnh Quốc Tiến")
+                .contains("26/08/2026 10:11–10:12")
+                .contains("Lịch điều phối")
+                .doesNotContain("ASSIGNED", "SCHEDULED");
+
+        assertThat(technician.title()).isEqualTo("Công việc đã quá lịch: WO-2026-001010");
+        assertThat(technician.message())
+                .contains("Máy rửa chén không cấp nước")
+                .contains("Trần Minh Anh")
+                .contains("26/08/2026 10:11–10:12")
+                .contains("Lịch của tôi");
+    }
+
+    @Test
     void reopenAndCancellationCopyKeepsReasonWithoutBecomingAuditDump() {
         var reopen = NotificationCopy.workOrderReopenedAttention(
                 WORK_ORDER,

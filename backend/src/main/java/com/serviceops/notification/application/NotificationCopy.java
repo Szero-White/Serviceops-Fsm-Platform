@@ -108,6 +108,33 @@ public final class NotificationCopy {
         return copy("Lịch của bạn đã thay đổi: " + context.code(), message);
     }
 
+    public static Copy workOrderOverdueForDispatcher(
+            WorkOrderContext context,
+            String technicianName,
+            Instant scheduledStart,
+            Instant scheduledEnd
+    ) {
+        return copy(
+                "Phiếu đã quá lịch thực hiện: " + context.code(),
+                workOrderContext(context) + " đã quá lịch " + scheduleRange(scheduledStart, scheduledEnd)
+                        + " nhưng công việc chưa bắt đầu. Kỹ thuật viên: "
+                        + fallback(technicianName, "chưa xác định")
+                        + ". Mở Lịch điều phối để kiểm tra và điều chỉnh lịch."
+        );
+    }
+
+    public static Copy workOrderOverdueForTechnician(
+            WorkOrderContext context,
+            Instant scheduledStart,
+            Instant scheduledEnd
+    ) {
+        return copy(
+                "Công việc đã quá lịch: " + context.code(),
+                workOrderContext(context) + " đã quá lịch " + scheduleRange(scheduledStart, scheduledEnd)
+                        + " nhưng chưa được bắt đầu. Mở Lịch của tôi để kiểm tra và liên hệ điều phối nếu cần đổi lịch."
+        );
+    }
+
     public static Copy workOrderWaitingForParts(
             WorkOrderContext context,
             String technicianName,

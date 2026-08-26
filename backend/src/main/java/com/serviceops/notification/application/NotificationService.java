@@ -58,6 +58,44 @@ public class NotificationService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public boolean createUnique(
+            UUID tenantId,
+            UserAccount recipient,
+            String eventKey,
+            String title,
+            String message
+    ) {
+        return repository.insertUnique(
+                UUID.randomUUID(),
+                tenantId,
+                recipient.getId(),
+                title,
+                message,
+                eventKey,
+                Instant.now()
+        ) == 1;
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int notifyRolesUnique(
+            UUID tenantId,
+            List<UserRole> roles,
+            String eventKey,
+            String title,
+            String message
+    ) {
+        int created = 0;
+        Set<UUID> notifiedUserIds = new HashSet<>();
+        for (UserAccount recipient : userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(tenantId, roles)) {
+            if (notifiedUserIds.add(recipient.getId())
+                    && createUnique(tenantId, recipient, eventKey, title, message)) {
+                created++;
+            }
+        }
+        return created;
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void notifyCurrentUser(String title, String message) {
         UUID tenantId = CurrentUser.tenantId();
         UserAccount recipient = userAccountRepository.findByIdAndTenantId(CurrentUser.userId(), tenantId)

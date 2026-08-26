@@ -43,6 +43,8 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Đổi Technician | Technician cũ | **Bạn không còn phụ trách: WO-...** | Actor + người nhận mới + khách hàng; dừng theo dõi job cũ |
 | Đổi Technician | Technician mới | **Bạn có công việc mới: WO-...** | Actor + summary + khách hàng; mở Lịch của tôi |
 | Chỉ đổi thời gian | Technician hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Actor + summary + khách hàng + lịch cũ → lịch mới + lý do; xem Lịch của tôi |
+| Appointment đã kết thúc, WO vẫn chưa bắt đầu | Dispatcher | **Phiếu đã quá lịch thực hiện: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; mở Lịch điều phối để xử lý |
+| Appointment đã kết thúc, WO vẫn chưa bắt đầu | Assigned Technician | **Công việc đã quá lịch: WO-...** | Summary + khách hàng + lịch đã lỡ; mở Lịch của tôi và liên hệ điều phối nếu cần |
 | Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
 | Work Order → REOPENED | Owner + Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
@@ -76,3 +78,5 @@ Dùng **Timeline** cho câu chuyện của một Work Order, **Inventory Movemen
 `V7__notification_feed_cleanup.sql` xóa các row bell cũ thuộc nhóm CRUD/import/generic-status từng được persist ở các release trước. Đây là dữ liệu notification dư thừa, không phải audit history; Audit/Timeline/Inventory Movements vẫn giữ nguồn truy vết.
 
 Các notification cũ còn giá trị hành động như assignment/reschedule/reopen/cancel vẫn được giữ. `frontend/src/features/notifications/presentation.ts` chỉ làm compatibility cho các title cũ này để tránh lộ enum hoặc chuỗi kỹ thuật. Không đặt logic legacy trong `AppLayout` và không tiếp tục mở rộng mapper bằng routine CRUD đã bị migration loại bỏ.
+
+`V8__overdue_notification_dedup.sql` bổ sung `event_key` nullable và unique theo `(tenant_id, recipient_user_id, event_key)`. Backend overdue scanner dùng key gắn với appointment + start/end window và `INSERT ... ON CONFLICT DO NOTHING`, vì vậy cùng một lịch quá hạn chỉ phát một bell cho mỗi recipient ngay cả khi scheduler chạy lặp lại.

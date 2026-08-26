@@ -76,6 +76,7 @@ export function AppLayout() {
     enabled: Boolean(user?.id) && notificationsOpen,
     staleTime: 0,
     refetchOnMount: 'always',
+    refetchInterval: 30_000,
   })
   const notifications = notificationsQuery.data
   const notificationsFetching = notificationsQuery.isFetching

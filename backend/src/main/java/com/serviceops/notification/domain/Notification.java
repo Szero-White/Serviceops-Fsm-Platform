@@ -30,6 +30,9 @@ public class Notification extends TenantScopedEntity {
     @Column(nullable = false, length = 500)
     private String message;
 
+    @Column(name = "event_key", length = 180)
+    private String eventKey;
+
     @Column(name = "read_at")
     private Instant readAt;
 }

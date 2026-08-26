@@ -23,6 +23,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -109,6 +111,43 @@ class NotificationServiceRoutingTest {
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(repository, times(1)).save(captor.capture());
         assertThat(captor.getValue().getRecipient().getId()).isEqualTo(owner.getId());
+    }
+
+    @Test
+    void uniqueRoleRoutingUsesEventKeyWithoutDependingOnSecurityContext() {
+        UserAccount dispatcher = user(UUID.randomUUID(), "dispatcher", UserRole.DISPATCHER);
+        when(userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(
+                TENANT_ID, List.of(UserRole.DISPATCHER)))
+                .thenReturn(List.of(dispatcher));
+        when(repository.insertUnique(
+                any(UUID.class),
+                eq(TENANT_ID),
+                eq(dispatcher.getId()),
+                anyString(),
+                anyString(),
+                eq("WORK_ORDER_OVERDUE:test"),
+                any(Instant.class)
+        )).thenReturn(1);
+
+        NotificationService service = new NotificationService(repository, userAccountRepository);
+
+        assertThat(service.notifyRolesUnique(
+                TENANT_ID,
+                List.of(UserRole.DISPATCHER),
+                "WORK_ORDER_OVERDUE:test",
+                "Phiếu đã quá lịch thực hiện",
+                "Mở Lịch điều phối để xử lý"
+        )).isEqualTo(1);
+
+        verify(repository).insertUnique(
+                any(UUID.class),
+                eq(TENANT_ID),
+                eq(dispatcher.getId()),
+                eq("Phiếu đã quá lịch thực hiện"),
+                eq("Mở Lịch điều phối để xử lý"),
+                eq("WORK_ORDER_OVERDUE:test"),
+                any(Instant.class)
+        );
     }
 
     @Test

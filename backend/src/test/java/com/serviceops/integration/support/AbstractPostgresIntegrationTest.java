@@ -54,6 +54,7 @@ public abstract class AbstractPostgresIntegrationTest {
         // Integration tests use the seeded demo accounts with the fixture password below.
         // Override local/environment demo credentials so CI is deterministic.
         registry.add("serviceops.demo.seed-password", () -> "123456");
+        registry.add("serviceops.notifications.overdue-scan.enabled", () -> "false");
     }
 
     protected String login(String username, String password) {

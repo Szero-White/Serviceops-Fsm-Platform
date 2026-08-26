@@ -79,7 +79,8 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 5. `V5__asset_serial_optional.sql` — Asset serial trở thành optional cho intake chưa xác định serial.
 6. `V6__inventory_transaction_actor_snapshot.sql` — snapshot actor cho inventory ledger.
 7. `V7__notification_feed_cleanup.sql` — data migration loại routine CRUD/import/generic-status bell rows của release cũ; không xóa Audit/Timeline/Inventory Movements.
+8. `V8__overdue_notification_dedup.sql` — thêm `notifications.event_key`, unique dedupe theo recipient/event và index phục vụ quét appointment quá hạn.
 
-V1–V6 là migration lịch sử bất biến; thay đổi mới phải thêm migration mới thay vì sửa file cũ.
+V1–V7 là migration lịch sử bất biến; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
 
 Source of truth: `backend/src/main/resources/db/migration/`.
