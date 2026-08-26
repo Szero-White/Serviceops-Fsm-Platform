@@ -60,10 +60,13 @@ class InventoryStockAdjustmentNotificationHandlerTest {
                 eq(TENANT_ID),
                 eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 org.mockito.ArgumentMatchers.isNull(),
-                eq("Tồn kho thấp: PART-TEST"),
+                eq("Tồn kho thấp sau kiểm kê: PART-TEST"),
                 message.capture()
         );
-        assertThat(message.getValue()).contains("ngưỡng cảnh báo là 3 cái");
+        assertThat(message.getValue())
+                .contains("Đặng Nam Kho")
+                .contains("ngưỡng tồn tối thiểu là 3 cái")
+                .contains("Kho phụ tùng");
     }
 
     @Test
@@ -84,7 +87,7 @@ class InventoryStockAdjustmentNotificationHandlerTest {
                 eq(TENANT_ID),
                 eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 org.mockito.ArgumentMatchers.isNull(),
-                eq("Tồn kho thấp: PART-TEST"),
+                eq("Tồn kho thấp sau kiểm kê: PART-TEST"),
                 anyString()
         );
     }

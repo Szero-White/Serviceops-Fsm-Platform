@@ -104,7 +104,15 @@ class WorkOrderCustomerServiceLifecycleTest {
         );
 
         assertThat(reopened.status()).isEqualTo(WorkOrderStatus.REOPENED);
-        var expectedNotification = NotificationCopy.workOrderReopenedAttention("WO-UAT-CS-001");
+        var expectedNotification = NotificationCopy.workOrderReopenedAttention(
+                new NotificationCopy.WorkOrderContext(
+                        "WO-UAT-CS-001",
+                        "Kiểm tra máy lạnh",
+                        "Khách hàng UAT"
+                ),
+                "Chăm sóc khách hàng Lê Thu CSKH",
+                "Khách phản hồi lỗi vẫn còn"
+        );
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
                 eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),

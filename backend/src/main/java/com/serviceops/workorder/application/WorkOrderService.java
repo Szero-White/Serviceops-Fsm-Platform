@@ -152,7 +152,7 @@ public class WorkOrderService {
 
         addHistory(entity, null, WorkOrderStatus.OPEN, "Tiếp nhận từ yêu cầu dịch vụ");
         auditService.record("CREATE_FROM_SERVICE_REQUEST", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode() + " từ yêu cầu dịch vụ");
-        var dispatchNotification = NotificationCopy.workOrderNeedsDispatch(entity.getCode());
+        var dispatchNotification = NotificationCopy.workOrderNeedsDispatch(notificationContext(entity), currentActorLabel());
         notificationService.notifyRoles(
                 tenantId,
                 dispatcherRoles(),
@@ -253,7 +253,7 @@ public class WorkOrderService {
             String previousTechnicianName = previousTechnician == null
                     ? "Chưa phân công"
                     : previousTechnician.getUser().getDisplayName();
-            String dispatchActor = dispatchActorLabel();
+            String dispatchActor = currentActorLabel();
             String details = "Điều chỉnh lịch " + workOrder.getCode()
                     + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
                     + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]"
@@ -264,18 +264,18 @@ public class WorkOrderService {
                 createNotification(
                         tenantId,
                         previousTechnician.getUser(),
-                        NotificationCopy.technicianTransferredAway(workOrder.getCode(), technicianName)
+                        NotificationCopy.technicianTransferredAway(notificationContext(workOrder), technicianName, dispatchActor)
                 );
                 createNotification(
                         tenantId,
                         technician.getUser(),
-                        NotificationCopy.technicianTransferredTo(workOrder.getCode(), dispatchActor)
+                        NotificationCopy.technicianTransferredTo(notificationContext(workOrder), dispatchActor)
                 );
             } else {
                 createNotification(
                         tenantId,
                         technician.getUser(),
-                        NotificationCopy.technicianScheduleChanged(workOrder.getCode(), dispatchActor)
+                        NotificationCopy.technicianScheduleChanged(notificationContext(workOrder), dispatchActor)
                 );
             }
         } else {
@@ -288,7 +288,7 @@ public class WorkOrderService {
             createNotification(
                     tenantId,
                     technician.getUser(),
-                    NotificationCopy.technicianAssigned(workOrder.getCode(), dispatchActorLabel())
+                    NotificationCopy.technicianAssigned(notificationContext(workOrder), currentActorLabel())
             );
         }
 
@@ -319,7 +319,7 @@ public class WorkOrderService {
         }
         addHistory(workOrder, previous, workOrder.getStatus(), blankToNull(request.note()));
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
-        notifyStatusChange(workOrder);
+        notifyStatusChange(workOrder, blankToNull(request.note()));
         return get(id);
     }
 
@@ -437,50 +437,82 @@ public class WorkOrderService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private static String dispatchActorLabel() {
-        String roleLabel = CurrentUser.hasRole("OWNER") ? "Chủ sở hữu" : "Điều phối viên";
+    private static String currentActorLabel() {
+        String role = CurrentUser.primaryRole();
+        String roleLabel = switch (role == null ? "" : role) {
+            case "OWNER" -> "Chủ sở hữu";
+            case "DISPATCHER" -> "Điều phối viên";
+            case "CUSTOMER_SERVICE" -> "Chăm sóc khách hàng";
+            case "TECHNICIAN" -> "Kỹ thuật viên";
+            case "WAREHOUSE_STAFF" -> "Nhân viên kho";
+            default -> "Người dùng";
+        };
         return roleLabel + " " + CurrentUser.displayName();
     }
 
-    private void notifyStatusChange(WorkOrder workOrder) {
+    private static NotificationCopy.WorkOrderContext notificationContext(WorkOrder workOrder) {
+        String customerName = workOrder.getCustomer() == null ? null : workOrder.getCustomer().getName();
+        return new NotificationCopy.WorkOrderContext(
+                workOrder.getCode(),
+                workOrder.getSummary(),
+                customerName
+        );
+    }
+
+    private static String assignedTechnicianName(WorkOrder workOrder) {
+        if (workOrder.getTechnician() == null || workOrder.getTechnician().getUser() == null) {
+            return null;
+        }
+        return workOrder.getTechnician().getUser().getDisplayName();
+    }
+
+    private void notifyStatusChange(WorkOrder workOrder, String note) {
         UUID tenantId = workOrder.getTenantId();
-        String code = workOrder.getCode();
+        var context = notificationContext(workOrder);
+        String actorLabel = currentActorLabel();
 
         switch (workOrder.getStatus()) {
             case WAITING_FOR_PARTS -> notifyRoles(
                     tenantId,
                     List.of(UserRole.DISPATCHER),
-                    NotificationCopy.workOrderWaitingForParts(code)
+                    NotificationCopy.workOrderWaitingForParts(
+                            context,
+                            assignedTechnicianName(workOrder),
+                            note
+                    )
             );
             case REOPENED -> {
                 notifyRoles(
                         tenantId,
                         List.of(UserRole.OWNER, UserRole.DISPATCHER),
-                        NotificationCopy.workOrderReopenedAttention(code)
+                        NotificationCopy.workOrderReopenedAttention(context, actorLabel, note)
                 );
                 notifyAssignedTechnician(
                         workOrder,
-                        NotificationCopy.workOrderReopenedForTechnician(code)
+                        NotificationCopy.workOrderReopenedForTechnician(context, actorLabel, note)
                 );
             }
             case COMPLETED -> notifyRoles(
                     tenantId,
                     List.of(UserRole.CUSTOMER_SERVICE),
-                    NotificationCopy.workOrderCompletedForCustomerService(code)
+                    NotificationCopy.workOrderCompletedForCustomerService(
+                            context,
+                            assignedTechnicianName(workOrder)
+                    )
             );
             case CLOSED -> notifyAssignedTechnician(
                     workOrder,
-                    NotificationCopy.workOrderClosedForTechnician(code)
+                    NotificationCopy.workOrderClosedForTechnician(context, actorLabel)
             );
             case CANCELLED -> {
                 notifyRoles(
                         tenantId,
                         List.of(UserRole.OWNER),
-                        NotificationCopy.workOrderCancelledForOwner(code)
+                        NotificationCopy.workOrderCancelledForOwner(context, actorLabel, note)
                 );
                 notifyAssignedTechnician(
                         workOrder,
-                        NotificationCopy.workOrderCancelledForTechnician(code)
+                        NotificationCopy.workOrderCancelledForTechnician(context, actorLabel, note)
                 );
             }
             case CUSTOMER_ACCEPTED, ON_THE_WAY, IN_PROGRESS -> {

@@ -377,7 +377,7 @@ public class InventoryService {
         }
         saveTransaction(part, workOrder, InventoryTransactionType.CONSUME, request.quantity(), request.note());
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
-        notifyLowStockIfCrossed(part, stockBeforeConsumption);
+        notifyLowStockIfCrossed(part, stockBeforeConsumption, workOrder);
         return toResponse(part);
     }
 
@@ -391,7 +391,7 @@ public class InventoryService {
         return net.max(BigDecimal.ZERO);
     }
 
-    private void notifyLowStockIfCrossed(SparePart part, BigDecimal previousStock) {
+    private void notifyLowStockIfCrossed(SparePart part, BigDecimal previousStock, WorkOrder workOrder) {
         boolean wasLowStock = previousStock.compareTo(part.getReorderLevel()) <= 0;
         boolean isLowStock = part.isActive() && part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0;
         if (!wasLowStock && isLowStock) {
@@ -400,7 +400,9 @@ public class InventoryService {
                     part.getName(),
                     part.getStockQuantity(),
                     part.getUnit(),
-                    part.getReorderLevel()
+                    part.getReorderLevel(),
+                    workOrder.getCode(),
+                    CurrentUser.displayName()
             );
             notificationService.notifyRolesIncludingCurrentUser(
                     part.getTenantId(),

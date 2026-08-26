@@ -92,6 +92,7 @@ class WorkOrderDispatchReassignmentTest {
         customer.setName("Công ty TNHH An Phát");
 
         workOrder.setCode("WO-2026-001006");
+        workOrder.setSummary("Máy rửa chén không cấp nước");
         workOrder.setCustomer(customer);
         workOrder.setStatus(WorkOrderStatus.ASSIGNED);
         workOrder.setTechnician(previousTechnician);
@@ -153,8 +154,12 @@ class WorkOrderDispatchReassignmentTest {
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã phân công phiếu cho bạn")
+                eq("Bạn có công việc mới: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Điều phối viên Lê Thu Điều phối")
+                                && message.contains("Máy rửa chén không cấp nước")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
     }
 
@@ -203,14 +208,20 @@ class WorkOrderDispatchReassignmentTest {
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(previousTechnician.getUser()),
-                eq("Bạn không còn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("Kỹ thuật viên B")
+                eq("Bạn không còn phụ trách: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Kỹ thuật viên B")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("đã chuyển phiếu cho bạn")
+                eq("Bạn có công việc mới: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Điều phối viên Lê Thu Điều phối")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
     }
 
@@ -257,7 +268,11 @@ class WorkOrderDispatchReassignmentTest {
                                 && details.contains("Lý do: Khách hàng đề nghị dời khung giờ tiếp nhận"))
         );
         var expectedNotification = NotificationCopy.technicianScheduleChanged(
-                "WO-2026-001006",
+                new NotificationCopy.WorkOrderContext(
+                        "WO-2026-001006",
+                        "Máy rửa chén không cấp nước",
+                        "Công ty TNHH An Phát"
+                ),
                 "Điều phối viên Lê Thu Điều phối"
         );
         verify(notificationService).create(

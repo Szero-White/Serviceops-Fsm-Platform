@@ -8,47 +8,112 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NotificationCopyTest {
 
-    @Test
-    void workOrderCopyUsesConsistentUserFacingTerminology() {
-        assertThat(NotificationCopy.workOrderNeedsDispatch("WO-2026-001010"))
-                .satisfies(copy -> {
-                    assertThat(copy.title()).isEqualTo("Phiếu mới chờ điều phối: WO-2026-001010");
-                    assertThat(copy.message())
-                            .contains("Phiếu công việc mới đã sẵn sàng")
-                            .contains("Lịch điều phối")
-                            .doesNotContain("OPEN", "ASSIGNED", "SCHEDULED");
-                });
+    private static final NotificationCopy.WorkOrderContext WORK_ORDER =
+            new NotificationCopy.WorkOrderContext(
+                    "WO-2026-001010",
+                    "Máy rửa chén không cấp nước",
+                    "Trần Minh Anh"
+            );
 
-        assertThat(NotificationCopy.technicianScheduleChanged("WO-2026-001010", "Điều phối viên Lê Thu"))
-                .satisfies(copy -> {
-                    assertThat(copy.title()).isEqualTo("Lịch làm việc đã thay đổi: WO-2026-001010");
-                    assertThat(copy.message()).contains("Lịch của tôi");
-                });
+    @Test
+    void dispatcherCopySaysWhichCustomerWhichJobAndWhatToDoNext() {
+        var copy = NotificationCopy.workOrderNeedsDispatch(WORK_ORDER, "Chăm sóc khách hàng Nguyễn An");
+
+        assertThat(copy.title()).isEqualTo("Cần phân công kỹ thuật viên: WO-2026-001010");
+        assertThat(copy.message())
+                .contains("Chăm sóc khách hàng Nguyễn An")
+                .contains("Máy rửa chén không cấp nước")
+                .contains("Trần Minh Anh")
+                .contains("Lịch điều phối")
+                .doesNotContain("OPEN", "ASSIGNED", "SCHEDULED");
     }
 
     @Test
-    void inventoryCopyKeepsSkuButExplainsTheAlertInPlainLanguage() {
-        var copy = NotificationCopy.lowStock(
-                "SENSOR-TEMP-10K",
-                "Cảm biến nhiệt độ 10K",
-                new BigDecimal("2"),
-                "cái",
-                new BigDecimal("3")
+    void technicianAssignmentAndScheduleCopyIdentifyActorAndBusinessContext() {
+        var assigned = NotificationCopy.technicianAssigned(WORK_ORDER, "Điều phối viên Lê Thu");
+        var rescheduled = NotificationCopy.technicianScheduleChanged(WORK_ORDER, "Điều phối viên Lê Thu");
+
+        assertThat(assigned.title()).isEqualTo("Bạn có công việc mới: WO-2026-001010");
+        assertThat(assigned.message())
+                .contains("Điều phối viên Lê Thu")
+                .contains("Máy rửa chén không cấp nước")
+                .contains("Trần Minh Anh")
+                .contains("Lịch của tôi");
+
+        assertThat(rescheduled.title()).isEqualTo("Lịch của bạn đã thay đổi: WO-2026-001010");
+        assertThat(rescheduled.message())
+                .contains("Điều phối viên Lê Thu")
+                .contains("Lịch của tôi");
+    }
+
+    @Test
+    void reopenAndCancellationCopyKeepsReasonWithoutBecomingAuditDump() {
+        var reopen = NotificationCopy.workOrderReopenedAttention(
+                WORK_ORDER,
+                "Chăm sóc khách hàng Nguyễn An",
+                "Khách báo máy vẫn chưa cấp nước sau khi chạy thử"
+        );
+        var cancelled = NotificationCopy.workOrderCancelledForTechnician(
+                WORK_ORDER,
+                "Chăm sóc khách hàng Nguyễn An",
+                "Khách đã chuyển lịch sửa chữa sang đơn vị khác"
         );
 
-        assertThat(copy.title()).isEqualTo("Tồn kho thấp: SENSOR-TEMP-10K");
-        assertThat(copy.message())
-                .isEqualTo("Cảm biến nhiệt độ 10K còn 2 cái; ngưỡng cảnh báo là 3 cái. Kiểm tra và bổ sung tồn kho.");
+        assertThat(reopen.message())
+                .contains("Chăm sóc khách hàng Nguyễn An")
+                .contains("Lý do: Khách báo máy vẫn chưa cấp nước")
+                .contains("điều phối bước tiếp theo");
+        assertThat(cancelled.message())
+                .contains("Khách đã chuyển lịch sửa chữa sang đơn vị khác")
+                .contains("dừng công việc này")
+                .contains("Lịch của tôi");
     }
 
     @Test
-    void customerServiceCompletionCopyExplainsTheNextActionWithoutClaimingClosureOwnership() {
-        var copy = NotificationCopy.workOrderCompletedForCustomerService("WO-2026-001010");
+    void customerServiceCompletionCopyNamesTechnicianCustomerAndNextAction() {
+        var copy = NotificationCopy.workOrderCompletedForCustomerService(WORK_ORDER, "Trịnh Quốc Tiến");
 
-        assertThat(copy.title()).isEqualTo("Phiếu đã hoàn thành: WO-2026-001010");
+        assertThat(copy.title()).isEqualTo("Cần theo dõi khách sau sửa chữa: WO-2026-001010");
         assertThat(copy.message())
+                .contains("Kỹ thuật viên Trịnh Quốc Tiến")
+                .contains("Trần Minh Anh")
                 .contains("Theo dõi phản hồi khách hàng")
                 .contains("mở lại phiếu")
                 .doesNotContain("Đóng phiếu", "Khách xác nhận");
+    }
+
+    @Test
+    void inventoryCopyKeepsSkuPartNameQuantitiesAndNextAction() {
+        var copy = NotificationCopy.lowStock(
+                "DW-INLET-220V",
+                "Van cấp nước máy rửa chén 220V",
+                new BigDecimal("2"),
+                "cái",
+                new BigDecimal("3"),
+                "WO-2026-001010",
+                "Trịnh Quốc Tiến"
+        );
+
+        assertThat(copy.title()).isEqualTo("Tồn kho thấp: DW-INLET-220V");
+        assertThat(copy.message())
+                .contains("Trịnh Quốc Tiến")
+                .contains("WO-2026-001010")
+                .contains("Van cấp nước máy rửa chén 220V")
+                .contains("còn 2 cái")
+                .contains("ngưỡng tồn tối thiểu là 3 cái")
+                .contains("Kho phụ tùng");
+    }
+
+    @Test
+    void copyAlwaysFitsPersistenceLimitsEvenWithLongBusinessText() {
+        String longText = "Nội dung rất dài ".repeat(100);
+        var copy = NotificationCopy.workOrderCancelledForOwner(
+                new NotificationCopy.WorkOrderContext("WO-2026-999999", longText, longText),
+                longText,
+                longText
+        );
+
+        assertThat(copy.title().length()).isLessThanOrEqualTo(180);
+        assertThat(copy.message().length()).isLessThanOrEqualTo(500);
     }
 }

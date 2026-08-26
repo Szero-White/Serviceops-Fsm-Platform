@@ -77,5 +77,9 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 3. `V3__soft_delete_work_orders.sql` — archive/soft-delete fields for Work Order history.
 4. `V4__schedule_board_query_index.sql` — scheduling/query index refinement.
 5. `V5__asset_serial_optional.sql` — Asset serial trở thành optional cho intake chưa xác định serial.
+6. `V6__inventory_transaction_actor_snapshot.sql` — snapshot actor cho inventory ledger.
+7. `V7__notification_feed_cleanup.sql` — data migration loại routine CRUD/import/generic-status bell rows của release cũ; không xóa Audit/Timeline/Inventory Movements.
+
+V1–V6 là migration lịch sử bất biến; thay đổi mới phải thêm migration mới thay vì sửa file cũ.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

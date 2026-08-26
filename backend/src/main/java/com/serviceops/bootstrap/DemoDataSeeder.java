@@ -127,7 +127,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         notification.setTenantId(tenant.getId());
         notification.setRecipient(technicianUser);
         var seededNotification = NotificationCopy.technicianAssigned(
-                wo1.getCode(),
+                new NotificationCopy.WorkOrderContext(
+                        wo1.getCode(),
+                        wo1.getSummary(),
+                        wo1.getCustomer().getName()
+                ),
                 "Điều phối viên " + dispatcher.getDisplayName()
         );
         notification.setTitle(seededNotification.title());

@@ -7,6 +7,7 @@ import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
@@ -129,11 +130,19 @@ class WorkOrderCompletionNotificationTest {
         );
 
         assertThat(response.status()).isEqualTo(WorkOrderStatus.COMPLETED);
+        var expectedNotification = NotificationCopy.workOrderCompletedForCustomerService(
+                new NotificationCopy.WorkOrderContext(
+                        "WO-UAT-001",
+                        "Kiểm tra máy lạnh không khởi động",
+                        "Khách hàng UAT"
+                ),
+                "Phạm Quốc Kỹ thuật"
+        );
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
                 eq(List.of(UserRole.CUSTOMER_SERVICE)),
-                eq("Phiếu đã hoàn thành: WO-UAT-001"),
-                contains("Theo dõi phản hồi khách hàng")
+                eq(expectedNotification.title()),
+                eq(expectedNotification.message())
         );
         verify(notificationService, never()).notifyRoles(
                 eq(TENANT_ID),

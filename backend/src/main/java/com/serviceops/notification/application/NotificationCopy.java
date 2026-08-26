@@ -5,97 +5,169 @@ import java.math.BigDecimal;
 /**
  * Central user-facing notification copy.
  *
- * Keep notification text concise and action-oriented. Internal enum names, raw timestamps,
- * test identifiers and audit details belong in the domain/audit layers, not in the bell UI.
+ * Bell notifications are reserved for cross-role events that require awareness or a next action.
+ * The title answers "what happened / what needs attention"; the message adds business context
+ * (who / which customer / which work order) and tells the recipient what to do next.
+ *
+ * Internal enum names, raw timestamps, test identifiers and audit details belong in Timeline/Audit,
+ * not in persistent notification copy.
  */
 public final class NotificationCopy {
+    private static final int TITLE_LIMIT = 180;
+    private static final int MESSAGE_LIMIT = 500;
+    private static final int CONTEXT_LIMIT = 96;
+    private static final int REASON_LIMIT = 160;
+
     private NotificationCopy() {
     }
 
     public record Copy(String title, String message) {
+        public Copy {
+            title = limit(normalize(title), TITLE_LIMIT);
+            message = limit(normalize(message), MESSAGE_LIMIT);
+        }
     }
 
-    public static Copy workOrderNeedsDispatch(String code) {
-        return new Copy(
-                "Phiếu mới chờ điều phối: " + code,
-                "Phiếu công việc mới đã sẵn sàng. Mở Lịch điều phối để phân công kỹ thuật viên."
+    /**
+     * Lightweight read model used only to compose notification copy. Keeping it in the notification
+     * package avoids coupling NotificationCopy to the Work Order domain entity.
+     */
+    public record WorkOrderContext(String code, String summary, String customerName) {
+        public WorkOrderContext {
+            code = fallback(code, "Phiếu công việc");
+            summary = fallback(summary, "Nội dung chưa có tiêu đề");
+            customerName = fallback(customerName, "Khách hàng chưa xác định");
+        }
+    }
+
+    public static Copy workOrderNeedsDispatch(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Cần phân công kỹ thuật viên: " + context.code(),
+                actor(actorLabel) + " đã chuyển " + workOrderContext(context)
+                        + " sang bộ phận điều phối. Mở Lịch điều phối để chọn kỹ thuật viên và thời gian thực hiện."
         );
     }
 
-    public static Copy technicianAssigned(String code, String actorLabel) {
-        return new Copy(
-                "Bạn được phân công: " + code,
-                actorLabel + " đã phân công phiếu cho bạn. Mở Lịch của tôi để xem lịch và nội dung công việc."
+    public static Copy technicianAssigned(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Bạn có công việc mới: " + context.code(),
+                actor(actorLabel) + " đã giao cho bạn " + workOrderContext(context)
+                        + ". Mở Lịch của tôi để xem lịch và bắt đầu công việc."
         );
     }
 
-    public static Copy technicianTransferredAway(String code, String newTechnicianName) {
-        return new Copy(
-                "Bạn không còn được phân công: " + code,
-                "Phiếu đã được chuyển cho " + newTechnicianName + ". Kiểm tra Lịch của tôi để cập nhật kế hoạch."
+    public static Copy technicianTransferredAway(
+            WorkOrderContext context,
+            String newTechnicianName,
+            String actorLabel
+    ) {
+        return copy(
+                "Bạn không còn phụ trách: " + context.code(),
+                actor(actorLabel) + " đã chuyển " + workOrderContext(context)
+                        + " cho kỹ thuật viên " + fallback(newTechnicianName, "khác")
+                        + ". Bạn không cần tiếp tục phiếu này; kiểm tra Lịch của tôi để cập nhật kế hoạch."
         );
     }
 
-    public static Copy technicianTransferredTo(String code, String actorLabel) {
-        return new Copy(
-                "Bạn được phân công: " + code,
-                actorLabel + " đã chuyển phiếu cho bạn. Mở Lịch của tôi để xem lịch mới và nội dung công việc."
+    public static Copy technicianTransferredTo(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Bạn có công việc mới: " + context.code(),
+                actor(actorLabel) + " đã chuyển cho bạn " + workOrderContext(context)
+                        + ". Mở Lịch của tôi để xem lịch mới và nội dung công việc."
         );
     }
 
-    public static Copy technicianScheduleChanged(String code, String actorLabel) {
-        return new Copy(
-                "Lịch làm việc đã thay đổi: " + code,
-                actorLabel + " đã cập nhật thời gian thực hiện. Mở Lịch của tôi để xem lịch mới."
+    public static Copy technicianScheduleChanged(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Lịch của bạn đã thay đổi: " + context.code(),
+                actor(actorLabel) + " đã đổi thời gian thực hiện của " + workOrderContext(context)
+                        + ". Mở Lịch của tôi để xem lịch mới."
         );
     }
 
-    public static Copy workOrderWaitingForParts(String code) {
-        return new Copy(
-                "Phiếu đang chờ phụ tùng: " + code,
-                "Kỹ thuật viên tạm dừng vì thiếu vật tư. Kiểm tra phiếu và phối hợp với kho để tiếp tục xử lý."
+    public static Copy workOrderWaitingForParts(
+            WorkOrderContext context,
+            String technicianName,
+            String note
+    ) {
+        String detail = optionalReason(note, "Ghi chú kỹ thuật viên");
+        return copy(
+                "Phiếu đang chờ phụ tùng: " + context.code(),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " đang tạm dừng " + workOrderContext(context) + " vì chờ phụ tùng."
+                        + detail + " Mở phiếu để xem tình trạng và phối hợp xử lý."
         );
     }
 
-    public static Copy workOrderReopenedAttention(String code) {
-        return new Copy(
-                "Phiếu cần xử lý lại: " + code,
-                "Phiếu đã được mở lại vì cần xử lý tiếp. Kiểm tra lý do và sắp xếp xử lý phù hợp."
+    public static Copy workOrderReopenedAttention(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Phiếu cần xử lý lại: " + context.code(),
+                actor(actorLabel) + " đã mở lại " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Mở phiếu để xem tình trạng và điều phối bước tiếp theo."
         );
     }
 
-    public static Copy workOrderReopenedForTechnician(String code) {
-        return new Copy(
-                "Phiếu được mở lại: " + code,
-                "Phiếu cần tiếp tục xử lý. Mở phiếu để xem lý do và cập nhật tiến độ theo phân công."
+    public static Copy workOrderReopenedForTechnician(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Công việc cần xử lý lại: " + context.code(),
+                actor(actorLabel) + " đã mở lại " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Mở phiếu để xem tình trạng và tiếp tục theo phân công."
         );
     }
 
-    public static Copy workOrderCompletedForCustomerService(String code) {
-        return new Copy(
-                "Phiếu đã hoàn thành: " + code,
-                "Kỹ thuật viên đã hoàn thành xử lý. Theo dõi phản hồi khách hàng; nếu sự cố còn, mở lại phiếu theo quy trình."
+    public static Copy workOrderCompletedForCustomerService(
+            WorkOrderContext context,
+            String technicianName
+    ) {
+        return copy(
+                "Cần theo dõi khách sau sửa chữa: " + context.code(),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " đã hoàn thành " + workOrderContext(context) + ". "
+                        + "Theo dõi phản hồi khách hàng; nếu sự cố còn, mở lại phiếu theo quy trình."
         );
     }
 
-    public static Copy workOrderClosedForTechnician(String code) {
-        return new Copy(
-                "Phiếu đã đóng: " + code,
-                "Khách đã xác nhận kết quả và phiếu đã đóng. Bạn không cần thao tác thêm trên công việc này."
+    public static Copy workOrderClosedForTechnician(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Phiếu đã đóng: " + context.code(),
+                actor(actorLabel) + " đã đóng " + workOrderContext(context)
+                        + " sau khi khách xác nhận. Công việc đã kết thúc; bạn không cần thao tác thêm."
         );
     }
 
-    public static Copy workOrderCancelledForOwner(String code) {
-        return new Copy(
-                "Phiếu đã hủy: " + code,
-                "Phiếu đã được hủy. Mở Lịch sử phiếu để xem lý do và người thực hiện khi cần."
+    public static Copy workOrderCancelledForOwner(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Phiếu đã hủy: " + context.code(),
+                actor(actorLabel) + " đã hủy " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Mở Lịch sử phiếu nếu cần kiểm tra chi tiết."
         );
     }
 
-    public static Copy workOrderCancelledForTechnician(String code) {
-        return new Copy(
-                "Phiếu đã hủy: " + code,
-                "Bạn không cần tiếp tục công việc này. Kiểm tra Lịch của tôi để cập nhật kế hoạch."
+    public static Copy workOrderCancelledForTechnician(
+            WorkOrderContext context,
+            String actorLabel,
+            String reason
+    ) {
+        return copy(
+                "Công việc đã hủy: " + context.code(),
+                actor(actorLabel) + " đã hủy " + workOrderContext(context) + "."
+                        + optionalReason(reason, "Lý do")
+                        + " Bạn dừng công việc này và kiểm tra Lịch của tôi để cập nhật kế hoạch."
         );
     }
 
@@ -104,13 +176,18 @@ public final class NotificationCopy {
             String partName,
             BigDecimal stockQuantity,
             String unit,
-            BigDecimal reorderLevel
+            BigDecimal reorderLevel,
+            String workOrderCode,
+            String technicianName
     ) {
-        return new Copy(
+        return copy(
                 "Tồn kho thấp: " + sku,
-                partName + " còn " + quantity(stockQuantity) + " " + unit
-                        + "; ngưỡng cảnh báo là " + quantity(reorderLevel) + " " + unit
-                        + ". Kiểm tra và bổ sung tồn kho."
+                "Sau khi kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " ghi nhận sử dụng cho " + fallback(workOrderCode, "phiếu công việc")
+                        + ", phụ tùng \"" + fallback(partName, sku) + "\" (" + sku + ") còn "
+                        + quantity(stockQuantity) + " " + unit + "; ngưỡng tồn tối thiểu là "
+                        + quantity(reorderLevel) + " " + unit
+                        + ". Mở Kho phụ tùng để kiểm tra và bổ sung nếu cần."
         );
     }
 
@@ -119,13 +196,16 @@ public final class NotificationCopy {
             String partName,
             BigDecimal stockQuantity,
             String unit,
-            BigDecimal reorderLevel
+            BigDecimal reorderLevel,
+            String actorDisplayName
     ) {
-        return new Copy(
-                "Tồn kho thấp: " + sku,
-                "Ngưỡng cảnh báo vừa được cập nhật. " + partName + " hiện còn "
+        return copy(
+                "Tồn kho thấp theo ngưỡng mới: " + sku,
+                fallback(actorDisplayName, "Người phụ trách") + " vừa thay đổi ngưỡng tồn tối thiểu. Phụ tùng \""
+                        + fallback(partName, sku) + "\" (" + sku + ") còn "
                         + quantity(stockQuantity) + " " + unit + "; ngưỡng mới là "
-                        + quantity(reorderLevel) + " " + unit + ". Kiểm tra và bổ sung tồn kho."
+                        + quantity(reorderLevel) + " " + unit
+                        + ". Mở Kho phụ tùng để kiểm tra và bổ sung nếu cần."
         );
     }
 
@@ -140,15 +220,17 @@ public final class NotificationCopy {
             String reason,
             boolean lowStock
     ) {
-        String message = partName
-                + ": hệ thống " + quantity(systemQuantity) + " " + unit
-                + ", thực tế " + quantity(actualQuantity) + " " + unit
+        String message = "Phụ tùng \"" + fallback(partName, sku) + "\" (" + sku + "): hệ thống "
+                + quantity(systemQuantity) + " " + unit
+                + ", kiểm kê thực tế " + quantity(actualQuantity) + " " + unit
                 + " (chênh " + signedQuantity(difference) + " " + unit + "). "
-                + "Người kiểm kê: " + actorDisplayName + ". Lý do: " + reason + ".";
+                + "Người kiểm kê: " + fallback(actorDisplayName, "Không xác định") + "."
+                + optionalReason(reason, "Lý do");
         if (lowStock) {
             message += " Tồn thực tế đang ở mức thấp.";
         }
-        return new Copy("Kiểm kê có chênh lệch: " + sku, message);
+        message += " Mở Lịch sử biến động để đối chiếu.";
+        return copy("Kiểm kê có chênh lệch: " + sku, message);
     }
 
     public static Copy lowStockAfterStocktake(
@@ -156,16 +238,59 @@ public final class NotificationCopy {
             String partName,
             BigDecimal actualQuantity,
             String unit,
-            BigDecimal reorderLevel
+            BigDecimal reorderLevel,
+            String actorDisplayName
     ) {
-        return new Copy(
-                "Tồn kho thấp: " + sku,
-                "Sau kiểm kê, " + partName + " còn " + quantity(actualQuantity) + " " + unit
-                        + "; ngưỡng cảnh báo là " + quantity(reorderLevel) + " " + unit
-                        + ". Kiểm tra và bổ sung tồn kho."
+        return copy(
+                "Tồn kho thấp sau kiểm kê: " + sku,
+                "Sau kiểm kê của " + fallback(actorDisplayName, "nhân viên kho")
+                        + ", phụ tùng \"" + fallback(partName, sku) + "\" (" + sku + ") còn "
+                        + quantity(actualQuantity) + " " + unit + "; ngưỡng tồn tối thiểu là "
+                        + quantity(reorderLevel) + " " + unit
+                        + ". Mở Kho phụ tùng để kiểm tra và bổ sung nếu cần."
         );
     }
 
+    private static Copy copy(String title, String message) {
+        return new Copy(title, message);
+    }
+
+    private static String workOrderContext(WorkOrderContext context) {
+        return "phiếu \"" + limit(context.summary(), CONTEXT_LIMIT) + "\" (" + context.code() + ") của khách "
+                + limit(context.customerName(), CONTEXT_LIMIT);
+    }
+
+    private static String actor(String actorLabel) {
+        return fallback(actorLabel, "Người phụ trách");
+    }
+
+    private static String optionalReason(String reason, String label) {
+        if (reason == null || reason.isBlank()) {
+            return "";
+        }
+        return " " + label + ": " + limit(normalize(reason), REASON_LIMIT) + ".";
+    }
+
+    private static String fallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : normalize(value);
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("\\s+", " ").trim();
+    }
+
+    private static String limit(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        if (maxLength <= 3) {
+            return value.substring(0, maxLength);
+        }
+        return value.substring(0, maxLength - 3).trim() + "...";
+    }
 
     private static String quantity(BigDecimal value) {
         return value.stripTrailingZeros().toPlainString();

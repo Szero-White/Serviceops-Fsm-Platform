@@ -16,7 +16,7 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().name()).isEqualTo("Thông báo");
-        assertThat(decision.topic().answer()).contains("đánh dấu lại chưa đọc");
+        assertThat(decision.topic().answer()).contains("Đánh dấu chưa đọc");
     }
 
     @Test
@@ -46,11 +46,13 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("Phiếu mới chờ điều phối")
-                .contains("Phiếu đã hoàn thành")
-                .contains("Bạn được phân công")
-                .contains("Tồn kho thấp")
+                .contains("Cần phân công kỹ thuật viên")
+                .contains("Cần theo dõi khách sau sửa chữa")
+                .contains("Bạn có công việc mới")
+                .contains("cảnh báo tồn kho")
                 .contains("CRUD thường ngày")
+                .contains("khách hàng")
+                .contains("người thực hiện")
                 .contains("tránh spam");
     }
 

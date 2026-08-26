@@ -29,7 +29,8 @@ public class InventoryReorderLevelNotificationHandler {
                     event.partName(),
                     event.stockQuantity(),
                     event.unit(),
-                    event.newReorderLevel()
+                    event.newReorderLevel(),
+                    event.actorDisplayName()
             );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),

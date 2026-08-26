@@ -33,7 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,7 +57,7 @@ class InventoryPartConsumptionPolicyTest {
 
     @BeforeEach
     void setUp() {
-        authenticate("technician", TECHNICIAN_USER_ID, "TECHNICIAN");
+        authenticate("technician", "Kỹ thuật viên test", TECHNICIAN_USER_ID, "TECHNICIAN");
         service = new InventoryService(
                 sparePartRepository, transactionRepository, workOrderRepository,
                 csvService, auditService, notificationService, eventPublisher
@@ -90,7 +90,7 @@ class InventoryPartConsumptionPolicyTest {
 
     @Test
     void nonTechnicianCannotBypassConsumptionPolicyByCallingServiceDirectly() {
-        authenticate("owner", UUID.randomUUID(), "OWNER");
+        authenticate("owner", "Owner test", UUID.randomUUID(), "OWNER");
         WorkOrder workOrder = assignedWorkOrder(WorkOrderStatus.IN_PROGRESS, TECHNICIAN_USER_ID);
         when(workOrderRepository.findForUpdate(workOrder.getId(), TENANT_ID)).thenReturn(Optional.of(workOrder));
 
@@ -123,7 +123,11 @@ class InventoryPartConsumptionPolicyTest {
                 eq(TENANT_ID),
                 eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
                 eq("Tồn kho thấp: PART-CONSUME"),
-                contains("ngưỡng cảnh báo là 5 cái")
+                argThat(message ->
+                        message.contains("Kỹ thuật viên test")
+                                && message.contains("WO-CONSUME-POLICY")
+                                && message.contains("ngưỡng tồn tối thiểu là 5 cái")
+                )
         );
     }
 
@@ -181,7 +185,7 @@ class InventoryPartConsumptionPolicyTest {
         return part;
     }
 
-    private static void authenticate(String username, UUID userId, String role) {
+    private static void authenticate(String username, String displayName, UUID userId, String role) {
         Instant now = Instant.now();
         Jwt jwt = Jwt.withTokenValue("test-token")
                 .header("alg", "none")
@@ -189,7 +193,7 @@ class InventoryPartConsumptionPolicyTest {
                 .claim("tenantId", TENANT_ID.toString())
                 .claim("userId", userId.toString())
                 .claim("roles", List.of(role))
-                .claim("displayName", username)
+                .claim("displayName", displayName)
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(300))
                 .build();

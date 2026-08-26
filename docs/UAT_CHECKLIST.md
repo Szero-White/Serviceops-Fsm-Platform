@@ -86,16 +86,18 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-ROLE-02 | Assigned Technician mở Work Order `COMPLETED` bằng icon mắt | Có nút **Khách xác nhận** cạnh **Tải ảnh / PDF**; bấm thành công → `CUSTOMER_ACCEPTED` |
 | WO-ROLE-03 | Technician hoặc Owner mở Work Order `CUSTOMER_ACCEPTED` | Có nút **Đóng phiếu**; bấm → `CLOSED`, tự chuyển sang **Lịch sử phiếu** và mở đúng phiếu vừa đóng; nếu cùng lỗi còn tồn tại trước khi đóng thì dùng `REOPENED` |
 | WO-ROLE-04 | Mở bộ lọc trạng thái ở trang Phiếu công việc | Không có `Đã đóng/Đã hủy`; hai trạng thái terminal chỉ tra cứu ở **Lịch sử phiếu** |
-| WO-NOTIF-01 | Technician hoàn thành Work Order | Customer Service nhận **Phiếu đã hoàn thành: WO-...** để theo dõi phản hồi; Owner không nhận chuông cho completion bình thường |
+| WO-NOTIF-01 | Technician hoàn thành Work Order | Customer Service nhận **Cần theo dõi khách sau sửa chữa: WO-...**; body có tên Technician + summary + khách hàng + bước follow-up; Owner không nhận completion bình thường |
 | WO-NOTIF-02 | Work Order sang `WAITING_FOR_PARTS` | Dispatcher nhận **Phiếu đang chờ phụ tùng: WO-...** và hướng dẫn phối hợp với kho |
 | WO-NOTIF-03 | Work Order `CLOSED` | Owner không nhận chuông cho closure bình thường; assigned Technician vẫn nhận khi người khác (ví dụ Owner) đóng phiếu thay |
-| WO-NOTIF-03A | Work Order `REOPENED` | Owner + Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Phiếu được mở lại: WO-...** nếu không phải actor |
+| WO-NOTIF-03A | Work Order `REOPENED` | Owner + Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Công việc cần xử lý lại: WO-...** nếu không phải actor; body có actor + khách hàng + lý do |
 | WO-NOTIF-03B | Work Order `CANCELLED` | Owner (trừ actor) nhận ngoại lệ; assigned Technician nhận thông báo dừng công việc nếu không phải actor |
 | NOTIF-SPAM-01 | Customer/Asset/Service Request/Channel, Technician profile, attachment, tạo/import catalog hoặc nhập kho thay đổi bình thường | Không role nào nhận bell notification cho CRUD routine; actor thấy success/error tại màn hình và thay đổi vẫn có Audit/workspace để truy vết |
 | NOTIF-OWNER-02 | Technician consume làm stock từ trên ngưỡng xuống chạm/thấp hơn `reorderLevel`, sau đó consume tiếp khi stock vẫn thấp | Owner/Warehouse nhận cảnh báo ở lần **cross threshold**; lần consume tiếp theo không tạo low-stock notification lặp lại |
 | WO-NOTIF-04 | Mở notification cũ có title dạng `Cập nhật WO-...: ON_THE_WAY → CANCELLED` | UI hiển thị title + mô tả tiếng Việt thân thiện, không lộ enum nội bộ |
-| WO-NOTIF-05 | Mở notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI hiển thị **Bạn được phân công: WO-...** và hướng dẫn mở **Lịch của tôi**; không dùng summary/test text làm nội dung chính |
-| NOTIF-LEGACY-01 | Mở notification cũ có mã kênh dạng `KENH_E2E_...` | UI dùng tên kênh đọc được hoặc câu tổng quát; không đưa mã test/kỹ thuật lên title chính |
+| WO-NOTIF-05 | Mở actionable notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI compatibility hiển thị **Bạn có công việc mới: WO-...** và hướng dẫn mở **Lịch của tôi**; không lộ raw summary/test text |
+| NOTIF-COPY-01 | Tạo SR thực tế rồi chuyển thành WO và phân công Technician | Dispatcher/Technician notification có `WO-...`, summary, tên khách, actor phù hợp và next action; đọc riêng một dòng vẫn hiểu đang nói tới ai/việc gì |
+| NOTIF-REASON-01 | Reopen hoặc cancel Work Order với lý do nghiệp vụ | Notification của recipient liên quan có actor + khách hàng + **Lý do**; không hiển thị enum/raw audit transition |
+| NOTIF-LEGACY-01 | Khởi động backend trên database cũ có notification Customer/Asset/SR/Channel/Attachment/import/generic `Cập nhật WO...` | Flyway V7 loại các bell row obsolete; badge/unread count giảm tương ứng; Audit/Timeline vẫn còn nguồn truy vết |
 | NOTIF-01 | Mark Read/Unread một notification khi API thành công | Dòng và badge/tab Chưa đọc cập nhật ngay sau invalidate |
 | NOTIF-02 | Làm API Mark Read/Unread lỗi | Hiện thông báo lỗi; nút không bị treo; trạng thái hiển thị không giả vờ đã đổi |
 | AI-01 | Mỗi role hỏi “Trong vai trò này tôi được làm những gì?” | AI trả overview đúng role lấy từ backend/JWT; OWNER thấy phạm vi quản trị rộng, các role khác chỉ thấy chức năng được giao |
