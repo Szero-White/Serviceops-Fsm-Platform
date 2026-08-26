@@ -139,7 +139,7 @@ Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 
 - `POST /spare-parts`
 - `PATCH /spare-parts/{id}/active`
-- `PATCH /spare-parts/{id}/reorder-level` — cập nhật `reorderLevel` (UI: **Ngưỡng tồn tối thiểu**). Không thay đổi stock và không tạo inventory transaction; thay đổi được audit. Nếu ngưỡng mới làm tồn hiện tại chuyển từ bình thường sang tồn thấp, backend phát low-stock notification sau commit cho OWNER/WAREHOUSE_STAFF khác người thao tác.
+- `PATCH /spare-parts/{id}/reorder-level` — cập nhật `reorderLevel` (UI: **Ngưỡng tồn tối thiểu**). Không thay đổi stock và không tạo inventory transaction; thay đổi được audit. Nếu ngưỡng mới làm tồn hiện tại chuyển từ bình thường sang tồn thấp, backend phát low-stock notification sau commit cho WAREHOUSE_STAFF khác người thao tác; OWNER không nhận cảnh báo tồn vận hành.
 - `DELETE /spare-parts/{id}`
 - `GET /spare-parts/import-template`
 - `POST /spare-parts/import?commit={bool}`
@@ -180,7 +180,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Notifications
 
-Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận low-stock; Owner chỉ nhận attention events như `REOPENED`/`CANCELLED`, low-stock threshold crossing và stocktake discrepancy. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do CONSUME chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại ở mỗi lần consume khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
+Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do CONSUME chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại ở mỗi lần consume khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
 
 - `GET /notifications`
 - `GET /notifications/unread-count`

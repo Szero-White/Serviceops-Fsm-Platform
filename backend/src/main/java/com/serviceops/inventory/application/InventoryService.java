@@ -406,7 +406,7 @@ public class InventoryService {
             );
             notificationService.notifyRolesIncludingCurrentUser(
                     part.getTenantId(),
-                    List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                    List.of(UserRole.WAREHOUSE_STAFF),
                     copy.title(),
                     copy.message()
             );

@@ -36,7 +36,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -97,7 +96,20 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
                 new TransitionWorkOrder(WorkOrderStatus.CLOSED, "Đã bàn giao và kết thúc công việc", null, null)
         );
         assertThat(closed.status()).isEqualTo(WorkOrderStatus.CLOSED);
-        verifyNoInteractions(notificationService);
+        var ownerSummary = NotificationCopy.workOrderClosedForOwner(
+                new NotificationCopy.WorkOrderContext(
+                        "WO-UAT-ACCEPT-001",
+                        "Kiểm tra máy lạnh",
+                        "Khách hàng UAT"
+                ),
+                "Kỹ thuật viên Phạm Quốc Kỹ thuật"
+        );
+        verify(notificationService).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.OWNER)),
+                eq(ownerSummary.title()),
+                eq(ownerSummary.message())
+        );
     }
 
     @Test
@@ -122,7 +134,7 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
         );
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
+                eq(List.of(UserRole.DISPATCHER)),
                 eq(expectedNotification.title()),
                 eq(expectedNotification.message())
         );

@@ -121,7 +121,7 @@ class InventoryPartConsumptionPolicyTest {
         assertThat(part.getStockQuantity()).isEqualByComparingTo("5");
         verify(notificationService).notifyRolesIncludingCurrentUser(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
+                eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 eq("Tồn kho thấp: PART-CONSUME"),
                 argThat(message ->
                         message.contains("Kỹ thuật viên test")

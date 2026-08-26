@@ -113,6 +113,19 @@ class NotificationCopyTest {
     }
 
     @Test
+    void ownerClosureCopyIsATerminalSummaryRatherThanAnOperationalAlert() {
+        var copy = NotificationCopy.workOrderClosedForOwner(WORK_ORDER, "Kỹ thuật viên Trịnh Quốc Tiến");
+
+        assertThat(copy.title()).isEqualTo("Phiếu đã hoàn tất: WO-2026-001010");
+        assertThat(copy.message())
+                .contains("Kỹ thuật viên Trịnh Quốc Tiến")
+                .contains("Máy rửa chén không cấp nước")
+                .contains("Trần Minh Anh")
+                .contains("hoàn tất toàn bộ quy trình")
+                .contains("Lịch sử phiếu");
+    }
+
+    @Test
     void customerServiceCompletionCopyNamesTechnicianCustomerAndNextAction() {
         var copy = NotificationCopy.workOrderCompletedForCustomerService(WORK_ORDER, "Trịnh Quốc Tiến");
 

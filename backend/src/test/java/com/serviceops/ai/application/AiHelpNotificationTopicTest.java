@@ -30,7 +30,9 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("phiếu mở lại/hủy")
+                .contains("kết quả cuối của Work Order")
+                .contains("đóng/hủy")
+                .contains("kiểm kê có chênh lệch")
                 .contains("tránh spam")
                 .contains("Timeline/Audit");
     }

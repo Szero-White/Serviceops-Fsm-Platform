@@ -65,7 +65,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | INV-05 | Warehouse hoàn 1 part sau khi WO đã CONSUME 3 | Tồn tăng 1; ledger tạo `RETURN`; returnable còn 2; thử hoàn thêm >2 nhận HTTP 409 |
 | INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date | Thấy IMPORT/CONSUME/RETURN/ADJUSTMENT đúng thứ tự, actor và tồn sau giao dịch; không cần quyền đọc operational Work Order |
 | INV-07 | Đóng Work Order sau CONSUME 3 và RETURN 1 rồi xuất invoice | Invoice chỉ tính net 2 đơn vị, không tính phần đã hoàn lại |
-| INV-08 | Warehouse/Owner sửa ngưỡng tồn tối thiểu từ 3 lên 6 khi stock hiện tại = 5 | Stock vẫn = 5; `reorderLevel=6`; không tạo inventory transaction; có audit `UPDATE_REORDER_LEVEL`; vì trạng thái chuyển từ bình thường sang tồn thấp nên OWNER/WAREHOUSE_STAFF khác người thao tác nhận notification sau commit |
+| INV-08 | Warehouse/Owner sửa ngưỡng tồn tối thiểu từ 3 lên 6 khi stock hiện tại = 5 | Stock vẫn = 5; `reorderLevel=6`; không tạo inventory transaction; có audit `UPDATE_REORDER_LEVEL`; vì trạng thái chuyển từ bình thường sang tồn thấp nên WAREHOUSE_STAFF khác người thao tác nhận notification sau commit; OWNER không nhận low-stock vận hành |
 | FILE-01 | Upload JPG/PNG/WEBP/PDF dưới 10 MB | File lưu và tải lại được |
 | FILE-02 | Upload loại file không cho phép | HTTP 400 INVALID_FILE_TYPE |
 | FILE-03 | Asset chưa có SR/WO nhưng còn attachment rồi thử hard-delete Asset | HTTP 409 `ASSET_HAS_ATTACHMENTS`; metadata/file không orphan |
@@ -88,9 +88,11 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-ROLE-04 | Mở bộ lọc trạng thái ở trang Phiếu công việc | Không có `Đã đóng/Đã hủy`; hai trạng thái terminal chỉ tra cứu ở **Lịch sử phiếu** |
 | WO-NOTIF-01 | Technician hoàn thành Work Order | Customer Service nhận **Cần theo dõi khách sau sửa chữa: WO-...**; body có tên Technician + summary + khách hàng + bước follow-up; Owner không nhận completion bình thường |
 | WO-NOTIF-02 | Work Order sang `WAITING_FOR_PARTS` | Dispatcher nhận **Phiếu đang chờ phụ tùng: WO-...** và hướng dẫn phối hợp với kho |
-| WO-NOTIF-03 | Work Order `CLOSED` | Owner không nhận chuông cho closure bình thường; assigned Technician vẫn nhận khi người khác (ví dụ Owner) đóng phiếu thay |
-| WO-NOTIF-03A | Work Order `REOPENED` bởi role khác CSKH | Owner + Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Công việc cần xử lý lại: WO-...** nếu không phải actor; Customer Service nhận **Phiếu cần theo dõi lại: WO-...**; body có actor + khách hàng + lý do |
-| WO-NOTIF-03B | Work Order `CANCELLED` bởi Owner/Dispatcher/Technician | Owner (trừ actor) nhận ngoại lệ; assigned Technician nhận thông báo dừng công việc nếu không phải actor; Customer Service nhận **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** |
+| WO-NOTIF-03 | Work Order `CLOSED` | Owner (trừ actor) nhận đúng 1 terminal summary **Phiếu đã hoàn tất: WO-...**; assigned Technician vẫn nhận khi người khác đóng phiếu thay |
+| WO-NOTIF-03A | Work Order `REOPENED` bởi role khác CSKH | Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Công việc cần xử lý lại: WO-...** nếu không phải actor; Customer Service nhận **Phiếu cần theo dõi lại: WO-...**; OWNER không nhận; body có actor + khách hàng + lý do |
+| WO-NOTIF-03B | Work Order `CANCELLED` bởi Owner/Dispatcher/Technician | Owner (trừ actor) nhận 1 terminal summary; assigned Technician nhận thông báo dừng công việc nếu không phải actor; Customer Service nhận **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** |
+| WO-NOTIF-03C | Work Order `REOPENED` | Dispatcher/assigned Technician/Customer Service nhận theo routing hiện hành; OWNER không nhận operational reopen alert |
+| WO-NOTIF-03D | Work Order `CLOSED` bởi role khác OWNER | OWNER nhận **Phiếu đã hoàn tất: WO-...** đúng 1 terminal summary; không cần nhận `COMPLETED` trước đó |
 | WO-NOTIF-03C | Work Order `REOPENED`/`CANCELLED` do chính Customer Service thao tác | Không broadcast lại cho nhóm Customer Service; các role vận hành liên quan vẫn nhận theo policy |
 | WO-NOTIF-03D | Appointment vừa quá hạn nhưng chưa qua grace period | Dispatcher + assigned Technician nhận overdue alert; Customer Service chưa nhận để tránh spam |
 | WO-NOTIF-03E | Appointment vẫn `SCHEDULED/ASSIGNED` sau `endTime + 15 phút` | Customer Service nhận đúng một **Khách hàng có thể cần được liên hệ: WO-...**; các lần scan sau không tạo duplicate |
@@ -98,7 +100,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-REOPEN-COMPLETION-01 | Hoàn thành WO với kết quả A → Mở lại → vào xử lý và mở form Hoàn thành lần nữa | Form tự điền Chẩn đoán + Giải pháp gần nhất; Ghi chú bàn giao không copy sang lần mới; Technician có thể giữ nguyên hoặc sửa trước khi hoàn thành |
 | WO-REOPEN-COMPLETION-02 | Sau reopen, Technician hoàn thành lần 2 với kết quả B | Tổng quan hiển thị B; Tiến trình vẫn giữ entry COMPLETED lần 1 với A và tạo entry COMPLETED lần 2 với B; mỗi entry giữ Chẩn đoán, Giải pháp, Ghi chú bàn giao tương ứng và actor riêng |
 | NOTIF-SPAM-01 | Customer/Asset/Service Request/Channel, Technician profile, attachment, tạo/import catalog hoặc nhập kho thay đổi bình thường | Không role nào nhận bell notification cho CRUD routine; actor thấy success/error tại màn hình và thay đổi vẫn có Audit/workspace để truy vết |
-| NOTIF-OWNER-02 | Technician consume làm stock từ trên ngưỡng xuống chạm/thấp hơn `reorderLevel`, sau đó consume tiếp khi stock vẫn thấp | Owner/Warehouse nhận cảnh báo ở lần **cross threshold**; lần consume tiếp theo không tạo low-stock notification lặp lại |
+| NOTIF-OWNER-02 | Technician consume làm stock từ trên ngưỡng xuống chạm/thấp hơn `reorderLevel`, sau đó consume tiếp khi stock vẫn thấp | Warehouse nhận cảnh báo ở lần **cross threshold**; OWNER không nhận; lần consume tiếp theo không tạo low-stock notification lặp lại |
 | WO-NOTIF-04 | Mở notification cũ có title dạng `Cập nhật WO-...: ON_THE_WAY → CANCELLED` | UI hiển thị title + mô tả tiếng Việt thân thiện, không lộ enum nội bộ |
 | WO-NOTIF-05 | Mở actionable notification cũ `Công việc mới: WO-...` có message là summary/test text khó hiểu | UI compatibility hiển thị **Bạn có công việc mới: WO-...** và hướng dẫn mở **Lịch của tôi**; không lộ raw summary/test text |
 | NOTIF-COPY-01 | Tạo SR thực tế rồi chuyển thành WO và phân công Technician | Dispatcher/Technician notification có `WO-...`, summary, tên khách, actor phù hợp và next action; đọc riêng một dòng vẫn hiểu đang nói tới ai/việc gì |

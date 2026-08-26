@@ -43,7 +43,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 
 1. Đăng nhập `warehouse`.
 2. Mở **Lịch sử biến động** để xem giao dịch `CONSUME` vừa phát sinh từ Work Order.
-3. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Đây là mốc cảnh báo tồn thấp, không phải số lượng đặt mua; thay đổi được audit và nếu ngưỡng mới làm tồn hiện tại mới rơi vào trạng thái tồn thấp thì hệ thống phát notification sau commit.
+3. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Đây là mốc cảnh báo tồn thấp, không phải số lượng đặt mua; thay đổi được audit và nếu ngưỡng mới làm tồn hiện tại mới rơi vào trạng thái tồn thấp thì hệ thống phát notification sau commit cho Warehouse.
 4. Nếu kỹ thuật viên trả lại phần chưa dùng, bấm **Hoàn trả**, nhập số lượng và lý do; backend chặn tổng RETURN vượt tổng CONSUME của cùng part/Work Order. Giao dịch RETURN được theo dõi ở **Lịch sử biến động** của kho và vẫn được trừ khi đối soát hóa đơn; nó không xuất hiện như field progress trong **Tiến trình** Work Order.
 5. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tự tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Sau khi giao dịch thành công, Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn chạm hoặc thấp hơn ngưỡng tồn tối thiểu.
 6. Quay lại **Lịch sử biến động** để kiểm tra actor, thời gian, số lượng, tồn sau giao dịch và Work Order liên quan.

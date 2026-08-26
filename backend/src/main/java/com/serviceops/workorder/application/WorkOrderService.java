@@ -507,7 +507,7 @@ public class WorkOrderService {
             case REOPENED -> {
                 notifyRoles(
                         tenantId,
-                        List.of(UserRole.OWNER, UserRole.DISPATCHER),
+                        List.of(UserRole.DISPATCHER),
                         NotificationCopy.workOrderReopenedAttention(context, actorLabel, note)
                 );
                 if (!CurrentUser.hasRole("CUSTOMER_SERVICE")) {
@@ -535,10 +535,17 @@ public class WorkOrderService {
                         copy.message()
                 );
             }
-            case CLOSED -> notifyAssignedTechnician(
-                    workOrder,
-                    NotificationCopy.workOrderClosedForTechnician(context, actorLabel)
-            );
+            case CLOSED -> {
+                notifyRoles(
+                        tenantId,
+                        List.of(UserRole.OWNER),
+                        NotificationCopy.workOrderClosedForOwner(context, actorLabel)
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        NotificationCopy.workOrderClosedForTechnician(context, actorLabel)
+                );
+            }
             case CANCELLED -> {
                 notifyRoles(
                         tenantId,

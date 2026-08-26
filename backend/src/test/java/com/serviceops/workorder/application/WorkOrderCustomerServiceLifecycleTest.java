@@ -118,7 +118,7 @@ class WorkOrderCustomerServiceLifecycleTest {
         );
         verify(notificationService).notifyRoles(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
+                eq(List.of(UserRole.DISPATCHER)),
                 eq(expectedNotification.title()),
                 eq(expectedNotification.message())
         );

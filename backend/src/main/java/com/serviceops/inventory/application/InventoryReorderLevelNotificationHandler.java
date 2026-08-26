@@ -34,7 +34,7 @@ public class InventoryReorderLevelNotificationHandler {
             );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),
-                    List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                    List.of(UserRole.WAREHOUSE_STAFF),
                     event.actorUserId(),
                     copy.title(),
                     copy.message()

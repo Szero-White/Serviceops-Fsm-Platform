@@ -215,6 +215,14 @@ public final class NotificationCopy {
         );
     }
 
+    public static Copy workOrderClosedForOwner(WorkOrderContext context, String actorLabel) {
+        return copy(
+                "Phiếu đã hoàn tất: " + context.code(),
+                actor(actorLabel) + " đã đóng " + workOrderContext(context)
+                        + " sau khi khách xác nhận. Phiếu đã hoàn tất toàn bộ quy trình; mở Lịch sử phiếu nếu cần đối soát."
+        );
+    }
+
     public static Copy workOrderClosedForTechnician(WorkOrderContext context, String actorLabel) {
         return copy(
                 "Phiếu đã đóng: " + context.code(),

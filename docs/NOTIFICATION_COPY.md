@@ -47,18 +47,19 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Appointment đã kết thúc, WO vẫn chưa bắt đầu | Assigned Technician | **Công việc đã quá lịch: WO-...** | Summary + khách hàng + lịch đã lỡ; mở Lịch của tôi và liên hệ điều phối nếu cần |
 | Appointment quá hạn quá grace period, WO vẫn chưa bắt đầu | Customer Service | **Khách hàng có thể cần được liên hệ: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; kiểm tra phiếu và chủ động liên hệ khách nếu cần |
 | Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
-| Work Order → REOPENED | Owner + Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
+| Work Order → REOPENED | Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
 | Work Order → REOPENED bởi role khác | Customer Service | **Phiếu cần theo dõi lại: WO-...** | Actor + summary + khách hàng + lý do; theo dõi khách và phối hợp xử lý |
 | Technician → COMPLETED | Customer Service | **Cần theo dõi khách sau sửa chữa: WO-...** | Technician + summary + khách hàng; theo dõi phản hồi, reopen nếu sự cố còn |
 
 Mỗi lần `COMPLETED` là một repair cycle riêng. Notification cho Customer Service được dedupe theo chính status-history ID của lần hoàn thành đó: retry cùng một completion không tạo bản sao, nhưng `REOPENED → ... → COMPLETED` lần sau vẫn tạo một notification mới hợp lệ, kể cả khi title/body giống lần trước.
+| Work Order → CLOSED | Owner, trừ actor | **Phiếu đã hoàn tất: WO-...** | Actor + summary + khách hàng; kết quả cuối để giám sát/đối soát |
 | Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |
 | Work Order → CANCELLED | Owner, trừ actor | **Phiếu đã hủy: WO-...** | Actor + summary + khách hàng + lý do; tra Lịch sử phiếu khi cần |
 | Work Order → CANCELLED | Assigned Technician, nếu không phải actor | **Công việc đã hủy: WO-...** | Actor + summary + khách hàng + lý do; dừng job và xem Lịch của tôi |
 | Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; kiểm tra và liên hệ khách nếu cần |
-| Consume làm stock cross threshold | Owner + Warehouse | **Tồn kho thấp: SKU** | Technician + WO + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
-| Đổi reorder level làm stock thành low | Owner + Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
+| Consume làm stock cross threshold | Warehouse | **Tồn kho thấp: SKU** | Technician + WO + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
+| Đổi reorder level làm stock thành low | Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
 | Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** | Người kiểm kê + system/actual/difference + lý do; mở Lịch sử biến động |
 | Stocktake kết thúc ở mức low | Warehouse | **Tồn kho thấp sau kiểm kê: SKU** | Người kiểm kê + tên part + actual + threshold; mở Kho phụ tùng |
 
@@ -74,7 +75,7 @@ Các thao tác dưới đây có success/error feedback tại màn hình và có
 - Upload attachment.
 - Tạo/import catalog phụ tùng hoặc nhập kho bình thường.
 - Technician `ON_THE_WAY`, `IN_PROGRESS`, từng lần CONSUME bình thường, `CUSTOMER_ACCEPTED`.
-- Completion/closure bình thường không broadcast cho Owner.
+- Completion không broadcast cho Owner; Owner chỉ nhận terminal summary khi phiếu `CLOSED` hoặc `CANCELLED`, cùng ngoại lệ quản trị stocktake discrepancy.
 
 Dùng **Timeline** cho câu chuyện của một Work Order, **Inventory Movements** cho ledger kho và **Audit** cho truy vết system-wide. Bell chỉ chứa việc người nhận thực sự cần biết hoặc cần hành động.
 
