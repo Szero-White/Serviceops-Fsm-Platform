@@ -42,7 +42,7 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Phân công lần đầu | Technician được giao | **Bạn có công việc mới: WO-...** | Dispatcher/Owner + summary + khách hàng; mở Lịch của tôi |
 | Đổi Technician | Technician cũ | **Bạn không còn phụ trách: WO-...** | Actor + người nhận mới + khách hàng; dừng theo dõi job cũ |
 | Đổi Technician | Technician mới | **Bạn có công việc mới: WO-...** | Actor + summary + khách hàng; mở Lịch của tôi |
-| Chỉ đổi thời gian | Technician hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Actor + summary + khách hàng; xem lịch mới |
+| Chỉ đổi thời gian | Technician hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Actor + summary + khách hàng + lịch cũ → lịch mới + lý do; xem Lịch của tôi |
 | Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
 | Work Order → REOPENED | Owner + Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |

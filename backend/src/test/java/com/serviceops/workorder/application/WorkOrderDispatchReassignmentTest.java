@@ -273,7 +273,12 @@ class WorkOrderDispatchReassignmentTest {
                         "Máy rửa chén không cấp nước",
                         "Công ty TNHH An Phát"
                 ),
-                "Điều phối viên Lê Thu Điều phối"
+                "Điều phối viên Lê Thu Điều phối",
+                Instant.parse("2026-08-25T02:00:00Z"),
+                Instant.parse("2026-08-25T04:00:00Z"),
+                newStart,
+                newEnd,
+                "Khách hàng đề nghị dời khung giờ tiếp nhận"
         );
         verify(notificationService).create(
                 eq(TENANT_ID),

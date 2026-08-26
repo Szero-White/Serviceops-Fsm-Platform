@@ -285,7 +285,41 @@
   background: #e8f2f7;
 }
 
+.schedule-appointment-card.is-overdue {
+  border-color: var(--ant-color-warning-border, #ffd591);
+  background: var(--ant-color-warning-bg, #fffbe6);
+}
+
+.schedule-appointment-card.is-overdue:hover {
+  border-color: var(--ant-color-warning, #faad14);
+  background: var(--ant-color-warning-bg, #fffbe6);
+}
+
+.schedule-appointment-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--ant-color-warning-border, #ffd591);
+  border-radius: 999px;
+  background: var(--ant-color-warning-bg, #fffbe6);
+  color: var(--ant-color-warning-text, #ad6800);
+  font-size: var(--app-type-meta);
+  font-weight: 600;
+  line-height: 18px;
+}
+
 .schedule-appointment-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   color: var(--app-primary-active);
   font-size: var(--app-type-meta);
   font-weight: 600;

@@ -1,6 +1,9 @@
 package com.serviceops.notification.application;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Central user-facing notification copy.
@@ -17,6 +20,14 @@ public final class NotificationCopy {
     private static final int MESSAGE_LIMIT = 500;
     private static final int CONTEXT_LIMIT = 96;
     private static final int REASON_LIMIT = 160;
+    private static final int RESCHEDULE_CONTEXT_LIMIT = 64;
+    private static final int RESCHEDULE_REASON_LIMIT = 120;
+    private static final int ACTOR_LIMIT = 72;
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final DateTimeFormatter SCHEDULE_DATE_TIME =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(BUSINESS_ZONE);
+    private static final DateTimeFormatter SCHEDULE_TIME =
+            DateTimeFormatter.ofPattern("HH:mm").withZone(BUSINESS_ZONE);
 
     private NotificationCopy() {
     }
@@ -77,12 +88,24 @@ public final class NotificationCopy {
         );
     }
 
-    public static Copy technicianScheduleChanged(WorkOrderContext context, String actorLabel) {
-        return copy(
-                "Lịch của bạn đã thay đổi: " + context.code(),
-                actor(actorLabel) + " đã đổi thời gian thực hiện của " + workOrderContext(context)
-                        + ". Mở Lịch của tôi để xem lịch mới."
-        );
+    public static Copy technicianScheduleChanged(
+            WorkOrderContext context,
+            String actorLabel,
+            Instant previousStart,
+            Instant previousEnd,
+            Instant newStart,
+            Instant newEnd,
+            String reason
+    ) {
+        String message = limit(actor(actorLabel), ACTOR_LIMIT)
+                + " đã đổi lịch " + context.code()
+                + " - \"" + limit(context.summary(), RESCHEDULE_CONTEXT_LIMIT) + "\" của khách "
+                + limit(context.customerName(), RESCHEDULE_CONTEXT_LIMIT) + ". "
+                + "Lịch cũ: " + scheduleRange(previousStart, previousEnd) + ". "
+                + "Lịch mới: " + scheduleRange(newStart, newEnd) + "."
+                + optionalReason(reason, "Lý do", RESCHEDULE_REASON_LIMIT)
+                + " Mở Lịch của tôi để xem lịch mới.";
+        return copy("Lịch của bạn đã thay đổi: " + context.code(), message);
     }
 
     public static Copy workOrderWaitingForParts(
@@ -265,10 +288,25 @@ public final class NotificationCopy {
     }
 
     private static String optionalReason(String reason, String label) {
+        return optionalReason(reason, label, REASON_LIMIT);
+    }
+
+    private static String optionalReason(String reason, String label, int maxLength) {
         if (reason == null || reason.isBlank()) {
             return "";
         }
-        return " " + label + ": " + limit(normalize(reason), REASON_LIMIT) + ".";
+        return " " + label + ": " + limit(normalize(reason), maxLength) + ".";
+    }
+
+    private static String scheduleRange(Instant start, Instant end) {
+        if (start == null || end == null) {
+            return "chưa xác định";
+        }
+        String startLabel = SCHEDULE_DATE_TIME.format(start);
+        String endLabel = start.atZone(BUSINESS_ZONE).toLocalDate().equals(end.atZone(BUSINESS_ZONE).toLocalDate())
+                ? SCHEDULE_TIME.format(end)
+                : SCHEDULE_DATE_TIME.format(end);
+        return startLabel + "–" + endLabel;
     }
 
     private static String fallback(String value, String fallback) {

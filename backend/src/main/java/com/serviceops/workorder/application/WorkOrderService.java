@@ -275,7 +275,15 @@ public class WorkOrderService {
                 createNotification(
                         tenantId,
                         technician.getUser(),
-                        NotificationCopy.technicianScheduleChanged(notificationContext(workOrder), dispatchActor)
+                        NotificationCopy.technicianScheduleChanged(
+                                notificationContext(workOrder),
+                                dispatchActor,
+                                previousStart,
+                                previousEnd,
+                                request.startTime(),
+                                request.endTime(),
+                                reason
+                        )
                 );
             }
         } else {

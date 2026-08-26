@@ -3,6 +3,7 @@ package com.serviceops.notification.application;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,7 +32,15 @@ class NotificationCopyTest {
     @Test
     void technicianAssignmentAndScheduleCopyIdentifyActorAndBusinessContext() {
         var assigned = NotificationCopy.technicianAssigned(WORK_ORDER, "Điều phối viên Lê Thu");
-        var rescheduled = NotificationCopy.technicianScheduleChanged(WORK_ORDER, "Điều phối viên Lê Thu");
+        var rescheduled = NotificationCopy.technicianScheduleChanged(
+                WORK_ORDER,
+                "Điều phối viên Lê Thu",
+                Instant.parse("2026-08-25T02:00:00Z"),
+                Instant.parse("2026-08-25T04:00:00Z"),
+                Instant.parse("2026-08-28T05:07:00Z"),
+                Instant.parse("2026-08-28T06:39:00Z"),
+                "Khách hàng yêu cầu dời lịch"
+        );
 
         assertThat(assigned.title()).isEqualTo("Bạn có công việc mới: WO-2026-001010");
         assertThat(assigned.message())
@@ -43,6 +52,11 @@ class NotificationCopyTest {
         assertThat(rescheduled.title()).isEqualTo("Lịch của bạn đã thay đổi: WO-2026-001010");
         assertThat(rescheduled.message())
                 .contains("Điều phối viên Lê Thu")
+                .contains("Máy rửa chén không cấp nước")
+                .contains("Trần Minh Anh")
+                .contains("Lịch cũ: 25/08/2026 09:00–11:00")
+                .contains("Lịch mới: 28/08/2026 12:07–13:39")
+                .contains("Lý do: Khách hàng yêu cầu dời lịch")
                 .contains("Lịch của tôi");
     }
 
