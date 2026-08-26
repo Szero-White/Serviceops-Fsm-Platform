@@ -53,12 +53,6 @@ public final class InventoryDtos {
     ) {
     }
 
-    public record ReturnPartRequest(
-            @NotNull @DecimalMin(value = "0.001") BigDecimal quantity,
-            @NotBlank @Size(max = 300) String note
-    ) {
-    }
-
     public record SparePartResponse(
             UUID id, String sku, String name, String unit, BigDecimal stockQuantity,
             BigDecimal reorderLevel, BigDecimal unitPrice, boolean lowStock, boolean active, Instant updatedAt
@@ -91,17 +85,6 @@ public final class InventoryDtos {
             String actorDisplayName,
             String actorRole,
             Instant createdAt
-    ) {
-    }
-
-    public record ReturnablePartResponse(
-            UUID workOrderId,
-            String workOrderCode,
-            UUID sparePartId,
-            String sparePartSku,
-            String sparePartName,
-            String unit,
-            BigDecimal returnableQuantity
     ) {
     }
 

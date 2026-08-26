@@ -270,6 +270,46 @@ public final class NotificationCopy {
         );
     }
 
+    public static Copy partRequestCreated(
+            String workOrderCode,
+            String workOrderSummary,
+            String sku,
+            String partName,
+            BigDecimal quantity,
+            String unit,
+            String technicianName
+    ) {
+        return copy(
+                "Có yêu cầu phụ tùng mới: " + fallback(workOrderCode, "Phiếu công việc"),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " cần " + quantity(quantity) + " " + fallback(unit, "") + " phụ tùng \""
+                        + fallback(partName, sku) + "\" (" + fallback(sku, "Chưa có SKU") + ") cho phiếu \""
+                        + limit(fallback(workOrderSummary, "Nội dung chưa có tiêu đề"), CONTEXT_LIMIT) + "\" ("
+                        + fallback(workOrderCode, "Phiếu công việc")
+                        + "). Mở Kho phụ tùng để kiểm tra và xác nhận cấp khi đã giao hàng thực tế."
+        );
+    }
+
+    public static Copy lowStockAfterIssue(
+            String sku,
+            String partName,
+            BigDecimal stockQuantity,
+            String unit,
+            BigDecimal reorderLevel,
+            String workOrderCode,
+            String warehouseActorName
+    ) {
+        return copy(
+                "Tồn kho thấp: " + sku,
+                "Sau khi nhân viên kho " + fallback(warehouseActorName, "phụ trách")
+                        + " xác nhận cấp phụ tùng cho " + fallback(workOrderCode, "phiếu công việc")
+                        + ", phụ tùng \"" + fallback(partName, sku) + "\" (" + sku + ") còn "
+                        + quantity(stockQuantity) + " " + unit + "; ngưỡng tồn tối thiểu là "
+                        + quantity(reorderLevel) + " " + unit
+                        + ". Mở Kho phụ tùng để kiểm tra và bổ sung nếu cần."
+        );
+    }
+
     public static Copy lowStock(
             String sku,
             String partName,

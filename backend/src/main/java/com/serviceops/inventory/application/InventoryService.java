@@ -13,8 +13,6 @@ import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.InventoryTransactionResponse;
-import com.serviceops.inventory.web.InventoryDtos.ReturnablePartResponse;
-import com.serviceops.inventory.web.InventoryDtos.ReturnPartRequest;
 import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportResult;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportRowResult;
@@ -222,46 +220,6 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public ReturnablePartResponse getReturnablePart(UUID workOrderId, UUID sparePartId) {
-        UUID tenantId = CurrentUser.tenantId();
-        WorkOrder workOrder = workOrderRepository.findDetailed(workOrderId, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
-        if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
-            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể hoàn trả phụ tùng cho phiếu công việc đã đóng hoặc hủy");
-        }
-        SparePart part = sparePartRepository.findByIdAndTenantId(sparePartId, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("SPARE_PART_NOT_FOUND", "Không tìm thấy phụ tùng"));
-        return toReturnableResponse(workOrder, part, netConsumedQuantity(tenantId, workOrderId, sparePartId));
-    }
-
-    @Transactional
-    public ReturnablePartResponse returnPart(UUID workOrderId, UUID sparePartId, ReturnPartRequest request) {
-        UUID tenantId = CurrentUser.tenantId();
-        WorkOrder workOrder = workOrderRepository.findForUpdate(workOrderId, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
-        if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
-            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể hoàn trả phụ tùng cho phiếu công việc đã đóng hoặc hủy");
-        }
-
-        SparePart part = requireLocked(sparePartId);
-        BigDecimal returnableBefore = netConsumedQuantity(tenantId, workOrderId, sparePartId);
-        if (returnableBefore.signum() <= 0) {
-            throw BusinessException.conflict("NO_PARTS_TO_RETURN", "Phiếu công việc không còn phụ tùng này để hoàn trả");
-        }
-        if (request.quantity().compareTo(returnableBefore) > 0) {
-            throw BusinessException.conflict("RETURN_EXCEEDS_CONSUMED",
-                    "Số lượng hoàn trả không được vượt quá " + returnableBefore.stripTrailingZeros().toPlainString() + " " + part.getUnit());
-        }
-
-        part.addStock(request.quantity());
-        saveTransaction(part, workOrder, InventoryTransactionType.RETURN, request.quantity(), request.note());
-        auditService.record("RETURN_PART", "WORK_ORDER", workOrder.getId(),
-                "Hoàn trả " + request.quantity() + " " + part.getUnit() + " - " + part.getSku()
-                        + "; lý do: " + request.note().trim());
-        return toReturnableResponse(workOrder, part, returnableBefore.subtract(request.quantity()));
-    }
-
-    @Transactional(readOnly = true)
     public byte[] exportSpareParts(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("sku").ascending());
         List<SparePartResponse> parts = sparePartRepository.search(CurrentUser.tenantId(), null, PageRequestSupport.normalizeSearch(search), pageable)
@@ -379,16 +337,6 @@ public class InventoryService {
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
         notifyLowStockIfCrossed(part, stockBeforeConsumption, workOrder);
         return toResponse(part);
-    }
-
-    private BigDecimal netConsumedQuantity(UUID tenantId, UUID workOrderId, UUID sparePartId) {
-        BigDecimal net = BigDecimal.ZERO;
-        for (InventoryTransaction transaction : transactionRepository.findPartUsageForWorkOrderAndSparePart(tenantId, workOrderId, sparePartId)) {
-            net = transaction.getTransactionType() == InventoryTransactionType.CONSUME
-                    ? net.add(transaction.getQuantity())
-                    : net.subtract(transaction.getQuantity());
-        }
-        return net.max(BigDecimal.ZERO);
     }
 
     private void notifyLowStockIfCrossed(SparePart part, BigDecimal previousStock, WorkOrder workOrder) {
@@ -525,11 +473,6 @@ public class InventoryService {
                 tx.getActorDisplayName() == null || tx.getActorDisplayName().isBlank() ? tx.getCreatedBy() : tx.getActorDisplayName(),
                 tx.getActorRole(),
                 tx.getCreatedAt());
-    }
-
-    private static ReturnablePartResponse toReturnableResponse(WorkOrder workOrder, SparePart part, BigDecimal quantity) {
-        return new ReturnablePartResponse(workOrder.getId(), workOrder.getCode(), part.getId(), part.getSku(),
-                part.getName(), part.getUnit(), quantity);
     }
 
     private record SparePartImportCandidate(

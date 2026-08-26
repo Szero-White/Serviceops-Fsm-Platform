@@ -7,6 +7,7 @@ import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.notification.application.NotificationCopy;
@@ -78,6 +79,7 @@ public class WorkOrderService {
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
+    private final WorkOrderPartRequestService workOrderPartRequestService;
     private final ServiceRequestRepository serviceRequestRepository;
     private final TechnicianRepository technicianRepository;
     private final AppointmentRepository appointmentRepository;
@@ -332,6 +334,7 @@ public class WorkOrderService {
                 blankToNull(request.note())
         );
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
+        workOrderPartRequestService.expirePendingRequests(workOrder);
         notifyStatusChange(workOrder, blankToNull(request.note()), statusHistory);
         return get(id);
     }

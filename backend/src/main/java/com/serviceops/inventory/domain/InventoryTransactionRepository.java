@@ -86,4 +86,36 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
     List<InventoryTransaction> findPartUsageForWorkOrderAndSparePart(@Param("tenantId") UUID tenantId,
                                                                      @Param("workOrderId") UUID workOrderId,
                                                                      @Param("sparePartId") UUID sparePartId);
+
+    @Query("""
+            select tx from InventoryTransaction tx
+            join fetch tx.sparePart
+            where tx.tenantId = :tenantId
+              and tx.workOrder.id = :workOrderId
+              and tx.transactionType in (
+                  com.serviceops.inventory.domain.InventoryTransactionType.ISSUE,
+                  com.serviceops.inventory.domain.InventoryTransactionType.RETURN
+              )
+            order by tx.createdAt asc
+            """)
+    List<InventoryTransaction> findWorkflowPartTransactionsForWorkOrder(@Param("tenantId") UUID tenantId,
+                                                                         @Param("workOrderId") UUID workOrderId);
+
+    @Query("""
+            select tx from InventoryTransaction tx
+            join fetch tx.sparePart
+            where tx.tenantId = :tenantId
+              and tx.workOrder.id = :workOrderId
+              and tx.sparePart.id = :sparePartId
+              and tx.transactionType in (
+                  com.serviceops.inventory.domain.InventoryTransactionType.ISSUE,
+                  com.serviceops.inventory.domain.InventoryTransactionType.RETURN
+              )
+            order by tx.createdAt asc
+            """)
+    List<InventoryTransaction> findWorkflowPartTransactionsForWorkOrderAndSparePart(
+            @Param("tenantId") UUID tenantId,
+            @Param("workOrderId") UUID workOrderId,
+            @Param("sparePartId") UUID sparePartId
+    );
 }

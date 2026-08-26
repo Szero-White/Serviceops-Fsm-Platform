@@ -4,6 +4,7 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.inventory.domain.InventoryTransaction;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
@@ -44,6 +45,7 @@ class WorkOrderActivityDetailTest {
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
+    @Mock private WorkOrderPartRequestService workOrderPartRequestService;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private TechnicianRepository technicianRepository;
     @Mock private AppointmentRepository appointmentRepository;
@@ -59,6 +61,7 @@ class WorkOrderActivityDetailTest {
                 repository,
                 historyRepository,
                 inventoryTransactionRepository,
+                workOrderPartRequestService,
                 serviceRequestRepository,
                 technicianRepository,
                 appointmentRepository,

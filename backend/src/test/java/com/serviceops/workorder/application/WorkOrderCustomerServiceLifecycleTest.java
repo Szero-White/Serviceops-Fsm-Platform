@@ -5,6 +5,7 @@ import com.serviceops.common.domain.Priority;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
@@ -50,6 +51,7 @@ class WorkOrderCustomerServiceLifecycleTest {
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
+    @Mock private WorkOrderPartRequestService workOrderPartRequestService;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private TechnicianRepository technicianRepository;
     @Mock private AppointmentRepository appointmentRepository;
@@ -65,6 +67,7 @@ class WorkOrderCustomerServiceLifecycleTest {
                 repository,
                 historyRepository,
                 inventoryTransactionRepository,
+                workOrderPartRequestService,
                 serviceRequestRepository,
                 technicianRepository,
                 appointmentRepository,
