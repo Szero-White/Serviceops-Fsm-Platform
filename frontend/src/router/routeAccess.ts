@@ -1,9 +1,9 @@
 import type { UserRole } from '../types'
 
-const ALL_ROLES: UserRole[] = ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN', 'WAREHOUSE_STAFF']
+const OPERATIONAL_DASHBOARD_ROLES: UserRole[] = ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN']
 
 export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
-  '/': ALL_ROLES,
+  '/': OPERATIONAL_DASHBOARD_ROLES,
   '/users': ['OWNER'],
   '/customers': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'],
   '/assets': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE'],
@@ -15,9 +15,15 @@ export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
   '/work-order-history': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'],
   '/technicians': ['OWNER', 'DISPATCHER'],
   '/inventory': ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'],
+  '/inventory-stocktake': ['OWNER', 'WAREHOUSE_STAFF'],
+  '/inventory-movements': ['OWNER', 'WAREHOUSE_STAFF'],
   '/audit': ['OWNER', 'DISPATCHER'],
 }
 
 export function canAccessRoute(role: UserRole | undefined, path: string) {
   return Boolean(role && ROUTE_ACCESS[path]?.includes(role))
+}
+
+export function defaultRouteForRole(role: UserRole): string {
+  return role === 'WAREHOUSE_STAFF' ? '/inventory' : '/'
 }

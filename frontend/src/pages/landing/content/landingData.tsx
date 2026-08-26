@@ -47,7 +47,7 @@ export const NAV_LINKS: NavLink[] = [
 
 export const STATS: Stat[] = [
   { value: '5', label: 'Vai trò nghiệp vụ có phân quyền', icon: <TeamOutlined /> },
-  { value: '59', label: 'Bài kiểm thử tự động ở acceptance gate', icon: <SafetyCertificateOutlined /> },
+  { value: 'CI', label: 'Backend, frontend và E2E quality gates', icon: <SafetyCertificateOutlined /> },
   { value: '3', label: 'Dịch vụ trong production Docker stack', icon: <RocketOutlined /> },
   { value: '1', label: 'Luồng dịch vụ end-to-end được truy vết', icon: <AuditOutlined /> },
 ]
@@ -75,7 +75,7 @@ export const FEATURES: Feature[] = [
     icon: <DatabaseOutlined />,
     colorKey: 'neutral',
     title: 'Kho phụ tùng có truy vết',
-    desc: 'Quản lý tồn hiện tại, ngưỡng đặt hàng và ledger nhập/xuất gắn trực tiếp với nghiệp vụ phiếu công việc.',
+    desc: 'Quản lý tồn hiện tại, ngưỡng tồn tối thiểu, kiểm kê và ledger nhập/sử dụng/hoàn trả/điều chỉnh gắn với nghiệp vụ thực tế.',
   },
   {
     icon: <BarChartOutlined />,
@@ -99,9 +99,9 @@ export const FEATURE_COLORS: Record<FeatureColor, { bg: string; fg: string }> = 
 
 export const HOW_IT_WORKS: Step[] = [
   { step: '01', title: 'Tiếp nhận yêu cầu', desc: 'Khách hàng gửi yêu cầu, hệ thống tạo ticket và phân loại ưu tiên.' },
-  { step: '02', title: 'Điều phối kỹ thuật viên', desc: 'Điều phối viên chỉ định kỹ thuật viên phù hợp và tạo phiếu công việc.' },
+  { step: '02', title: 'Điều phối kỹ thuật viên', desc: 'Phiếu công việc được bàn giao từ Service Request; điều phối viên chọn kỹ thuật viên và xếp lịch phù hợp.' },
   { step: '03', title: 'Thực hiện và cập nhật', desc: 'Kỹ thuật viên cập nhật tiến độ, phụ tùng và bằng chứng tại hiện trường.' },
-  { step: '04', title: 'Hoàn thành và báo cáo', desc: 'Đóng việc, cập nhật kho, ghi audit log và tổng hợp KPI lên dashboard.' },
+  { step: '04', title: 'Hoàn thành và truy vết', desc: 'Hoàn tất công việc, giữ lịch sử trạng thái, inventory ledger, invoice và audit trail để đối soát.' },
 ]
 
 export const OPERATIONAL_SCENARIOS: OperationalScenario[] = [
@@ -121,7 +121,7 @@ export const OPERATIONAL_SCENARIOS: OperationalScenario[] = [
     title: 'Kiểm soát tồn kho và truy vết',
     audience: 'Warehouse / Owner',
     icon: <DatabaseOutlined />,
-    text: 'Theo dõi tồn hiện tại, ledger giao dịch, ngưỡng đặt hàng, audit log và các thay đổi quan trọng theo tenant.',
+    text: 'Theo dõi tồn hiện tại, kiểm kê chênh lệch, hoàn trả theo Work Order và ledger biến động kho có actor, thời gian và tồn sau giao dịch.',
   },
 ]
 

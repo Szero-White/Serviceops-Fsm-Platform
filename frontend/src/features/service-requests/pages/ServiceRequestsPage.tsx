@@ -8,6 +8,7 @@ import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
 import { serviceChannelsApi } from '../../service-channels/api'
 import { serviceRequestsApi } from '../api'
+import { useAuth } from '../../auth/AuthContext'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
@@ -17,6 +18,7 @@ import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../typ
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const priorityOptions = [
   { value: 'LOW', label: 'Thấp' },
   { value: 'NORMAL', label: 'Bình thường' },
@@ -39,10 +41,13 @@ export function ServiceRequestsPage() {
   const [editing, setEditing] = useState<ServiceRequest>()
   const [lastAiDraft, setLastAiDraft] = useState<ServiceRequestDraftSuggestion>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const watchedCustomerId = Form.useWatch('customerId', form)
   const watchedTitle = Form.useWatch('title', form)
   const watchedDescription = Form.useWatch('description', form)
   const { message, notification } = App.useApp()
+  const { user } = useAuth()
+  const canConvert = user ? ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role) : false
   const queryClient = useQueryClient()
 
   const serviceRequestsQuery = useQuery({
@@ -61,13 +66,34 @@ export function ServiceRequestsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100) })
-  const { data: assets, isFetching: assetsLoading } = useQuery({
+  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true) })
+  const customers = customersQuery.data
+  const assetsQuery = useQuery({
     queryKey: ['assets', 'service-request-customer', watchedCustomerId],
     queryFn: () => assetsApi.list('', 0, 100, watchedCustomerId),
     enabled: Boolean(watchedCustomerId),
   })
-  const { data: channels = [] } = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
+  const assets = assetsQuery.data
+  const assetsLoading = assetsQuery.isFetching
+  const channelsQuery = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
+  const channels = channelsQuery.data ?? []
+
+  const customerOptions = useMemo(() => {
+    const options = (customers?.content ?? []).map((customer) => ({
+      value: customer.id,
+      label: `${customer.code} · ${customer.name}`,
+    }))
+    if (editing && !options.some((option) => option.value === editing.customerId)) {
+      return [
+        {
+          value: editing.customerId,
+          label: `${editing.customerName} · Khách hàng hiện tại`,
+        },
+        ...options,
+      ]
+    }
+    return options
+  }, [customers, editing])
 
   const channelOptions = useMemo(
     () => channels.filter((channel) => channel.active).map((channel) => ({ value: channel.code, label: channel.name })),
@@ -78,6 +104,7 @@ export function ServiceRequestsPage() {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['service-requests'] })
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
 
@@ -274,21 +301,23 @@ export function ServiceRequestsPage() {
 
                   {isOpen && (
                     <>
-                      <Popconfirm
-                        title="Chuyển yêu cầu sang điều phối?"
-                        description="Yêu cầu sẽ được khóa và một phiếu công việc mới sẽ được tạo cho Dispatcher xử lý."
-                        okText="Chuyển sang điều phối"
-                        cancelText="Giữ lại"
-                        okButtonProps={{ loading: convert.isPending }}
-                        onConfirm={() => convert.mutate(record.id)}
-                      >
-                        <Button
-                          aria-label="Chuyển sang điều phối"
-                          title="Chuyển sang điều phối"
-                          type="text"
-                          icon={<SwapOutlined />}
-                        />
-                      </Popconfirm>
+                      {canConvert && (
+                        <Popconfirm
+                          title="Chuyển yêu cầu sang điều phối?"
+                          description="Yêu cầu sẽ được khóa và một phiếu công việc mới sẽ được tạo cho Dispatcher xử lý."
+                          okText="Chuyển sang điều phối"
+                          cancelText="Giữ lại"
+                          okButtonProps={{ loading: convert.isPending }}
+                          onConfirm={() => convert.mutate(record.id)}
+                        >
+                          <Button
+                            aria-label="Chuyển sang điều phối"
+                            title="Chuyển sang điều phối"
+                            type="text"
+                            icon={<SwapOutlined />}
+                          />
+                        </Popconfirm>
+                      )}
                       <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
                         <Tooltip title="Huỷ yêu cầu"><Button aria-label="Huỷ yêu cầu" type="text" danger icon={<CloseCircleOutlined />} /></Tooltip>
                       </Popconfirm>
@@ -315,15 +344,24 @@ export function ServiceRequestsPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật yêu cầu dịch vụ' : 'Tiếp nhận yêu cầu dịch vụ'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={760} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật yêu cầu dịch vụ' : 'Tiếp nhận yêu cầu dịch vụ'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Tiếp nhận yêu cầu'} width={760} destroyOnHidden>
+        {customersQuery.isError ? (
+          <QueryErrorAlert title="Chưa tải được danh sách khách hàng" error={customersQuery.error} onRetry={() => customersQuery.refetch()} />
+        ) : null}
+        {channelsQuery.isError ? (
+          <QueryErrorAlert title="Chưa tải được kênh tiếp nhận" error={channelsQuery.error} onRetry={() => channelsQuery.refetch()} />
+        ) : null}
+        {watchedCustomerId && assetsQuery.isError ? (
+          <QueryErrorAlert title="Chưa tải được thiết bị của khách hàng" error={assetsQuery.error} onRetry={() => assetsQuery.refetch()} />
+        ) : null}
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
               <Select
                 showSearch
                 optionFilterProp="label"
                 placeholder="Chọn khách hàng"
-                options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))}
+                options={customerOptions}
                 onChange={handleCustomerChange}
               />
             </Form.Item>

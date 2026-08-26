@@ -2,12 +2,19 @@ package com.serviceops.inventory.web;
 
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.inventory.application.InventoryService;
+import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
+import com.serviceops.inventory.web.InventoryDtos.InventoryTransactionResponse;
+import com.serviceops.inventory.web.InventoryDtos.ReturnablePartResponse;
+import com.serviceops.inventory.web.InventoryDtos.ReturnPartRequest;
+import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportResult;
 import com.serviceops.inventory.web.InventoryDtos.SparePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartResponse;
 import com.serviceops.inventory.web.InventoryDtos.SparePartStatusRequest;
 import com.serviceops.inventory.web.InventoryDtos.StockAdjustmentRequest;
+import com.serviceops.inventory.web.InventoryDtos.StocktakeRequest;
+import com.serviceops.inventory.web.InventoryDtos.StocktakeResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -29,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.UUID;
 
 @RestController
@@ -50,6 +58,12 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public SparePartResponse create(@Valid @RequestBody SparePartRequest request) {
         return service.create(request);
+    }
+
+    @PatchMapping("/spare-parts/{id}/reorder-level")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public SparePartResponse updateReorderLevel(@PathVariable UUID id, @Valid @RequestBody ReorderLevelRequest request) {
+        return service.updateReorderLevel(id, request);
     }
 
     @PatchMapping("/spare-parts/{id}/active")
@@ -90,8 +104,39 @@ public class InventoryController {
         return service.importStock(id, request);
     }
 
+    @PostMapping("/spare-parts/{id}/stocktake")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public StocktakeResponse stocktake(@PathVariable UUID id, @Valid @RequestBody StocktakeRequest request) {
+        return service.stocktake(id, request);
+    }
+
+    @GetMapping("/inventory-transactions")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public PageResponse<InventoryTransactionResponse> transactions(
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(required = false) InventoryTransactionType type,
+            @RequestParam(required = false) Instant fromTime,
+            @RequestParam(required = false) Instant toTime,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return service.searchTransactions(search, type, fromTime, toTime, page, size);
+    }
+
+    @GetMapping("/work-orders/{workOrderId}/parts/{sparePartId}/returnable")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public ReturnablePartResponse returnable(@PathVariable UUID workOrderId, @PathVariable UUID sparePartId) {
+        return service.getReturnablePart(workOrderId, sparePartId);
+    }
+
+    @PostMapping("/work-orders/{workOrderId}/parts/{sparePartId}/return")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public ReturnablePartResponse returnPart(@PathVariable UUID workOrderId, @PathVariable UUID sparePartId,
+                                             @Valid @RequestBody ReturnPartRequest request) {
+        return service.returnPart(workOrderId, sparePartId, request);
+    }
+
     @PostMapping("/work-orders/{workOrderId}/parts/consume")
-    @PreAuthorize("hasAnyRole('OWNER','TECHNICIAN')")
+    @PreAuthorize("hasRole('TECHNICIAN')")
     public SparePartResponse consume(@PathVariable UUID workOrderId, @Valid @RequestBody ConsumePartRequest request) {
         return service.consume(workOrderId, request);
     }

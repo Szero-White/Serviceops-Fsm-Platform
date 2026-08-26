@@ -10,8 +10,6 @@ import com.serviceops.customer.domain.CustomerRepository;
 import com.serviceops.customer.application.CustomerCsvService.CustomerCsvRow;
 import com.serviceops.customer.web.CustomerDtos.CustomerImportResult;
 import com.serviceops.customer.web.CustomerDtos.CustomerImportRowResult;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.customer.web.CustomerDtos.CustomerRequest;
@@ -40,12 +38,11 @@ public class CustomerService {
     private final WorkOrderRepository workOrderRepository;
     private final CustomerCsvService csvService;
     private final AuditService auditService;
-    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public PageResponse<CustomerResponse> search(String search, int page, int size) {
+    public PageResponse<CustomerResponse> search(String search, Boolean active, int page, int size) {
         var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), active, PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -65,7 +62,6 @@ public class CustomerService {
         apply(customer, request, code);
         repository.save(customer);
         auditService.record("CREATE", "CUSTOMER", customer.getId(), "Tạo khách hàng " + customer.getCode());
-        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng mới: " + customer.getCode(), customer.getName());
         return toResponse(customer);
     }
 
@@ -78,7 +74,6 @@ public class CustomerService {
         }
         apply(customer, request, code);
         auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + customer.getCode());
-        notificationService.notifyRoles(CurrentUser.tenantId(), customerRoles(), "Khách hàng được cập nhật: " + customer.getCode(), customer.getName());
         return toResponse(customer);
     }
 
@@ -94,13 +89,12 @@ public class CustomerService {
         }
         repository.delete(customer);
         auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + customer.getCode());
-        notificationService.notifyRoles(tenantId, customerRoles(), "Khách hàng đã xoá: " + customer.getCode(), customer.getName());
     }
 
     @Transactional(readOnly = true)
     public byte[] exportCustomers(String search) {
         var pageable = PageRequest.of(0, 5_000, Sort.by("code").ascending());
-        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), PageRequestSupport.normalizeSearch(search), pageable)
+        List<CustomerResponse> customers = repository.search(CurrentUser.tenantId(), null, PageRequestSupport.normalizeSearch(search), pageable)
                 .stream()
                 .map(CustomerService::toResponse)
                 .toList();
@@ -136,7 +130,6 @@ public class CustomerService {
         }
 
         auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khách hàng từ CSV");
-        notificationService.notifyRoles(tenantId, customerRoles(), "Đã import danh sách khách hàng", validRows + " hồ sơ mới được thêm vào hệ thống");
         return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -224,9 +217,6 @@ public class CustomerService {
         throw new IllegalArgumentException("Cot active chi nhan true hoac false");
     }
 
-    private static List<UserRole> customerRoles() {
-        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-    }
 
     public static CustomerResponse toResponse(Customer c) {
         return new CustomerResponse(c.getId(), c.getCode(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), c.getNotes(), c.isActive(), c.getCreatedAt(), c.getUpdatedAt());

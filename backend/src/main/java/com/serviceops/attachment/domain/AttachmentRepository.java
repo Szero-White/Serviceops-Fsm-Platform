@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface AttachmentRepository extends JpaRepository<Attachment, UUID> {
     Optional<Attachment> findByIdAndTenantId(UUID id, UUID tenantId);
     List<Attachment> findByTenantIdAndReferenceTypeAndReferenceIdOrderByCreatedAtDesc(UUID tenantId, String referenceType, UUID referenceId);
+    boolean existsByTenantIdAndReferenceTypeAndReferenceId(UUID tenantId, String referenceType, UUID referenceId);
 }

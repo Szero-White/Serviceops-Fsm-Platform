@@ -15,12 +15,13 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     @Query("""
             select c from Customer c
             where c.tenantId = :tenantId
+              and (:active is null or c.active = :active)
               and (:search = '' or lower(c.name) like lower(concat('%', :search, '%'))
                    or lower(c.code) like lower(concat('%', :search, '%'))
                    or lower(coalesce(c.phone, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(c.email, '')) like lower(concat('%', :search, '%')))
             """)
-    Page<Customer> search(@Param("tenantId") UUID tenantId, @Param("search") String search, Pageable pageable);
+    Page<Customer> search(@Param("tenantId") UUID tenantId, @Param("active") Boolean active, @Param("search") String search, Pageable pageable);
 
     Optional<Customer> findByIdAndTenantId(UUID id, UUID tenantId);
     Optional<Customer> findByTenantIdAndCodeIgnoreCase(UUID tenantId, String code);

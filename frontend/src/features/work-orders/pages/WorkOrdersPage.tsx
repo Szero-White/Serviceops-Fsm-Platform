@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { App, Form, Input, Select } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -26,12 +26,13 @@ import {
   type ScheduleWorkOrderValues,
 } from '../components/WorkOrderDialogs'
 import { WorkOrderTable } from '../components/WorkOrderTable'
-import { availableWorkOrderTransitions, WORK_ORDER_STATUS_OPTIONS } from '../model/workOrderPresentation'
+import { ACTIVE_WORK_ORDER_STATUS_OPTIONS, availableWorkOrderTransitions, WORK_ORDER_STATUS_OPTIONS } from '../model/workOrderPresentation'
 import { workOrderPermissions } from '../model/workOrderPermissions'
 
 export function WorkOrdersPage() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const permissions = workOrderPermissions(user?.role)
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
@@ -71,30 +72,41 @@ export function WorkOrdersPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const { data: detail, isLoading: detailLoading } = useQuery({
+  const detailQuery = useQuery({
     queryKey: ['work-order', selectedId],
     queryFn: () => workOrdersApi.get(selectedId!),
     enabled: Boolean(selectedId),
   })
-  const { data: technicians } = useQuery({
+  const detail = detailQuery.data
+  const detailLoading = detailQuery.isLoading
+
+  const techniciansQuery = useQuery({
     queryKey: ['technicians'],
     queryFn: () => techniciansApi.list(),
     enabled: permissions.canSchedule,
   })
-  const { data: parts } = useQuery({
+  const technicians = techniciansQuery.data
+
+  const partsQuery = useQuery({
     queryKey: ['spare-parts', 'all'],
     queryFn: () => inventoryApi.list('', 0, 100),
     enabled: permissions.canConsumePart,
   })
-  const { data: attachments } = useQuery({
+  const parts = partsQuery.data
+
+  const attachmentsQuery = useQuery({
     queryKey: ['attachments', selectedId],
     queryFn: () => attachmentsApi.list('WORK_ORDER', selectedId!),
     enabled: Boolean(selectedId),
   })
+  const attachments = attachmentsQuery.data
 
   const refreshOperations = () => {
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
     queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['audit'] })
   }
@@ -109,13 +121,31 @@ export function WorkOrdersPage() {
       technicianId: values.technicianId,
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
+      reason: values.reason?.trim() || undefined,
     }),
     onSuccess: (workOrder, values) => {
       const technicianName = technicians?.find((technician) => technician.id === values.technicianId)?.name ?? workOrder.technicianName ?? 'Kỹ thuật viên'
-      notification.success({
-        message: `Đã phân công · ${workOrder.code}`,
-        description: `${technicianName} · ${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`,
-      })
+      const previousTechnicianName = detail?.technicianName
+      const technicianChanged = Boolean(detail?.technicianId && detail.technicianId !== values.technicianId)
+      const redispatched = Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd)
+      const scheduleText = `${dayjs(values.period[0]).format('DD/MM/YYYY HH:mm')}–${dayjs(values.period[1]).format('HH:mm')}`
+
+      if (technicianChanged) {
+        notification.success({
+          message: `Đã điều phối lại · ${workOrder.code}`,
+          description: `Đã chuyển từ ${previousTechnicianName ?? 'kỹ thuật viên trước'} sang ${technicianName} · Kỹ thuật viên hiện trường. Kỹ thuật viên mới đã được thông báo · ${scheduleText}.`,
+        })
+      } else if (redispatched) {
+        notification.success({
+          message: `Đã cập nhật lịch · ${workOrder.code}`,
+          description: `${technicianName} · Kỹ thuật viên hiện trường đã nhận thông báo lịch mới · ${scheduleText}.`,
+        })
+      } else {
+        notification.success({
+          message: `Đã chuyển thông tin đến ${technicianName}`,
+          description: `${workOrder.code} · Kỹ thuật viên hiện trường · ${scheduleText}. Phiếu đang chờ kỹ thuật viên tiếp nhận và bắt đầu công việc.`,
+        })
+      }
       setScheduleOpen(false)
       scheduleForm.resetFields()
       refreshOperations()
@@ -127,11 +157,26 @@ export function WorkOrdersPage() {
     mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) => workOrdersApi.transition(selectedId!, { targetStatus, note }),
     onSuccess: (workOrder) => {
       const statusLabel = WORK_ORDER_STATUS_OPTIONS.find((option) => option.value === workOrder.status)?.label ?? workOrder.status
-      notification.success({
-        message: `Đã cập nhật ${workOrder.code}`,
-        description: `Trạng thái hiện tại: ${statusLabel}.`,
-      })
+      if (workOrder.status === 'CUSTOMER_ACCEPTED') {
+        notification.success({
+          message: `Khách đã xác nhận · ${workOrder.code}`,
+          description: 'Có thể đóng phiếu ngay, hoặc mở lại nếu khách báo lỗi trước khi phiếu được đóng.',
+        })
+      } else if (workOrder.status === 'CLOSED') {
+        notification.success({
+          message: `Đã đóng ${workOrder.code}`,
+          description: 'Phiếu đã chuyển sang Lịch sử phiếu công việc.',
+        })
+      } else {
+        notification.success({
+          message: `Đã cập nhật ${workOrder.code}`,
+          description: `Trạng thái hiện tại: ${statusLabel}.`,
+        })
+      }
       refreshOperations()
+      if (workOrder.status === 'CLOSED') {
+        navigate(`/work-order-history?open=${encodeURIComponent(workOrder.id)}`)
+      }
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -141,7 +186,7 @@ export function WorkOrdersPage() {
     onSuccess: (workOrder) => {
       notification.success({
         message: `Đã hoàn thành ${workOrder.code}`,
-        description: workOrder.summary,
+        description: 'Kết quả đã được lưu. Sau khi khách đồng ý, kỹ thuật viên được giao hoặc Owner có thể bấm Khách xác nhận ngay trong phiếu.',
       })
       setCompleteOpen(false)
       completeForm.resetFields()
@@ -160,6 +205,8 @@ export function WorkOrdersPage() {
       setConsumeOpen(false)
       consumeForm.resetFields()
       queryClient.invalidateQueries({ queryKey: ['spare-parts'] })
+      queryClient.invalidateQueries({ queryKey: ['stocktake-parts'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
       refreshOperations()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -177,15 +224,47 @@ export function WorkOrdersPage() {
     }
   }
 
+  const submitSchedule = (values: ScheduleWorkOrderValues) => {
+    const sameTechnician = detail?.technicianId === values.technicianId
+    const sameSchedule = Boolean(
+      detail?.scheduledStart
+      && detail?.scheduledEnd
+      && dayjs(detail.scheduledStart).valueOf() === values.period[0].valueOf()
+      && dayjs(detail.scheduledEnd).valueOf() === values.period[1].valueOf(),
+    )
+
+    if (sameTechnician && sameSchedule) {
+      message.info('Chưa có thay đổi kỹ thuật viên hoặc thời gian thực hiện')
+      return
+    }
+
+    schedule.mutate(values)
+  }
+
   const openSchedule = () => {
+    if (techniciansQuery.isError) {
+      message.error('Chưa tải được danh sách kỹ thuật viên. Vui lòng thử lại.')
+      void techniciansQuery.refetch()
+      return
+    }
     if (!detail) return
     scheduleForm.setFieldsValue({
       technicianId: detail.technicianId,
       period: detail.scheduledStart && detail.scheduledEnd
         ? [dayjs(detail.scheduledStart), dayjs(detail.scheduledEnd)]
         : undefined,
+      reason: undefined,
     })
     setScheduleOpen(true)
+  }
+
+  const openConsumePart = () => {
+    if (partsQuery.isError) {
+      message.error('Chưa tải được danh mục phụ tùng. Vui lòng thử lại.')
+      void partsQuery.refetch()
+      return
+    }
+    setConsumeOpen(true)
   }
 
   const transitions = useMemo(
@@ -204,7 +283,7 @@ export function WorkOrdersPage() {
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={WORK_ORDER_STATUS_OPTIONS} />
+        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} />
       </div>
 
       {workOrdersQuery.isError && (
@@ -231,20 +310,32 @@ export function WorkOrdersPage() {
         attachments={attachments}
         open={Boolean(selectedId)}
         loading={detailLoading}
+        error={detailQuery.error}
+        onRetry={() => detailQuery.refetch()}
+        attachmentsError={attachmentsQuery.error}
+        onRetryAttachments={() => attachmentsQuery.refetch()}
         permissions={permissions}
         transitions={transitions}
         transitionPending={transition.isPending}
         onClose={() => selectWorkOrder(undefined)}
         onSchedule={openSchedule}
         onComplete={() => setCompleteOpen(true)}
-        onConsumePart={() => setConsumeOpen(true)}
+        onConsumePart={openConsumePart}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
         onUpload={uploadFile}
         onAttachmentsChanged={refreshAttachments}
       />
 
       <WorkOrderDialogs
-        schedule={{ open: scheduleOpen, form: scheduleForm, pending: schedule.isPending, onClose: () => setScheduleOpen(false), onSubmit: (values) => schedule.mutate(values) }}
+        schedule={{
+          open: scheduleOpen,
+          form: scheduleForm,
+          pending: schedule.isPending,
+          redispatching: Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd),
+          currentTechnicianName: detail?.technicianName,
+          onClose: () => setScheduleOpen(false),
+          onSubmit: submitSchedule,
+        }}
         complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, onClose: () => setCompleteOpen(false), onSubmit: (values) => complete.mutate(values) }}
         consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
         technicians={technicians}

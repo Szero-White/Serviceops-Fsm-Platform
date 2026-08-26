@@ -62,7 +62,14 @@ public class UserManagementService {
         repository.save(user);
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
-        auditService.record("CREATE", "USER_ACCOUNT", user.getId(), "Tạo người dùng " + user.getUsername() + " với vai trò " + user.getRole());
+        auditService.record(
+                "CREATE",
+                "USER_ACCOUNT",
+                user.getId(),
+                "Tạo người dùng " + user.getUsername()
+                        + " với vai trò " + user.getRole()
+                        + " · trạng thái " + accountStatusLabel(user.isActive())
+        );
         return toResponse(user, technician);
     }
 
@@ -71,21 +78,26 @@ public class UserManagementService {
         UserAccount user = require(id);
         demoAccountProtectionPolicy.guardMutation(user);
         guardRoleChange(user, request.role());
+        guardUsernameChange(user, request.username());
         guardSelfUpdate(user, request);
         guardLastOwner(user, request.role(), request.active());
+        guardTechnicianDeactivation(user, request.active());
 
+        boolean previousActive = user.isActive();
         String username = normalizeUsername(request.username());
-        if (repository.existsByUsernameIgnoreCaseAndIdNot(username, user.getId())) {
-            throw BusinessException.conflict("USER_USERNAME_EXISTS", "Tên đăng nhập đã tồn tại");
-        }
-
         applyUser(user, request, username);
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
 
         TechnicianProfile technician = syncTechnicianProfile(user, request);
-        auditService.record("UPDATE", "USER_ACCOUNT", user.getId(), "Cập nhật người dùng " + user.getUsername());
+        auditService.record(
+                "UPDATE",
+                "USER_ACCOUNT",
+                user.getId(),
+                "Cập nhật người dùng " + user.getUsername()
+                        + " · " + accountStatusAudit(previousActive, user.isActive())
+        );
         return toResponse(user, technician);
     }
 
@@ -99,7 +111,7 @@ public class UserManagementService {
         guardLastOwner(user, null, false);
 
         UUID tenantId = CurrentUser.tenantId();
-        TechnicianProfile technician = technicianRepository.findByTenantIdAndUserId(tenantId, user.getId()).orElse(null);
+        TechnicianProfile technician = technicianRepository.findByTenantIdAndUserIdForUpdate(tenantId, user.getId()).orElse(null);
         if (technician != null) {
             long workOrderCount = workOrderRepository.countByTenantIdAndTechnicianId(tenantId, technician.getId());
             long appointmentCount = appointmentRepository.countByTenantIdAndTechnicianId(tenantId, technician.getId());
@@ -162,6 +174,31 @@ public class UserManagementService {
         return technicianRepository.save(technician);
     }
 
+    private void guardTechnicianDeactivation(UserAccount user, Boolean nextActive) {
+        if (user.getRole() != UserRole.TECHNICIAN || !user.isActive() || nextActive == null || nextActive) {
+            return;
+        }
+        UUID tenantId = CurrentUser.tenantId();
+        technicianRepository.findByTenantIdAndUserIdForUpdate(tenantId, user.getId()).ifPresent(technician -> {
+            if (workOrderRepository.existsActiveAssignment(tenantId, technician.getId())) {
+                throw BusinessException.conflict(
+                        "TECHNICIAN_ACTIVE_ASSIGNMENTS",
+                        "Không thể tạm ngưng kỹ thuật viên khi còn phiếu công việc đang hoạt động; hãy điều phối lại hoặc hủy công việc trước"
+                );
+            }
+        });
+    }
+
+    private void guardUsernameChange(UserAccount user, String requestedUsername) {
+        String normalized = normalizeUsername(requestedUsername);
+        if (!user.getUsername().equalsIgnoreCase(normalized)) {
+            throw BusinessException.conflict(
+                    "USER_USERNAME_CHANGE_BLOCKED",
+                    "Tên đăng nhập được cố định sau khi tạo tài khoản để bảo toàn lịch sử và quyền sở hữu dữ liệu"
+            );
+        }
+    }
+
     private void guardRoleChange(UserAccount user, UserRole nextRole) {
         if (nextRole == user.getRole()) {
             return;
@@ -199,6 +236,18 @@ public class UserManagementService {
         if (activeOwnerCount <= 1 && user.isActive()) {
             throw BusinessException.conflict("USER_LAST_OWNER_BLOCKED", "Doanh nghiệp phải còn ít nhất một chủ sở hữu đang hoạt động");
         }
+    }
+
+    private static String accountStatusLabel(boolean active) {
+        return active ? "Hoạt động" : "Tạm ngưng";
+    }
+
+    private static String accountStatusAudit(boolean previousActive, boolean currentActive) {
+        if (previousActive == currentActive) {
+            return "trạng thái " + accountStatusLabel(currentActive);
+        }
+        return "trạng thái " + accountStatusLabel(previousActive)
+                + " -> " + accountStatusLabel(currentActive);
     }
 
     private static String normalizeUsername(String username) {

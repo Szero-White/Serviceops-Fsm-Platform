@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml)
 
-**Live demo:** _Coming soon — add the deployed URL here before sharing the portfolio._
+**Live demo:** Not deployed publicly yet. The repository includes a complete local setup and production-like Docker validation path.
 
 ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
 
@@ -22,7 +22,7 @@ ServiceOps provides one operational record that follows the work across those ha
 | Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling, operational history and audit review |
 | Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, service requests and Service Request → Work Order handoff |
 | Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence and spare-part consumption |
-| Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock import, inventory balances and part lifecycle management |
+| Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock receiving, stocktake/reconciliation, returns and movement traceability |
 
 The frontend hides routes and actions that are outside a role's responsibility, while the backend remains the authoritative authorization boundary.
 
@@ -36,9 +36,9 @@ Consider a customer reporting that an air conditioner is no longer cooling prope
 4. **Dispatch plans the visit.** A Dispatcher selects a technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same technician is not silently double-booked.
 5. **The technician receives the assignment.** The technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied technician identifier.
 6. **Field execution begins.** The technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the technician.
-7. **Spare parts participate in the same job.** When a repair needs a part, consumption is recorded against the Work Order and the stock balance is reduced transactionally. Negative stock is blocked. Inactive/discontinued parts remain historically traceable but cannot be newly consumed.
+7. **Spare parts participate in the same job.** When a repair needs a part, consumption is recorded against the assigned Work Order only while field execution is active (`ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `REOPENED`) and the stock balance is reduced transactionally. The Work Order activity timeline immediately surfaces `CONSUME`/`RETURN` events with part, quantity, actor and time, while inventory transactions remain the source of truth. No new consumption is accepted after completion/customer acceptance. Negative stock is blocked. Inactive/discontinued parts remain historically traceable but cannot be newly consumed.
 8. **The service result is documented.** Diagnosis, resolution notes and JPG/PNG/WEBP/PDF evidence stay attached to the job so the service record explains both what was found and what was done.
-9. **The job is accepted and closed.** After completion, an authorized management role can record customer acceptance and close the Work Order. Reopen/cancel paths remain controlled by the work-order state machine.
+9. **The result is accepted and the job is closed.** After `COMPLETED`, the assigned Technician can record the customer's on-site acceptance, while Owner has the same acceptance/closure capability as an administrative override. `CUSTOMER_ACCEPTED` exposes the final **Close Work Order** action. If the customer reports that the same issue persists before closure, the Work Order can be `REOPENED`; after `CLOSED`, a later issue starts a new Service Request/Work Order so the original service history remains immutable.
 10. **The organization can trace the result.** Work-order history, notifications, invoice export, dashboard data and audit records provide the operational trail after the field visit is finished.
 
 This produces one continuous business chain instead of separate records for each department:
@@ -57,9 +57,10 @@ Technician assignment → Schedule / Reschedule
 Technician
 ON_THE_WAY → IN_PROGRESS
         ↓
-        ├── needs spare part ──→ Warehouse / Inventory
-        │                         ↓
-        └──────── consume part ←──┘
+        ├── consume part ─────→ Inventory transaction / stock decreases
+        │
+        ├── unused quantity ────→ Warehouse confirms controlled RETURN
+        │                         └── stock increases + ledger trace
         ↓
 Diagnosis → Resolution → Evidence → COMPLETED
         ↓
@@ -99,7 +100,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 | Dispatcher | `dispatcher` | `Demo@2026` | Work orders, technician assignment and weekly scheduling |
 | Customer Service | `customer-service` | `Demo@2026` | Customers, assets, service requests and request-to-work-order flow |
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
-| Warehouse | `warehouse` | `Demo@2026` | Spare parts, stock transactions and inventory operations |
+| Warehouse | `warehouse` | `Demo@2026` | Spare parts, stocktake, Work Order part returns and inventory movement history |
 
 `technician-2` is an additional seeded technician account and also uses `Demo@2026` in the current local portfolio environment. It is intentionally **not** a sixth quick-login card. It is used to verify isolation between two individual technicians who share the `TECHNICIAN` role, especially for `/my-schedule` and assigned work.
 
@@ -113,8 +114,8 @@ For a review, use **one service case across every role** instead of demonstratin
 2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
 3. Sign in as **Dispatcher**, assign a technician and demonstrate schedule/reschedule behavior.
 4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and record the service result.
-5. Sign in as **Warehouse** when spare-parts preparation or catalog lifecycle needs to be demonstrated; then return to the technician and consume the part through the Work Order.
-6. Complete the Work Order and use an authorized management role for customer acceptance and closure.
+5. Sign in as **Warehouse** to review the stock movement created by the Work Order, demonstrate a controlled part return when applicable, and run a stocktake/reconciliation example.
+6. Complete the Work Order as **Technician**, then use **Khách xác nhận** after the customer agrees and **Đóng phiếu** to move the job into Work Order History. Owner can perform the same acceptance/closure as an admin override; if the same issue persists before closure, reopen the existing job. Invoice quantities use net consumption after returns.
 7. Finish as **Owner** by reviewing users, dashboard, history and audit data for the same operational story.
 8. Switch roles or open protected routes directly to verify that frontend visibility and backend authorization remain aligned.
 
@@ -126,8 +127,9 @@ For a review, use **one service case across every role** instead of demonstratin
 - Work-order lifecycle with controlled role-aware transitions and history.
 - Technician assignment, overlap-safe scheduling and weekly dispatcher schedule board.
 - Personal technician schedule derived from the authenticated account.
-- Spare-parts catalog, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
+- Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
 - Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
+- Warehouse stocktake/reconciliation, editable minimum-stock thresholds, Work Order part returns and a searchable inventory movement ledger; threshold changes are audited and can raise low-stock alerts when the new threshold makes current stock newly low. Invoice quantities use net consumption after returns.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work-order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Service invoice/export view derived from work-order and consumed-parts data.
@@ -212,8 +214,8 @@ The role-aware AI help assistant is constrained to product guidance and does not
 - Pessimistic locking for scheduling, inventory updates and selected owner invariants.
 - Optimistic concurrency conflicts mapped to HTTP `409 CONCURRENT_MODIFICATION`.
 - Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied technician ID.
-- Technician field transitions are limited to `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`.
-- Management transitions such as `CANCELLED`, `CUSTOMER_ACCEPTED`, `CLOSED` and `REOPENED` remain restricted to management roles.
+- Technician field transitions remain assignment-scoped; after `COMPLETED`, the assigned Technician can record `CUSTOMER_ACCEPTED`, close the Work Order, or reopen it before closure when the same issue persists.
+- Customer acceptance and closure belong to the assigned Technician with Owner as an administrative override. Customer Service can reopen/cancel when handling a customer follow-up; `CLOSED` and `CANCELLED` remain terminal.
 - Scheduling conflicts use locking plus overlap detection.
 - Inventory consumption prevents negative stock.
 - Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
@@ -236,44 +238,70 @@ The current Playwright suite contains **11 browser tests across 3 spec files** a
 - Warehouse spare-part creation and stock import;
 - Customer Service request intake and Service Request → Work Order conversion;
 - Technician UI transition restrictions;
-- backend rejection of unauthorized Technician management transitions.
+- backend rejection of unauthorized Technician and Dispatcher transitions;
+- Warehouse frontend route isolation from Work Order and operational dashboard data.
 
-See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the current verified baseline.
+Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
+
+See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the previous verified baseline and the revalidation required after the current release-consistency patch.
 
 ## Run locally
 
 ### Prerequisites
 
+Required:
+
 - Java JDK 21
 - Node.js 22 LTS + npm
-- PostgreSQL 17
 - Git
 
-Docker Desktop is optional for daily development when PostgreSQL already runs natively.
+Choose one PostgreSQL option:
 
-For a reproducible setup, follow [RUN_LOCAL.md](RUN_LOCAL.md). It uses repository-relative commands and the disposable local credentials documented in `.env.example`; production credentials must be supplied separately.
+- PostgreSQL 17 installed locally; or
+- Docker Desktop for the repository-managed PostgreSQL 17 container.
 
-After PostgreSQL is ready, start the backend from the repository root:
+### First-time setup
 
-```powershell
-cd backend
-$env:POSTGRES_HOST="localhost"
-$env:POSTGRES_PORT="5432"
-$env:POSTGRES_DB="serviceops"
-$env:POSTGRES_USER="serviceops"
-$env:POSTGRES_PASSWORD="serviceops"
-$env:DEMO_PASSWORD="Demo@2026"
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
-```
-
-In a second terminal:
+From the repository root, create your local environment file:
 
 ```powershell
-cd frontend
 Copy-Item .env.example .env
-npm ci
-npm run dev
 ```
+
+The committed example uses disposable local values:
+
+```text
+POSTGRES_DB=serviceops
+POSTGRES_USER=serviceops
+POSTGRES_PASSWORD=serviceops
+DEMO_PASSWORD=Demo@2026
+```
+
+If your existing native PostgreSQL uses different credentials, edit only your local `.env` file. `.env` is ignored by Git.
+
+For the shortest first run with Docker Desktop, the next command creates/starts PostgreSQL and launches both application terminals:
+
+```powershell
+.\scripts\dev-start.ps1 -StartPostgres
+```
+
+If you use native PostgreSQL, create the `serviceops` database/user once (or point `.env` at your existing database); the exact SQL is in [RUN_LOCAL.md](RUN_LOCAL.md).
+
+### Daily quick start — backend + frontend together
+
+If PostgreSQL is already running:
+
+```powershell
+.\scripts\dev-start.ps1
+```
+
+If you use Docker Desktop and want the script to start the repository PostgreSQL container first:
+
+```powershell
+.\scripts\dev-start.ps1 -StartPostgres
+```
+
+`dev-start.ps1` is repository-relative: it works regardless of where the repository was cloned. It opens separate backend and frontend terminals, passes the same `DEMO_PASSWORD` to both sides, and runs `npm ci` automatically when `frontend/node_modules` does not exist.
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 
@@ -283,7 +311,7 @@ Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 | Swagger UI | `http://localhost:8080/swagger-ui.html` |
 | Health | `http://localhost:8080/actuator/health` |
 
-More local setup and troubleshooting notes are in [RUN_LOCAL.md](RUN_LOCAL.md).
+For manual backend/frontend startup, native PostgreSQL setup and troubleshooting, see [RUN_LOCAL.md](RUN_LOCAL.md).
 
 ## Production-like validation
 
@@ -320,7 +348,11 @@ frontend/                 React operations console
   src/features/           Feature-oriented frontend modules
   e2e/                    Playwright browser E2E
 
-scripts/production/       Backup and guarded restore utilities
+scripts/                  Local developer helpers
+  dev-start.ps1           One-command backend + frontend startup
+  start-postgres.ps1      Optional local PostgreSQL container startup
+  check-local.ps1         Local backend/frontend verification
+  production/             Backup and guarded restore utilities
 docs/                     Architecture, security, business and operations docs
 .github/workflows/        CI pipeline
 docker-compose.local.yml  Optional local PostgreSQL container

@@ -7,11 +7,16 @@ export interface Dashboard {
   openServiceRequests: number
   activeTechnicians: number
   openWorkOrders: number
+  scheduledWorkOrders: number
   assignedWorkOrders: number
+  onTheWayWorkOrders: number
   inProgressWorkOrders: number
   waitingForPartsWorkOrders: number
   completedWorkOrders: number
+  customerAcceptedWorkOrders: number
   closedWorkOrders: number
+  reopenedWorkOrders: number
+  cancelledWorkOrders: number
   lowStockParts: number
   recentWorkOrders: Array<{
     id: string

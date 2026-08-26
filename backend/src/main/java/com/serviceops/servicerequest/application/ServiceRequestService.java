@@ -3,13 +3,12 @@ package com.serviceops.servicerequest.application;
 import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -33,8 +32,8 @@ public class ServiceRequestService {
     private final AssetRepository assetRepository;
     private final ServiceChannelService serviceChannelService;
     private final WorkOrderRepository workOrderRepository;
+    private final AttachmentRepository attachmentRepository;
     private final AuditService auditService;
-    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
@@ -58,7 +57,6 @@ public class ServiceRequestService {
         entity.setCreatedBy(CurrentUser.username());
         repository.save(entity);
         auditService.record("CREATE", "SERVICE_REQUEST", entity.getId(), "Tiếp nhận yêu cầu: " + entity.getTitle());
-        notificationService.notifyRoles(tenantId, intakeRoles(), "Yêu cầu dịch vụ mới", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -70,7 +68,6 @@ public class ServiceRequestService {
         }
         applyEditableFields(entity, request, CurrentUser.tenantId());
         auditService.record("UPDATE", "SERVICE_REQUEST", entity.getId(), "Cập nhật yêu cầu dịch vụ: " + entity.getTitle());
-        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ được cập nhật", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -83,7 +80,6 @@ public class ServiceRequestService {
             throw BusinessException.conflict("SERVICE_REQUEST_INVALID_STATE", ex.getMessage());
         }
         auditService.record("CANCEL", "SERVICE_REQUEST", entity.getId(), "Hủy yêu cầu dịch vụ");
-        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ đã huỷ", entity.getTitle());
         return toResponse(entity);
     }
 
@@ -94,9 +90,14 @@ public class ServiceRequestService {
         if (workOrderCount > 0 || entity.getStatus() == ServiceRequestStatus.CONVERTED) {
             throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo phiếu công việc");
         }
+        if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(CurrentUser.tenantId(), "SERVICE_REQUEST", id)) {
+            throw BusinessException.conflict(
+                    "SERVICE_REQUEST_HAS_ATTACHMENTS",
+                    "Không thể xóa yêu cầu dịch vụ khi còn file đính kèm; hãy xóa file đính kèm trước"
+            );
+        }
         repository.delete(entity);
         auditService.record("DELETE", "SERVICE_REQUEST", entity.getId(), "Xóa yêu cầu dịch vụ: " + entity.getTitle());
-        notificationService.notifyRoles(CurrentUser.tenantId(), intakeRoles(), "Yêu cầu dịch vụ đã xoá", entity.getTitle());
     }
 
     public ServiceRequest require(UUID id) {
@@ -105,7 +106,7 @@ public class ServiceRequestService {
     }
 
     private void applyEditableFields(ServiceRequest entity, CreateServiceRequest request, UUID tenantId) {
-        Customer customer = resolveCustomer(request.customerId(), tenantId);
+        Customer customer = resolveCustomer(request.customerId(), tenantId, entity);
         Asset asset = resolveAsset(request.assetId(), customer, tenantId);
         String channelCode = serviceChannelService.requireActive(tenantId, request.channel()).getCode();
 
@@ -117,9 +118,18 @@ public class ServiceRequestService {
         entity.setChannel(channelCode);
     }
 
-    private Customer resolveCustomer(UUID customerId, UUID tenantId) {
-        return customerRepository.findByIdAndTenantId(customerId, tenantId)
+    private Customer resolveCustomer(UUID customerId, UUID tenantId, ServiceRequest existingRequest) {
+        Customer customer = customerRepository.findByIdAndTenantId(customerId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+        boolean sameExistingCustomer = existingRequest.getCustomer() != null
+                && existingRequest.getCustomer().getId().equals(customer.getId());
+        if (!customer.isActive() && !sameExistingCustomer) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể tiếp nhận yêu cầu dịch vụ mới"
+            );
+        }
+        return customer;
     }
 
     private Asset resolveAsset(UUID assetId, Customer customer, UUID tenantId) {
@@ -134,9 +144,6 @@ public class ServiceRequestService {
         return asset;
     }
 
-    private static List<UserRole> intakeRoles() {
-        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-    }
 
     public static ServiceRequestResponse toResponse(ServiceRequest request) {
         String assetLabel = request.getAsset() == null ? null : assetLabel(request.getAsset());

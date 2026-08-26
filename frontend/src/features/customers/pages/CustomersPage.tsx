@@ -1,6 +1,6 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography, Upload } from 'antd'
+import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography, Upload } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { customersApi } from '../../customers/api'
@@ -15,23 +15,36 @@ import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
+type CustomerStatusFilter = 'all' | 'active' | 'inactive'
+
+const CUSTOMER_STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'Tất cả trạng thái' },
+  { value: 'active', label: 'Hoạt động' },
+  { value: 'inactive', label: 'Ngừng hoạt động' },
+] satisfies Array<{ value: CustomerStatusFilter; label: string }>
+
 export function CustomersPage() {
   const { user } = useAuth()
   const canManage = user?.role === 'OWNER' || user?.role === 'CUSTOMER_SERVICE'
   const [searchInput, setSearchInput] = useState('')
+  const [statusFilter, setStatusFilter] = useState<CustomerStatusFilter>('all')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
+  const activeFilter = statusFilter === 'all' ? undefined : statusFilter === 'active'
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Customer>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<CustomerImportResult>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const customersQuery = useQuery({
-    queryKey: ['customers', { search, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE),
+    queryKey: ['customers', { search, statusFilter, page, size: LIST_PAGE_SIZE }],
+    queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE, activeFilter),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = customersQuery
@@ -46,6 +59,17 @@ export function CustomersPage() {
     }
   }, [data, page])
 
+  const refreshRelatedViews = () => {
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+    queryClient.invalidateQueries({ queryKey: ['service-requests'] })
+    queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => editing ? customersApi.update(editing.id, values) : customersApi.create(values),
     onSuccess: () => {
@@ -53,8 +77,7 @@ export function CustomersPage() {
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -63,8 +86,7 @@ export function CustomersPage() {
     mutationFn: (id: string) => customersApi.delete(id),
     onSuccess: () => {
       message.success('Đã xoá khách hàng')
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -91,8 +113,7 @@ export function CustomersPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
-        queryClient.invalidateQueries({ queryKey: ['customers'] })
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+        refreshRelatedViews()
       }
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -179,7 +200,14 @@ export function CustomersPage() {
         title="Khách hàng"
         description="Quản lý liên hệ, địa chỉ phục vụ và trạng thái khách hàng trong một danh sách dễ quét."
         actions={canManage ? customerActions : undefined}
-        meta={<MetaBadge>{customersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
+        meta={
+          <>
+            <MetaBadge>{customersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>
+            <MetaBadge tone={statusFilter === 'all' ? 'neutral' : 'info'}>
+              {CUSTOMER_STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label}
+            </MetaBadge>
+          </>
+        }
       />
 
       <CardlessTableToolbar>
@@ -189,6 +217,15 @@ export function CustomersPage() {
           placeholder="Tìm tên, mã, số điện thoại hoặc email"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
+        />
+        <Select
+          aria-label="Lọc trạng thái khách hàng"
+          value={statusFilter}
+          options={CUSTOMER_STATUS_FILTER_OPTIONS}
+          onChange={(value) => {
+            setStatusFilter(value)
+            setPage(0)
+          }}
         />
       </CardlessTableToolbar>
 
@@ -263,8 +300,8 @@ export function CustomersPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={680} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm khách hàng'} width={680} destroyOnHidden>
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Mã khách hàng" name="code" rules={[{ required: true, message: 'Nhập mã khách hàng' }]}><Input /></Form.Item>
             <Form.Item label="Tên khách hàng" name="name" rules={[{ required: true, message: 'Nhập tên khách hàng' }]}><Input /></Form.Item>
@@ -294,5 +331,5 @@ export function CustomersPage() {
 }
 
 function CardlessTableToolbar({ children }: { children: ReactNode }) {
-  return <div className="table-toolbar">{children}</div>
+  return <div className="table-toolbar toolbar-row">{children}</div>
 }

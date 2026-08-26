@@ -1,0 +1,57 @@
+package com.serviceops.ai.application;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class AiHelpNotificationTopicTest {
+    @Test
+    void markUnreadQuestionExplainsNotificationToggle() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi lỡ đánh dấu thông báo đã đọc, làm sao đánh dấu lại chưa đọc?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().name()).isEqualTo("Thông báo");
+        assertThat(decision.topic().answer()).contains("đánh dấu lại chưa đọc");
+    }
+
+    @Test
+    void ownerNotificationGuidanceExplainsAttentionOnlyPolicy() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("OWNER", "Chủ sở hữu", "/");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Owner sẽ nhận những thông báo nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().answer())
+                .contains("phiếu mở lại/hủy")
+                .contains("tránh spam")
+                .contains("Timeline/Audit");
+    }
+
+    @Test
+    void notificationGuidanceExplainsRoleRelevantQueuesInsteadOfRoutineCrudSpam() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Thông báo của từng vai trò dùng để làm gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().answer())
+                .contains("Phiếu mới chờ điều phối")
+                .contains("Phiếu đã hoàn thành")
+                .contains("Bạn được phân công")
+                .contains("Tồn kho thấp")
+                .contains("CRUD thường ngày")
+                .contains("tránh spam");
+    }
+
+}

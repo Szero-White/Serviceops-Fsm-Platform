@@ -57,6 +57,7 @@ class WorkOrderInvoiceServiceTest {
                 null,
                 null,
                 Instant.now(),
+                List.of(),
                 List.of()
         );
     }

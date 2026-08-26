@@ -41,7 +41,7 @@ public class WorkOrder extends TenantScopedEntity {
             Map.entry(WorkOrderStatus.CUSTOMER_ACCEPTED, EnumSet.of(WorkOrderStatus.CLOSED, WorkOrderStatus.REOPENED)),
             Map.entry(WorkOrderStatus.REOPENED, EnumSet.of(WorkOrderStatus.SCHEDULED, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED)),
             Map.entry(WorkOrderStatus.CLOSED, EnumSet.noneOf(WorkOrderStatus.class)),
-            Map.entry(WorkOrderStatus.CANCELLED, EnumSet.of(WorkOrderStatus.REOPENED))
+            Map.entry(WorkOrderStatus.CANCELLED, EnumSet.noneOf(WorkOrderStatus.class))
     );
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -13,6 +13,7 @@ import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const colorOptions = [
   { value: 'blue', label: 'Xanh dương' },
   { value: 'green', label: 'Xanh lá' },
@@ -41,6 +42,7 @@ export function ServiceChannelsPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceChannel>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const { message } = App.useApp()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -179,8 +181,8 @@ export function ServiceChannelsPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật kênh tiếp nhận' : 'Thêm kênh tiếp nhận'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={680} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật kênh tiếp nhận' : 'Thêm kênh tiếp nhận'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm kênh'} width={680} destroyOnHidden>
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Tên kênh" name="name" rules={[{ required: true, message: 'Nhập tên kênh' }]}>
               <Input onBlur={(event) => !editing && !form.getFieldValue('code') && form.setFieldValue('code', buildCode(event.target.value))} placeholder="Ví dụ: TikTok Lead" />

@@ -8,14 +8,13 @@ import com.serviceops.asset.web.AssetDtos.AssetImportResult;
 import com.serviceops.asset.web.AssetDtos.AssetImportRowResult;
 import com.serviceops.asset.web.AssetDtos.AssetRequest;
 import com.serviceops.asset.web.AssetDtos.AssetResponse;
+import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
-import com.serviceops.identity.domain.UserRole;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.security.CurrentUser;
@@ -42,9 +41,9 @@ public class AssetService {
     private final CustomerRepository customerRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final AttachmentRepository attachmentRepository;
     private final AssetCsvService csvService;
     private final AuditService auditService;
-    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<AssetResponse> search(String search, UUID customerId, int page, int size) {
@@ -69,8 +68,8 @@ public class AssetService {
         if (serial != null && repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+        Customer customer = requireCustomer(request.customerId(), tenantId);
+        requireActiveCustomerForNewAsset(customer);
         Asset asset = new Asset();
         asset.setTenantId(tenantId);
         asset.setCustomer(customer);
@@ -78,7 +77,6 @@ public class AssetService {
         repository.save(asset);
         String label = assetDisplayLabel(asset);
         auditService.record("CREATE", "ASSET", asset.getId(), "Tạo thiết bị " + label);
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị mới: " + label, customer.getName());
         return toResponse(asset);
     }
 
@@ -93,9 +91,15 @@ public class AssetService {
             throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
         }
         UUID tenantId = CurrentUser.tenantId();
-        Customer customer = customerRepository.findByIdAndTenantId(request.customerId(), tenantId)
-                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
-        if (!asset.getCustomer().getId().equals(customer.getId())) {
+        Customer customer = requireCustomer(request.customerId(), tenantId);
+        boolean customerChanged = !asset.getCustomer().getId().equals(customer.getId());
+        if (customerChanged && !customer.isActive()) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể đăng ký thiết bị mới"
+            );
+        }
+        if (customerChanged) {
             long serviceRequestCount = serviceRequestRepository.countByTenantIdAndAssetId(tenantId, id);
             long workOrderCount = workOrderRepository.countByTenantIdAndAssetId(tenantId, id);
             if (serviceRequestCount > 0 || workOrderCount > 0) {
@@ -109,7 +113,6 @@ public class AssetService {
         apply(asset, request, serial);
         String label = assetDisplayLabel(asset);
         auditService.record("UPDATE", "ASSET", asset.getId(), "Cập nhật thiết bị " + label);
-        notificationService.notifyRoles(CurrentUser.tenantId(), assetRoles(), "Thiết bị được cập nhật: " + label, customer.getName());
         return toResponse(asset);
     }
 
@@ -122,10 +125,15 @@ public class AssetService {
         if (serviceRequestCount > 0 || workOrderCount > 0) {
             throw BusinessException.conflict("ASSET_IN_USE", "Không thể xóa thiết bị đang được sử dụng");
         }
+        if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(tenantId, "ASSET", id)) {
+            throw BusinessException.conflict(
+                    "ASSET_HAS_ATTACHMENTS",
+                    "Không thể xóa thiết bị khi còn file đính kèm; hãy xóa file đính kèm trước"
+            );
+        }
         String label = assetDisplayLabel(asset);
         repository.delete(asset);
         auditService.record("DELETE", "ASSET", asset.getId(), "Xóa thiết bị " + label);
-        notificationService.notifyRoles(tenantId, assetRoles(), "Thiết bị đã xoá: " + label, asset.getCustomer().getName());
     }
 
     @Transactional(readOnly = true)
@@ -167,8 +175,21 @@ public class AssetService {
         }
 
         auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiết bị từ CSV");
-        notificationService.notifyRoles(tenantId, assetRoles(), "Đã import danh sách thiết bị", validRows + " thiết bị mới được thêm vào hệ thống");
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
+    }
+
+    private Customer requireCustomer(UUID customerId, UUID tenantId) {
+        return customerRepository.findByIdAndTenantId(customerId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
+    }
+
+    private static void requireActiveCustomerForNewAsset(Customer customer) {
+        if (!customer.isActive()) {
+            throw BusinessException.conflict(
+                    "CUSTOMER_INACTIVE",
+                    "Khách hàng đã ngừng hoạt động, không thể đăng ký thiết bị mới"
+            );
+        }
     }
 
     private Asset require(UUID id) {
@@ -214,6 +235,9 @@ public class AssetService {
         Customer customer = customerRepository.findByTenantIdAndCodeIgnoreCase(tenantId, customerCode).orElse(null);
         if (customer == null) {
             return AssetImportCandidate.invalid(row, "Không tìm thấy khách hàng theo mã " + customerCode);
+        }
+        if (!customer.isActive()) {
+            return AssetImportCandidate.invalid(row, "Khách hàng " + customerCode + " đã ngừng hoạt động");
         }
 
         String serial = row.serialNumber().trim().toUpperCase(Locale.ROOT);
@@ -268,9 +292,6 @@ public class AssetService {
         return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
     }
 
-    private static List<UserRole> assetRoles() {
-        return List.of(UserRole.OWNER, UserRole.CUSTOMER_SERVICE);
-    }
 
     public static AssetResponse toResponse(Asset a) {
         return new AssetResponse(a.getId(), a.getCustomer().getId(), a.getCustomer().getName(), a.getCategory(), a.getBrand(), a.getModel(), a.getSerialNumber(), a.getInstalledAt(), a.getWarrantyUntil(), a.isUnderWarranty(LocalDate.now()), a.getStatus(), a.getNotes(), a.getCreatedAt());

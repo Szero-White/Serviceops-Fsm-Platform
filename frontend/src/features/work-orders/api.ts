@@ -7,13 +7,13 @@ export const workOrdersApi = {
   history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 20) =>
     http.get<PageResponse<WorkOrder>>('/work-orders/history', { params: { search, status, page, size } }).then((response) => response.data),
   get: (id: string) => http.get<WorkOrder>(`/work-orders/${id}`).then((response) => response.data),
-  schedule: (id: string, payload: { technicianId: string; startTime: string; endTime: string }) =>
+  schedule: (id: string, payload: { technicianId: string; startTime: string; endTime: string; reason?: string }) =>
     http.post<WorkOrder>(`/work-orders/${id}/schedule`, payload).then((response) => response.data),
   transition: (id: string, payload: { targetStatus: WorkOrderStatus; note?: string; diagnosis?: string; resolution?: string }) =>
     http.post<WorkOrder>(`/work-orders/${id}/transition`, payload).then((response) => response.data),
   invoice: (id: string) =>
     http.get<Blob>(`/work-orders/${id}/invoice`, { responseType: 'blob' }).then((response) => response.data),
-  consumePart: (id: string, payload: { sparePartId: string; quantity: number; note?: string }) =>
+  consumePart: (id: string, payload: { sparePartId: string; quantity: number; note: string }) =>
     http.post<SparePart>(`/work-orders/${id}/parts/consume`, payload).then((response) => response.data),
   deleteFromHistory: (id: string) => http.delete<void>(`/work-orders/${id}`).then((response) => response.data),
 }

@@ -45,4 +45,10 @@ public class InventoryTransaction extends TenantScopedEntity {
 
     @Column(name = "created_by", nullable = false, length = 100)
     private String createdBy;
+
+    @Column(name = "actor_display_name", length = 150)
+    private String actorDisplayName;
+
+    @Column(name = "actor_role", length = 40)
+    private String actorRole;
 }

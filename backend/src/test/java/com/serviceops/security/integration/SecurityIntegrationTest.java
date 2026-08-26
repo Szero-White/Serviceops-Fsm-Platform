@@ -60,7 +60,11 @@ class SecurityIntegrationTest extends AbstractPostgresIntegrationTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(exchangeGet("/api/v1/spare-parts", technicianToken).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+        assertThat(exchangeGet("/api/v1/work-orders", warehouseToken).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(exchangeGet("/api/v1/work-orders/history", warehouseToken).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(exchangeGet("/api/v1/dashboard", warehouseToken).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(exchangeGet(
                 "/api/v1/attachments?referenceType=ASSET&referenceId=" + UUID.randomUUID(),

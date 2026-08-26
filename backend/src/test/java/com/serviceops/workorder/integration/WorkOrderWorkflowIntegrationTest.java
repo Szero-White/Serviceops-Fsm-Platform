@@ -131,16 +131,14 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
                 "diagnosis", "Integration test diagnosis",
                 "resolution", "Integration test resolution"
         ));
-        assertForbiddenTechnicianTransition(workOrderId, technicianToken, "CUSTOMER_ACCEPTED", "COMPLETED");
-        assertForbiddenTechnicianTransition(workOrderId, technicianToken, "REOPENED", "COMPLETED");
+        assertTransition(workOrderId, technicianToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
 
         String ownerToken = login("owner", "123456");
-        assertTransition(workOrderId, ownerToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
         ResponseEntity<Map<String, Object>> closed = assertTransition(
                 workOrderId,
                 ownerToken,
                 "CLOSED",
-                Map.of("note", "Workflow closed")
+                Map.of("note", "Workflow closed by owner override")
         );
         assertThat(closed.getBody()).isNotNull();
         assertThat(closed.getBody().get("status")).isEqualTo("CLOSED");
@@ -203,6 +201,18 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
                 .findByTenantIdAndWorkOrderId(owner.getTenantId(), UUID.fromString(workOrderId))
                 .orElseThrow()
                 .getStatus()).isEqualTo(AppointmentStatus.ACTIVE);
+
+        String dispatcherToken = login("dispatcher", "123456");
+        ResponseEntity<Map<String, Object>> dispatcherForbidden = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/transition",
+                dispatcherToken,
+                Map.of("targetStatus", "ON_THE_WAY")
+        );
+        assertThat(dispatcherForbidden.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(dispatcherForbidden.getBody()).isNotNull();
+        assertThat(dispatcherForbidden.getBody().get("code")).isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
+        assertThat(workOrderRepository.findById(UUID.fromString(workOrderId)).orElseThrow().getStatus().name())
+                .isEqualTo("ASSIGNED");
 
         ResponseEntity<Map<String, Object>> forbidden = postJsonMap(
                 "/api/v1/work-orders/" + workOrderId + "/transition",

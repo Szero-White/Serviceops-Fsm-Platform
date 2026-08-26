@@ -10,8 +10,11 @@ import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
+import com.serviceops.technician.domain.TechnicianProfile;
+import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
+import com.serviceops.workorder.domain.WorkOrderStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -59,6 +62,9 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
     private SparePartRepository sparePartRepository;
 
     @Autowired
+    private TechnicianRepository technicianRepository;
+
+    @Autowired
     private InventoryTransactionRepository inventoryTransactionRepository;
 
     @Test
@@ -72,12 +78,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         );
         customerRepository.saveAndFlush(customer);
 
-        WorkOrder workOrder = workOrder(
-                owner.getTenantId(),
-                customer,
-                uniqueCode("IP-WO-")
-        );
-        workOrderRepository.saveAndFlush(workOrder);
+        WorkOrder workOrder = assignedInProgressWorkOrder(owner, customer, "IP-WO-");
 
         SparePart part = new SparePart();
         part.setTenantId(owner.getTenantId());
@@ -92,7 +93,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
 
         ResponseEntity<String> response = postJson(
                 "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
-                login("owner", "123456"),
+                login("technician", "123456"),
                 Map.of(
                         "sparePartId", part.getId(),
                         "quantity", new BigDecimal("1"),
@@ -120,12 +121,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         );
         customerRepository.saveAndFlush(customer);
 
-        WorkOrder workOrder = workOrder(
-                owner.getTenantId(),
-                customer,
-                uniqueCode("STOCK-WO-")
-        );
-        workOrderRepository.saveAndFlush(workOrder);
+        WorkOrder workOrder = assignedInProgressWorkOrder(owner, customer, "STOCK-WO-");
 
         SparePart part = new SparePart();
         part.setTenantId(owner.getTenantId());
@@ -138,7 +134,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         part.setActive(true);
         sparePartRepository.saveAndFlush(part);
 
-        String token = login("owner", "123456");
+        String token = login("technician", "123456");
         Map<String, Object> body = Map.of(
                 "sparePartId", part.getId(),
                 "quantity", new BigDecimal("4.000"),
@@ -247,6 +243,92 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 .orElseThrow();
         assertThat(reloaded.getStockQuantity()).isEqualByComparingTo("2.000");
         assertThat(reloaded.isActive()).isFalse();
+    }
+
+    @Test
+    void warehouseCanUpdateMinimumStockThresholdWithoutChangingPhysicalStock() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        SparePart part = sparePart(owner, "THRESHOLD-", new BigDecimal("5.000"));
+        sparePartRepository.saveAndFlush(part);
+
+        ResponseEntity<String> response = exchangeInventory(
+                "/api/v1/spare-parts/" + part.getId() + "/reorder-level",
+                HttpMethod.PATCH,
+                login("warehouse", "123456"),
+                Map.of("reorderLevel", new BigDecimal("6.000"))
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        SparePart reloaded = sparePartRepository
+                .findByIdAndTenantId(part.getId(), owner.getTenantId())
+                .orElseThrow();
+        assertThat(reloaded.getStockQuantity()).isEqualByComparingTo("5.000");
+        assertThat(reloaded.getReorderLevel()).isEqualByComparingTo("6.000");
+    }
+
+    @Test
+    void warehouseCanReconcileReturnAndTraceInventoryWithoutOperationalWorkOrderAccess() {
+        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
+        Customer customer = customer(owner.getTenantId(), uniqueCode("WH-CUST-"), "Warehouse Workflow Customer");
+        customerRepository.saveAndFlush(customer);
+        WorkOrder workOrder = assignedInProgressWorkOrder(owner, customer, "WH-WO-");
+        SparePart part = sparePart(owner, "WH-PART-", new BigDecimal("5.000"));
+        sparePartRepository.saveAndFlush(part);
+
+        ResponseEntity<String> consumeResponse = postJson(
+                "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
+                login("technician", "123456"),
+                Map.of("sparePartId", part.getId(), "quantity", new BigDecimal("2.000"), "note", "Warehouse return test")
+        );
+        assertThat(consumeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        String warehouseToken = login("warehouse", "123456");
+        ResponseEntity<String> returnResponse = postJson(
+                "/api/v1/work-orders/" + workOrder.getId() + "/parts/" + part.getId() + "/return",
+                warehouseToken,
+                Map.of("quantity", new BigDecimal("1.000"), "note", "Unused part returned")
+        );
+        assertThat(returnResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> stocktakeResponse = postJson(
+                "/api/v1/spare-parts/" + part.getId() + "/stocktake",
+                warehouseToken,
+                Map.of("actualQuantity", new BigDecimal("3.000"), "reason", "Physical count")
+        );
+        assertThat(stocktakeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> historyResponse = exchangeInventory(
+                "/api/v1/inventory-transactions?search=" + part.getSku(),
+                HttpMethod.GET,
+                warehouseToken,
+                null
+        );
+        assertThat(historyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(historyResponse.getBody()).contains("CONSUME", "RETURN", "ADJUSTMENT_OUT", part.getSku());
+
+        ResponseEntity<String> unfilteredHistoryResponse = exchangeInventory(
+                "/api/v1/inventory-transactions",
+                HttpMethod.GET,
+                warehouseToken,
+                null
+        );
+        assertThat(unfilteredHistoryResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(unfilteredHistoryResponse.getBody()).contains(part.getSku());
+
+        assertThat(sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId()).orElseThrow().getStockQuantity())
+                .isEqualByComparingTo("3.000");
+    }
+
+    private WorkOrder assignedInProgressWorkOrder(UserAccount owner, Customer customer, String codePrefix) {
+        UserAccount technicianUser = userAccountRepository.findByUsernameIgnoreCase("technician").orElseThrow();
+        TechnicianProfile technician = technicianRepository
+                .findByTenantIdAndUserId(owner.getTenantId(), technicianUser.getId())
+                .orElseThrow();
+
+        WorkOrder workOrder = workOrder(owner.getTenantId(), customer, uniqueCode(codePrefix));
+        workOrder.setTechnician(technician);
+        workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
+        return workOrderRepository.saveAndFlush(workOrder);
     }
 
     private SparePart sparePart(UserAccount owner, String skuPrefix, BigDecimal stock) {

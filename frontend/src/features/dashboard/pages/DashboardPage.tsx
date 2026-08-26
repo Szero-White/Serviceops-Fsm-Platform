@@ -82,8 +82,14 @@ export function DashboardPage() {
     )
   }
 
-  const activeTotal = data.openWorkOrders + data.assignedWorkOrders + data.inProgressWorkOrders + data.waitingForPartsWorkOrders
-  const completedTotal = data.completedWorkOrders + data.closedWorkOrders
+  const activeTotal = data.openWorkOrders
+    + data.scheduledWorkOrders
+    + data.assignedWorkOrders
+    + data.onTheWayWorkOrders
+    + data.inProgressWorkOrders
+    + data.waitingForPartsWorkOrders
+    + data.reopenedWorkOrders
+  const completedTotal = data.completedWorkOrders + data.customerAcceptedWorkOrders + data.closedWorkOrders
   const completionRate = activeTotal + completedTotal === 0 ? 0 : Math.round((completedTotal / (activeTotal + completedTotal)) * 100)
   return (
     <div className="page-shell">
@@ -104,16 +110,16 @@ export function DashboardPage() {
         {isTechnician ? (
           <>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Đã phân công" value={data.assignedWorkOrders} helper="Công việc cần chuẩn bị" icon={<CustomerServiceOutlined />} tone="primary" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper="Công việc của bạn" icon={<ToolOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders + data.onTheWayWorkOrders + data.reopenedWorkOrders} helper="Bao gồm đang di chuyển và mở lại" icon={<ToolOutlined />} tone="primary" /></Col>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="warning" /></Col>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Đã hoàn thành" value={data.completedWorkOrders} helper="Chờ xác nhận hoặc đóng phiếu" icon={<CheckCircleOutlined />} tone="success" /></Col>
           </>
         ) : (
           <>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Yêu cầu đang mở" value={data.openServiceRequests} helper="Cần tiếp nhận và xử lý" icon={<CustomerServiceOutlined />} tone="primary" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders} helper={`${data.assignedWorkOrders} phiếu đã phân công`} icon={<ToolOutlined />} tone="primary" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Đang thực hiện" value={data.inProgressWorkOrders + data.onTheWayWorkOrders + data.reopenedWorkOrders} helper={`${data.scheduledWorkOrders + data.assignedWorkOrders} phiếu chờ / đã phân công`} icon={<ToolOutlined />} tone="primary" /></Col>
             <Col xs={24} sm={12} xl={6}><MetricCard label="Chờ phụ tùng" value={data.waitingForPartsWorkOrders} helper="Cần phối hợp với kho" icon={<ClockCircleOutlined />} tone="warning" /></Col>
-            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm mức đặt hàng" icon={<AlertOutlined />} tone="danger" /></Col>
+            <Col xs={24} sm={12} xl={6}><MetricCard label="Phụ tùng sắp hết" value={data.lowStockParts} helper="Đã chạm ngưỡng tồn tối thiểu" icon={<AlertOutlined />} tone="danger" /></Col>
           </>
         )}
       </Row>

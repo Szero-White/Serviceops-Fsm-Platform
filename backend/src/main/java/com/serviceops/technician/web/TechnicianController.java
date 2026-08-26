@@ -29,6 +29,7 @@ public class TechnicianController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER')")
     public TechnicianResponse updateProfile(
             @PathVariable UUID id,
             @Valid @RequestBody TechnicianProfileRequest request

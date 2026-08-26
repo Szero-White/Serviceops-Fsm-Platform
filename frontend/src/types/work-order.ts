@@ -1,4 +1,4 @@
-import type { Priority } from './common'
+import type { Priority, UserRole } from './common'
 
 export type WorkOrderStatus =
   | 'DRAFT'
@@ -23,6 +23,24 @@ export interface WorkOrderHistory {
   createdAt: string
 }
 
+export type WorkOrderActivityType = 'STATUS_CHANGE' | 'DISPATCH_UPDATED' | 'PART_CONSUMED' | 'PART_RETURNED'
+
+export interface WorkOrderActivity {
+  id: string
+  type: WorkOrderActivityType
+  status?: WorkOrderStatus
+  note?: string
+  actor: string
+  actorDisplayName?: string
+  actorRole?: UserRole | 'SYSTEM'
+  sparePartId?: string
+  sparePartSku?: string
+  sparePartName?: string
+  unit?: string
+  quantity?: number
+  createdAt: string
+}
+
 export interface WorkOrder {
   id: string
   code: string
@@ -44,6 +62,7 @@ export interface WorkOrder {
   completedAt?: string
   createdAt: string
   history: WorkOrderHistory[]
+  activities?: WorkOrderActivity[]
 }
 
 export interface Technician {

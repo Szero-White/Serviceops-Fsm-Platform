@@ -5,7 +5,11 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
+import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.domain.InventoryTransaction;
+import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -23,6 +27,7 @@ import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
+import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderActivityResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistoryResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +39,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,14 +50,34 @@ public class WorkOrderService {
             WorkOrderStatus.ON_THE_WAY,
             WorkOrderStatus.IN_PROGRESS,
             WorkOrderStatus.WAITING_FOR_PARTS,
-            WorkOrderStatus.COMPLETED
+            WorkOrderStatus.COMPLETED,
+            WorkOrderStatus.CUSTOMER_ACCEPTED,
+            WorkOrderStatus.CLOSED,
+            WorkOrderStatus.REOPENED
+    );
+    private static final Set<WorkOrderStatus> OWNER_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CUSTOMER_ACCEPTED,
+            WorkOrderStatus.CLOSED,
+            WorkOrderStatus.REOPENED,
+            WorkOrderStatus.CANCELLED
     );
     private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.REOPENED,
             WorkOrderStatus.CANCELLED
+    );
+    private static final Set<WorkOrderStatus> DISPATCHER_ALLOWED_TRANSITIONS = EnumSet.of(
+            WorkOrderStatus.CANCELLED
+    );
+    private static final Set<WorkOrderStatus> DISPATCHABLE_STATUSES = EnumSet.of(
+            WorkOrderStatus.OPEN,
+            WorkOrderStatus.SCHEDULED,
+            WorkOrderStatus.ASSIGNED,
+            WorkOrderStatus.REOPENED
     );
 
     private final WorkOrderRepository repository;
     private final WorkOrderStatusHistoryRepository historyRepository;
+    private final InventoryTransactionRepository inventoryTransactionRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final TechnicianRepository technicianRepository;
     private final AppointmentRepository appointmentRepository;
@@ -71,9 +97,21 @@ public class WorkOrderService {
     @Transactional(readOnly = true)
     public WorkOrderResponse get(UUID id) {
         WorkOrder workOrder = require(id);
-        List<WorkOrderHistoryResponse> history = historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(CurrentUser.tenantId(), id)
-                .stream().map(WorkOrderService::toHistory).toList();
-        return toResponse(workOrder, history);
+        UUID tenantId = CurrentUser.tenantId();
+        List<WorkOrderStatusHistory> statusHistory = historyRepository
+                .findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(tenantId, id);
+        List<InventoryTransaction> partTransactions = inventoryTransactionRepository
+                .findPartUsageForWorkOrder(tenantId, id);
+        List<WorkOrderHistoryResponse> history = statusHistory.stream()
+                .map(WorkOrderService::toHistory)
+                .toList();
+        var dispatchEvents = auditService.findEntityEvents(id, "WORK_ORDER", List.of("RESCHEDULE"));
+        List<WorkOrderActivityResponse> activities = WorkOrderActivityMapper.merge(
+                statusHistory,
+                partTransactions,
+                dispatchEvents
+        );
+        return toResponse(workOrder, history, activities);
     }
 
     @Transactional(readOnly = true)
@@ -114,11 +152,12 @@ public class WorkOrderService {
 
         addHistory(entity, null, WorkOrderStatus.OPEN, "Tiếp nhận từ yêu cầu dịch vụ");
         auditService.record("CREATE_FROM_SERVICE_REQUEST", "WORK_ORDER", entity.getId(), "Tạo " + entity.getCode() + " từ yêu cầu dịch vụ");
+        var dispatchNotification = NotificationCopy.workOrderNeedsDispatch(entity.getCode());
         notificationService.notifyRoles(
                 tenantId,
-                dispatchRoles(),
-                "Có phiếu mới chờ điều phối: " + entity.getCode(),
-                entity.getSummary()
+                dispatcherRoles(),
+                dispatchNotification.title(),
+                dispatchNotification.message()
         );
         return toResponse(entity, List.of());
     }
@@ -128,8 +167,16 @@ public class WorkOrderService {
         if (!request.endTime().isAfter(request.startTime())) {
             throw BusinessException.badRequest("INVALID_APPOINTMENT_TIME", "Thời gian kết thúc phải sau thời gian bắt đầu");
         }
+
         UUID tenantId = CurrentUser.tenantId();
-        WorkOrder workOrder = require(id);
+        WorkOrder workOrder = requireForUpdate(id);
+        if (!DISPATCHABLE_STATUSES.contains(workOrder.getStatus())) {
+            throw BusinessException.conflict(
+                    "WORK_ORDER_ALREADY_STARTED",
+                    "Chỉ có thể điều phối lại trước khi kỹ thuật viên bắt đầu di chuyển hoặc thực hiện công việc"
+            );
+        }
+
         TechnicianProfile technician = technicianRepository.findForUpdate(request.technicianId(), tenantId)
                 .orElseThrow(() -> BusinessException.notFound("TECHNICIAN_NOT_FOUND", "Không tìm thấy kỹ thuật viên"));
         if (!technician.isActive()
@@ -137,12 +184,47 @@ public class WorkOrderService {
                 || technician.getUser().getRole() != UserRole.TECHNICIAN) {
             throw BusinessException.conflict("TECHNICIAN_INACTIVE", "Kỹ thuật viên đang ngừng hoạt động hoặc tài khoản không còn hiệu lực");
         }
-        boolean overlap = appointmentRepository.existsOverlap(tenantId, technician.getId(), request.startTime(), request.endTime(), AppointmentStatus.ACTIVE, workOrder.getId());
+
+        Appointment existingAppointment = appointmentRepository
+                .findByTenantIdAndWorkOrderId(tenantId, workOrder.getId())
+                .orElse(null);
+        TechnicianProfile previousTechnician = existingAppointment == null
+                ? workOrder.getTechnician()
+                : existingAppointment.getTechnician();
+        Instant previousStart = existingAppointment == null ? workOrder.getScheduledStart() : existingAppointment.getStartTime();
+        Instant previousEnd = existingAppointment == null ? workOrder.getScheduledEnd() : existingAppointment.getEndTime();
+
+        boolean previouslyDispatched = previousTechnician != null || previousStart != null || previousEnd != null;
+        boolean technicianChanged = previousTechnician != null && !previousTechnician.getId().equals(technician.getId());
+        boolean scheduleChanged = !Objects.equals(previousStart, request.startTime())
+                || !Objects.equals(previousEnd, request.endTime());
+        boolean dispatchChanged = technicianChanged || scheduleChanged;
+
+        if (previouslyDispatched && !dispatchChanged) {
+            return get(id);
+        }
+
+        String reason = blankToNull(request.reason());
+        if (previouslyDispatched && reason == null) {
+            throw BusinessException.badRequest(
+                    "WORK_ORDER_REDISPATCH_REASON_REQUIRED",
+                    "Phải nhập lý do khi điều phối lại kỹ thuật viên hoặc lịch thực hiện"
+            );
+        }
+
+        boolean overlap = appointmentRepository.existsOverlap(
+                tenantId,
+                technician.getId(),
+                request.startTime(),
+                request.endTime(),
+                AppointmentStatus.ACTIVE,
+                workOrder.getId()
+        );
         if (overlap) {
             throw BusinessException.conflict("TECHNICIAN_SCHEDULE_CONFLICT", "Kỹ thuật viên đã có công việc trùng thời gian");
         }
 
-        WorkOrderStatus previous = workOrder.getStatus();
+        WorkOrderStatus previousStatus = workOrder.getStatus();
         try {
             workOrder.schedule(technician, request.startTime(), request.endTime());
         } catch (IllegalArgumentException ex) {
@@ -151,7 +233,7 @@ public class WorkOrderService {
             throw BusinessException.conflict("INVALID_STATUS_TRANSITION", ex.getMessage());
         }
 
-        Appointment appointment = appointmentRepository.findByTenantIdAndWorkOrderId(tenantId, workOrder.getId()).orElseGet(Appointment::new);
+        Appointment appointment = existingAppointment == null ? new Appointment() : existingAppointment;
         if (appointment.getId() == null) {
             appointment.setTenantId(tenantId);
             appointment.setWorkOrder(workOrder);
@@ -162,16 +244,60 @@ public class WorkOrderService {
         appointment.setStatus(AppointmentStatus.ACTIVE);
         appointmentRepository.save(appointment);
 
-        addHistory(workOrder, previous, workOrder.getStatus(), "Phân công cho " + technician.getUser().getDisplayName());
-        auditService.record("ASSIGN", "WORK_ORDER", workOrder.getId(), "Phân công " + workOrder.getCode() + " cho " + technician.getUser().getDisplayName());
-        notificationService.create(tenantId, technician.getUser(), "Công việc mới: " + workOrder.getCode(), "Bạn được phân công: " + workOrder.getSummary());
-        notificationService.notifyRoles(tenantId, dispatchRoles(), "Đã phân công " + workOrder.getCode(), technician.getUser().getDisplayName() + " phụ trách: " + workOrder.getSummary());
+        String technicianName = technician.getUser().getDisplayName();
+        if (previousStatus != workOrder.getStatus()) {
+            addHistory(workOrder, previousStatus, workOrder.getStatus(), "Phân công cho " + technicianName);
+        }
+
+        if (previouslyDispatched) {
+            String previousTechnicianName = previousTechnician == null
+                    ? "Chưa phân công"
+                    : previousTechnician.getUser().getDisplayName();
+            String dispatchActor = dispatchActorLabel();
+            String details = "Điều chỉnh lịch " + workOrder.getCode()
+                    + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
+                    + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]"
+                    + ". Lý do: " + reason;
+            auditService.record("RESCHEDULE", "WORK_ORDER", workOrder.getId(), details);
+
+            if (technicianChanged && previousTechnician != null) {
+                createNotification(
+                        tenantId,
+                        previousTechnician.getUser(),
+                        NotificationCopy.technicianTransferredAway(workOrder.getCode(), technicianName)
+                );
+                createNotification(
+                        tenantId,
+                        technician.getUser(),
+                        NotificationCopy.technicianTransferredTo(workOrder.getCode(), dispatchActor)
+                );
+            } else {
+                createNotification(
+                        tenantId,
+                        technician.getUser(),
+                        NotificationCopy.technicianScheduleChanged(workOrder.getCode(), dispatchActor)
+                );
+            }
+        } else {
+            auditService.record(
+                    "ASSIGN",
+                    "WORK_ORDER",
+                    workOrder.getId(),
+                    "Phân công " + workOrder.getCode() + " cho " + technicianName
+            );
+            createNotification(
+                    tenantId,
+                    technician.getUser(),
+                    NotificationCopy.technicianAssigned(workOrder.getCode(), dispatchActorLabel())
+            );
+        }
+
         return get(id);
     }
 
     @Transactional
     public WorkOrderResponse transition(UUID id, TransitionWorkOrder request) {
-        WorkOrder workOrder = require(id);
+        WorkOrder workOrder = requireForUpdate(id);
         ensureTechnicianCanAccess(workOrder);
         ensureRoleCanTransition(request);
         WorkOrderStatus previous = workOrder.getStatus();
@@ -193,7 +319,7 @@ public class WorkOrderService {
         }
         addHistory(workOrder, previous, workOrder.getStatus(), blankToNull(request.note()));
         auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
-        notifyStatusChange(workOrder, previous);
+        notifyStatusChange(workOrder);
         return get(id);
     }
 
@@ -206,7 +332,6 @@ public class WorkOrderService {
             throw BusinessException.conflict("WORK_ORDER_NOT_ARCHIVABLE", ex.getMessage());
         }
         auditService.record("DELETE_HISTORY", "WORK_ORDER", workOrder.getId(), "Xóa khỏi lịch sử " + workOrder.getCode());
-        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), "Đã xóa khỏi lịch sử: " + workOrder.getCode(), workOrder.getSummary());
     }
 
 
@@ -223,13 +348,35 @@ public class WorkOrderService {
     private static void ensureRoleCanTransition(TransitionWorkOrder request) {
         WorkOrderStatus targetStatus = request.targetStatus();
 
+        if (CurrentUser.hasRole("OWNER")) {
+            if (!OWNER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Owner có quyền quản trị bước xác nhận khách, đóng/mở lại và hủy phiếu; tiến độ hiện trường vẫn thuộc kỹ thuật viên"
+                );
+            }
+            ensureCancellationReason(request);
+            return;
+        }
+
         if (CurrentUser.hasRole("TECHNICIAN")) {
             if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Kỹ thuật viên chỉ được cập nhật tiến độ thực hiện của công việc được phân công"
+                        "Kỹ thuật viên chỉ được cập nhật tiến độ, ghi nhận khách xác nhận, đóng hoặc mở lại công việc được phân công"
                 );
             }
+            return;
+        }
+
+        if (CurrentUser.hasRole("DISPATCHER")) {
+            if (!DISPATCHER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
+                throw BusinessException.forbidden(
+                        "WORK_ORDER_TRANSITION_FORBIDDEN",
+                        "Điều phối viên chỉ được hủy phiếu công việc theo nghiệp vụ điều phối"
+                );
+            }
+            ensureCancellationReason(request);
             return;
         }
 
@@ -237,16 +384,29 @@ public class WorkOrderService {
             if (!CUSTOMER_SERVICE_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Chăm sóc khách hàng chỉ được hủy phiếu công việc"
+                        "Chăm sóc khách hàng chỉ mở lại hoặc hủy phiếu khi tiếp nhận yêu cầu thay đổi từ khách hàng"
                 );
             }
-            if (blankToNull(request.note()) == null) {
-                throw BusinessException.badRequest(
-                        "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
-                        "Phải nhập lý do hủy phiếu công việc"
-                );
-            }
+            ensureCancellationReason(request);
+            return;
         }
+
+        // Preserve validation behavior for direct service calls without a supported role.
+        ensureCancellationReason(request);
+    }
+
+    private static void ensureCancellationReason(TransitionWorkOrder request) {
+        if (request.targetStatus() == WorkOrderStatus.CANCELLED && blankToNull(request.note()) == null) {
+            throw BusinessException.badRequest(
+                    "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
+                    "Phải nhập lý do hủy phiếu công việc"
+            );
+        }
+    }
+
+    private WorkOrder requireForUpdate(UUID id) {
+        return repository.findForUpdate(id, CurrentUser.tenantId())
+                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
     }
 
     private WorkOrder require(UUID id) {
@@ -277,16 +437,80 @@ public class WorkOrderService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private void notifyStatusChange(WorkOrder workOrder, WorkOrderStatus previous) {
-        String title = "Cập nhật " + workOrder.getCode() + ": " + previous + " → " + workOrder.getStatus();
-        notificationService.notifyRoles(workOrder.getTenantId(), dispatchRoles(), title, workOrder.getSummary());
-        if (workOrder.getTechnician() != null && !CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
-            notificationService.create(workOrder.getTenantId(), workOrder.getTechnician().getUser(), title, workOrder.getSummary());
+    private static String dispatchActorLabel() {
+        String roleLabel = CurrentUser.hasRole("OWNER") ? "Chủ sở hữu" : "Điều phối viên";
+        return roleLabel + " " + CurrentUser.displayName();
+    }
+
+    private void notifyStatusChange(WorkOrder workOrder) {
+        UUID tenantId = workOrder.getTenantId();
+        String code = workOrder.getCode();
+
+        switch (workOrder.getStatus()) {
+            case WAITING_FOR_PARTS -> notifyRoles(
+                    tenantId,
+                    List.of(UserRole.DISPATCHER),
+                    NotificationCopy.workOrderWaitingForParts(code)
+            );
+            case REOPENED -> {
+                notifyRoles(
+                        tenantId,
+                        List.of(UserRole.OWNER, UserRole.DISPATCHER),
+                        NotificationCopy.workOrderReopenedAttention(code)
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        NotificationCopy.workOrderReopenedForTechnician(code)
+                );
+            }
+            case COMPLETED -> notifyRoles(
+                    tenantId,
+                    List.of(UserRole.CUSTOMER_SERVICE),
+                    NotificationCopy.workOrderCompletedForCustomerService(code)
+            );
+            case CLOSED -> notifyAssignedTechnician(
+                    workOrder,
+                    NotificationCopy.workOrderClosedForTechnician(code)
+            );
+            case CANCELLED -> {
+                notifyRoles(
+                        tenantId,
+                        List.of(UserRole.OWNER),
+                        NotificationCopy.workOrderCancelledForOwner(code)
+                );
+                notifyAssignedTechnician(
+                        workOrder,
+                        NotificationCopy.workOrderCancelledForTechnician(code)
+                );
+            }
+            case CUSTOMER_ACCEPTED, ON_THE_WAY, IN_PROGRESS -> {
+                // Expected operational steps stay in the Work Order timeline instead of the bell.
+            }
+            default -> {
+                // Scheduling/assignment has dedicated notifications. Avoid generic
+                // internal status wording in user-facing notifications.
+            }
         }
     }
 
-    private static List<UserRole> dispatchRoles() {
-        return List.of(UserRole.OWNER, UserRole.DISPATCHER);
+    private void notifyAssignedTechnician(WorkOrder workOrder, NotificationCopy.Copy copy) {
+        if (workOrder.getTechnician() == null
+                || CurrentUser.userId().equals(workOrder.getTechnician().getUser().getId())) {
+            return;
+        }
+        createNotification(workOrder.getTenantId(), workOrder.getTechnician().getUser(), copy);
+    }
+
+    private void notifyRoles(UUID tenantId, List<UserRole> roles, NotificationCopy.Copy copy) {
+        notificationService.notifyRoles(tenantId, roles, copy.title(), copy.message());
+    }
+
+    private void createNotification(UUID tenantId, UserAccount recipient, NotificationCopy.Copy copy) {
+        notificationService.create(tenantId, recipient, copy.title(), copy.message());
+    }
+
+    private static List<UserRole> dispatcherRoles() {
+        return List.of(UserRole.DISPATCHER);
     }
 
     private static WorkOrderHistoryResponse toHistory(WorkOrderStatusHistory h) {
@@ -294,13 +518,21 @@ public class WorkOrderService {
     }
 
     public static WorkOrderResponse toResponse(WorkOrder w, List<WorkOrderHistoryResponse> history) {
+        return toResponse(w, history, List.of());
+    }
+
+    private static WorkOrderResponse toResponse(
+            WorkOrder w,
+            List<WorkOrderHistoryResponse> history,
+            List<WorkOrderActivityResponse> activities
+    ) {
         String assetLabel = w.getAsset() == null ? null : assetLabel(w.getAsset());
         return new WorkOrderResponse(w.getId(), w.getCode(), w.getServiceRequest() == null ? null : w.getServiceRequest().getId(),
                 w.getCustomer().getId(), w.getCustomer().getName(), w.getAsset() == null ? null : w.getAsset().getId(), assetLabel,
                 w.getTechnician() == null ? null : w.getTechnician().getId(),
                 w.getTechnician() == null ? null : w.getTechnician().getUser().getDisplayName(),
                 w.getSummary(), w.getDescription(), w.getPriority(), w.getStatus(), w.getScheduledStart(), w.getScheduledEnd(),
-                w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history);
+                w.getDiagnosis(), w.getResolution(), w.getCompletedAt(), w.getCreatedAt(), history, activities);
     }
 
     private static String assetLabel(Asset asset) {

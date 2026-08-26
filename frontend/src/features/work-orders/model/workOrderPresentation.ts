@@ -14,6 +14,10 @@ export const WORK_ORDER_STATUS_OPTIONS = [
   { value: 'REOPENED', label: 'Mở lại' },
 ]
 
+export const ACTIVE_WORK_ORDER_STATUS_OPTIONS = WORK_ORDER_STATUS_OPTIONS.filter(
+  (option) => option.value !== 'CLOSED' && option.value !== 'CANCELLED',
+)
+
 export const PRIORITY_OPTIONS = [
   { value: 'LOW', label: 'Thấp' },
   { value: 'NORMAL', label: 'Bình thường' },
@@ -28,7 +32,7 @@ export const TRANSITION_LABELS: Partial<Record<WorkOrderStatus, string>> = {
   COMPLETED: 'Hoàn thành',
   CUSTOMER_ACCEPTED: 'Khách xác nhận',
   CLOSED: 'Đóng phiếu',
-  REOPENED: 'Mở lại',
+  REOPENED: 'Khách yêu cầu xử lý lại',
   CANCELLED: 'Huỷ phiếu',
 }
 
@@ -42,17 +46,33 @@ const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {
   COMPLETED: ['CUSTOMER_ACCEPTED', 'REOPENED'],
   CUSTOMER_ACCEPTED: ['CLOSED', 'REOPENED'],
   REOPENED: ['IN_PROGRESS', 'CANCELLED'],
-  CANCELLED: ['REOPENED'],
+}
+
+export const WORK_ORDER_PART_CONSUMPTION_STATUSES = new Set<WorkOrderStatus>([
+  'ASSIGNED',
+  'ON_THE_WAY',
+  'IN_PROGRESS',
+  'WAITING_FOR_PARTS',
+  'REOPENED',
+])
+
+export function canConsumePartInStatus(status: WorkOrderStatus): boolean {
+  return WORK_ORDER_PART_CONSUMPTION_STATUSES.has(status)
 }
 
 const ROLE_ALLOWED_TRANSITIONS: Partial<Record<UserRole, ReadonlySet<WorkOrderStatus>>> = {
+  OWNER: new Set(['CUSTOMER_ACCEPTED', 'CLOSED', 'REOPENED', 'CANCELLED']),
   TECHNICIAN: new Set([
     'ON_THE_WAY',
     'IN_PROGRESS',
     'WAITING_FOR_PARTS',
     'COMPLETED',
+    'CUSTOMER_ACCEPTED',
+    'CLOSED',
+    'REOPENED',
   ]),
-  CUSTOMER_SERVICE: new Set(['CANCELLED']),
+  CUSTOMER_SERVICE: new Set(['REOPENED', 'CANCELLED']),
+  DISPATCHER: new Set(['CANCELLED']),
 }
 
 export function availableWorkOrderTransitions(status: WorkOrderStatus, role?: UserRole): WorkOrderStatus[] {

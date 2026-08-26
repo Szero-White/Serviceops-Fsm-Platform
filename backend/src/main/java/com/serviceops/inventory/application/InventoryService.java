@@ -12,17 +12,25 @@ import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
+import com.serviceops.inventory.web.InventoryDtos.InventoryTransactionResponse;
+import com.serviceops.inventory.web.InventoryDtos.ReturnablePartResponse;
+import com.serviceops.inventory.web.InventoryDtos.ReturnPartRequest;
+import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportResult;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportRowResult;
 import com.serviceops.inventory.web.InventoryDtos.SparePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartResponse;
 import com.serviceops.inventory.web.InventoryDtos.StockAdjustmentRequest;
+import com.serviceops.inventory.web.InventoryDtos.StocktakeRequest;
+import com.serviceops.inventory.web.InventoryDtos.StocktakeResponse;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -30,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,12 +49,23 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
+    private static final Instant INVENTORY_HISTORY_MIN_TIME = Instant.EPOCH;
+    private static final Instant INVENTORY_HISTORY_MAX_TIME = Instant.parse("9999-12-31T23:59:59Z");
+    private static final Set<WorkOrderStatus> PART_CONSUMPTION_ALLOWED_STATUSES = Set.of(
+            WorkOrderStatus.ASSIGNED,
+            WorkOrderStatus.ON_THE_WAY,
+            WorkOrderStatus.IN_PROGRESS,
+            WorkOrderStatus.WAITING_FOR_PARTS,
+            WorkOrderStatus.REOPENED
+    );
+
     private final SparePartRepository sparePartRepository;
     private final InventoryTransactionRepository transactionRepository;
     private final WorkOrderRepository workOrderRepository;
     private final InventoryCsvService csvService;
     private final AuditService auditService;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public PageResponse<SparePartResponse> search(String search, Boolean active, int page, int size) {
@@ -80,7 +100,43 @@ public class InventoryService {
             saveTransaction(part, null, InventoryTransactionType.IMPORT, request.initialStock(), "Tồn đầu kỳ");
         }
         auditService.record("CREATE", "SPARE_PART", part.getId(), "Tạo phụ tùng " + sku);
-        notificationService.notifyRoles(tenantId, warehouseRoles(), "Phụ tùng mới: " + part.getSku(), part.getName());
+        return toResponse(part);
+    }
+
+    @Transactional
+    public SparePartResponse updateReorderLevel(UUID id, ReorderLevelRequest request) {
+        SparePart part = requireLocked(id);
+        BigDecimal previousLevel = part.getReorderLevel();
+        BigDecimal newLevel = request.reorderLevel();
+
+        if (previousLevel.compareTo(newLevel) == 0) {
+            return toResponse(part);
+        }
+
+        part.setReorderLevel(newLevel);
+        auditService.record(
+                "UPDATE_REORDER_LEVEL",
+                "SPARE_PART",
+                part.getId(),
+                "Cập nhật ngưỡng tồn tối thiểu " + part.getSku() + ": "
+                        + previousLevel.stripTrailingZeros().toPlainString() + " -> "
+                        + newLevel.stripTrailingZeros().toPlainString() + " " + part.getUnit()
+        );
+
+        eventPublisher.publishEvent(new InventoryReorderLevelChangedEvent(
+                part.getTenantId(),
+                part.getId(),
+                part.getSku(),
+                part.getName(),
+                part.getUnit(),
+                part.getStockQuantity(),
+                previousLevel,
+                newLevel,
+                part.isActive(),
+                CurrentUser.userId(),
+                CurrentUser.displayName()
+        ));
+
         return toResponse(part);
     }
 
@@ -93,8 +149,116 @@ public class InventoryService {
         part.addStock(request.quantity());
         saveTransaction(part, null, InventoryTransactionType.IMPORT, request.quantity(), request.note());
         auditService.record("IMPORT_STOCK", "SPARE_PART", part.getId(), "Nhập " + request.quantity() + " " + part.getUnit());
-        notificationService.notifyRoles(part.getTenantId(), warehouseRoles(), "Đã nhập kho " + part.getSku(), request.quantity() + " " + part.getUnit() + " - " + part.getName());
         return toResponse(part);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<InventoryTransactionResponse> searchTransactions(String search,
+                                                                          InventoryTransactionType type,
+                                                                          Instant fromTime,
+                                                                          Instant toTime,
+                                                                          int page,
+                                                                          int size) {
+        if (fromTime != null && toTime != null && fromTime.isAfter(toTime)) {
+            throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời gian bắt đầu phải trước thời gian kết thúc");
+        }
+        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        List<InventoryTransactionType> types = type == null
+                ? List.of(InventoryTransactionType.values())
+                : List.of(type);
+        Instant effectiveFromTime = fromTime == null ? INVENTORY_HISTORY_MIN_TIME : fromTime;
+        Instant effectiveToTime = toTime == null ? INVENTORY_HISTORY_MAX_TIME : toTime;
+
+        return PageResponse.from(transactionRepository.search(
+                CurrentUser.tenantId(),
+                types,
+                PageRequestSupport.normalizeSearch(search),
+                effectiveFromTime,
+                effectiveToTime,
+                pageable
+        ).map(InventoryService::toTransactionResponse));
+    }
+
+    @Transactional
+    public StocktakeResponse stocktake(UUID id, StocktakeRequest request) {
+        SparePart part = requireLocked(id);
+        BigDecimal systemQuantity = part.getStockQuantity();
+        BigDecimal actualQuantity = request.actualQuantity();
+        BigDecimal difference = actualQuantity.subtract(systemQuantity);
+        InventoryTransactionType adjustmentType = null;
+
+        if (difference.signum() > 0) {
+            part.addStock(difference);
+            adjustmentType = InventoryTransactionType.ADJUSTMENT_IN;
+            saveTransaction(part, null, adjustmentType, difference, "Kiểm kê: " + request.reason().trim());
+        } else if (difference.signum() < 0) {
+            BigDecimal adjustmentQuantity = difference.abs();
+            part.consume(adjustmentQuantity);
+            adjustmentType = InventoryTransactionType.ADJUSTMENT_OUT;
+            saveTransaction(part, null, adjustmentType, adjustmentQuantity, "Kiểm kê: " + request.reason().trim());
+        }
+
+        String reason = request.reason().trim();
+        auditService.record("STOCKTAKE", "SPARE_PART", part.getId(),
+                "Kiểm kê " + part.getSku() + ": " + systemQuantity + " -> " + actualQuantity
+                        + "; lý do: " + reason);
+
+        if (difference.signum() != 0) {
+            eventPublisher.publishEvent(new InventoryStockAdjustedEvent(
+                    part.getTenantId(),
+                    part.getId(),
+                    part.getSku(),
+                    part.getName(),
+                    part.getUnit(),
+                    systemQuantity,
+                    actualQuantity,
+                    part.getReorderLevel(),
+                    CurrentUser.userId(),
+                    CurrentUser.displayName(),
+                    reason
+            ));
+        }
+        return new StocktakeResponse(toResponse(part), systemQuantity, actualQuantity, difference, adjustmentType);
+    }
+
+    @Transactional(readOnly = true)
+    public ReturnablePartResponse getReturnablePart(UUID workOrderId, UUID sparePartId) {
+        UUID tenantId = CurrentUser.tenantId();
+        WorkOrder workOrder = workOrderRepository.findDetailed(workOrderId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
+        if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
+            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể hoàn trả phụ tùng cho phiếu công việc đã đóng hoặc hủy");
+        }
+        SparePart part = sparePartRepository.findByIdAndTenantId(sparePartId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("SPARE_PART_NOT_FOUND", "Không tìm thấy phụ tùng"));
+        return toReturnableResponse(workOrder, part, netConsumedQuantity(tenantId, workOrderId, sparePartId));
+    }
+
+    @Transactional
+    public ReturnablePartResponse returnPart(UUID workOrderId, UUID sparePartId, ReturnPartRequest request) {
+        UUID tenantId = CurrentUser.tenantId();
+        WorkOrder workOrder = workOrderRepository.findForUpdate(workOrderId, tenantId)
+                .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
+        if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
+            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể hoàn trả phụ tùng cho phiếu công việc đã đóng hoặc hủy");
+        }
+
+        SparePart part = requireLocked(sparePartId);
+        BigDecimal returnableBefore = netConsumedQuantity(tenantId, workOrderId, sparePartId);
+        if (returnableBefore.signum() <= 0) {
+            throw BusinessException.conflict("NO_PARTS_TO_RETURN", "Phiếu công việc không còn phụ tùng này để hoàn trả");
+        }
+        if (request.quantity().compareTo(returnableBefore) > 0) {
+            throw BusinessException.conflict("RETURN_EXCEEDS_CONSUMED",
+                    "Số lượng hoàn trả không được vượt quá " + returnableBefore.stripTrailingZeros().toPlainString() + " " + part.getUnit());
+        }
+
+        part.addStock(request.quantity());
+        saveTransaction(part, workOrder, InventoryTransactionType.RETURN, request.quantity(), request.note());
+        auditService.record("RETURN_PART", "WORK_ORDER", workOrder.getId(),
+                "Hoàn trả " + request.quantity() + " " + part.getUnit() + " - " + part.getSku()
+                        + "; lý do: " + request.note().trim());
+        return toReturnableResponse(workOrder, part, returnableBefore.subtract(request.quantity()));
     }
 
     @Transactional(readOnly = true)
@@ -136,7 +300,6 @@ public class InventoryService {
         }
 
         auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phụ tùng từ CSV");
-        notificationService.notifyRoles(tenantId, warehouseRoles(), "Đã import danh mục phụ tùng", validRows + " SKU mới được thêm vào kho");
         return new SparePartImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -184,18 +347,27 @@ public class InventoryService {
         UUID tenantId = CurrentUser.tenantId();
         WorkOrder workOrder = workOrderRepository.findForUpdate(workOrderId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
-        if (CurrentUser.hasRole("TECHNICIAN")
-                && (workOrder.getTechnician() == null
-                || !workOrder.getTechnician().getUser().getId().equals(CurrentUser.userId()))) {
+        if (!CurrentUser.hasRole("TECHNICIAN")) {
+            throw BusinessException.forbidden(
+                    "WORK_ORDER_PART_CONSUMPTION_FORBIDDEN",
+                    "Chỉ kỹ thuật viên được phân công mới được ghi nhận phụ tùng đã dùng cho công việc"
+            );
+        }
+        if (workOrder.getTechnician() == null
+                || !workOrder.getTechnician().getUser().getId().equals(CurrentUser.userId())) {
             throw BusinessException.forbidden("WORK_ORDER_NOT_ASSIGNED", "Bạn chỉ được dùng phụ tùng cho công việc được phân công cho mình");
         }
-        if (workOrder.getStatus() == WorkOrderStatus.CLOSED || workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
-            throw BusinessException.conflict("WORK_ORDER_NOT_EDITABLE", "Không thể dùng phụ tùng cho phiếu công việc đã đóng hoặc hủy");
+        if (!PART_CONSUMPTION_ALLOWED_STATUSES.contains(workOrder.getStatus())) {
+            throw BusinessException.conflict(
+                    "WORK_ORDER_PART_CONSUMPTION_NOT_ALLOWED",
+                    "Chỉ có thể dùng phụ tùng khi công việc đang được thực hiện; phiếu đã hoàn thành, khách đã xác nhận, đã đóng hoặc đã hủy không được ghi nhận thêm phụ tùng"
+            );
         }
         SparePart part = requireLocked(request.sparePartId());
         if (!part.isActive()) {
             throw BusinessException.conflict("SPARE_PART_INACTIVE", "Phụ tùng đã ngừng hoạt động và không thể xuất dùng");
         }
+        BigDecimal stockBeforeConsumption = part.getStockQuantity();
         try {
             part.consume(request.quantity());
         } catch (IllegalArgumentException ex) {
@@ -205,10 +377,38 @@ public class InventoryService {
         }
         saveTransaction(part, workOrder, InventoryTransactionType.CONSUME, request.quantity(), request.note());
         auditService.record("CONSUME_PART", "WORK_ORDER", workOrder.getId(), "Dùng " + request.quantity() + " " + part.getUnit() + " - " + part.getSku());
-        if (part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0) {
-            notificationService.notifyRolesIncludingCurrentUser(tenantId, warehouseRoles(), "Phụ tùng sắp hết: " + part.getSku(), part.getName() + " còn " + part.getStockQuantity() + " " + part.getUnit());
-        }
+        notifyLowStockIfCrossed(part, stockBeforeConsumption);
         return toResponse(part);
+    }
+
+    private BigDecimal netConsumedQuantity(UUID tenantId, UUID workOrderId, UUID sparePartId) {
+        BigDecimal net = BigDecimal.ZERO;
+        for (InventoryTransaction transaction : transactionRepository.findPartUsageForWorkOrderAndSparePart(tenantId, workOrderId, sparePartId)) {
+            net = transaction.getTransactionType() == InventoryTransactionType.CONSUME
+                    ? net.add(transaction.getQuantity())
+                    : net.subtract(transaction.getQuantity());
+        }
+        return net.max(BigDecimal.ZERO);
+    }
+
+    private void notifyLowStockIfCrossed(SparePart part, BigDecimal previousStock) {
+        boolean wasLowStock = previousStock.compareTo(part.getReorderLevel()) <= 0;
+        boolean isLowStock = part.isActive() && part.getStockQuantity().compareTo(part.getReorderLevel()) <= 0;
+        if (!wasLowStock && isLowStock) {
+            var copy = NotificationCopy.lowStock(
+                    part.getSku(),
+                    part.getName(),
+                    part.getStockQuantity(),
+                    part.getUnit(),
+                    part.getReorderLevel()
+            );
+            notificationService.notifyRolesIncludingCurrentUser(
+                    part.getTenantId(),
+                    List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                    copy.title(),
+                    copy.message()
+            );
+        }
     }
 
     private SparePart requireLocked(UUID id) {
@@ -239,7 +439,7 @@ public class InventoryService {
 
         try {
             BigDecimal initialStock = parseNonNegative(row.initialStock(), "Ton ban dau");
-            BigDecimal reorderLevel = parseNonNegative(row.reorderLevel(), "Muc dat hang lai");
+            BigDecimal reorderLevel = parseNonNegative(row.reorderLevel(), "Ngưỡng tồn tối thiểu");
             BigDecimal unitPrice = parseNonNegative(row.unitPrice(), "Don gia");
             boolean active = parseBoolean(row.active());
             return new SparePartImportCandidate(row, sku, row.name().trim(), row.unit().trim(), initialStock, reorderLevel, unitPrice, active, true, "Hop le");
@@ -301,15 +501,33 @@ public class InventoryService {
         tx.setBalanceAfter(part.getStockQuantity());
         tx.setNote(note == null || note.isBlank() ? null : note.trim());
         tx.setCreatedBy(CurrentUser.username());
+        tx.setActorDisplayName(CurrentUser.displayName());
+        tx.setActorRole(CurrentUser.primaryRole());
         transactionRepository.save(tx);
-    }
-
-    private static List<UserRole> warehouseRoles() {
-        return List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF);
     }
 
     public static SparePartResponse toResponse(SparePart p) {
         return new SparePartResponse(p.getId(), p.getSku(), p.getName(), p.getUnit(), p.getStockQuantity(), p.getReorderLevel(), p.getUnitPrice(), p.getStockQuantity().compareTo(p.getReorderLevel()) <= 0, p.isActive(), p.getUpdatedAt());
+    }
+
+    private static InventoryTransactionResponse toTransactionResponse(InventoryTransaction tx) {
+        WorkOrder workOrder = tx.getWorkOrder();
+        SparePart part = tx.getSparePart();
+        return new InventoryTransactionResponse(
+                tx.getId(), tx.getTransactionType(), part.getId(), part.getSku(), part.getName(), part.getUnit(),
+                tx.getQuantity(), tx.getBalanceAfter(),
+                workOrder == null ? null : workOrder.getId(),
+                workOrder == null ? null : workOrder.getCode(),
+                workOrder == null ? null : workOrder.getSummary(),
+                tx.getNote(), tx.getCreatedBy(),
+                tx.getActorDisplayName() == null || tx.getActorDisplayName().isBlank() ? tx.getCreatedBy() : tx.getActorDisplayName(),
+                tx.getActorRole(),
+                tx.getCreatedAt());
+    }
+
+    private static ReturnablePartResponse toReturnableResponse(WorkOrder workOrder, SparePart part, BigDecimal quantity) {
+        return new ReturnablePartResponse(workOrder.getId(), workOrder.getCode(), part.getId(), part.getSku(),
+                part.getName(), part.getUnit(), quantity);
     }
 
     private record SparePartImportCandidate(

@@ -2,51 +2,69 @@
 
 ## 1. Yêu cầu môi trường
 
-- Java JDK 21
-- Maven 3.9+ (không bắt buộc nếu dùng Maven Wrapper đi kèm)
-- Node.js 22 LTS và npm
-- Docker Desktop
-- Git
+Bắt buộc:
 
-Kiểm tra:
+- Java JDK 21
+- Node.js 22 LTS và npm
+- Git
+- PostgreSQL 17, theo **một** trong hai cách:
+  - PostgreSQL cài trực tiếp trên Windows; hoặc
+  - Docker Desktop chạy PostgreSQL container của repository.
+
+Maven cài toàn cục không bắt buộc vì repository có Maven Wrapper.
+
+Kiểm tra phần bắt buộc:
 
 ```powershell
 java -version
 .\backend\mvnw.cmd -version
 node -v
 npm -v
+```
+
+Chỉ khi chọn Docker Desktop:
+
+```powershell
 docker version
 ```
 
-## 2. Quy tắc thư mục
+## 2. Tạo cấu hình local một lần
 
-Giải nén vào đường dẫn không dấu, không chứa `&`, ví dụ:
-
-```text
-D:\Study\Java\serviceops-local-first
-```
-
-Không nên đặt trong `D:\Học tập\...` hoặc thư mục chứa ký tự `&` vì PowerShell và một số tool có thể hiểu sai đường dẫn.
-
-## 3. Khởi động PostgreSQL
-
-### Cách A — Docker Desktop (khuyến nghị)
-
-Tại thư mục gốc:
+Từ thư mục gốc repository:
 
 ```powershell
 Copy-Item .env.example .env
-docker compose -f docker-compose.local.yml up -d
-docker compose -f docker-compose.local.yml ps
 ```
 
-Kiểm tra container phải ở trạng thái `healthy`.
+Mặc định `.env.example` dùng:
 
-File `.env` ở thư mục gốc được Docker Compose dùng để tạo PostgreSQL, nhưng Spring Boot không tự nạp file này. Ở bước chạy backend bên dưới, đặt cùng bộ biến `POSTGRES_*` để hai phía dùng đúng một tài khoản database.
+```env
+POSTGRES_DB=serviceops
+POSTGRES_USER=serviceops
+POSTGRES_PASSWORD=serviceops
+POSTGRES_PORT=5432
+DEMO_PASSWORD=Demo@2026
+```
+
+Nếu PostgreSQL native trên máy bạn dùng tài khoản khác, chỉ sửa file `.env` local. Không commit `.env`.
+
+`DEMO_PASSWORD` được `scripts/dev-start.ps1` truyền đồng thời cho backend và frontend để quick-login không lệch mật khẩu.
+
+## 3. Chuẩn bị PostgreSQL
+
+### Cách A — Docker Desktop
+
+Bạn có thể khởi động riêng PostgreSQL:
+
+```powershell
+.\scripts\start-postgres.ps1
+```
+
+hoặc dùng quick start ở bước 4 với `-StartPostgres`.
 
 ### Cách B — PostgreSQL đã cài trên Windows
 
-Nếu máy đã có PostgreSQL, mở pgAdmin/psql và chạy từng lệnh bằng tài khoản quản trị:
+Nếu dùng đúng bộ mặc định `serviceops/serviceops`, chạy bằng tài khoản quản trị PostgreSQL:
 
 ```sql
 CREATE USER serviceops WITH PASSWORD 'serviceops';
@@ -54,11 +72,35 @@ CREATE DATABASE serviceops OWNER serviceops;
 GRANT ALL PRIVILEGES ON DATABASE serviceops TO serviceops;
 ```
 
-Không cần chạy Docker. Nếu cấu hình khác, đặt biến môi trường `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` trước khi chạy backend.
+Nếu database/user đã tồn tại hoặc bạn dùng credential khác, chỉ cần cập nhật `.env` cho khớp. Không cần Docker.
 
-## 4. Chạy backend
+## 4. Cách chạy hằng ngày — khuyến nghị
 
-Mở PowerShell mới:
+PostgreSQL đã chạy:
+
+```powershell
+.\scripts\dev-start.ps1
+```
+
+Nếu dùng Docker và muốn bật PostgreSQL trước:
+
+```powershell
+.\scripts\dev-start.ps1 -StartPostgres
+```
+
+Script tự xác định repository root nên không phụ thuộc đường dẫn kiểu `D:\Study\...`. Nó mở hai cửa sổ CMD riêng cho Spring Boot và Vite. Nếu frontend chưa có `node_modules`, script chạy `npm ci` trước `npm run dev`.
+
+Mở:
+
+- Frontend: http://localhost:3000
+- Swagger: http://localhost:8080/swagger-ui.html
+- Health: http://localhost:8080/actuator/health
+
+## 5. Chạy thủ công khi cần troubleshoot
+
+### Backend
+
+Mở PowerShell tại repository root. Đọc giá trị từ `.env` của bạn và đặt cùng bộ `POSTGRES_*` + `DEMO_PASSWORD`, ví dụ với credential mặc định:
 
 ```powershell
 cd backend
@@ -67,90 +109,85 @@ $env:POSTGRES_PORT="5432"
 $env:POSTGRES_DB="serviceops"
 $env:POSTGRES_USER="serviceops"
 $env:POSTGRES_PASSWORD="serviceops"
+$env:DEMO_PASSWORD="Demo@2026"
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-Khi log có dòng `Started ServiceOpsApplication`, mở:
+Flyway tự migrate schema. Seeder tạo bộ dữ liệu demo khi database chưa có account `owner`.
 
-- Swagger: http://localhost:8080/swagger-ui.html
-- Health: http://localhost:8080/actuator/health
+> Local profile không tự đổi mật khẩu của demo accounts đã tồn tại. Nếu bạn đổi `DEMO_PASSWORD` sau lần seed đầu tiên, hãy dùng mật khẩu hiện có của database hoặc chủ động reset database local nếu dữ liệu đó không cần giữ.
 
-Flyway tự tạo schema và seeder tự thêm dữ liệu demo khi database còn trống.
+### Frontend
 
-## 5. Chạy frontend
-
-Mở PowerShell mới:
+Mở terminal khác:
 
 ```powershell
 cd frontend
-Copy-Item .env.example .env
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
 npm ci
 npm run dev
 ```
 
-Mở http://localhost:3000.
+`frontend/.env.example` dùng cùng quick-login password `Demo@2026`.
 
 ## 6. Dừng hệ thống
 
-Dừng backend/frontend bằng `Ctrl + C`.
+Dừng backend/frontend bằng `Ctrl + C` trong hai terminal.
 
-Dừng PostgreSQL nhưng giữ dữ liệu:
+Nếu dùng Docker PostgreSQL và muốn dừng container nhưng giữ dữ liệu:
 
 ```powershell
 docker compose -f docker-compose.local.yml stop
 ```
 
-Xóa cả container và dữ liệu local để chạy lại từ đầu:
+Chỉ khi **thật sự muốn xóa toàn bộ database local**:
 
 ```powershell
 docker compose -f docker-compose.local.yml down -v
 ```
 
-## 7. Lỗi thường gặp
+Không dùng `down -v` chỉ để dọn vài record test.
+
+## 7. E2E và dữ liệu local
+
+Không chạy mutating Playwright E2E vào frontend/backend developer local hoặc database `serviceops` đang dùng để UAT.
+
+Playwright yêu cầu `E2E_BASE_URL` rõ ràng và CI chạy nó trên stack Docker cô lập. Dữ liệu `E2E-*` được tạo bởi browser workflow là stateful test data; không nên dùng script xóa hàng loạt trên database local nếu chưa kiểm tra quan hệ Work Order, appointment, history, inventory và attachment.
+
+## 8. Lỗi thường gặp
 
 ### Cổng 5432 đã được dùng
 
-Sửa `.env`:
-
-```env
-POSTGRES_PORT=5433
-```
-
-Sau đó backend cũng phải dùng cổng đó:
-
-```powershell
-$env:POSTGRES_PORT="5433"
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
-```
+Sửa `POSTGRES_PORT` trong `.env` và bảo đảm backend dùng cùng giá trị.
 
 ### Frontend không gọi được backend
 
-Mặc định frontend dùng `VITE_API_URL=/api/v1` và Vite proxy `/api` sang `http://localhost:8080`, nên không cần hard-code backend URL vào bundle local.
+Mặc định frontend dùng `VITE_API_URL=/api/v1` và Vite proxy `/api` sang `http://localhost:8080`.
 
-Nếu bạn chủ động đổi backend host/port, cập nhật proxy trong `frontend/vite.config.ts` hoặc đặt `VITE_API_URL` phù hợp rồi khởi động lại `npm run dev`.
+### Quick-login báo sai mật khẩu
 
-### Backend báo sai JWT secret
+Kiểm tra ba giá trị có đồng bộ không:
 
-`JWT_SECRET` phải là chuỗi Base64 đủ dài. Bản `.env.example` đã có key local hợp lệ; production phải thay key mới.
+- `DEMO_PASSWORD` trong `.env`/backend startup;
+- `VITE_DEMO_PASSWORD` được frontend nhận;
+- mật khẩu thực tế của demo accounts trong database đã seed trước đó.
 
-### Muốn reset dữ liệu demo
+Với database mới theo tài liệu này, giá trị thống nhất là `Demo@2026`.
 
-```powershell
-docker compose -f docker-compose.local.yml down -v
-docker compose -f docker-compose.local.yml up -d
-```
-
-## 8. Kiểm tra trước khi commit
+## 9. Kiểm tra trước khi commit
 
 ```powershell
 cd backend
 .\mvnw.cmd clean test
 
 cd ..\frontend
+npm ci
 npm run lint
 npm run build
 
 git status
 ```
+
+Docker/Testcontainers có thể được skip khi Docker không khả dụng; đọc đúng summary test và không gọi skipped tests là passed.
 
 Không commit `.env`, `node_modules`, `dist`, `target` hoặc thư mục upload local.

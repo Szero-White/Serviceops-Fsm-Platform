@@ -43,6 +43,11 @@ public class NotificationService {
         notifyRolesInternal(tenantId, roles, title, message, null);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void notifyRolesIndependently(UUID tenantId, List<UserRole> roles, UUID excludedUserId, String title, String message) {
+        notifyRolesInternal(tenantId, roles, title, message, excludedUserId);
+    }
+
     private void notifyRolesInternal(UUID tenantId, List<UserRole> roles, String title, String message, UUID excludedUserId) {
         Set<UUID> notifiedUserIds = new HashSet<>();
         userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(tenantId, roles).forEach(recipient -> {
@@ -85,10 +90,21 @@ public class NotificationService {
 
     @Transactional
     public NotificationResponse markRead(UUID id) {
-        Notification notification = repository.findByIdAndTenantIdAndRecipientId(id, CurrentUser.tenantId(), CurrentUser.userId())
-                .orElseThrow(() -> BusinessException.notFound("NOTIFICATION_NOT_FOUND", "Không tìm thấy thông báo"));
+        Notification notification = requireOwnedNotification(id);
         notification.setReadAt(Instant.now());
         return toResponse(notification);
+    }
+
+    @Transactional
+    public NotificationResponse markUnread(UUID id) {
+        Notification notification = requireOwnedNotification(id);
+        notification.setReadAt(null);
+        return toResponse(notification);
+    }
+
+    private Notification requireOwnedNotification(UUID id) {
+        return repository.findByIdAndTenantIdAndRecipientId(id, CurrentUser.tenantId(), CurrentUser.userId())
+                .orElseThrow(() -> BusinessException.notFound("NOTIFICATION_NOT_FOUND", "Không tìm thấy thông báo"));
     }
 
     private static NotificationResponse toResponse(Notification n) {

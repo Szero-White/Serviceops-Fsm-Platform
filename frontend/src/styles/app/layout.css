@@ -249,11 +249,52 @@
   align-self: flex-end;
 }
 
-.notification-unread {
-  border-radius: 8px;
+.notification-item {
+  gap: 10px;
+  padding: 12px 10px !important;
+  border-radius: 10px;
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+.notification-item:hover {
+  background: #f7f9fb;
+}
+
+.notification-item-unread {
   background: var(--app-primary-soft);
   cursor: pointer;
-  padding-inline: 10px !important;
+}
+
+.notification-item-unread:hover {
+  background: #edf5fb;
+}
+
+.notification-item .ant-list-item-meta {
+  min-width: 0;
+  align-items: flex-start;
+}
+
+/* Notification title weight balance */
+.notification-item-title {
+  font-weight: 400 !important;
+}
+
+.notification-item-unread .notification-item-title {
+  font-weight: 500 !important;
+}
+
+.notification-item-read .notification-item-title {
+  font-weight: 400 !important;
+}
+
+.notification-read-state-button {
+  flex: 0 0 auto;
+  color: var(--app-text-secondary) !important;
+}
+
+.notification-read-state-button:hover {
+  color: var(--app-primary) !important;
+  background: var(--app-primary-soft) !important;
 }
 
 .app-menu .ant-menu-item-group-title {

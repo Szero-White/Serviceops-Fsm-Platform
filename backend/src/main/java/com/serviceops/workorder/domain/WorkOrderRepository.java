@@ -230,6 +230,23 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             """)
     long countDispatchQueue(@Param("tenantId") UUID tenantId);
 
+    @Query("""
+            select case when count(w) > 0 then true else false end
+            from WorkOrder w
+            where w.tenantId = :tenantId
+              and w.technician.id = :technicianId
+              and w.deletedAt is null
+              and w.status in (
+                  com.serviceops.workorder.domain.WorkOrderStatus.SCHEDULED,
+                  com.serviceops.workorder.domain.WorkOrderStatus.ASSIGNED,
+                  com.serviceops.workorder.domain.WorkOrderStatus.ON_THE_WAY,
+                  com.serviceops.workorder.domain.WorkOrderStatus.IN_PROGRESS,
+                  com.serviceops.workorder.domain.WorkOrderStatus.WAITING_FOR_PARTS,
+                  com.serviceops.workorder.domain.WorkOrderStatus.REOPENED
+              )
+            """)
+    boolean existsActiveAssignment(@Param("tenantId") UUID tenantId, @Param("technicianId") UUID technicianId);
+
     long countByTenantIdAndTechnicianId(UUID tenantId, UUID technicianId);
     long countByTenantIdAndServiceRequestId(UUID tenantId, UUID serviceRequestId);
     long countByTenantIdAndCustomerId(UUID tenantId, UUID customerId);

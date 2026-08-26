@@ -2,7 +2,7 @@ import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcel
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
@@ -18,6 +18,7 @@ import { formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
   { value: 'IN_SERVICE', label: 'Đang sửa chữa' },
@@ -37,6 +38,7 @@ export function AssetsPage() {
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<AssetImportResult>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const assetsQuery = useQuery({
@@ -55,7 +57,35 @@ export function AssetsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const { data: customers } = useQuery({ queryKey: ['customers', 'all'], queryFn: () => customersApi.list('', 0, 100), enabled: canManage })
+  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true), enabled: canManage })
+  const customers = customersQuery.data
+  const customerOptions = useMemo(() => {
+    const options = (customers?.content ?? []).map((customer) => ({
+      value: customer.id,
+      label: `${customer.code} · ${customer.name}`,
+    }))
+    if (editing && !options.some((option) => option.value === editing.customerId)) {
+      return [
+        {
+          value: editing.customerId,
+          label: `${editing.customerName} · Khách hàng hiện tại`,
+        },
+        ...options,
+      ]
+    }
+    return options
+  }, [customers, editing])
+
+  const refreshRelatedViews = () => {
+    queryClient.invalidateQueries({ queryKey: ['assets'] })
+    queryClient.invalidateQueries({ queryKey: ['service-requests'] })
+    queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+    queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
@@ -72,8 +102,7 @@ export function AssetsPage() {
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -82,8 +111,7 @@ export function AssetsPage() {
     mutationFn: (id: string) => assetsApi.delete(id),
     onSuccess: () => {
       message.success('Đã xoá thiết bị')
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -110,8 +138,7 @@ export function AssetsPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
-        queryClient.invalidateQueries({ queryKey: ['assets'] })
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+        refreshRelatedViews()
       }
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -287,10 +314,17 @@ export function AssetsPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật thiết bị' : 'Thêm thiết bị'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} width={720} destroyOnHidden>
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+      <Modal title={editing ? 'Cập nhật thiết bị' : 'Thêm thiết bị'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm thiết bị'} width={720} destroyOnHidden>
+        {customersQuery.isError ? (
+          <QueryErrorAlert
+            title="Chưa tải được danh sách khách hàng"
+            error={customersQuery.error}
+            onRetry={() => customersQuery.refetch()}
+          />
+        ) : null}
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-            <Select showSearch optionFilterProp="label" options={customers?.content.map((customer) => ({ value: customer.id, label: `${customer.code} · ${customer.name}` }))} />
+            <Select showSearch optionFilterProp="label" options={customerOptions} />
           </Form.Item>
           <div className="form-grid two-cols">
             <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>

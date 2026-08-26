@@ -61,6 +61,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   UPDATE: 'Cập nhật',
   DELETE: 'Xóa',
   ASSIGN: 'Phân công',
+  RESCHEDULE: 'Điều chỉnh lịch',
   CHANGE_STATUS: 'Đổi trạng thái',
   CANCEL: 'Hủy',
   CONSUME_PART: 'Xuất phụ tùng',

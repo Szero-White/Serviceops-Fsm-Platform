@@ -90,6 +90,28 @@ class NotificationServiceRoutingTest {
     }
 
     @Test
+    void independentNotificationRoutingCanExcludeTheOriginatingActor() {
+        UserAccount actor = user(ACTOR_ID, "warehouse", UserRole.WAREHOUSE_STAFF);
+        UserAccount owner = user(UUID.randomUUID(), "owner", UserRole.OWNER);
+        when(userAccountRepository.findByTenantIdAndRoleInAndActiveTrue(
+                TENANT_ID, List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)))
+                .thenReturn(List.of(actor, owner));
+
+        NotificationService service = new NotificationService(repository, userAccountRepository);
+        service.notifyRolesIndependently(
+                TENANT_ID,
+                List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                ACTOR_ID,
+                "Stocktake",
+                "Adjusted"
+        );
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(repository, times(1)).save(captor.capture());
+        assertThat(captor.getValue().getRecipient().getId()).isEqualTo(owner.getId());
+    }
+
+    @Test
     void unreadListUsesRecipientScopedUnreadQueryAndNormalizesPaging() {
         authenticate(ACTOR_ID, "dispatcher", "DISPATCHER");
         when(repository.findByTenantIdAndRecipientIdAndReadAtIsNull(

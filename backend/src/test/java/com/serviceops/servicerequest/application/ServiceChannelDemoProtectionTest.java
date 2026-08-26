@@ -2,7 +2,6 @@ package com.serviceops.servicerequest.application;
 
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
-import com.serviceops.notification.application.NotificationService;
 import com.serviceops.security.DemoProperties;
 import com.serviceops.servicerequest.domain.ServiceChannel;
 import com.serviceops.servicerequest.domain.ServiceChannelRepository;
@@ -115,7 +114,6 @@ class ServiceChannelDemoProtectionTest {
         ServiceChannelRepository repository = mock(ServiceChannelRepository.class);
         ServiceRequestRepository serviceRequestRepository = mock(ServiceRequestRepository.class);
         AuditService auditService = mock(AuditService.class);
-        NotificationService notificationService = mock(NotificationService.class);
 
         when(repository.findByIdAndTenantId(channel.getId(), tenantId)).thenReturn(Optional.of(channel));
 
@@ -123,7 +121,6 @@ class ServiceChannelDemoProtectionTest {
                 repository,
                 serviceRequestRepository,
                 auditService,
-                notificationService,
                 new DemoProperties(demoEnabled, "Demo@2026")
         );
 

@@ -8,6 +8,7 @@ import { Alert, Button, Card, Form, Input, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { DEMO_PASSWORD, DemoAccountSelector } from './DemoAccountSelector'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 export type LoginFormValues = {
   username: string
   password: string
@@ -39,6 +40,7 @@ export function LoginPanel({
   onSubmit: (values: LoginFormValues) => Promise<void>
 }) {
   const [form] = Form.useForm<LoginFormValues>()
+  const handleFormValidationFailed = useFormValidationFeedback()
 
   const selectDemoAccount = (username: string, password: string) => {
     form.setFieldsValue({ username, password })
@@ -67,7 +69,9 @@ export function LoginPanel({
             layout="vertical"
             onFinish={onSubmit}
             initialValues={DEFAULT_LOGIN_VALUES}
-            requiredMark={false}
+            onFinishFailed={handleFormValidationFailed}
+            scrollToFirstError
+            requiredMark
           >
             <Form.Item
               label="Tên đăng nhập"

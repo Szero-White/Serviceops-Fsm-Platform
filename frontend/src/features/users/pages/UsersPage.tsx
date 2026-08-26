@@ -14,6 +14,7 @@ import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 
+import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 const roleLabels: Record<UserRole, string> = {
   OWNER: 'Chủ sở hữu',
   DISPATCHER: 'Điều phối',
@@ -23,7 +24,7 @@ const roleLabels: Record<UserRole, string> = {
 }
 
 const roleDescriptions: Record<UserRole, string> = {
-  OWNER: 'Quản trị hệ thống, người dùng, danh mục, báo cáo và audit.',
+  OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
   DISPATCHER: 'Điều phối phiếu công việc, phân công và theo dõi lịch kỹ thuật viên.',
   CUSTOMER_SERVICE: 'Tiếp nhận yêu cầu, quản lý khách hàng và thiết bị.',
   TECHNICIAN: 'Xem việc được giao, cập nhật tiến độ, ghi nhận vật tư và bằng chứng.',
@@ -34,6 +35,14 @@ const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({
   value,
   label,
 }))
+
+type UserStatusFilter = 'all' | 'active' | 'inactive'
+
+const userStatusFilterOptions: Array<{ value: UserStatusFilter; label: string }> = [
+  { value: 'all', label: 'Tất cả trạng thái' },
+  { value: 'active', label: 'Hoạt động' },
+  { value: 'inactive', label: 'Tạm ngưng' },
+]
 
 function usernameFromName(value: string) {
   const slug = value
@@ -50,12 +59,15 @@ function usernameFromName(value: string) {
 
 export function UsersPage() {
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all')
+  const [tablePage, setTablePage] = useState(1)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<UserAccount>()
   const [form] = Form.useForm()
+  const handleFormValidationFailed = useFormValidationFeedback()
   const selectedRole = Form.useWatch('role', form)
   const { user: currentUser } = useAuth()
-  const { message } = App.useApp()
+  const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -79,17 +91,39 @@ export function UsersPage() {
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
-    if (!keyword) {
-      return data
+    return data.filter((account) => {
+      const statusMatches =
+        statusFilter === 'all'
+        || (statusFilter === 'active' && account.active)
+        || (statusFilter === 'inactive' && !account.active)
+
+      if (!statusMatches) {
+        return false
+      }
+
+      if (!keyword) {
+        return true
+      }
+
+      return [account.displayName, account.username, roleLabels[account.role], account.phone, account.skills]
+        .some((value) => value?.toLowerCase().includes(keyword))
+    })
+  }, [data, search, statusFilter])
+
+  useEffect(() => {
+    const totalPages = Math.max(Math.ceil(filtered.length / LIST_PAGE_SIZE), 1)
+    if (tablePage > totalPages) {
+      setTablePage(totalPages)
     }
-    return data.filter((account) =>
-      [account.displayName, account.username, roleLabels[account.role], account.phone, account.skills].some((value) => value?.toLowerCase().includes(keyword)),
-    )
-  }, [data, search])
+  }, [filtered.length, tablePage])
 
   const ownerCount = data.filter((account) => account.role === 'OWNER' && account.active).length
   const activeCount = data.filter((account) => account.active).length
   const technicianCount = data.filter((account) => account.role === 'TECHNICIAN').length
+
+  const resultCountLabel = search.trim() || statusFilter !== 'all'
+    ? `${filtered.length}/${data.length} tài khoản`
+    : `${data.length} tài khoản`
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
@@ -99,13 +133,23 @@ export function UsersPage() {
       }
       return editing ? usersApi.update(editing.id, payload) : usersApi.create(payload)
     },
-    onSuccess: () => {
-      message.success(editing ? 'Đã cập nhật người dùng' : 'Đã tạo người dùng')
+    onSuccess: (savedAccount) => {
+      notification.success({
+        message: editing ? 'Đã cập nhật tài khoản' : 'Đã tạo tài khoản',
+        description: savedAccount.role === 'TECHNICIAN' && savedAccount.active
+          ? `${savedAccount.displayName} · ${roleLabels[savedAccount.role]} · Hoạt động. Trạng thái sẵn sàng điều phối của hồ sơ kỹ thuật viên được quản lý riêng.`
+          : `${savedAccount.displayName} · ${roleLabels[savedAccount.role]} · ${savedAccount.active ? 'Hoạt động' : 'Tạm ngưng'}`,
+      })
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -113,10 +157,21 @@ export function UsersPage() {
 
   const remove = useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
-    onSuccess: () => {
-      message.success('Đã xoá người dùng')
+    onSuccess: (_, removedId) => {
+      const removedAccount = data.find((account) => account.id === removedId)
+      notification.success({
+        message: 'Đã xoá tài khoản',
+        description: removedAccount
+          ? `${removedAccount.displayName} · ${roleLabels[removedAccount.role]}`
+          : 'Tài khoản đã được xoá khỏi hệ thống.',
+      })
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
+      queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -142,7 +197,14 @@ export function UsersPage() {
         title="Người dùng & phân quyền"
         description="OWNER tạo tài khoản cho nhân sự, phân vai trò theo trách nhiệm và kiểm soát trạng thái truy cập."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm người dùng</Button>}
-        meta={<MetaBadge>{isError ? 'Lỗi tải dữ liệu' : `${data.length} tài khoản`}</MetaBadge>}
+        meta={
+          <>
+            <MetaBadge>{isError ? 'Lỗi tải dữ liệu' : resultCountLabel}</MetaBadge>
+            <MetaBadge tone={statusFilter === 'all' ? 'neutral' : 'info'}>
+              {userStatusFilterOptions.find((option) => option.value === statusFilter)?.label}
+            </MetaBadge>
+          </>
+        }
       />
 
       <div className="channel-summary-grid">
@@ -151,8 +213,26 @@ export function UsersPage() {
         <MetricCard label="Kỹ thuật viên" value={technicianCount} helper="Đồng bộ hồ sơ phân công" icon={<KeyOutlined />} tone="primary" />
       </div>
 
-      <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tên, username, vai trò, điện thoại hoặc kỹ năng" value={search} onChange={(event) => setSearch(event.target.value)} />
+      <div className="table-toolbar toolbar-row">
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder="Tìm tên, username, vai trò, điện thoại hoặc kỹ năng"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value)
+            setTablePage(1)
+          }}
+        />
+        <Select
+          aria-label="Lọc trạng thái tài khoản"
+          value={statusFilter}
+          options={userStatusFilterOptions}
+          onChange={(value) => {
+            setStatusFilter(value)
+            setTablePage(1)
+          }}
+        />
       </div>
 
       {isError && (
@@ -169,7 +249,12 @@ export function UsersPage() {
         dataSource={isError ? [] : filtered}
         className="content-table"
         scroll={{ x: 1120 }}
-        pagination={{ pageSize: LIST_PAGE_SIZE, showSizeChanger: false }}
+        pagination={{
+          current: tablePage,
+          pageSize: LIST_PAGE_SIZE,
+          showSizeChanger: false,
+          onChange: setTablePage,
+        }}
         locale={{ emptyText: <Empty description={isError ? 'Không thể tải dữ liệu người dùng' : 'Chưa có người dùng phù hợp'} /> }}
         columns={[
           {
@@ -251,11 +336,12 @@ export function UsersPage() {
         open={open}
         onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
+        okText={editing ? 'Lưu thay đổi' : 'Tạo người dùng'}
         confirmLoading={save.isPending}
         width={760}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} requiredMark={false}>
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Họ tên" name="displayName" rules={[{ required: true, message: 'Nhập họ tên người dùng' }]}>
               <Input
@@ -263,8 +349,8 @@ export function UsersPage() {
                 onBlur={(event) => !editing && !form.getFieldValue('username') && form.setFieldValue('username', usernameFromName(event.target.value))}
               />
             </Form.Item>
-            <Form.Item label="Tên đăng nhập" name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
-              <Input placeholder="le.thu.dieu.phoi" />
+            <Form.Item label={editing ? 'Tên đăng nhập (không thể thay đổi)' : 'Tên đăng nhập'} name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
+              <Input placeholder="le.thu.dieu.phoi" disabled={Boolean(editing)} />
             </Form.Item>
             <Form.Item label={editing ? 'Vai trò (không thể thay đổi)' : 'Vai trò'} name="role" rules={[{ required: true, message: 'Chọn vai trò' }]}>
               <Select options={roleOptions} disabled={Boolean(editing)} />
@@ -272,7 +358,7 @@ export function UsersPage() {
             <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
               <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
             </Form.Item>
-            {selectedRole === 'TECHNICIAN' && (!editing || editing.role !== 'TECHNICIAN') && (
+            {selectedRole === 'TECHNICIAN' && (
               <>
                 <Form.Item label="Điện thoại kỹ thuật viên" name="phone">
                   <Input placeholder="0909123456" />

@@ -3,7 +3,12 @@ package com.serviceops.security;
 import com.serviceops.ai.web.AiController;
 import com.serviceops.asset.web.AssetController;
 import com.serviceops.customer.web.CustomerController;
+import com.serviceops.dashboard.web.DashboardController;
+import com.serviceops.inventory.web.InventoryController;
+import com.serviceops.identity.web.UserManagementController;
+import com.serviceops.servicerequest.web.ServiceChannelController;
 import com.serviceops.servicerequest.web.ServiceRequestController;
+import com.serviceops.technician.web.TechnicianController;
 import com.serviceops.workorder.web.WorkOrderController;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +22,19 @@ class RoleOwnershipContractTest {
 
     private static final String MASTER_DATA_READ = "hasAnyRole('OWNER','CUSTOMER_SERVICE','DISPATCHER')";
     private static final String INTAKE_OWNERS = "hasAnyRole('OWNER','CUSTOMER_SERVICE')";
+    private static final String OPERATIONAL_WORK_ORDER_READ = "hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')";
+
+    @Test
+    void ownerKeepsAdministrativeCoverageWithoutImpersonatingTechnicianOnlyExecution() {
+        assertClassAuthorization(UserManagementController.class, "hasRole('OWNER')");
+        assertClassAuthorization(ServiceRequestController.class, INTAKE_OWNERS);
+        assertClassAuthorization(ServiceChannelController.class, INTAKE_OWNERS);
+        assertMethodAuthorization(WorkOrderController.class, "convert", INTAKE_OWNERS);
+        assertMethodAuthorization(WorkOrderController.class, "schedule", "hasAnyRole('OWNER','DISPATCHER')");
+        assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
+        assertMethodAuthorization(InventoryController.class, "stocktake", "hasAnyRole('OWNER','WAREHOUSE_STAFF')");
+        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
+    }
 
     @Test
     void dispatcherCanReadCustomerAndAssetMasterDataButCannotOwnTheirWrites() {
@@ -37,6 +55,7 @@ class RoleOwnershipContractTest {
 
     @Test
     void workOrdersCanOnlyBeCreatedFromServiceRequestsAndCustomerServiceKeepsCancellationAccess() {
+        assertClassAuthorization(WorkOrderController.class, OPERATIONAL_WORK_ORDER_READ);
         assertThat(Arrays.stream(WorkOrderController.class.getDeclaredMethods()).map(Method::getName))
                 .doesNotContain("create");
 
@@ -51,6 +70,30 @@ class RoleOwnershipContractTest {
                 "transition",
                 "hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')"
         );
+        assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
+    }
+
+    @Test
+    void dispatcherCanReadTechnicianProfilesButOnlyOwnerCanEditThem() {
+        assertClassAuthorization(TechnicianController.class, "hasAnyRole('OWNER','DISPATCHER')");
+        assertMethodAuthorization(TechnicianController.class, "updateProfile", "hasRole('OWNER')");
+    }
+
+
+    @Test
+    void warehouseOwnsStockReconciliationAndMovementTraceabilityButNotConsumption() {
+        String warehouseOwners = "hasAnyRole('OWNER','WAREHOUSE_STAFF')";
+        assertMethodAuthorization(InventoryController.class, "updateReorderLevel", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "stocktake", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "transactions", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "returnable", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "returnPart", warehouseOwners);
+        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
+    }
+
+    @Test
+    void operationalDashboardExcludesWarehouse() {
+        assertClassAuthorization(DashboardController.class, OPERATIONAL_WORK_ORDER_READ);
     }
 
     private static void assertClassAuthorization(Class<?> controller, String expected) {

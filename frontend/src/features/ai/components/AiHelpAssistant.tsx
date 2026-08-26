@@ -15,30 +15,39 @@ type ChatMessage =
 
 const roleSuggestions: Record<string, string[]> = {
   OWNER: [
-    'Tôi mới bắt đầu dùng ServiceOps, nên kiểm tra những mục nào trước?',
-    'Làm sao kiểm tra ai đã sửa dữ liệu trong hệ thống?',
-    'Nên cấu hình kênh tiếp nhận ở đâu?',
+    'Với quyền Chủ sở hữu, tôi có thể quản lý những chức năng nào?',
+    'Làm sao lọc tài khoản đang hoạt động và tạm ngưng?',
+    'Tôi điều phối lại kỹ thuật viên hoặc lịch trước khi công việc bắt đầu như thế nào?',
+    'Làm sao kiểm tra audit và các thông báo quan trọng?',
   ],
   DISPATCHER: [
-    'Tôi mới làm Điều phối viên, quy trình xử lý một yêu cầu như thế nào?',
+    'Tôi mới làm Điều phối viên, trong vai trò này tôi được làm những gì?',
     'Tôi phân công và xếp lịch kỹ thuật viên ở đâu?',
+    'Nếu kỹ thuật viên chưa bắt đầu nhưng không thể đáp ứng, tôi điều phối lại thế nào?',
     'Theo dõi phiếu đang xử lý như thế nào?',
   ],
   CUSTOMER_SERVICE: [
-    'Tôi mới làm CSKH, nên bắt đầu tiếp nhận yêu cầu như thế nào?',
+    'Tôi mới làm CSKH, trong vai trò này tôi được làm những gì?',
+    'Tôi tiếp nhận yêu cầu và chuyển sang điều phối như thế nào?',
+    'Khi kỹ thuật viên hoàn thành nhưng khách báo còn lỗi, tôi xử lý phản hồi thế nào?',
     'Khi nào nên tạo khách hàng và thiết bị trước?',
     'AI tiếp nhận trong form dùng ra sao?',
   ],
   TECHNICIAN: [
-    'Tôi mới làm Kỹ thuật viên, nên bắt đầu ca làm việc từ đâu?',
+    'Tôi mới làm Kỹ thuật viên, trong vai trò này tôi được làm những gì?',
+    'Tôi nên bắt đầu ca làm việc từ đâu?',
     'Tôi xem công việc được giao ở đâu?',
     'Cập nhật trạng thái và ghi chẩn đoán như thế nào?',
     'Tôi ghi phụ tùng đã dùng ở đâu?',
   ],
   WAREHOUSE_STAFF: [
-    'Tôi mới làm kho, quy trình theo dõi và nhập phụ tùng như thế nào?',
-    'Làm sao biết phụ tùng sắp hết tồn?',
-    'Khi kỹ thuật viên dùng phụ tùng thì theo dõi ở đâu?',
+    'Tôi mới làm kho, trong vai trò này tôi được làm những gì?',
+    'Tôi nên bắt đầu từ đâu?',
+    'Tôi kiểm kê tồn thực tế và xử lý chênh lệch như thế nào?',
+    'Tôi chỉnh ngưỡng tồn tối thiểu ở đâu và khi nào có cảnh báo?',
+    'Kiểm kê bị lệch tồn thì ai sẽ nhận thông báo?',
+    'Tôi xem lịch sử nhập, sử dụng, hoàn trả và điều chỉnh kho ở đâu?',
+    'Kỹ thuật viên không dùng hết phụ tùng thì tôi hoàn trả theo Work Order như thế nào?',
   ],
 }
 
@@ -51,10 +60,10 @@ export function AiHelpAssistant() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const suggestions = useMemo(
-    () => roleSuggestions[user?.role ?? ''] ?? ['Tôi nên bắt đầu sử dụng hệ thống từ đâu?'],
-    [user?.role],
-  )
+  const suggestions = useMemo(() => {
+    const roleItems = roleSuggestions[user?.role ?? ''] ?? ['Tôi nên bắt đầu sử dụng hệ thống từ đâu?']
+    return [...roleItems, 'Tôi bấm Lưu/Hoàn thành nhưng hệ thống chưa thực hiện, cần kiểm tra gì?', 'Tôi lỡ đánh dấu thông báo đã đọc, làm sao chuyển lại chưa đọc?']
+  }, [user?.role])
 
   const help = useMutation({
     mutationFn: aiApi.help,

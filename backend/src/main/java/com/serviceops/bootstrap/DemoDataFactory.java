@@ -222,6 +222,8 @@ public class DemoDataFactory {
         tx.setBalanceAfter(stock);
         tx.setNote("Tồn đầu kỳ demo");
         tx.setCreatedBy("system");
+        tx.setActorDisplayName("Hệ thống");
+        tx.setActorRole("SYSTEM");
         inventoryTransactionRepository.save(tx);
         return part;
     }

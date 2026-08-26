@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { CurrentUser } from '../../types'
 import { authApi } from './api'
@@ -22,22 +23,27 @@ function readStoredUser(): CurrentUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(readStoredUser)
+  const queryClient = useQueryClient()
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
     authenticated: Boolean(user && localStorage.getItem('serviceops.accessToken')),
     login: async (username: string, password: string) => {
       const response = await authApi.login(username, password)
+      await queryClient.cancelQueries()
+      queryClient.clear()
       localStorage.setItem('serviceops.accessToken', response.accessToken)
       localStorage.setItem('serviceops.user', JSON.stringify(response.user))
       setUser(response.user)
     },
     logout: () => {
+      void queryClient.cancelQueries()
+      queryClient.clear()
       localStorage.removeItem('serviceops.accessToken')
       localStorage.removeItem('serviceops.user')
       setUser(null)
     },
-  }), [user])
+  }), [queryClient, user])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

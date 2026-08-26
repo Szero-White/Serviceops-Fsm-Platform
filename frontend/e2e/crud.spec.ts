@@ -94,7 +94,7 @@ test('Warehouse can create a spare part and import stock through the UI', async 
   await modal.getByLabel('Tên phụ tùng').fill(`Phụ tùng E2E ${suffix}`)
   await modal.getByLabel('Đơn vị').fill('cái')
   await modal.getByLabel('Tồn ban đầu').fill('2')
-  await modal.getByLabel('Mức đặt hàng lại').fill('1')
+  await modal.getByLabel('Ngưỡng tồn tối thiểu').fill('1')
   await modal.getByLabel('Đơn giá').fill('10000')
   await submitModal(page, 'Thêm phụ tùng')
   await expect(page.getByText('Đã tạo phụ tùng').last()).toBeVisible()

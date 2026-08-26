@@ -7,7 +7,7 @@ Customer/CSKH tạo Service Request
         ↓
 Xác thực khách hàng + thiết bị + mức ưu tiên
         ↓
-Chuyển thành Work Order
+Customer Service chuyển Service Request thành Work Order
         ↓
 Dispatcher chọn kỹ thuật viên và khung giờ
         ↓
@@ -17,10 +17,18 @@ Technician: ON_THE_WAY → IN_PROGRESS
         ↓
 Ghi chẩn đoán, giải pháp, phụ tùng và file minh chứng
         ↓
-COMPLETED → CUSTOMER_ACCEPTED → CLOSED
+COMPLETED
         ↓
-Dashboard + lịch sử + audit được cập nhật
+Technician được giao hoặc Owner ghi nhận khi khách đồng ý
+        ↓
+CUSTOMER_ACCEPTED
+        ↓
+Đóng phiếu → CLOSED → Lịch sử phiếu
+        ↓
+Dashboard + lịch sử + audit + notification được cập nhật
 ```
+
+Work Order public flow **không có generic direct-create API**. Nguồn tạo chuẩn là `Service Request → Work Order`; demo seed cũng giữ source Service Request cho các Work Order mẫu.
 
 ## 2. State transition
 
@@ -35,11 +43,25 @@ Nhánh:
 
 ```text
 IN_PROGRESS → WAITING_FOR_PARTS → IN_PROGRESS
-COMPLETED/CUSTOMER_ACCEPTED → REOPENED → IN_PROGRESS
-OPEN/SCHEDULED/ASSIGNED/ON_THE_WAY/IN_PROGRESS → CANCELLED
+COMPLETED/CUSTOMER_ACCEPTED → REOPENED → IN_PROGRESS hoặc SCHEDULED
+CANCELLED là trạng thái kết thúc; nếu khách phát sinh nhu cầu mới sau khi hủy thì tạo yêu cầu/phiếu mới thay vì mở lại phiếu đã hủy.
 ```
 
-Chuyển trạng thái không hợp lệ trả `409 INVALID_STATUS_TRANSITION`.
+Các trạng thái active có thể hủy theo policy:
+
+```text
+OPEN / SCHEDULED / ASSIGNED / ON_THE_WAY /
+IN_PROGRESS / WAITING_FOR_PARTS / REOPENED → CANCELLED
+```
+
+Role ownership của transition:
+
+- `TECHNICIAN`: trên Work Order được giao cho chính mình có thể `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`; sau hoàn thành có thể ghi nhận `CUSTOMER_ACCEPTED`, `CLOSED` hoặc `REOPENED` nếu cùng sự cố cần xử lý lại trước khi đóng.
+- `OWNER`: quyền quản trị cho bước hậu xử lý Work Order: `CUSTOMER_ACCEPTED`, `CLOSED`, `REOPENED`, `CANCELLED`. Owner không dùng generic transition để giả lập tiến độ hiện trường và không consume phụ tùng thay Technician.
+- `CUSTOMER_SERVICE`: tiếp nhận phản hồi khách; có thể `REOPENED` hoặc `CANCELLED` khi khách yêu cầu thay đổi, nhưng không bấm Khách xác nhận/Đóng phiếu.
+- `DISPATCHER`: điều phối/schedule/reschedule và operational cancellation; không thực hiện field progress, customer acceptance hoặc close.
+
+Transition không hợp lệ về state trả `409 INVALID_STATUS_TRANSITION`; transition đúng state nhưng sai role trả `403 WORK_ORDER_TRANSITION_FORBIDDEN`.
 
 ## 3. Quy tắc xếp lịch
 
@@ -49,27 +71,66 @@ Hai khoảng thời gian chồng lấn khi:
 newStart < existingEnd AND newEnd > existingStart
 ```
 
-Khi hai điều phối viên gửi request đồng thời, pessimistic lock trên technician làm tuần tự hóa thao tác. Request thứ hai sẽ nhìn thấy appointment vừa commit và nhận `409 TECHNICIAN_SCHEDULE_CONFLICT`.
+Khi hai điều phối viên gửi request đồng thời, pessimistic lock trên technician làm tuần tự hóa thao tác. Request thứ hai nhìn thấy appointment vừa commit và nhận `409 TECHNICIAN_SCHEDULE_CONFLICT`.
+
+Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn role `TECHNICIAN` không thể nhận lịch mới. Owner cũng không được tạm ngưng account/profile kỹ thuật viên khi còn Work Order operational đang gán cho người đó; phải điều phối lại hoặc hủy công việc trước.
+
+Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/lịch khi phiếu vẫn ở `OPEN`, `SCHEDULED`, `ASSIGNED` hoặc `REOPENED`, tức trước khi kỹ thuật viên bắt đầu di chuyển/thực hiện. Điều phối lại bắt buộc có lý do, được ghi audit `RESCHEDULE` và xuất hiện trong tab **Tiến trình** như một activity điều phối riêng. Nếu đổi kỹ thuật viên, người cũ nhận thông báo đã được điều chuyển khỏi phiếu và người mới nhận thông báo công việc mới; nếu chỉ đổi lịch, kỹ thuật viên hiện tại nhận lịch cập nhật. Khi WO đã `ON_THE_WAY` hoặc `IN_PROGRESS`, endpoint schedule/reschedule từ chối để tránh bàn giao ngầm trong khi field work đang diễn ra. Việc đổi kỹ thuật viên, đổi thời gian hoặc đổi cả hai từ trang **Lịch điều phối** và từ chi tiết Work Order đều đi qua cùng endpoint, vì vậy cùng tạo một event `RESCHEDULE`; UI Tiến trình chỉ trình bày phần thay đổi theo giờ địa phương, còn audit vẫn giữ timestamp ISO để truy vết.
 
 ## 4. Quy tắc tồn kho
 
 - Số lượng phải lớn hơn 0.
-- Work order đóng/hủy không được dùng thêm phụ tùng.
-- Kỹ thuật viên chỉ được dùng phụ tùng cho work order của mình.
-- Mỗi thay đổi tạo một dòng `inventory_transactions` với `balance_after`.
-- Không sửa stock bằng API CRUD tùy ý.
+- Chỉ Work Order `ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` hoặc `REOPENED` mới được ghi nhận CONSUME mới.
+- `COMPLETED`, `CUSTOMER_ACCEPTED`, `CLOSED`, `CANCELLED`, cũng như các trạng thái trước khi thực thi, không được dùng thêm phụ tùng.
+- Technician chỉ consume phụ tùng cho Work Order được giao cho mình; backend kiểm tra cả role, ownership và trạng thái phiếu.
+- Warehouse quản lý catalog/import/lifecycle stock nhưng không consume thay Technician trong operational Work Order flow. OWNER/WAREHOUSE_STAFF có thể chỉnh **ngưỡng tồn tối thiểu** (`reorderLevel`) của phụ tùng; thao tác này không đổi stock, được ghi audit và chỉ phát cảnh báo khi ngưỡng mới làm current stock mới rơi vào trạng thái tồn thấp.
+- Warehouse kiểm kê bằng số lượng thực tế; chênh lệch tạo `ADJUSTMENT_IN`/`ADJUSTMENT_OUT` có lý do và actor. Sau commit, Owner nhận thông báo chênh lệch; nếu tồn sau kiểm kê `<= reorderLevel` (ngưỡng tồn tối thiểu), Warehouse nhận cảnh báo tồn thấp. Technician không nhận broadcast kiểm kê vì hiện chưa có part-request/reservation để xác định WO bị ảnh hưởng.
+- Warehouse có thể xác nhận nhận lại phụ tùng đã ghi nhận cho Work Order trước khi phiếu CLOSED/CANCELLED; tổng RETURN không được vượt tổng CONSUME cùng part trên cùng Work Order.
+- Mỗi thay đổi tạo `inventory_transactions` với `balance_after`; màn Lịch sử biến động là stock ledger chuyên biệt, khác audit log toàn hệ thống. Work Order detail dùng read model `activities` để ghép status history, điều phối và `CONSUME` hợp lệ của Technician theo thời gian. Warehouse `RETURN` vẫn được giữ đầy đủ ở stock ledger và dùng cho đối soát/invoice, nhưng không hiển thị như tiến trình hiện trường của Work Order để tránh làm Dispatcher hiểu nhầm Warehouse là người thực hiện job.
+- Invoice tính phụ tùng theo net `CONSUME - RETURN`, tránh tính phí phần đã hoàn lại.
+- Locking + validation + transaction ngăn stock âm và serialize thay đổi cùng một SKU.
 
 ## 5. Quyền thao tác
 
-- OWNER: quản trị người dùng, cấu hình kênh tiếp nhận, giám sát toàn hệ thống và các thao tác quản lý/override được ủy quyền.
-- DISPATCHER: xem customer/asset để phục vụ điều phối; theo dõi work order, kỹ thuật viên, phân công, xếp lịch/reschedule và nghiệp vụ điều phối được phép. Không tiếp nhận Service Request và không tạo Work Order trực tiếp.
-- CUSTOMER_SERVICE: quản lý customer/asset, tiếp nhận/chỉnh sửa/hủy Service Request, chuyển Service Request sang điều phối và hủy Work Order đang hoạt động khi khách thay đổi nhu cầu theo policy.
-- TECHNICIAN: xem/cập nhật công việc được giao, upload minh chứng và ghi nhận phụ tùng sử dụng cho chính công việc được giao.
-- WAREHOUSE_STAFF: quản lý danh mục phụ tùng, nhập kho, tồn kho và vòng đời phụ tùng; không sở hữu luồng Work Order.
+- `OWNER`: quản trị tài khoản/cấu hình và có quyền quản lý trên các module nghiệp vụ dành cho Owner: Customer/Asset, Service Request (kể cả chuyển sang Work Order), Channel, điều phối, kỹ thuật viên, kho/kiểm kê/lịch sử biến động, Work Order history và audit. Trong Work Order, Owner là admin override cho điều phối và hậu xử lý nhưng không giả lập field progress hoặc consume phụ tùng thay Technician.
+- `DISPATCHER`: Customer/Asset read-only; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation; xem lịch sử/audit. Không tiếp nhận Service Request hoặc xác nhận/đóng phiếu.
+- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
+- `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; consume spare part cho chính job; sau `COMPLETED` có thể ghi nhận Khách xác nhận, Đóng phiếu hoặc Mở lại cùng job trước khi đóng.
+- `OWNER`: quản trị/giám sát và có admin override cho Khách xác nhận, Đóng phiếu, Mở lại/Hủy phiếu.
+- `WAREHOUSE_STAFF`: `/inventory`, `/inventory-stocktake`, `/inventory-movements` và API kho; không có Work Order operational API hoặc operational dashboard.
 
+## 6. Delete / cancel / deactivate
 
-## Workspace theo vai trò
+- Service Request và Work Order nghiệp vụ ưu tiên state (`CANCELLED`) thay cho hard delete khi đã có lịch sử vận hành.
+- Work Order `CLOSED`/`CANCELLED` chỉ Owner được ẩn khỏi lịch sử tra cứu; audit vẫn được giữ.
+- Asset/Service Request chưa có operational reference vẫn không được hard-delete nếu còn attachment; phải xử lý attachment trước để tránh orphan metadata/file.
+- Customer `active=false` vẫn giữ trong danh mục và toàn bộ lịch sử cũ, nhưng không được dùng để tạo Service Request hoặc đăng ký Asset mới. Backend áp cùng invariant để API trực tiếp không thể bypass UI. Record đã tồn tại vẫn được phép hoàn thiện/chỉnh sửa với chính khách hàng cũ để không phá hồ sơ đang xử lý.
+- Technician có assignment operational không được deactivate.
 
-- Dispatcher/OWNER dùng **Lịch điều phối** để nhìn toàn đội, xử lý hàng đợi và thay đổi phân công.
-- TECHNICIAN dùng **Lịch của tôi**. Backend lấy `userId` từ JWT, ánh xạ sang `technician_profiles.user_id` và chỉ trả appointment của hồ sơ đó.
-- Hai kỹ thuật viên cùng role vẫn là hai tài khoản riêng; role xác định quyền, còn `UserAccount` xác định danh tính và audit accountability.
+## 7. Workspace theo vai trò
+
+- Owner/Dispatcher dùng **Lịch điều phối**.
+- Technician dùng **Lịch của tôi**; backend suy ra `TechnicianProfile` từ JWT `userId`, client không gửi `technicianId`.
+- Warehouse đăng nhập/điều hướng mặc định vào **Kho phụ tùng**, không vào operational dashboard.
+- Hai Technician cùng role vẫn là hai identity riêng; role quyết định quyền, `UserAccount` quyết định ownership/audit accountability.
+
+- Inventory movement history snapshots actor name/role and requires a purpose when parts are consumed for a Work Order.
+
+### Trợ lý AI theo vai trò
+
+- Role của AI Help được backend suy ra từ JWT; client không được tự chọn role để mở rộng phạm vi hướng dẫn.
+- Câu hỏi tổng quát như “Tôi được làm gì?” trả overview đúng workspace của role hiện tại. OWNER được mô tả toàn bộ phạm vi quản trị; các role khác chỉ nhận hướng dẫn thuộc trách nhiệm được cấp.
+- Knowledge base tách nghiệp vụ dễ nhầm quyền: Dispatcher có điều phối/reschedule nhưng không User Management/Service Request intake/kho; Customer Service có intake/convert/follow-up nhưng không điều phối/accept/close; Technician chỉ job được giao/My Schedule/phụ tùng cho job, không quản trị kho; Warehouse không có operational Work Order/dashboard.
+- AI chỉ hướng dẫn thao tác; không đọc runtime database và không tự thực hiện mutation.
+
+## 8. Chính sách phản hồi người dùng và notification
+
+- Validation phía client: trường bắt buộc hiển thị rõ; submit thiếu dữ liệu không gọi API, cuộn tới lỗi đầu tiên và hiện cảnh báo ngắn.
+- Mutation đã gửi: người thao tác luôn nhận phản hồi thành công hoặc lỗi tại màn hình hiện tại; không để nút bấm thất bại im lặng.
+- Query/dữ liệu phụ trợ lỗi: hiển thị trạng thái lỗi + `Thử lại`, không render dữ liệu rỗng như thể tải thành công.
+- Notification chuông dành cho thay đổi liên vai trò hoặc sự kiện cần người nhận chú ý/hành động; không broadcast mọi bước tiến độ để tránh spam. OWNER là audience quản trị ngoại lệ, không phải recipient mặc định của mọi module.
+- Copy notification theo cấu trúc **tiêu đề = việc gì xảy ra/cần làm**, **mô tả = bước tiếp theo**. Mã nghiệp vụ như `WO-...`/SKU được giữ để tra cứu, nhưng enum nội bộ, chuỗi test hoặc mô tả kỹ thuật khó hiểu không được dùng làm nội dung chính.
+- Notification được route theo **việc cần hành động**, không theo quyền xem rộng. Dispatcher nhận **Phiếu mới chờ điều phối**, **Phiếu đang chờ phụ tùng** và **Phiếu cần xử lý lại**. Customer Service nhận **Phiếu đã hoàn thành** để theo dõi phản hồi khách hàng mà không nhận quyền Khách xác nhận/Đóng phiếu. Technician nhận **Bạn được phân công**, **Lịch làm việc đã thay đổi**, chuyển giao, mở lại, hủy hoặc đóng phiếu khi sự kiện do người khác thực hiện. Warehouse nhận **Tồn kho thấp**; Owner chỉ nhận ngoại lệ quản trị như mở lại/hủy, tồn kho thấp và chênh lệch kiểm kê.
+- CRUD thường ngày của Customer/Asset/Service Request/Channel, cập nhật Technician profile, attachment, tạo/import catalog và nhập kho **không tạo bell notification** cho bất kỳ role nào. Người thao tác đã có success/error feedback tại màn hình; người cần truy vết dùng workspace/Audit. Low-stock do Technician consume chỉ phát khi stock chuyển từ trên ngưỡng xuống chạm/thấp hơn `reorderLevel`; các lần consume tiếp theo khi part đã low-stock không lặp lại cùng cảnh báo.
+- Copy mới được gom về `NotificationCopy` để giữ thuật ngữ thống nhất: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Tồn kho thấp**. Notification cũ dạng `Cập nhật WO-...: ON_THE_WAY → CANCELLED`, `Công việc mới: WO-...`, title CRUD cũ hoặc mã kênh kỹ thuật được frontend đổi sang cách đọc thân thiện khi hiển thị; không rewrite lịch sử notification trong database.
+- Notification read/unread là trạng thái của đúng recipient; lỗi đổi trạng thái phải được báo và không giả vờ cập nhật badge/list.

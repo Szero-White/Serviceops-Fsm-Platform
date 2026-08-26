@@ -47,7 +47,7 @@ test('Customer Service can receive a service request and convert it to a work or
   assertRuntimeClean()
 })
 
-test('Technician sees only technician transitions and backend rejects management transitions', async ({ page }) => {
+test('Technician and Dispatcher transition boundaries are enforced by UI and backend', async ({ page }) => {
   const assertRuntimeClean = watchRuntime(page)
   await login(page, 'owner')
 
@@ -99,6 +99,13 @@ test('Technician sees only technician transitions and backend rejects management
     expect(candidate.body.code).toBe('TECHNICIAN_SCHEDULE_CONFLICT')
   }
   expect(scheduledStatus).toBe(200)
+
+  await login(page, 'dispatcher')
+  const dispatcherForbidden = await apiJson(page, 'POST', `/work-orders/${workOrder.body.id}/transition`, {
+    targetStatus: 'ON_THE_WAY',
+    note: 'Dispatcher must not perform technician field progress',
+  })
+  expect(dispatcherForbidden.status).toBe(403)
 
   await login(page, 'technician')
   await page.goto(`/work-orders?open=${workOrder.body.id}`)

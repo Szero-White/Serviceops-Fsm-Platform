@@ -7,6 +7,7 @@ import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.domain.Notification;
 import com.serviceops.notification.domain.NotificationRepository;
 import com.serviceops.security.DemoProperties;
@@ -84,6 +85,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         ServiceRequest sr1 = demoDataFactory.serviceRequest(tenant, customers.get(0), asset1, "Máy lạnh không đủ lạnh", "Máy chạy nhưng nhiệt độ phòng không giảm, có tiếng ồn nhẹ.", Priority.HIGH, "PHONE", customerService.getUsername());
         ServiceRequest sr2 = demoDataFactory.serviceRequest(tenant, customers.get(1), asset2, "Bảo trì định kỳ 6 tháng", "Vệ sinh dàn nóng, dàn lạnh và kiểm tra gas.", Priority.NORMAL, "ZALO", customerService.getUsername());
         ServiceRequest sr3 = demoDataFactory.serviceRequest(tenant, customers.get(2), asset3, "Tủ lạnh đóng tuyết", "Ngăn đông đóng tuyết dày, ngăn mát yếu.", Priority.URGENT, "WEBSITE", customerService.getUsername());
+        ServiceRequest sr4 = demoDataFactory.serviceRequest(tenant, customers.get(3), asset4, "Vệ sinh hệ thống điều hòa văn phòng", "Khách hàng yêu cầu vệ sinh hệ thống điều hòa văn phòng.", Priority.NORMAL, "PHONE", customerService.getUsername());
         demoDataFactory.serviceRequest(tenant, customers.get(4), asset5, "Tủ đông phát tiếng kêu", "Tiếng kêu lớn khi máy nén khởi động.", Priority.NORMAL, "PHONE", customerService.getUsername());
 
         WorkOrder wo1 = demoDataFactory.workOrder(tenant, sr1, customers.get(0), asset1, technician, "Kiểm tra hệ thống lạnh", Priority.HIGH,
@@ -92,7 +94,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 WorkOrderStatus.IN_PROGRESS, Instant.now().minus(1, ChronoUnit.HOURS), Instant.now().plus(1, ChronoUnit.HOURS));
         WorkOrder wo3 = demoDataFactory.workOrder(tenant, sr3, customers.get(2), asset3, null, "Khắc phục tủ lạnh đóng tuyết", Priority.URGENT,
                 WorkOrderStatus.OPEN, null, null);
-        WorkOrder wo4 = demoDataFactory.workOrder(tenant, null, customers.get(3), asset4, technician, "Vệ sinh hệ thống điều hòa văn phòng", Priority.NORMAL,
+        WorkOrder wo4 = demoDataFactory.workOrder(tenant, sr4, customers.get(3), asset4, technician, "Vệ sinh hệ thống điều hòa văn phòng", Priority.NORMAL,
                 WorkOrderStatus.COMPLETED, Instant.now().minus(2, ChronoUnit.DAYS), Instant.now().minus(2, ChronoUnit.DAYS).plus(3, ChronoUnit.HOURS));
         wo4.setDiagnosis("Dàn lạnh bám bụi, lưu lượng gió giảm.");
         wo4.setResolution("Vệ sinh dàn lạnh, kiểm tra dòng và áp suất gas.");
@@ -102,14 +104,17 @@ public class DemoDataSeeder implements ApplicationRunner {
         demoDataFactory.appointment(tenant, wo2, technician2);
         demoDataFactory.appointment(tenant, wo4, technician);
 
-        demoDataFactory.history(tenant, wo1, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", dispatcher.getUsername());
+        demoDataFactory.history(tenant, wo1, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
         demoDataFactory.history(tenant, wo1, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
-        demoDataFactory.history(tenant, wo2, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", dispatcher.getUsername());
+        demoDataFactory.history(tenant, wo2, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
         demoDataFactory.history(tenant, wo2, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
         demoDataFactory.history(tenant, wo2, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technician2User.getUsername());
         demoDataFactory.history(tenant, wo2, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technician2User.getUsername());
-        demoDataFactory.history(tenant, wo3, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", dispatcher.getUsername());
-        demoDataFactory.history(tenant, wo4, null, WorkOrderStatus.OPEN, "Tạo trực tiếp", dispatcher.getUsername());
+        demoDataFactory.history(tenant, wo3, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
+        demoDataFactory.history(tenant, wo4, null, WorkOrderStatus.OPEN, "Tạo từ yêu cầu dịch vụ", customerService.getUsername());
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.OPEN, WorkOrderStatus.ASSIGNED, "Phân công kỹ thuật viên", dispatcher.getUsername());
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ASSIGNED, WorkOrderStatus.ON_THE_WAY, "Đang di chuyển", technicianUser.getUsername());
+        demoDataFactory.history(tenant, wo4, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technicianUser.getUsername());
         demoDataFactory.history(tenant, wo4, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED, "Hoàn tất công việc", technicianUser.getUsername());
 
         demoDataFactory.sparePart(tenant, "GAS-R32-1KG", "Gas lạnh R32", "kg", new BigDecimal("12.500"), new BigDecimal("3.000"), new BigDecimal("285000"));
@@ -121,8 +126,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         Notification notification = new Notification();
         notification.setTenantId(tenant.getId());
         notification.setRecipient(technicianUser);
-        notification.setTitle("Công việc mới: " + wo1.getCode());
-        notification.setMessage("Bạn được phân công kiểm tra máy lạnh tại Công ty TNHH An Phát.");
+        var seededNotification = NotificationCopy.technicianAssigned(
+                wo1.getCode(),
+                "Điều phối viên " + dispatcher.getDisplayName()
+        );
+        notification.setTitle(seededNotification.title());
+        notification.setMessage(seededNotification.message());
         notificationRepository.save(notification);
 
         auditService.recordAs(tenant.getId(), "system", "SEED", "SYSTEM", tenant.getId(), "Khởi tạo dữ liệu demo local-first");

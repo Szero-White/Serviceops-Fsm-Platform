@@ -10,6 +10,6 @@ export function workOrderPermissions(role?: UserRole): WorkOrderPermissions {
   return {
     canSchedule: role ? ['OWNER', 'DISPATCHER'].includes(role) : false,
     canTransition: role ? ['OWNER', 'CUSTOMER_SERVICE', 'DISPATCHER', 'TECHNICIAN'].includes(role) : false,
-    canConsumePart: role ? ['OWNER', 'TECHNICIAN'].includes(role) : false,
+    canConsumePart: role === 'TECHNICIAN',
   }
 }
