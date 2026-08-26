@@ -348,13 +348,6 @@ public class WorkOrderService {
     private static void ensureRoleCanTransition(TransitionWorkOrder request) {
         WorkOrderStatus targetStatus = request.targetStatus();
 
-        if (targetStatus == WorkOrderStatus.CANCELLED && blankToNull(request.note()) == null) {
-            throw BusinessException.badRequest(
-                    "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
-                    "Phải nhập lý do hủy phiếu công việc"
-            );
-        }
-
         if (CurrentUser.hasRole("OWNER")) {
             if (!OWNER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
@@ -362,6 +355,7 @@ public class WorkOrderService {
                         "Owner có quyền quản trị bước xác nhận khách, đóng/mở lại và hủy phiếu; tiến độ hiện trường vẫn thuộc kỹ thuật viên"
                 );
             }
+            ensureCancellationReason(request);
             return;
         }
 
@@ -382,6 +376,7 @@ public class WorkOrderService {
                         "Điều phối viên chỉ được hủy phiếu công việc theo nghiệp vụ điều phối"
                 );
             }
+            ensureCancellationReason(request);
             return;
         }
 
@@ -392,6 +387,20 @@ public class WorkOrderService {
                         "Chăm sóc khách hàng chỉ mở lại hoặc hủy phiếu khi tiếp nhận yêu cầu thay đổi từ khách hàng"
                 );
             }
+            ensureCancellationReason(request);
+            return;
+        }
+
+        // Preserve validation behavior for direct service calls without a supported role.
+        ensureCancellationReason(request);
+    }
+
+    private static void ensureCancellationReason(TransitionWorkOrder request) {
+        if (request.targetStatus() == WorkOrderStatus.CANCELLED && blankToNull(request.note()) == null) {
+            throw BusinessException.badRequest(
+                    "WORK_ORDER_CANCELLATION_REASON_REQUIRED",
+                    "Phải nhập lý do hủy phiếu công việc"
+            );
         }
     }
 

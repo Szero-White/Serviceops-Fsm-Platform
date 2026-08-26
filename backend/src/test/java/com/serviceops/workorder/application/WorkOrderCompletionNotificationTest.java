@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -82,6 +83,21 @@ class WorkOrderCompletionNotificationTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void technicianCancellationIsForbiddenBeforeCancellationReasonValidation() {
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.CANCELLED, null, null, null)
+        ))
+                .isInstanceOfSatisfying(BusinessException.class, ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(ex.getCode()).isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
+                });
+
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
     }
 
     @Test
