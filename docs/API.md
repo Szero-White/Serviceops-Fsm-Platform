@@ -173,11 +173,17 @@ Legacy compatibility:
 
 ## Attachments
 
-- `POST /attachments`
+- `POST /attachments` — multipart `referenceType`, `referenceId`, optional `purpose`, `file`
 - `GET /attachments?referenceType={WORK_ORDER|ASSET|SERVICE_REQUEST}&referenceId={id}`
 - `GET /attachments/{id}/download`
-- `PATCH /attachments/{id}` — rename
-- `DELETE /attachments/{id}`
+- `PATCH /attachments/{id}` — rename khi attachment còn mutable
+- `DELETE /attachments/{id}` — xóa khi attachment còn mutable
+
+`purpose` tách lifecycle nghiệp vụ:
+
+- `WORK_EVIDENCE`: ảnh/PDF hồ sơ sửa chữa. OWNER hoặc assigned TECHNICIAN được upload khi Work Order chưa `CUSTOMER_ACCEPTED`/`CLOSED`/`CANCELLED`; uploader hoặc OWNER quản lý khi còn mutable. Sau khi hồ sơ finalized chỉ xem/tải.
+- `PAYMENT_EVIDENCE`: ảnh JPG/PNG/WEBP do assigned TECHNICIAN chuẩn bị ở bước thanh toán. Khi `reportTransfer` liên kết ảnh với Payment, attachment bị lock và không còn rename/delete. Evidence không hiển thị lẫn trong tab hồ sơ sửa chữa.
+- `GENERAL`: attachment của Asset/Service Request/Company Payment Profile.
 
 Authorization nằm trong AttachmentService theo reference:
 
@@ -185,7 +191,6 @@ Authorization nằm trong AttachmentService theo reference:
 - ASSET: OWNER / DISPATCHER / CUSTOMER_SERVICE.
 - SERVICE_REQUEST: OWNER / CUSTOMER_SERVICE.
 - WAREHOUSE_STAFF bị chặn khỏi operational references.
-- Rename/delete: OWNER hoặc uploader, sau khi reference access đã hợp lệ.
 
 ## Audit
 

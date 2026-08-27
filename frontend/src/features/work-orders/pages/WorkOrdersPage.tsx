@@ -228,8 +228,8 @@ export function WorkOrdersPage() {
 
   const uploadFile = async (options: UploadRequestOption) => {
     try {
-      await attachmentsApi.upload('WORK_ORDER', selectedId!, options.file as File)
-      message.success('Đã tải file lên')
+      await attachmentsApi.upload('WORK_ORDER', selectedId!, options.file as File, 'WORK_EVIDENCE')
+      message.success('Đã lưu hình ảnh / tài liệu vào hồ sơ công việc')
       options.onSuccess?.({})
       refreshAttachments()
     } catch (error) {

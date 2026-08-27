@@ -13,6 +13,8 @@ import type { WorkOrder, WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { attachmentsApi } from '../../attachments/api'
+import { AttachmentList } from '../../attachments/components/AttachmentList'
 import { useAuth } from '../../auth/AuthContext'
 import { paymentsApi } from '../../payments/api'
 import { workOrdersApi } from '../api'
@@ -68,6 +70,12 @@ export function WorkOrderHistoryPage() {
   })
   const detail = detailQuery.data
   const detailLoading = detailQuery.isLoading
+  const attachmentsQuery = useQuery({
+    queryKey: ['attachments', selectedId],
+    queryFn: () => attachmentsApi.list('WORK_ORDER', selectedId!),
+    enabled: Boolean(selectedId),
+  })
+  const workAttachments = attachmentsQuery.data?.filter((item) => item.purpose === 'WORK_EVIDENCE')
 
   const remove = useMutation({
     mutationFn: (id: string) => workOrdersApi.deleteFromHistory(id),
@@ -245,6 +253,19 @@ export function WorkOrderHistoryPage() {
               <Descriptions.Item label="Chẩn đoán" span={2}>{detail.diagnosis ?? EMPTY_VALUE}</Descriptions.Item>
               <Descriptions.Item label="Giải pháp" span={2}>{detail.resolution ?? EMPTY_VALUE}</Descriptions.Item>
             </Descriptions>
+
+            <section className="detail-section">
+              <h3 className="detail-section-title">Hình ảnh & tài liệu</h3>
+              {attachmentsQuery.isError ? (
+                <QueryErrorAlert
+                  title="Chưa tải được hình ảnh và tài liệu"
+                  error={attachmentsQuery.error}
+                  onRetry={() => attachmentsQuery.refetch()}
+                />
+              ) : (
+                <AttachmentList attachments={workAttachments} />
+              )}
+            </section>
 
             <section className="detail-section">
               <h3 className="detail-section-title">Tiến trình xử lý</h3>

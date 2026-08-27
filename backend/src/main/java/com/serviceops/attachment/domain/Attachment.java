@@ -3,11 +3,14 @@ package com.serviceops.attachment.domain;
 import com.serviceops.common.domain.TenantScopedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -36,4 +39,15 @@ public class Attachment extends TenantScopedEntity {
 
     @Column(name = "uploaded_by", nullable = false, length = 100)
     private String uploadedBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    private AttachmentPurpose purpose = AttachmentPurpose.GENERAL;
+
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
+    public boolean isLocked() {
+        return lockedAt != null;
+    }
 }

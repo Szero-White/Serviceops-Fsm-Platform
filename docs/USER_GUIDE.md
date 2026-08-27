@@ -50,6 +50,12 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 6. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn thấp.
 7. Quay lại **Lịch sử biến động** để kiểm tra toàn bộ hàng thực sự ra/vào kho.
 
+### Hình ảnh & tài liệu trong quá trình sửa chữa
+
+- Trong Work Order, assigned Technician có thể **Chụp ảnh** hoặc **Tải file lên** để lưu nhiều ảnh/PDF phục vụ hồ sơ sửa chữa; OWNER cũng có thể bổ sung khi phiếu còn active.
+- File sửa chữa do chính uploader tải lên có thể đổi tên/xóa khi hồ sơ còn mutable; OWNER có thể quản lý work evidence active. Sau `CUSTOMER_ACCEPTED`, `CLOSED` hoặc `CANCELLED`, hồ sơ chuyển read-only và chỉ còn **Xem/Tải xuống**.
+- Ảnh giao dịch chuyển khoản là `PAYMENT_EVIDENCE` riêng và chỉ hiển thị trong tab **Thanh toán**. Technician có thể chụp lại/bỏ ảnh nháp trước khi báo chuyển khoản; sau khi báo chuyển khoản, evidence bị khóa để CSKH đối soát và không thể rename/delete.
+
 ### Bước 4 — Khách xác nhận, thanh toán và đóng phiếu
 
 1. Technician hoàn thành công việc (`COMPLETED`), nhập đủ actual-used, tiền công và phí phát sinh thực tế rồi cho khách xem kết quả/tổng tiền.

@@ -47,6 +47,8 @@
 Vì vậy application layer phải bảo vệ integrity:
 
 - upload/list/download resolve parent và kiểm tra ownership;
+- `attachments.purpose` phân biệt `GENERAL`, `WORK_EVIDENCE`, `PAYMENT_EVIDENCE`; `locked_at` khóa evidence thanh toán sau khi liên kết Payment;
+- Work Order finalized (`CUSTOMER_ACCEPTED`/`CLOSED`/`CANCELLED`) làm `WORK_EVIDENCE` read-only ở application layer;
 - Asset/Service Request không được hard-delete khi còn attachment;
 - xóa attachment xóa metadata trong transaction và dọn physical file sau commit.
 
@@ -83,7 +85,11 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 8. `V8__overdue_notification_dedup.sql` — thêm `notifications.event_key`, unique dedupe theo recipient/event và index phục vụ quét appointment quá hạn.
 9. `V9__work_order_actor_identity_snapshot.sql` — thêm snapshot `actor_display_name`/`actor_role` cho Work Order status history và audit, đồng thời backfill từ `user_accounts` để Timeline cũ hiển thị đúng người thao tác khi còn đối chiếu được.
 10. `V10__work_order_completion_snapshot.sql` — lưu `diagnosis_snapshot`/`resolution_snapshot` trên từng lần Work Order chuyển `COMPLETED`; `work_orders.diagnosis`/`resolution` vẫn là bản mới nhất, còn Timeline giữ kết quả riêng của từng repair cycle. Migration chỉ backfill lần hoàn thành gần nhất từ dữ liệu hiện có để không giả lập lịch sử cũ không thể khôi phục chính xác.
+11. `V11__work_order_part_request_and_usage.sql` — part request workflow + actual-used aggregate phục vụ `REQUEST/ISSUE/USED/RETURN`.
+12. `V12__billing_payment_reconciliation.sql` — billing snapshot, payment state và cấu hình tài khoản công ty.
+13. `V13__payment_receipt.sql` — official payment receipt sau `SETTLED`.
+14. `V14__attachment_lifecycle.sql` — phân loại attachment purpose và khóa payment evidence đã liên kết.
 
-V1–V8 là migration lịch sử bất biến; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
+V1–V13 là migration lịch sử bất biến ở checkpoint hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

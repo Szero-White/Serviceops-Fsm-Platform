@@ -1,6 +1,7 @@
 package com.serviceops.payment.application;
 
 import com.serviceops.attachment.domain.Attachment;
+import com.serviceops.attachment.domain.AttachmentPurpose;
 import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.customer.domain.Customer;
@@ -74,6 +75,9 @@ class PaymentServiceTest {
         evidence.setTenantId(TENANT_ID);
         evidence.setReferenceType("WORK_ORDER");
         evidence.setReferenceId(payment.getWorkOrder().getId());
+        evidence.setPurpose(AttachmentPurpose.PAYMENT_EVIDENCE);
+        evidence.setUploadedBy("technician");
+        evidence.setContentType("image/png");
         when(repository.findForUpdateByWorkOrder(TENANT_ID, payment.getWorkOrder().getId())).thenReturn(Optional.of(payment));
         when(companyPaymentProfileService.requireConfigured()).thenReturn(new CompanyPaymentProfile());
         when(attachmentRepository.findByIdAndTenantId(evidenceId, TENANT_ID)).thenReturn(Optional.of(evidence));
@@ -85,6 +89,30 @@ class PaymentServiceTest {
         assertThat(response.method()).isEqualTo(PaymentMethod.BANK_TRANSFER);
         assertThat(response.transferEvidenceAttachmentId()).isEqualTo(evidenceId);
         assertThat(payment.getSettledAt()).isNull();
+        assertThat(evidence.isLocked()).isTrue();
+    }
+
+    @Test
+    void workEvidenceCannotBeReusedAsPaymentEvidence() {
+        authenticate("TECHNICIAN", TECHNICIAN_ID, "technician", "Trịnh Quốc Tiến");
+        Payment payment = payment(PaymentStatus.UNPAID);
+        UUID evidenceId = UUID.randomUUID();
+        Attachment evidence = new Attachment();
+        evidence.setId(evidenceId);
+        evidence.setTenantId(TENANT_ID);
+        evidence.setReferenceType("WORK_ORDER");
+        evidence.setReferenceId(payment.getWorkOrder().getId());
+        evidence.setPurpose(AttachmentPurpose.WORK_EVIDENCE);
+        evidence.setUploadedBy("technician");
+        evidence.setContentType("image/png");
+        when(repository.findForUpdateByWorkOrder(TENANT_ID, payment.getWorkOrder().getId())).thenReturn(Optional.of(payment));
+        when(companyPaymentProfileService.requireConfigured()).thenReturn(new CompanyPaymentProfile());
+        when(attachmentRepository.findByIdAndTenantId(evidenceId, TENANT_ID)).thenReturn(Optional.of(evidence));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service().reportTransfer(payment.getWorkOrder().getId(), evidenceId))
+                .isInstanceOf(com.serviceops.common.exception.BusinessException.class)
+                .extracting("code")
+                .isEqualTo("INVALID_PAYMENT_EVIDENCE");
     }
 
     @Test

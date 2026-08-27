@@ -1,6 +1,7 @@
 package com.serviceops.payment.application;
 
 import com.serviceops.attachment.domain.Attachment;
+import com.serviceops.attachment.domain.AttachmentPurpose;
 import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
@@ -157,9 +158,32 @@ public class PaymentService {
         Attachment attachment = attachmentRepository.findByIdAndTenantId(attachmentId, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy ảnh giao dịch"));
         if (!"WORK_ORDER".equals(attachment.getReferenceType())
-                || !payment.getWorkOrder().getId().equals(attachment.getReferenceId())) {
-            throw BusinessException.badRequest("INVALID_PAYMENT_EVIDENCE", "Ảnh giao dịch phải thuộc đúng phiếu công việc");
+                || !payment.getWorkOrder().getId().equals(attachment.getReferenceId())
+                || attachment.getPurpose() != AttachmentPurpose.PAYMENT_EVIDENCE) {
+            throw BusinessException.badRequest(
+                    "INVALID_PAYMENT_EVIDENCE",
+                    "Bằng chứng chuyển khoản phải là ảnh thanh toán thuộc đúng phiếu công việc"
+            );
         }
+        if (!CurrentUser.username().equals(attachment.getUploadedBy())) {
+            throw BusinessException.forbidden(
+                    "PAYMENT_EVIDENCE_OWNER_MISMATCH",
+                    "Chỉ kỹ thuật viên đã tải ảnh mới được dùng ảnh đó để ghi nhận chuyển khoản"
+            );
+        }
+        if (attachment.isLocked()) {
+            throw BusinessException.conflict(
+                    "PAYMENT_EVIDENCE_ALREADY_LOCKED",
+                    "Bằng chứng chuyển khoản đã được liên kết với một giao dịch và không thể dùng lại"
+            );
+        }
+        if (!attachment.getContentType().startsWith("image/")) {
+            throw BusinessException.badRequest(
+                    "PAYMENT_EVIDENCE_IMAGE_REQUIRED",
+                    "Bằng chứng chuyển khoản phải là ảnh"
+            );
+        }
+        attachment.setLockedAt(Instant.now());
     }
 
     private static void ensureAssignedTechnician(Payment payment) {

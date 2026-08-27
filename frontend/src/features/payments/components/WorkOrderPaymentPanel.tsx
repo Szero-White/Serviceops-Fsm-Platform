@@ -1,4 +1,4 @@
-import { CameraOutlined, CheckCircleOutlined, DollarOutlined, PictureOutlined, SwapOutlined } from '@ant-design/icons'
+import { CameraOutlined, CheckCircleOutlined, DeleteOutlined, DollarOutlined, PictureOutlined, SwapOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Descriptions, Empty, Popconfirm, Space, Typography, Upload } from 'antd'
@@ -53,10 +53,17 @@ export function WorkOrderPaymentPanel({
   const payment = paymentQuery.data
   const profile = profileQuery.data
   const transferEvidence = attachments?.find((item) => item.id === payment?.transferEvidenceAttachmentId)
+  const draftEvidence = attachments?.find((item) => item.purpose === 'PAYMENT_EVIDENCE' && item.manageable)
+  const selectedEvidence = evidence ?? draftEvidence
 
   useEffect(() => () => {
     if (evidencePreview) URL.revokeObjectURL(evidencePreview)
   }, [evidencePreview])
+
+  useEffect(() => {
+    setEvidence(undefined)
+    setEvidencePreview(undefined)
+  }, [workOrder.id])
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['work-order-payment', workOrder.id] })
@@ -69,7 +76,7 @@ export function WorkOrderPaymentPanel({
   }
 
   const reportTransfer = useMutation({
-    mutationFn: () => paymentsApi.reportTransfer(workOrder.id, evidence?.id),
+    mutationFn: () => paymentsApi.reportTransfer(workOrder.id, selectedEvidence?.id),
     onSuccess: () => {
       notification.success({ message: 'Đã ghi nhận khách báo chuyển khoản', description: 'Khách có thể kết thúc tại đây. CSKH sẽ đối chiếu tiền thực tế vào tài khoản công ty.' })
       refresh()
@@ -126,15 +133,38 @@ export function WorkOrderPaymentPanel({
   const uploadEvidence = async (options: UploadRequestOption) => {
     try {
       const file = options.file as File
-      const attachment = await attachmentsApi.upload('WORK_ORDER', workOrder.id, file)
+      const previousEvidence = selectedEvidence
+      const attachment = await attachmentsApi.upload('WORK_ORDER', workOrder.id, file, 'PAYMENT_EVIDENCE')
       setEvidence(attachment)
+      if (evidencePreview) URL.revokeObjectURL(evidencePreview)
       setEvidencePreview(URL.createObjectURL(file))
-      message.success('Đã lưu ảnh giao dịch vào phiếu')
+      if (previousEvidence?.manageable && previousEvidence.id !== attachment.id) {
+        try {
+          await attachmentsApi.delete(previousEvidence.id)
+        } catch {
+          message.warning('Ảnh mới đã được lưu nhưng ảnh nháp trước chưa xóa được')
+        }
+      }
+      message.success('Đã lưu ảnh giao dịch để chờ ghi nhận chuyển khoản')
       options.onSuccess?.({})
       queryClient.invalidateQueries({ queryKey: ['attachments', workOrder.id] })
     } catch (error) {
       message.error(apiErrorMessage(error))
       options.onError?.(error as Error)
+    }
+  }
+
+  const removeDraftEvidence = async () => {
+    if (!selectedEvidence?.manageable) return
+    try {
+      await attachmentsApi.delete(selectedEvidence.id)
+      setEvidence(undefined)
+      if (evidencePreview) URL.revokeObjectURL(evidencePreview)
+      setEvidencePreview(undefined)
+      message.success('Đã bỏ ảnh giao dịch nháp')
+      queryClient.invalidateQueries({ queryKey: ['attachments', workOrder.id] })
+    } catch (error) {
+      message.error(apiErrorMessage(error))
     }
   }
 
@@ -194,12 +224,13 @@ export function WorkOrderPaymentPanel({
             <Typography.Text strong>Ảnh giao dịch chuyển khoản (khuyến nghị)</Typography.Text>
             <Space wrap>
               <Upload accept="image/*" capture="environment" customRequest={uploadEvidence} showUploadList={false}>
-                <Button icon={<CameraOutlined />}>{evidence ? 'Chụp lại' : 'Chụp ảnh'}</Button>
+                <Button icon={<CameraOutlined />}>{selectedEvidence ? 'Chụp lại' : 'Chụp ảnh'}</Button>
               </Upload>
               <Upload accept="image/*" customRequest={uploadEvidence} showUploadList={false}>
                 <Button icon={<PictureOutlined />}>Chọn từ thư viện</Button>
               </Upload>
-              {evidence ? <MetaBadge tone="success">Đã chọn: {evidence.originalFilename}</MetaBadge> : null}
+              {selectedEvidence ? <MetaBadge tone="success">Đã chọn: {selectedEvidence.originalFilename}</MetaBadge> : null}
+              {selectedEvidence?.manageable ? <Button danger type="text" icon={<DeleteOutlined />} onClick={() => void removeDraftEvidence()}>Bỏ ảnh</Button> : null}
             </Space>
             {evidencePreview ? (
               <div>
@@ -213,7 +244,7 @@ export function WorkOrderPaymentPanel({
           <Space wrap>
             <Popconfirm
               title="Khách báo đã chuyển khoản?"
-              description={evidence ? 'Ảnh giao dịch sẽ được liên kết với khoản thanh toán này.' : 'Chưa có ảnh giao dịch. Vẫn có thể ghi nhận nếu khách không thể cung cấp ảnh.'}
+              description={selectedEvidence ? 'Ảnh giao dịch sẽ được khóa và liên kết với khoản thanh toán này.' : 'Chưa có ảnh giao dịch. Vẫn có thể ghi nhận nếu khách không thể cung cấp ảnh.'}
               okText="Ghi nhận chuyển khoản"
               cancelText="Chưa"
               onConfirm={() => reportTransfer.mutate()}

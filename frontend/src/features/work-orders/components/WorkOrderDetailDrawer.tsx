@@ -1,5 +1,6 @@
 import {
   CalendarOutlined,
+  CameraOutlined,
   CheckCircleOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons'
@@ -65,6 +66,13 @@ export function WorkOrderDetailDrawer({
   const canScheduleCurrent = permissions.canSchedule
     && workOrder
     && ['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'].includes(workOrder.status)
+  const workAttachments = attachments?.filter((item) => item.purpose === 'WORK_EVIDENCE')
+  const canUploadWorkEvidence = Boolean(
+    workOrder
+    && role
+    && ['OWNER', 'TECHNICIAN'].includes(role)
+    && !['CUSTOMER_ACCEPTED', 'CLOSED', 'CANCELLED'].includes(workOrder.status),
+  )
 
   return (
     <Drawer
@@ -152,9 +160,16 @@ export function WorkOrderDetailDrawer({
                   {TRANSITION_LABELS.CLOSED}
                 </Button>
               )}
-              <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
-                <Button icon={<CloudUploadOutlined />}>Tải ảnh / PDF</Button>
-              </Upload>
+              {canUploadWorkEvidence ? (
+                <>
+                  <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp" capture="environment">
+                    <Button icon={<CameraOutlined />}>Chụp ảnh</Button>
+                  </Upload>
+                  <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
+                    <Button icon={<CloudUploadOutlined />}>Tải file lên</Button>
+                  </Upload>
+                </>
+              ) : null}
             </Space>
           </div>
 
@@ -215,14 +230,14 @@ export function WorkOrderDetailDrawer({
             },
             {
               key: 'attachments',
-              label: `File đính kèm (${attachments?.length ?? 0})`,
+              label: `Hình ảnh & tài liệu (${workAttachments?.length ?? 0})`,
               children: attachmentsError ? (
                 <QueryErrorAlert
-                  title="Chưa tải được file đính kèm"
+                  title="Chưa tải được hình ảnh và tài liệu"
                   error={attachmentsError}
                   onRetry={onRetryAttachments}
                 />
-              ) : <AttachmentList attachments={attachments} onChanged={onAttachmentsChanged} />,
+              ) : <AttachmentList attachments={workAttachments} onChanged={onAttachmentsChanged} />,
             },
             ]}
           />

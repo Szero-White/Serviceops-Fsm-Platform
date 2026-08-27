@@ -10,7 +10,6 @@ import {
 import { App, Button, Empty, Form, Input, List, Modal, Popconfirm, Spin } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
-import { useAuth } from '../../auth/AuthContext'
 import type { AttachmentItem } from '../../../types'
 import { formatNumber } from '../../../utils/format'
 import { attachmentsApi } from '../api'
@@ -45,7 +44,6 @@ type AttachmentListProps = {
 
 export function AttachmentList({ attachments, onChanged }: AttachmentListProps) {
   const { message } = App.useApp()
-  const { user } = useAuth()
   const [renameForm] = Form.useForm<{ originalFilename: string }>()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewFile, setPreviewFile] = useState<AttachmentItem | null>(null)
@@ -172,7 +170,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       <List
         dataSource={attachments}
         renderItem={(item) => {
-          const canManage = user?.role === 'OWNER' || item.uploadedBy === user?.username
+          const canManage = item.manageable
 
           return (
             <List.Item
@@ -222,7 +220,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                   )
                 }
                 title={item.originalFilename}
-                description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}`}
+                description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}${item.locked ? ' · Đã khóa' : ''}`}
               />
             </List.Item>
           )

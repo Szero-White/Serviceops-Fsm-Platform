@@ -75,6 +75,10 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | FILE-02 | Upload loại file không cho phép | HTTP 400 INVALID_FILE_TYPE |
 | FILE-03 | Asset chưa có SR/WO nhưng còn attachment rồi thử hard-delete Asset | HTTP 409 `ASSET_HAS_ATTACHMENTS`; metadata/file không orphan |
 | FILE-04 | Service Request chưa convert nhưng còn attachment rồi thử hard-delete | HTTP 409 `SERVICE_REQUEST_HAS_ATTACHMENTS`; metadata/file không orphan |
+| FILE-05 | Assigned Technician upload nhiều ảnh/PDF khi Work Order đang active | Tab **Hình ảnh & tài liệu** hiển thị đủ file; uploader có thể xem/tải/đổi tên/xóa file của mình |
+| FILE-06 | Work Order chuyển `CUSTOMER_ACCEPTED`, sau đó thử rename/delete/upload work evidence | Bị chặn; hồ sơ sửa chữa chỉ còn read-only |
+| FILE-07 | Technician tải ảnh payment evidence nhưng chưa báo chuyển khoản | Có thể chụp lại/bỏ ảnh nháp; ảnh không xuất hiện lẫn trong tab **Hình ảnh & tài liệu** |
+| FILE-08 | Technician báo chuyển khoản với payment evidence rồi thử rename/delete attachment đó | Payment → `TRANSFER_PENDING_VERIFICATION`; evidence bị lock và API chặn rename/delete |
 | AUD-01 | Thực hiện thao tác quan trọng | Có audit log tương ứng |
 | AUD-02 | Mở Nhật ký hệ thống | Mặc định 30 ngày gần nhất, 20 dòng/trang, mới nhất trước |
 | AUD-03 | Lọc theo ngày / người thao tác / hành động / đối tượng | Backend chỉ trả dữ liệu phù hợp và tổng số bản ghi đúng |
