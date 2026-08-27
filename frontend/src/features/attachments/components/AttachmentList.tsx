@@ -133,12 +133,12 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       const values = await renameForm.validateFields()
       setRenaming(true)
       await attachmentsApi.rename(renameFile.id, values.originalFilename)
-      message.success('Đã đổi tên tệp đính kèm')
+      message.success('Đã đổi tên file đính kèm')
       closeRename()
       onChanged?.()
     } catch (error) {
       if (isFormValidationError(error)) {
-        message.warning('Vui lòng nhập tên tệp trước khi lưu')
+        message.warning('Vui lòng nhập tên file trước khi lưu')
         return
       }
       message.error(apiErrorMessage(error))
@@ -154,7 +154,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       if (previewFile?.id === file.id) {
         closePreview()
       }
-      message.success('Đã xoá tệp đính kèm')
+      message.success('Đã xóa file đính kèm')
       onChanged?.()
     } catch (error) {
       message.error(apiErrorMessage(error))
@@ -196,15 +196,15 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                       </Button>,
                       <Popconfirm
                         key="delete"
-                        title="Xoá tệp đính kèm này?"
-                        description="File sẽ bị xoá khỏi phiếu công việc và không còn tải xuống được."
-                        okText="Xoá"
+                        title="Xóa file đính kèm này?"
+                        description="File sẽ bị xóa khỏi phiếu công việc và không còn tải xuống được."
+                        okText="Xóa"
                         cancelText="Giữ lại"
                         okButtonProps={{ danger: true, loading: deletingId === item.id }}
                         onConfirm={() => handleDelete(item)}
                       >
                         <Button type="text" danger icon={<DeleteOutlined />} loading={deletingId === item.id}>
-                          Xoá
+                          Xóa
                         </Button>
                       </Popconfirm>,
                     ]
@@ -268,13 +268,13 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       </Modal>
 
       <Modal
-        title="Đổi tên tệp đính kèm"
+        title="Đổi tên file đính kèm"
         open={Boolean(renameFile)}
         onCancel={closeRename}
         onOk={handleRename}
         confirmLoading={renaming}
         okText="Lưu"
-        cancelText="Huỷ"
+        cancelText="Hủy"
         destroyOnHidden
       >
         <Form form={renameForm} layout="vertical" requiredMark>

@@ -11,18 +11,11 @@ import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge, RoleTag } from '../../../components/PresentationBadge'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
+import { USER_ROLE_LABELS } from '../../../constants/userRoles'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
-const roleLabels: Record<UserRole, string> = {
-  OWNER: 'Chủ sở hữu',
-  DISPATCHER: 'Điều phối',
-  CUSTOMER_SERVICE: 'CSKH',
-  TECHNICIAN: 'Kỹ thuật viên',
-  WAREHOUSE_STAFF: 'Nhân viên kho',
-}
-
 const roleDescriptions: Record<UserRole, string> = {
   OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
   DISPATCHER: 'Điều phối phiếu công việc, phân công và theo dõi lịch kỹ thuật viên.',
@@ -31,7 +24,7 @@ const roleDescriptions: Record<UserRole, string> = {
   WAREHOUSE_STAFF: 'Quản lý phụ tùng, nhập kho và theo dõi tồn.',
 }
 
-const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({
+const roleOptions = Object.entries(USER_ROLE_LABELS).map(([value, label]) => ({
   value,
   label,
 }))
@@ -105,7 +98,7 @@ export function UsersPage() {
         return true
       }
 
-      return [account.displayName, account.username, roleLabels[account.role], account.phone, account.skills]
+      return [account.displayName, account.username, USER_ROLE_LABELS[account.role], account.phone, account.skills]
         .some((value) => value?.toLowerCase().includes(keyword))
     })
   }, [data, search, statusFilter])
@@ -137,8 +130,8 @@ export function UsersPage() {
       notification.success({
         message: editing ? 'Đã cập nhật tài khoản' : 'Đã tạo tài khoản',
         description: savedAccount.role === 'TECHNICIAN' && savedAccount.active
-          ? `${savedAccount.displayName} · ${roleLabels[savedAccount.role]} · Hoạt động. Trạng thái sẵn sàng điều phối của hồ sơ kỹ thuật viên được quản lý riêng.`
-          : `${savedAccount.displayName} · ${roleLabels[savedAccount.role]} · ${savedAccount.active ? 'Hoạt động' : 'Tạm ngưng'}`,
+          ? `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · Hoạt động. Trạng thái sẵn sàng điều phối của hồ sơ kỹ thuật viên được quản lý riêng.`
+          : `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · ${savedAccount.active ? 'Hoạt động' : 'Tạm ngưng'}`,
       })
       setOpen(false)
       setEditing(undefined)
@@ -160,10 +153,10 @@ export function UsersPage() {
     onSuccess: (_, removedId) => {
       const removedAccount = data.find((account) => account.id === removedId)
       notification.success({
-        message: 'Đã xoá tài khoản',
+        message: 'Đã xóa tài khoản',
         description: removedAccount
-          ? `${removedAccount.displayName} · ${roleLabels[removedAccount.role]}`
-          : 'Tài khoản đã được xoá khỏi hệ thống.',
+          ? `${removedAccount.displayName} · ${USER_ROLE_LABELS[removedAccount.role]}`
+          : 'Tài khoản đã được xóa khỏi hệ thống.',
       })
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
@@ -292,16 +285,16 @@ export function UsersPage() {
                     onClick={() => showEdit(record)}
                   />
                   <Popconfirm
-                    title={isProtectedDemo ? 'Tài khoản demo cố định' : 'Xoá người dùng này?'}
+                    title={isProtectedDemo ? 'Tài khoản demo cố định' : 'Xóa người dùng này?'}
                     description={
                       isProtectedDemo
                         ? 'Tài khoản này cần được giữ nguyên để bảo đảm luồng public demo luôn hoạt động.'
                         : isSelf
                           ? 'Không thể xóa tài khoản đang đăng nhập.'
-                          : 'Chỉ xoá được khi người dùng chưa bị ràng buộc dữ liệu vận hành.'
+                          : 'Chỉ xóa được khi người dùng chưa bị ràng buộc dữ liệu vận hành.'
                     }
-                    okText="Xoá"
-                    cancelText="Huỷ"
+                    okText="Xóa"
+                    cancelText="Hủy"
                     okButtonProps={{ danger: true, loading: remove.isPending, disabled: deleteBlocked }}
                     onConfirm={() => {
                       if (!deleteBlocked) {
@@ -310,7 +303,7 @@ export function UsersPage() {
                     }}
                   >
                     <Button
-                      aria-label="Xoá người dùng"
+                      aria-label="Xóa người dùng"
                       type="text"
                       danger
                       disabled={deleteBlocked}

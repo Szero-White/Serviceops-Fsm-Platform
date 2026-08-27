@@ -473,7 +473,7 @@ final class AiHelpKnowledgeBase {
         return new HelpTopic("Kênh tiếp nhận", "/service-channels", List.of("OWNER"),
                 List.of("kenh", "zalo", "website", "dien thoai", "channel", "nguon tiep nhan"),
                 "Dùng để chuẩn hóa nguồn tiếp nhận yêu cầu như điện thoại, website, Zalo hoặc nội bộ.",
-                List.of("Mở menu Kênh tiếp nhận", "Kiểm tra các kênh đang hoạt động", "Nếu giao diện cho phép, thêm hoặc chỉnh sửa kênh", "Ưu tiên tắt kênh không còn dùng thay vì xoá dữ liệu đã phát sinh"));
+                List.of("Mở menu Kênh tiếp nhận", "Kiểm tra các kênh đang hoạt động", "Nếu giao diện cho phép, thêm hoặc chỉnh sửa kênh", "Ưu tiên tắt kênh không còn dùng thay vì xóa dữ liệu đã phát sinh"));
     }
 
     private static HelpTopic topicChannelsReadOnly() {

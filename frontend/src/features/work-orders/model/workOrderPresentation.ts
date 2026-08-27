@@ -10,7 +10,7 @@ export const WORK_ORDER_STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Đã hoàn thành' },
   { value: 'CUSTOMER_ACCEPTED', label: 'Khách xác nhận' },
   { value: 'CLOSED', label: 'Đã đóng' },
-  { value: 'CANCELLED', label: 'Đã huỷ' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
   { value: 'REOPENED', label: 'Mở lại' },
 ]
 
@@ -33,7 +33,7 @@ export const TRANSITION_LABELS: Partial<Record<WorkOrderStatus, string>> = {
   CUSTOMER_ACCEPTED: 'Khách xác nhận',
   CLOSED: 'Đóng phiếu',
   REOPENED: 'Khách yêu cầu xử lý lại',
-  CANCELLED: 'Huỷ phiếu',
+  CANCELLED: 'Hủy phiếu',
 }
 
 const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {

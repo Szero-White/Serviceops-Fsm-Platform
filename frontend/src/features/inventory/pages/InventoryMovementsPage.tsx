@@ -8,6 +8,7 @@ import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
+import { actorRoleLabel } from '../../../constants/userRoles'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import type { InventoryTransaction, InventoryTransactionType, ReturnablePart } from '../../../types'
 import { formatCompactDecimalInput, formatDateTime, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
@@ -28,19 +29,6 @@ const TYPE_LABELS: Record<InventoryTransactionType, string> = {
 
 function isIncrease(type: InventoryTransactionType) {
   return type === 'IMPORT' || type === 'RETURN' || type === 'ADJUSTMENT_IN'
-}
-
-const ACTOR_ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Quản trị hệ thống',
-  DISPATCHER: 'Điều phối',
-  CUSTOMER_SERVICE: 'Chăm sóc khách hàng',
-  TECHNICIAN: 'Kỹ thuật hiện trường',
-  WAREHOUSE_STAFF: 'Kho vận',
-  SYSTEM: 'Hệ thống',
-}
-
-function actorDepartmentLabel(role?: string) {
-  return role ? (ACTOR_ROLE_LABELS[role] ?? role) : 'Không xác định'
 }
 
 export function InventoryMovementsPage() {
@@ -147,7 +135,7 @@ export function InventoryMovementsPage() {
           { title: 'Biến động', width: 140, render: (_, record) => <Typography.Text strong type={isIncrease(record.type) ? 'success' : undefined}>{isIncrease(record.type) ? '+' : '-'}{formatQuantityWithUnit(record.quantity, record.unit)}</Typography.Text> },
           { title: 'Tồn sau', width: 130, render: (_, record) => formatQuantityWithUnit(record.balanceAfter, record.unit) },
           { title: 'Phiếu công việc', width: 220, render: (_, record) => record.workOrderCode ? <div className="table-primary-cell"><Typography.Text code>{record.workOrderCode}</Typography.Text><Typography.Text type="secondary" ellipsis={{ tooltip: record.workOrderSummary }}>{record.workOrderSummary ?? 'Nghiệp vụ theo phiếu công việc'}</Typography.Text></div> : '—' },
-          { title: 'Người thực hiện', width: 230, render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.actorDisplayName || record.createdBy}</Typography.Text><Typography.Text type="secondary">{actorDepartmentLabel(record.actorRole)}</Typography.Text></div> },
+          { title: 'Người thực hiện', width: 230, render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.actorDisplayName || record.createdBy}</Typography.Text><Typography.Text type="secondary">{actorRoleLabel(record.actorRole)}</Typography.Text></div> },
           { title: 'Mục đích / ghi chú', dataIndex: 'note', width: 260, ellipsis: true, render: (value: string | undefined, record) => value || record.workOrderSummary || '—' },
           { title: 'Thao tác', width: 120, fixed: 'right', render: (_, record) => record.type === 'CONSUME' && record.workOrderId ? <Button size="small" icon={<RollbackOutlined />} onClick={() => void openReturn(record)}>Hoàn trả</Button> : null },
         ]}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Tag } from 'antd'
 import type { UserRole } from '../types'
+import { USER_ROLE_LABELS } from '../constants/userRoles'
 
 export type SemanticTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
@@ -35,16 +36,8 @@ export function BinaryStatusTag({
   )
 }
 
-const roleLabels: Record<UserRole, string> = {
-  OWNER: 'Chủ sở hữu',
-  DISPATCHER: 'Điều phối',
-  CUSTOMER_SERVICE: 'CSKH',
-  TECHNICIAN: 'Kỹ thuật viên',
-  WAREHOUSE_STAFF: 'Nhân viên kho',
-}
-
 export function RoleTag({ role }: { role: UserRole }) {
-  return <Tag className={`${toneClass('neutral')} role-tag`}>{roleLabels[role]}</Tag>
+  return <Tag className={`${toneClass('neutral')} role-tag`}>{USER_ROLE_LABELS[role]}</Tag>
 }
 
 export function WarrantyTag({ underWarranty }: { underWarranty: boolean }) {
@@ -69,9 +62,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   IMPORT_CUSTOMERS: 'Import khách hàng',
   IMPORT_ASSETS: 'Import thiết bị',
   IMPORT_SPARE_PARTS: 'Import phụ tùng',
-  UPLOAD_FILE: 'Tải tệp',
-  RENAME_FILE: 'Đổi tên tệp',
-  DELETE_FILE: 'Xóa tệp',
+  UPLOAD_FILE: 'Tải file',
+  RENAME_FILE: 'Đổi tên file',
+  DELETE_FILE: 'Xóa file',
   DELETE_HISTORY: 'Xóa khỏi lịch sử',
   AI_HELP_LOCAL: 'Trợ lý nội bộ',
   AI_HELP_GEMINI: 'Trợ lý AI',

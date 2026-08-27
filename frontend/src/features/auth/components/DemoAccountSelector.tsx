@@ -7,21 +7,23 @@ import {
 } from '@ant-design/icons'
 import { Button, Typography } from 'antd'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { USER_ROLE_LABELS } from '../../../constants/userRoles'
+import type { UserRole } from '../../../types'
 import type { ReactNode } from 'react'
 
 type DemoAccount = {
   username: string
-  role: string
+  role: UserRole
   description: string
   icon: ReactNode
 }
 
 const DEMO_ACCOUNTS: DemoAccount[] = [
-  { username: 'owner', role: 'Owner', description: 'Toàn quyền quản trị và giám sát', icon: <SafetyCertificateOutlined /> },
-  { username: 'dispatcher', role: 'Dispatcher', description: 'Điều phối phiếu công việc và lịch kỹ thuật', icon: <TeamOutlined /> },
-  { username: 'customer-service', role: 'Customer Service', description: 'Khách hàng và yêu cầu dịch vụ', icon: <CustomerServiceOutlined /> },
-  { username: 'technician', role: 'Technician', description: 'Thực hiện công việc hiện trường', icon: <ToolOutlined /> },
-  { username: 'warehouse', role: 'Warehouse', description: 'Tồn kho, kiểm kê và truy vết biến động', icon: <UserOutlined /> },
+  { username: 'owner', role: 'OWNER', description: 'Toàn quyền quản trị và giám sát', icon: <SafetyCertificateOutlined /> },
+  { username: 'dispatcher', role: 'DISPATCHER', description: 'Điều phối phiếu công việc và lịch kỹ thuật', icon: <TeamOutlined /> },
+  { username: 'customer-service', role: 'CUSTOMER_SERVICE', description: 'Khách hàng và yêu cầu dịch vụ', icon: <CustomerServiceOutlined /> },
+  { username: 'technician', role: 'TECHNICIAN', description: 'Thực hiện công việc hiện trường', icon: <ToolOutlined /> },
+  { username: 'warehouse', role: 'WAREHOUSE_STAFF', description: 'Tồn kho, kiểm kê và truy vết biến động', icon: <UserOutlined /> },
 ]
 
 export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD?.trim() ?? ''
@@ -47,7 +49,7 @@ export function DemoAccountSelector({ onSelect }: { onSelect: (username: string,
           >
             <span className="demo-account-icon">{account.icon}</span>
             <span className="demo-account-copy">
-              <strong>{account.role}</strong>
+              <strong>{USER_ROLE_LABELS[account.role]}</strong>
               <small>{account.description}</small>
               <code>{account.username}</code>
             </span>

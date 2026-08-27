@@ -375,10 +375,10 @@ public class InventoryService {
             return SparePartImportCandidate.invalid(row, "SKU không được vượt quá 60 ký tự");
         }
         if (!seenSkus.add(sku)) {
-            return SparePartImportCandidate.invalid(row, "SKU bi trung trong file import");
+            return SparePartImportCandidate.invalid(row, "SKU bị trùng trong file import");
         }
         if (sparePartRepository.existsByTenantIdAndSkuIgnoreCase(tenantId, sku)) {
-            return SparePartImportCandidate.invalid(row, "SKU da ton tai trong he thong");
+            return SparePartImportCandidate.invalid(row, "SKU đã tồn tại trong hệ thống");
         }
         if (row.name().isBlank() || row.name().length() > 180) {
             return SparePartImportCandidate.invalid(row, "Tên phụ tùng bắt buộc và tối đa 180 ký tự");
@@ -411,7 +411,7 @@ public class InventoryService {
         sparePartRepository.save(part);
         if (candidate.initialStock().signum() > 0) {
             part.addStock(candidate.initialStock());
-            saveTransaction(part, null, InventoryTransactionType.IMPORT, candidate.initialStock(), "Import ton ban dau tu CSV");
+            saveTransaction(part, null, InventoryTransactionType.IMPORT, candidate.initialStock(), "Nhập tồn ban đầu từ CSV");
         }
     }
 
@@ -438,7 +438,7 @@ public class InventoryService {
         if ("false".equals(normalized)) {
             return false;
         }
-        throw new IllegalArgumentException("Cot active chi nhan true hoac false");
+        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
     }
 
     private void saveTransaction(SparePart part, WorkOrder workOrder, InventoryTransactionType type, BigDecimal quantity, String note) {

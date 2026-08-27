@@ -102,7 +102,7 @@ public class AttachmentService {
         repository.delete(attachment);
         deleteStoredFileAfterCommit(attachment.getStorageKey());
         auditService.record("DELETE_FILE", attachment.getReferenceType(), attachment.getReferenceId(),
-                "Xoá file " + attachment.getOriginalFilename());
+                "Xóa file " + attachment.getOriginalFilename());
     }
 
 

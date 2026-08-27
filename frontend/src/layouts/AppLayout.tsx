@@ -32,17 +32,10 @@ import { useAuth } from '../features/auth/AuthContext'
 import { AiHelpAssistant } from '../features/ai/components/AiHelpAssistant'
 import { formatDateTime } from '../utils/format'
 import { canAccessRoute } from '../router/routeAccess'
+import { USER_ROLE_LABELS } from '../constants/userRoles'
 
 const { Header, Sider, Content } = Layout
 const NOTIFICATION_PAGE_SIZE = 30
-
-const roleLabels: Record<string, string> = {
-  OWNER: 'Quản trị hệ thống',
-  DISPATCHER: 'Điều phối viên',
-  CUSTOMER_SERVICE: 'Chăm sóc khách hàng',
-  TECHNICIAN: 'Kỹ thuật viên',
-  WAREHOUSE_STAFF: 'Nhân viên kho',
-}
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
@@ -227,7 +220,7 @@ export function AppLayout() {
               <Avatar className="user-avatar">{user?.displayName?.charAt(0) ?? 'U'}</Avatar>
               <span className="user-menu-copy">
                 <strong>{user?.displayName}</strong>
-                <small>{roleLabels[user?.role ?? ''] ?? user?.role}</small>
+                <small>{user?.role ? USER_ROLE_LABELS[user.role] : ''}</small>
               </span>
             </button>
           </Dropdown>

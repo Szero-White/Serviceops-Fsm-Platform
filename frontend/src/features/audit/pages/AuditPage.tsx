@@ -22,7 +22,7 @@ const auditEntityLabels: Record<string, string> = {
   SPARE_PART: 'Phụ tùng',
   INVENTORY: 'Kho phụ tùng',
   USER_ACCOUNT: 'Tài khoản người dùng',
-  ATTACHMENT: 'Tệp đính kèm',
+  ATTACHMENT: 'File đính kèm',
   AI: 'Trợ lý AI',
   SYSTEM: 'Hệ thống',
 }

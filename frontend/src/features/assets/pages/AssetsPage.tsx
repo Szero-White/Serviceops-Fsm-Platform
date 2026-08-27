@@ -110,7 +110,7 @@ export function AssetsPage() {
   const remove = useMutation({
     mutationFn: (id: string) => assetsApi.delete(id),
     onSuccess: () => {
-      message.success('Đã xoá thiết bị')
+      message.success('Đã xóa thiết bị')
       refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -299,14 +299,14 @@ export function AssetsPage() {
               <Space size={4}>
                 <Button aria-label="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
-                  title="Xoá thiết bị này?"
-                  description="Chỉ xoá được khi thiết bị chưa được dùng trong yêu cầu dịch vụ hoặc phiếu công việc."
-                  okText="Xoá"
-                  cancelText="Huỷ"
+                  title="Xóa thiết bị này?"
+                  description="Chỉ xóa được khi thiết bị chưa được dùng trong yêu cầu dịch vụ hoặc phiếu công việc."
+                  okText="Xóa"
+                  cancelText="Hủy"
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xoá thiết bị" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa thiết bị" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ),

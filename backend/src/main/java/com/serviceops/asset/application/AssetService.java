@@ -248,10 +248,10 @@ public class AssetService {
             return AssetImportCandidate.invalid(row, "Serial tối đa 120 ký tự");
         }
         if (!seenSerials.add(serial)) {
-            return AssetImportCandidate.invalid(row, "Serial bi trung trong file import");
+            return AssetImportCandidate.invalid(row, "Serial bị trùng trong file import");
         }
         if (repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
-            return AssetImportCandidate.invalid(row, "Serial da ton tai trong he thong");
+            return AssetImportCandidate.invalid(row, "Serial đã tồn tại trong hệ thống");
         }
         if (row.category().isBlank() || row.category().length() > 80) {
             return AssetImportCandidate.invalid(row, "Loại thiết bị bắt buộc và tối đa 80 ký tự");

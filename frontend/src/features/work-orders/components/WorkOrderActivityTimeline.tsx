@@ -2,6 +2,7 @@ import { CalendarOutlined, RollbackOutlined, ToolOutlined } from '@ant-design/ic
 import { Empty, Space, Timeline, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { StatusTag } from '../../../components/StatusTag'
+import { actorRoleLabel } from '../../../constants/userRoles'
 import type { WorkOrderActivity, WorkOrderHistory } from '../../../types'
 import { formatDateTime, formatQuantityWithUnit } from '../../../utils/format'
 
@@ -20,18 +21,9 @@ function fallbackActivities(history?: WorkOrderHistory[]): WorkOrderActivity[] {
   }))
 }
 
-const actorRoleLabels: Record<NonNullable<WorkOrderActivity['actorRole']>, string> = {
-  OWNER: 'Chủ sở hữu',
-  DISPATCHER: 'Điều phối viên',
-  CUSTOMER_SERVICE: 'Chăm sóc khách hàng',
-  TECHNICIAN: 'Kỹ thuật viên',
-  WAREHOUSE_STAFF: 'Nhân viên kho',
-  SYSTEM: 'Hệ thống',
-}
-
 function activityActor(activity: WorkOrderActivity) {
   const displayName = activity.actorDisplayName?.trim() || activity.actor?.trim()
-  const roleLabel = activity.actorRole ? actorRoleLabels[activity.actorRole] : undefined
+  const roleLabel = activity.actorRole ? actorRoleLabel(activity.actorRole) : undefined
 
   if (activity.actorRole === 'SYSTEM' || (!activity.actorRole && activity.actor?.toLowerCase() === 'system')) {
     return 'Hệ thống'

@@ -96,7 +96,7 @@ export function WorkOrderDetailDrawer({
                 ) : target === 'CANCELLED' ? (
                   <Popconfirm
                     key={target}
-                    title="Huỷ phiếu công việc này?"
+                    title="Hủy phiếu công việc này?"
                     description={(
                       <Space direction="vertical" size={8}>
                         <Typography.Text type="secondary">Lý do hủy sẽ được lưu vào lịch sử phiếu.</Typography.Text>
@@ -191,10 +191,10 @@ export function WorkOrderDetailDrawer({
             },
             {
               key: 'attachments',
-              label: `Tệp đính kèm (${attachments?.length ?? 0})`,
+              label: `File đính kèm (${attachments?.length ?? 0})`,
               children: attachmentsError ? (
                 <QueryErrorAlert
-                  title="Chưa tải được tệp đính kèm"
+                  title="Chưa tải được file đính kèm"
                   error={attachmentsError}
                   onRetry={onRetryAttachments}
                 />

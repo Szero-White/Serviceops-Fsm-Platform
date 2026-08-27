@@ -29,7 +29,7 @@ const priorityOptions = [
 const requestStatusOptions = [
   { value: 'OPEN', label: 'Đang mở' },
   { value: 'CONVERTED', label: 'Đã chuyển điều phối' },
-  { value: 'CANCELLED', label: 'Đã huỷ' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
 ]
 
 export function ServiceRequestsPage() {
@@ -130,7 +130,7 @@ export function ServiceRequestsPage() {
   const remove = useMutation({
     mutationFn: (id: string) => serviceRequestsApi.delete(id),
     onSuccess: () => {
-      message.success('Đã xoá yêu cầu dịch vụ')
+      message.success('Đã xóa yêu cầu dịch vụ')
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -151,7 +151,7 @@ export function ServiceRequestsPage() {
   const cancel = useMutation({
     mutationFn: serviceRequestsApi.cancel,
     onSuccess: () => {
-      message.success('Đã huỷ yêu cầu')
+      message.success('Đã hủy yêu cầu')
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -318,23 +318,23 @@ export function ServiceRequestsPage() {
                           />
                         </Popconfirm>
                       )}
-                      <Popconfirm title="Huỷ yêu cầu này?" okText="Huỷ" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
-                        <Tooltip title="Huỷ yêu cầu"><Button aria-label="Huỷ yêu cầu" type="text" danger icon={<CloseCircleOutlined />} /></Tooltip>
+                      <Popconfirm title="Hủy yêu cầu này?" okText="Hủy" cancelText="Giữ lại" onConfirm={() => cancel.mutate(record.id)}>
+                        <Tooltip title="Hủy yêu cầu"><Button aria-label="Hủy yêu cầu" type="text" danger icon={<CloseCircleOutlined />} /></Tooltip>
                       </Popconfirm>
                     </>
                   )}
 
-                  <Tooltip title={isConverted ? 'Không thể xoá yêu cầu đã tạo phiếu công việc' : 'Xoá yêu cầu'}>
+                  <Tooltip title={isConverted ? 'Không thể xóa yêu cầu đã tạo phiếu công việc' : 'Xóa yêu cầu'}>
                     <Popconfirm
                       disabled={isConverted}
-                      title="Xoá yêu cầu này?"
-                      description="Không thể xoá yêu cầu đã chuyển thành phiếu công việc."
-                      okText="Xoá"
-                      cancelText="Huỷ"
+                      title="Xóa yêu cầu này?"
+                      description="Không thể xóa yêu cầu đã chuyển thành phiếu công việc."
+                      okText="Xóa"
+                      cancelText="Hủy"
                       okButtonProps={{ danger: true, loading: remove.isPending }}
                       onConfirm={() => remove.mutate(record.id)}
                     >
-                      <Button aria-label="Xoá yêu cầu" type="text" danger disabled={isConverted} icon={<DeleteOutlined />} />
+                      <Button aria-label="Xóa yêu cầu" type="text" danger disabled={isConverted} icon={<DeleteOutlined />} />
                     </Popconfirm>
                   </Tooltip>
                 </Space>
