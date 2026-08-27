@@ -38,3 +38,4 @@ frontend/playwright-report/
 frontend/test-results/
 
 SOURCE_MANIFEST.txt
+db-backups/

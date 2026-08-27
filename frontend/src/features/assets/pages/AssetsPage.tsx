@@ -33,6 +33,8 @@ export function AssetsPage() {
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
   const [open, setOpen] = useState(false)
+  const [customerOptionSearchInput, setCustomerOptionSearchInput] = useState('')
+  const customerOptionSearch = useDebouncedValue(customerOptionSearchInput.trim())
   const [editing, setEditing] = useState<Asset>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [bulkImportFile, setBulkImportFile] = useState<File>()
@@ -57,7 +59,12 @@ export function AssetsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true), enabled: canManage })
+  const customersQuery = useQuery({
+    queryKey: ['customers', 'active-options', customerOptionSearch],
+    queryFn: () => customersApi.list(customerOptionSearch, 0, LIST_PAGE_SIZE, true),
+    enabled: canManage && open,
+    placeholderData: keepPreviousData,
+  })
   const customers = customersQuery.data
   const customerOptions = useMemo(() => {
     const options = (customers?.content ?? []).map((customer) => ({
@@ -162,6 +169,7 @@ export function AssetsPage() {
 
   const showCreate = () => {
     setEditing(undefined)
+    setCustomerOptionSearchInput('')
     form.resetFields()
     form.setFieldsValue({ status: 'ACTIVE' })
     setOpen(true)
@@ -169,6 +177,7 @@ export function AssetsPage() {
 
   const showEdit = (record: Asset) => {
     setEditing(record)
+    setCustomerOptionSearchInput('')
     form.setFieldsValue({
       ...record,
       installedAt: record.installedAt ? dayjs(record.installedAt) : undefined,
@@ -324,7 +333,14 @@ export function AssetsPage() {
         ) : null}
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-            <Select showSearch optionFilterProp="label" options={customerOptions} />
+            <Select
+              showSearch
+              filterOption={false}
+              loading={customersQuery.isFetching}
+              placeholder="Tìm theo mã hoặc tên khách hàng"
+              onSearch={setCustomerOptionSearchInput}
+              options={customerOptions}
+            />
           </Form.Item>
           <div className="form-grid two-cols">
             <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>

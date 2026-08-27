@@ -18,11 +18,8 @@ import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../api'
 import { paymentsApi } from '../../payments/api'
 import { WorkOrderDetailDrawer } from '../components/WorkOrderDetailDrawer'
-import {
-  WorkOrderDialogs,
-  type CompleteWorkOrderValues,
-  type ScheduleWorkOrderValues,
-} from '../components/WorkOrderDialogs'
+import { CompleteWorkOrderModal, type CompleteWorkOrderValues } from '../components/CompleteWorkOrderModal'
+import { WorkOrderScheduleModal, type ScheduleWorkOrderValues } from '../components/WorkOrderScheduleModal'
 import { WorkOrderTable } from '../components/WorkOrderTable'
 import { ACTIVE_WORK_ORDER_STATUS_OPTIONS, availableWorkOrderTransitions, WORK_ORDER_STATUS_OPTIONS } from '../model/workOrderPresentation'
 import { workOrderPermissions } from '../model/workOrderPermissions'
@@ -333,18 +330,26 @@ export function WorkOrdersPage() {
         onAttachmentsChanged={refreshAttachments}
       />
 
-      <WorkOrderDialogs
-        schedule={{
-          open: scheduleOpen,
-          form: scheduleForm,
-          pending: schedule.isPending,
-          redispatching: Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd),
-          currentTechnicianName: detail?.technicianName,
-          onClose: () => setScheduleOpen(false),
-          onSubmit: submitSchedule,
-        }}
-        complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, hasPreviousResult: Boolean(detail?.diagnosis || detail?.resolution), onClose: closeComplete, onSubmit: (values) => complete.mutate(values) }}
+      <WorkOrderScheduleModal
+        open={scheduleOpen}
+        workOrderCode={detail?.code}
+        workOrderSummary={detail?.summary}
+        currentTechnicianName={detail?.technicianName}
+        form={scheduleForm}
         technicians={technicians}
+        pending={schedule.isPending}
+        redispatching={Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd)}
+        onClose={() => setScheduleOpen(false)}
+        onSubmit={submitSchedule}
+      />
+
+      <CompleteWorkOrderModal
+        open={completeOpen}
+        form={completeForm}
+        pending={complete.isPending}
+        hasPreviousResult={Boolean(detail?.diagnosis || detail?.resolution)}
+        onClose={closeComplete}
+        onSubmit={(values) => complete.mutate(values)}
       />
     </div>
   )

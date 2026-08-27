@@ -18,10 +18,7 @@ import type { DispatchQueueItem, ScheduleAppointment, Technician, WorkOrderStatu
 import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../../work-orders/api'
 import { scheduleBoardApi } from '../api'
-import {
-  ScheduleAppointmentModal,
-  type ScheduleAppointmentValues,
-} from '../components/ScheduleAppointmentModal'
+import { WorkOrderScheduleModal, type ScheduleWorkOrderValues } from '../../work-orders/components/WorkOrderScheduleModal'
 
 const DAY_COUNT = 7
 const RESCHEDULABLE_STATUSES = new Set<WorkOrderStatus>(['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'])
@@ -57,7 +54,7 @@ export function ScheduleBoardPage() {
     redispatching?: boolean
   }>()
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [scheduleForm] = Form.useForm<ScheduleAppointmentValues>()
+  const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
@@ -100,7 +97,7 @@ export function ScheduleBoardPage() {
   }, [boardQuery.data?.appointments, days])
 
   const scheduleMutation = useMutation({
-    mutationFn: (values: ScheduleAppointmentValues) => workOrdersApi.schedule(selectedWorkOrder!.id, {
+    mutationFn: (values: ScheduleWorkOrderValues) => workOrdersApi.schedule(selectedWorkOrder!.id, {
       technicianId: values.technicianId,
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
@@ -283,10 +280,11 @@ export function ScheduleBoardPage() {
         </div>
       )}
 
-      <ScheduleAppointmentModal
+      <WorkOrderScheduleModal
         open={scheduleOpen}
         workOrderCode={selectedWorkOrder?.code}
         workOrderSummary={selectedWorkOrder?.summary}
+        currentTechnicianName={selectedWorkOrder?.technicianName}
         form={scheduleForm}
         technicians={technicians}
         pending={scheduleMutation.isPending}

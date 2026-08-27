@@ -36,6 +36,10 @@ export function ServiceRequestsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
+  const [customerOptionSearchInput, setCustomerOptionSearchInput] = useState('')
+  const customerOptionSearch = useDebouncedValue(customerOptionSearchInput.trim())
+  const [assetOptionSearchInput, setAssetOptionSearchInput] = useState('')
+  const assetOptionSearch = useDebouncedValue(assetOptionSearchInput.trim())
   const [status, setStatus] = useState<string>('OPEN')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceRequest>()
@@ -66,12 +70,18 @@ export function ServiceRequestsPage() {
       setPage(Math.max(data.totalPages - 1, 0))
     }
   }, [data, page])
-  const customersQuery = useQuery({ queryKey: ['customers', 'active-options'], queryFn: () => customersApi.list('', 0, 100, true) })
+  const customersQuery = useQuery({
+    queryKey: ['customers', 'active-options', customerOptionSearch],
+    queryFn: () => customersApi.list(customerOptionSearch, 0, LIST_PAGE_SIZE, true),
+    enabled: open,
+    placeholderData: keepPreviousData,
+  })
   const customers = customersQuery.data
   const assetsQuery = useQuery({
-    queryKey: ['assets', 'service-request-customer', watchedCustomerId],
-    queryFn: () => assetsApi.list('', 0, 100, watchedCustomerId),
-    enabled: Boolean(watchedCustomerId),
+    queryKey: ['assets', 'service-request-customer', watchedCustomerId, assetOptionSearch],
+    queryFn: () => assetsApi.list(assetOptionSearch, 0, LIST_PAGE_SIZE, watchedCustomerId),
+    enabled: open && Boolean(watchedCustomerId),
+    placeholderData: keepPreviousData,
   })
   const assets = assetsQuery.data
   const assetsLoading = assetsQuery.isFetching
@@ -94,6 +104,27 @@ export function ServiceRequestsPage() {
     }
     return options
   }, [customers, editing])
+
+  const assetOptions = useMemo(() => {
+    const options = (assets?.content ?? []).map((asset) => ({
+      value: asset.id,
+      label: `${asset.serialNumber ?? 'Chưa xác định serial'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
+    }))
+    if (
+      editing?.assetId
+      && editing.customerId === watchedCustomerId
+      && !options.some((option) => option.value === editing.assetId)
+    ) {
+      return [
+        {
+          value: editing.assetId,
+          label: `${editing.assetLabel ?? 'Thiết bị hiện tại'} · Thiết bị hiện tại`,
+        },
+        ...options,
+      ]
+    }
+    return options
+  }, [assets, editing, watchedCustomerId])
 
   const channelOptions = useMemo(
     () => channels.filter((channel) => channel.active).map((channel) => ({ value: channel.code, label: channel.name })),
@@ -199,12 +230,15 @@ export function ServiceRequestsPage() {
   }
 
   const handleCustomerChange = (customerId: string) => {
+    setAssetOptionSearchInput('')
     form.setFieldsValue({ customerId, assetId: undefined })
   }
 
   const showCreate = () => {
     setEditing(undefined)
     setLastAiDraft(undefined)
+    setCustomerOptionSearchInput('')
+    setAssetOptionSearchInput('')
     form.resetFields()
     form.setFieldsValue({ priority: 'NORMAL', channel: channelOptions[0]?.value ?? 'PHONE' })
     setOpen(true)
@@ -213,6 +247,8 @@ export function ServiceRequestsPage() {
   const showEdit = (record: ServiceRequest) => {
     setEditing(record)
     setLastAiDraft(undefined)
+    setCustomerOptionSearchInput('')
+    setAssetOptionSearchInput('')
     form.setFieldsValue({
       customerId: record.customerId,
       assetId: record.assetId,
@@ -359,9 +395,11 @@ export function ServiceRequestsPage() {
             <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
               <Select
                 showSearch
-                optionFilterProp="label"
-                placeholder="Chọn khách hàng"
+                filterOption={false}
+                loading={customersQuery.isFetching}
+                placeholder="Tìm theo mã hoặc tên khách hàng"
                 options={customerOptions}
+                onSearch={setCustomerOptionSearchInput}
                 onChange={handleCustomerChange}
               />
             </Form.Item>
@@ -369,15 +407,13 @@ export function ServiceRequestsPage() {
               <Select
                 allowClear
                 showSearch
-                optionFilterProp="label"
+                filterOption={false}
                 disabled={!watchedCustomerId}
                 loading={assetsLoading}
-                placeholder={watchedCustomerId ? 'Chọn thiết bị của khách hàng' : 'Chọn khách hàng trước'}
-                notFoundContent={watchedCustomerId && !assetsLoading ? 'Khách hàng này chưa có thiết bị' : undefined}
-                options={assets?.content.map((asset) => ({
-                  value: asset.id,
-                  label: `${asset.serialNumber ?? 'Chưa xác định serial'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
-                }))}
+                placeholder={watchedCustomerId ? 'Tìm serial, hãng hoặc model' : 'Chọn khách hàng trước'}
+                notFoundContent={watchedCustomerId && !assetsLoading ? 'Không tìm thấy thiết bị phù hợp' : undefined}
+                onSearch={setAssetOptionSearchInput}
+                options={assetOptions}
               />
             </Form.Item>
             <Form.Item label="Mức độ ưu tiên" name="priority" rules={[{ required: true, message: 'Chọn mức ưu tiên' }]}><Select options={priorityOptions} /></Form.Item>

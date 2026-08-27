@@ -84,6 +84,13 @@ Complex drawers, dialogs, tables and role rules should live in focused feature f
 
 Domain contracts are separated by area under `src/types/`. `src/types/index.ts` is only a stable public barrel and must not become a monolithic type declaration file.
 
+### Data selectors and query scale
+
+- A `Select` backed by a paginated/searchable API must debounce user input and search server-side; do not fetch an arbitrary first 100 records and treat it as the complete option set.
+- Preserve the currently selected/editing entity even when it falls outside the latest search page.
+- Small bounded reference sets (roles, status enums, service channels, a technician roster at current scale) may remain client-filtered when the backend intentionally returns the full set.
+- Prefer correctness-first query invalidation after business mutations; introduce shared query-key factories only when they reduce repeated mistakes without hiding domain dependencies.
+
 ### Navigation and authorization
 
 - `router/routeAccess.ts` defines frontend route availability; backend `@PreAuthorize`/service guards remain the real security boundary.

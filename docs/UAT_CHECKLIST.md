@@ -95,6 +95,9 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SEARCH-06 | Làm API danh sách lỗi hoặc backend tạm dừng | UI hiển thị lỗi + nút Thử lại; không hiển thị nhầm thành danh sách rỗng hợp lệ |
 | SEARCH-06A | Làm lỗi API dữ liệu phụ trợ (chi tiết WO, kỹ thuật viên, phụ tùng, khách hàng/kênh/thiết bị hoặc schedule board) | UI hiển thị lỗi có hướng dẫn/Thử lại thay vì render select hoặc drawer rỗng gây hiểu nhầm |
 | SEARCH-07 | Tìm ở Người dùng / Kỹ thuật viên / Kênh tiếp nhận | Lọc tức thời trên tập dữ liệu nhỏ đã tải, page size 20 và lỗi API có trạng thái Thử lại nhất quán |
+| SEARCH-08 | Tenant có nhiều hơn một page khách hàng; mở Thêm thiết bị hoặc Tiếp nhận yêu cầu rồi gõ mã/tên của khách không nằm ở page đầu | Selector debounce và gọi server search; khách phù hợp xuất hiện mà không phụ thuộc first-100/first-page |
+| SEARCH-09 | Khách có nhiều thiết bị hoặc catalog có nhiều phụ tùng; tìm serial/model trong form Service Request và SKU/tên trong Yêu cầu phụ tùng của Work Order | Selector remote-search trả đúng item ngoài page đầu; item đang được edit vẫn hiển thị dù không thuộc page search hiện tại |
+| DEV-DB-01 | Chạy `scripts/reset-local-db.ps1` với host local và database có dữ liệu | Script kiểm role owner, backup + verify archive trước, yêu cầu confirm đúng tên DB, recreate DB; sau `dev-start.ps1` Flyway chạy V1→latest và demo seed trở lại |
 | WO-ROLE-01 | Owner mở Work Order `COMPLETED` | Chỉ giám sát dữ liệu; không có action Khách xác nhận/actual-used/payment settlement/đóng phiếu thay role phụ trách |
 | WO-ROLE-02 | Assigned Technician mở Work Order `COMPLETED` bằng icon mắt | Có nút **Khách xác nhận** cạnh **Tải ảnh / PDF**; bấm thành công → `CUSTOMER_ACCEPTED` |
 | WO-ROLE-03 | CSKH mở Work Order `CUSTOMER_ACCEPTED` | Nếu payment chưa `SETTLED` thì đóng phiếu bị chặn; sau `SETTLED` có thể phát hành biên nhận và **Đóng phiếu** → `CLOSED`, tự chuyển sang Lịch sử phiếu |

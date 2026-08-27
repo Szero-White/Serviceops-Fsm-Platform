@@ -148,13 +148,45 @@ docker compose -f docker-compose.local.yml down -v
 
 Không dùng `down -v` chỉ để dọn vài record test.
 
-## 7. E2E và dữ liệu local
+## 7. Reset database local an toàn
+
+Khi dữ liệu UAT/manual test đã quá rối và bạn muốn tạo lại database local từ đầu, dùng script có backup guard:
+
+```powershell
+.\scripts\reset-local-db.ps1
+```
+
+Script:
+
+- đọc `POSTGRES_HOST/PORT/DB/USER/PASSWORD` từ process environment hoặc `.env`;
+- từ chối chạy nếu `POSTGRES_HOST` không phải `localhost`, `127.0.0.1` hoặc `::1`;
+- kiểm tra role owner tồn tại **trước** khi drop database;
+- mặc định tạo custom-format backup vào `db-backups/` và kiểm tra archive bằng `pg_restore -l`;
+- yêu cầu gõ lại đúng tên database trước khi `DROP DATABASE`;
+- tạo lại database với owner đúng theo `POSTGRES_USER`;
+- không tự chạy Flyway: sau khi reset thành công, chạy `.\scripts\dev-start.ps1`; backend sẽ migrate V1 → latest và seeder local sẽ tạo lại dữ liệu demo.
+
+Nếu PostgreSQL binaries chưa nằm trong `PATH`, chỉ rõ thư mục `bin`:
+
+```powershell
+.\scripts\reset-local-db.ps1 -PostgresBin "D:\PostgreSQL\bin"
+```
+
+Nếu account ứng dụng không có quyền drop/create database, truyền role quản trị và nhập password khi script hỏi:
+
+```powershell
+.\scripts\reset-local-db.ps1 -AdminUser postgres
+```
+
+`db-backups/` là dữ liệu local và đã được Git ignore. Chỉ dùng `-SkipBackup` khi bạn **chủ động chấp nhận** không giữ snapshot trước reset.
+
+## 8. E2E và dữ liệu local
 
 Không chạy mutating Playwright E2E vào frontend/backend developer local hoặc database `serviceops` đang dùng để UAT.
 
 Playwright yêu cầu `E2E_BASE_URL` rõ ràng và CI chạy nó trên stack Docker cô lập. Dữ liệu `E2E-*` được tạo bởi browser workflow là stateful test data; không nên dùng script xóa hàng loạt trên database local nếu chưa kiểm tra quan hệ Work Order, appointment, history, inventory và attachment.
 
-## 8. Lỗi thường gặp
+## 9. Lỗi thường gặp
 
 ### Cổng 5432 đã được dùng
 
@@ -174,7 +206,7 @@ Kiểm tra ba giá trị có đồng bộ không:
 
 Với database mới theo tài liệu này, giá trị thống nhất là `Demo@2026`.
 
-## 9. Kiểm tra trước khi commit
+## 10. Kiểm tra trước khi commit
 
 ```powershell
 cd backend

@@ -1,21 +1,22 @@
 import { DatePicker, Form, Input, Modal, Select, Typography } from 'antd'
-import dayjs, { type Dayjs } from 'dayjs'
 import type { FormInstance } from 'antd'
+import dayjs, { type Dayjs } from 'dayjs'
 import type { Technician } from '../../../types'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
 const { RangePicker } = DatePicker
 
-export type ScheduleAppointmentValues = {
+export type ScheduleWorkOrderValues = {
   technicianId: string
   period: [Dayjs, Dayjs]
   reason?: string
 }
 
-export function ScheduleAppointmentModal({
+export function WorkOrderScheduleModal({
   open,
   workOrderCode,
   workOrderSummary,
+  currentTechnicianName,
   form,
   technicians,
   pending,
@@ -26,17 +27,25 @@ export function ScheduleAppointmentModal({
   open: boolean
   workOrderCode?: string
   workOrderSummary?: string
-  form: FormInstance<ScheduleAppointmentValues>
+  currentTechnicianName?: string
+  form: FormInstance<ScheduleWorkOrderValues>
   technicians?: Technician[]
   pending: boolean
   redispatching?: boolean
   onClose: () => void
-  onSubmit: (values: ScheduleAppointmentValues) => void
+  onSubmit: (values: ScheduleWorkOrderValues) => void
 }) {
   const handleFormValidationFailed = useFormValidationFeedback()
+
+  const title = workOrderCode
+    ? `${redispatching ? 'Điều phối lại' : 'Xếp lịch'} ${workOrderCode}`
+    : redispatching
+      ? 'Điều phối lại phiếu công việc'
+      : 'Phân công và xếp lịch'
+
   return (
     <Modal
-      title={workOrderCode ? `${redispatching ? 'Điều phối lại' : 'Xếp lịch'} ${workOrderCode}` : 'Xếp lịch công việc'}
+      title={title}
       open={open}
       onCancel={onClose}
       onOk={() => form.submit()}
@@ -52,11 +61,19 @@ export function ScheduleAppointmentModal({
       ) : null}
       {redispatching ? (
         <Typography.Paragraph type="secondary">
-          Thay đổi kỹ thuật viên, thời gian hoặc cả hai sẽ được ghi vào Tiến trình của phiếu.
-          Kỹ thuật viên liên quan sẽ nhận thông báo phù hợp.
+          Phiếu đang được giao{currentTechnicianName ? ` cho ${currentTechnicianName}` : ''}.
+          Chỉ điều phối lại khi kỹ thuật viên chưa bắt đầu di chuyển hoặc thực hiện công việc.
+          Thay đổi kỹ thuật viên, thời gian hoặc cả hai sẽ được ghi vào Tiến trình và thông báo cho kỹ thuật viên liên quan.
         </Typography.Paragraph>
       ) : null}
-      <Form form={form} layout="vertical" onFinish={onSubmit} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onSubmit}
+        onFinishFailed={handleFormValidationFailed}
+        scrollToFirstError
+        requiredMark
+      >
         <Form.Item label="Kỹ thuật viên" name="technicianId" rules={[{ required: true, message: 'Chọn kỹ thuật viên' }]}>
           <Select
             showSearch

@@ -1,6 +1,7 @@
 import { Form, Input, InputNumber, Modal, Select, Space, Typography } from 'antd'
 import { useEffect } from 'react'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import type { PageResponse, SparePart, WorkOrderPartRequest } from '../../../types'
 import { formatCompactDecimalInput, formatCurrency, formatQuantityWithUnit } from '../../../utils/format'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
@@ -15,14 +16,22 @@ export function WorkOrderPartRequestModal({
   open,
   request,
   parts,
+  partsLoading,
+  partsError,
   pending,
+  onPartSearch,
+  onRetryParts,
   onClose,
   onSubmit,
 }: {
   open: boolean
   request?: WorkOrderPartRequest
   parts?: PageResponse<SparePart>
+  partsLoading: boolean
+  partsError?: Error | null
   pending: boolean
+  onPartSearch: (value: string) => void
+  onRetryParts: () => void
   onClose: () => void
   onSubmit: (values: WorkOrderPartRequestValues) => void
 }) {
@@ -50,6 +59,13 @@ export function WorkOrderPartRequestModal({
       width={620}
       destroyOnHidden
     >
+      {!request && partsError ? (
+        <QueryErrorAlert
+          title="Chưa tải được danh mục phụ tùng"
+          error={partsError}
+          onRetry={onRetryParts}
+        />
+      ) : null}
       <Form
         form={form}
         layout="vertical"
@@ -67,8 +83,11 @@ export function WorkOrderPartRequestModal({
           <Form.Item label="Phụ tùng" name="sparePartId" rules={[{ required: true, message: 'Chọn phụ tùng' }]}>
             <Select
               showSearch
-              optionFilterProp="label"
-              placeholder="Chọn phụ tùng cần cấp"
+              filterOption={false}
+              loading={partsLoading}
+              placeholder="Tìm SKU hoặc tên phụ tùng"
+              notFoundContent={!partsLoading ? 'Không tìm thấy phụ tùng phù hợp' : undefined}
+              onSearch={onPartSearch}
               options={parts?.content
                 .filter((part) => part.active)
                 .map((part) => ({

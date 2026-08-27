@@ -324,6 +324,14 @@ Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 
 For manual backend/frontend startup, native PostgreSQL setup and troubleshooting, see [RUN_LOCAL.md](RUN_LOCAL.md).
 
+When local UAT data needs a clean rebuild, use the guarded reset script instead of ad-hoc `DROP DATABASE` commands:
+
+```powershell
+.\scripts\reset-local-db.ps1
+```
+
+It refuses non-local hosts, verifies the configured owner role, creates and validates a local backup by default, asks for explicit database-name confirmation, and then recreates the database. Start ServiceOps normally afterward so Flyway migrates V1 → latest and the local seeder recreates demo data.
+
 ### Playwright against the local development stack
 
 The E2E suite mutates business data, so it refuses `localhost:3000`/`5173` by default. For local development, point ServiceOps at a **disposable PostgreSQL database** (not data you want to keep), start backend/frontend normally, then opt in explicitly:
@@ -376,6 +384,7 @@ frontend/                 React operations console
 scripts/                  Local developer helpers
   dev-start.ps1           One-command backend + frontend startup
   start-postgres.ps1      Optional local PostgreSQL container startup
+  reset-local-db.ps1      Guarded backup + local database recreation
   check-local.ps1         Local backend/frontend verification
   production/             Backup and guarded restore utilities
 docs/                     Architecture, security, business and operations docs

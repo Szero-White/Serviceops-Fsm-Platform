@@ -4,6 +4,8 @@ import { App, Button, Empty, Form, Input, Modal, Space, Table, Typography } from
 import { useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { LIST_PAGE_SIZE } from '../../../constants/pagination'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import type { UserRole, WorkOrder, WorkOrderPartRequest, WorkOrderPartRequestStatus, WorkOrderPartUsage } from '../../../types'
 import { formatDateTime, formatQuantityWithUnit } from '../../../utils/format'
@@ -21,6 +23,8 @@ function requestTone(status: WorkOrderPartRequestStatus) {
 
 export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder; role?: UserRole }) {
   const [requestOpen, setRequestOpen] = useState(false)
+  const [partSearchInput, setPartSearchInput] = useState('')
+  const partSearch = useDebouncedValue(partSearchInput.trim())
   const [editingRequest, setEditingRequest] = useState<WorkOrderPartRequest>()
   const [cancelingRequest, setCancelingRequest] = useState<WorkOrderPartRequest>()
   const [editingUsage, setEditingUsage] = useState<WorkOrderPartUsage>()
@@ -40,9 +44,9 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
     queryFn: () => inventoryApi.workOrderPartUsage(workOrder.id),
   })
   const partsQuery = useQuery({
-    queryKey: ['spare-parts', 'part-request-catalog'],
-    queryFn: () => inventoryApi.list('', 0, 100, true),
-    enabled: canCreateRequest,
+    queryKey: ['spare-parts', 'part-request-catalog', partSearch],
+    queryFn: () => inventoryApi.list(partSearch, 0, LIST_PAGE_SIZE, true),
+    enabled: canCreateRequest && requestOpen && !editingRequest,
   })
 
   const refresh = () => {
@@ -104,12 +108,8 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
   })
 
   const openCreateRequest = () => {
-    if (partsQuery.isError) {
-      message.error('Chưa tải được danh mục phụ tùng. Vui lòng thử lại.')
-      void partsQuery.refetch()
-      return
-    }
     setEditingRequest(undefined)
+    setPartSearchInput('')
     setRequestOpen(true)
   }
 
@@ -190,8 +190,12 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
         open={requestOpen}
         request={editingRequest}
         parts={partsQuery.data}
+        partsLoading={partsQuery.isFetching}
+        partsError={partsQuery.error}
         pending={saveRequest.isPending}
-        onClose={() => { setRequestOpen(false); setEditingRequest(undefined) }}
+        onPartSearch={setPartSearchInput}
+        onRetryParts={() => partsQuery.refetch()}
+        onClose={() => { setRequestOpen(false); setEditingRequest(undefined); setPartSearchInput('') }}
         onSubmit={(values) => saveRequest.mutate(values)}
       />
 
