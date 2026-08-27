@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AiHelpNotificationTopicTest {
     @Test
     void markUnreadQuestionExplainsNotificationToggle() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Tôi lỡ đánh dấu thông báo đã đọc, làm sao đánh dấu lại chưa đọc?",
@@ -51,6 +51,8 @@ class AiHelpNotificationTopicTest {
                 .contains("Cần phân công kỹ thuật viên")
                 .contains("Cần theo dõi khách sau sửa chữa")
                 .contains("Bạn có công việc mới")
+                .contains("Có yêu cầu phụ tùng mới")
+                .contains("Yêu cầu phụ tùng")
                 .contains("cảnh báo tồn kho")
                 .contains("CRUD thường ngày")
                 .contains("khách hàng")

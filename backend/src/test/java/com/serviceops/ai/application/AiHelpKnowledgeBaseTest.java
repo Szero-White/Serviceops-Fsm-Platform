@@ -117,7 +117,7 @@ class AiHelpKnowledgeBaseTest {
     }
 
     @Test
-    void technicianCanAskWhereConsumedPartsAppearInWorkOrderTimeline() {
+    void technicianCanAskWhereCurrentPartUsageAppearsInWorkOrderTimeline() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
@@ -177,8 +177,8 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().answer())
                 .contains("OWNER")
                 .contains("Warehouse")
-                .contains("TECHNICIAN")
-                .contains("part-request/reservation");
+                .contains("Technician")
+                .contains("Yêu cầu phụ tùng");
     }
 
     @Test
@@ -219,13 +219,13 @@ class AiHelpKnowledgeBaseTest {
         );
 
         assertThat(decision.allowed()).isFalse();
-        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
     }
 
 
     @Test
     void ownerGenericQuestionReturnsBroadOwnerCapabilityOverview() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("OWNER", "Quản trị hệ thống", "/");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("OWNER", "Chủ sở hữu", "/");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Với quyền Chủ sở hữu, tôi có thể làm những gì trong hệ thống?",
@@ -280,7 +280,7 @@ class AiHelpKnowledgeBaseTest {
     }
 
     @Test
-    void customerServiceGenericQuestionDoesNotClaimAcceptanceOrCloseOwnership() {
+    void customerServiceGenericQuestionReflectsPaymentReceiptAndClosureOwnership() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("CUSTOMER_SERVICE", "Chăm sóc khách hàng", "/service-requests");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
@@ -292,7 +292,9 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().answer())
                 .contains("chuyển yêu cầu")
                 .contains("không phân công kỹ thuật viên")
-                .contains("không Khách xác nhận/Đóng phiếu");
+                .contains("không ghi nhận khách xác nhận tại hiện trường")
+                .contains("phát hành biên nhận")
+                .contains("đóng phiếu");
     }
 
     @Test
@@ -344,7 +346,7 @@ class AiHelpKnowledgeBaseTest {
 
     @Test
     void warehouseGenericStartQuestionReturnsWarehouseOverviewInsteadOfDashboardDenial() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Tôi mới làm kho, tôi nên bắt đầu từ đâu?",
@@ -352,10 +354,11 @@ class AiHelpKnowledgeBaseTest {
         );
 
         assertThat(decision.allowed()).isTrue();
-        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
         assertThat(decision.topic().answer())
-                .contains("nghiệp vụ kho")
-                .contains("không có quyền thao tác Work Order hiện trường");
+                .contains("Yêu cầu phụ tùng")
+                .contains("không sửa số lượng kỹ thuật viên đã yêu cầu")
+                .contains("không thao tác Work Order hiện trường");
     }
 
     @Test
@@ -375,10 +378,104 @@ class AiHelpKnowledgeBaseTest {
                 .doesNotContain("Tạo hoặc cập nhật tài khoản")
                 .doesNotContain("Dùng Sửa ngưỡng");
         assertThat(warehouseKnowledge)
+                .contains("Yêu cầu phụ tùng (/part-requests)")
                 .contains("Kiểm kê tồn kho")
                 .contains("Lịch sử biến động kho")
                 .doesNotContain("Người dùng (/users)")
                 .doesNotContain("Điều phối và xếp lịch");
+    }
+
+    @Test
+    void warehousePartRequestQuestionMapsToQueueAndKeepsQuantityOwnershipClear() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Có yêu cầu phụ tùng mới thì tôi xử lý ở đâu, có được sửa số lượng kỹ thuật viên yêu cầu không?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
+        assertThat(decision.topic().answer())
+                .contains("REQUEST")
+                .contains("không làm giảm tồn kho")
+                .contains("không sửa số lượng")
+                .contains("ISSUE")
+                .contains("Không thể cấp");
+    }
+
+    @Test
+    void ownerBankQrQuestionMapsToPaymentSettings() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("OWNER", "Chủ sở hữu", "/");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi cấu hình tài khoản ngân hàng và QR công ty nhận thanh toán ở đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/payment-settings");
+        assertThat(decision.topic().answer())
+                .contains("Chỉ Chủ sở hữu")
+                .contains("QR")
+                .contains("công ty");
+    }
+
+    @Test
+    void technicianTransferQuestionStaysInsideAssignedWorkOrderInsteadOfOwnerSettings() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Khách muốn chuyển khoản thì tôi cho xem QR công ty và ghi nhận thanh toán thế nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/work-orders");
+        assertThat(decision.topic().answer())
+                .contains("tài khoản/QR công ty")
+                .contains("chỉ đọc")
+                .contains("không SETTLED")
+                .contains("CSKH");
+    }
+
+
+    @Test
+    void customerServicePaymentQuestionExplainsQueueToWorkOrderReconciliationFlow() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("CUSTOMER_SERVICE", "Chăm sóc khách hàng", "/payments");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Khách báo chuyển khoản rồi thì tôi đối soát và đóng phiếu như thế nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/payments");
+        assertThat(decision.topic().answer())
+                .contains("Đối soát thanh toán")
+                .contains("Work Order")
+                .contains("snapshot chi phí")
+                .contains("SETTLED")
+                .contains("biên nhận")
+                .contains("đóng Work Order");
+    }
+
+    @Test
+    void closedWorkOrderHistoryQuestionMapsToHistoryRoute() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("CUSTOMER_SERVICE", "Chăm sóc khách hàng", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi xem lại lịch sử phiếu đã đóng và tiến trình thanh toán ở đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/work-order-history");
+        assertThat(decision.topic().answer())
+                .contains("CLOSED")
+                .contains("Tiến trình")
+                .contains("thanh toán")
+                .contains("RETURN");
     }
 
 }

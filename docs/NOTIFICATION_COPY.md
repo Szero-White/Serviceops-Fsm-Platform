@@ -11,7 +11,7 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 - **Title = hành động/sự kiện quan trọng + mã tra cứu.** Ví dụ: `Cần phân công kỹ thuật viên: WO-2026-001245`.
 - **Body = actor + business context + next action.** Với Work Order, ưu tiên tên khách hàng và tiêu đề công việc; với kho, ưu tiên SKU, tên phụ tùng và số lượng/ngưỡng.
 - Body chỉ 1–2 câu ngắn, không lặp lại title và không biến notification thành audit dump.
-- Dùng đúng thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Kho phụ tùng**, **Lịch sử biến động**, **Lịch sử phiếu**.
+- Dùng đúng thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Lịch sử biến động**, **Lịch sử phiếu**.
 - Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`), raw timestamp ISO, tên class/API, chuỗi test hoặc technical summary khó hiểu làm nội dung chính.
 - Lý do nghiệp vụ quan trọng như **mở lại/hủy phiếu** được giữ trong body, nhưng được cắt gọn để không vượt giới hạn persistence.
 - `NotificationCopy` là nơi duy nhất tạo copy runtime cho bell. Service nghiệp vụ chỉ cung cấp context; không tự ghép title/message rải rác.
@@ -47,21 +47,23 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Appointment đã kết thúc, WO vẫn chưa bắt đầu | Assigned Technician | **Công việc đã quá lịch: WO-...** | Summary + khách hàng + lịch đã lỡ; mở Lịch của tôi và liên hệ điều phối nếu cần |
 | Appointment quá hạn quá grace period, WO vẫn chưa bắt đầu | Customer Service | **Khách hàng có thể cần được liên hệ: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; kiểm tra phiếu và chủ động liên hệ khách nếu cần |
 | Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
+| Technician tạo part request | Warehouse | **Có yêu cầu phụ tùng mới: WO-...** | Technician + Work Order + SKU/tên part + quantity; mở Yêu cầu phụ tùng để xác nhận cấp hoặc Không thể cấp |
 | Work Order → REOPENED | Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
 | Work Order → REOPENED bởi role khác | Customer Service | **Phiếu cần theo dõi lại: WO-...** | Actor + summary + khách hàng + lý do; theo dõi khách và phối hợp xử lý |
 | Technician → COMPLETED | Customer Service | **Cần theo dõi khách sau sửa chữa: WO-...** | Technician + summary + khách hàng; theo dõi phản hồi, reopen nếu sự cố còn |
 
-Mỗi lần `COMPLETED` là một repair cycle riêng. Notification cho Customer Service được dedupe theo chính status-history ID của lần hoàn thành đó: retry cùng một completion không tạo bản sao, nhưng `REOPENED → ... → COMPLETED` lần sau vẫn tạo một notification mới hợp lệ, kể cả khi title/body giống lần trước.
-| Work Order → CLOSED | Owner, trừ actor | **Phiếu đã hoàn tất: WO-...** | Actor + summary + khách hàng; kết quả cuối để giám sát/đối soát |
+| Work Order → CLOSED | Owner, trừ actor | **Phiếu đã hoàn tất: WO-...** | CSKH/actor + summary + khách hàng; payment đã đối soát và biên nhận đã sẵn sàng, kết quả cuối để Owner giám sát |
 | Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |
 | Work Order → CANCELLED | Owner, trừ actor | **Phiếu đã hủy: WO-...** | Actor + summary + khách hàng + lý do; tra Lịch sử phiếu khi cần |
 | Work Order → CANCELLED | Assigned Technician, nếu không phải actor | **Công việc đã hủy: WO-...** | Actor + summary + khách hàng + lý do; dừng job và xem Lịch của tôi |
 | Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; kiểm tra và liên hệ khách nếu cần |
-| Consume làm stock cross threshold | Warehouse | **Tồn kho thấp: SKU** | Technician + WO + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
+| ISSUE làm stock cross threshold | Warehouse | **Tồn kho thấp: SKU** | Warehouse/Work Order + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
 | Đổi reorder level làm stock thành low | Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
 | Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** | Người kiểm kê + system/actual/difference + lý do; mở Lịch sử biến động |
 | Stocktake kết thúc ở mức low | Warehouse | **Tồn kho thấp sau kiểm kê: SKU** | Người kiểm kê + tên part + actual + threshold; mở Kho phụ tùng |
+
+Mỗi lần `COMPLETED` là một repair cycle riêng. Notification cho Customer Service được dedupe theo chính status-history ID của lần hoàn thành đó: retry cùng một completion không tạo bản sao, nhưng `REOPENED → ... → COMPLETED` lần sau vẫn tạo một notification mới hợp lệ, kể cả khi title/body giống lần trước.
 
 ## Những việc cố ý không tạo bell
 
@@ -74,7 +76,7 @@ Các thao tác dưới đây có success/error feedback tại màn hình và có
 - Cập nhật Technician profile.
 - Upload attachment.
 - Tạo/import catalog phụ tùng hoặc nhập kho bình thường.
-- Technician `ON_THE_WAY`, `IN_PROGRESS`, từng lần CONSUME bình thường, `CUSTOMER_ACCEPTED`.
+- Technician `ON_THE_WAY`, `IN_PROGRESS`, từng lần actual-used/ISSUE/RETURN bình thường và `CUSTOMER_ACCEPTED`. Part request mới cần Warehouse chú ý có notification riêng; ledger/timeline chịu trách nhiệm cho truy vết vật tư.
 - Completion không broadcast cho Owner; Owner chỉ nhận terminal summary khi phiếu `CLOSED` hoặc `CANCELLED`, cùng ngoại lệ quản trị stocktake discrepancy.
 
 Dùng **Timeline** cho câu chuyện của một Work Order, **Inventory Movements** cho ledger kho và **Audit** cho truy vết system-wide. Bell chỉ chứa việc người nhận thực sự cần biết hoặc cần hành động.

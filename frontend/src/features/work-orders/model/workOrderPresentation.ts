@@ -30,7 +30,7 @@ export const TRANSITION_LABELS: Partial<Record<WorkOrderStatus, string>> = {
   IN_PROGRESS: 'Bắt đầu / tiếp tục',
   WAITING_FOR_PARTS: 'Chờ phụ tùng',
   COMPLETED: 'Hoàn thành',
-  CUSTOMER_ACCEPTED: 'Khách xác nhận',
+  CUSTOMER_ACCEPTED: 'Ghi nhận khách xác nhận',
   CLOSED: 'Đóng phiếu',
   REOPENED: 'Khách yêu cầu xử lý lại',
   CANCELLED: 'Hủy phiếu',
@@ -44,32 +44,18 @@ const TRANSITIONS: Partial<Record<WorkOrderStatus, WorkOrderStatus[]>> = {
   IN_PROGRESS: ['WAITING_FOR_PARTS', 'COMPLETED', 'CANCELLED'],
   WAITING_FOR_PARTS: ['IN_PROGRESS', 'CANCELLED'],
   COMPLETED: ['CUSTOMER_ACCEPTED', 'REOPENED'],
-  CUSTOMER_ACCEPTED: ['CLOSED', 'REOPENED'],
+  CUSTOMER_ACCEPTED: ['CLOSED'],
   REOPENED: ['IN_PROGRESS', 'CANCELLED'],
 }
 
-export const WORK_ORDER_PART_CONSUMPTION_STATUSES = new Set<WorkOrderStatus>([
-  'ASSIGNED',
-  'ON_THE_WAY',
-  'IN_PROGRESS',
-  'WAITING_FOR_PARTS',
-  'REOPENED',
-])
-
-export function canConsumePartInStatus(status: WorkOrderStatus): boolean {
-  return WORK_ORDER_PART_CONSUMPTION_STATUSES.has(status)
-}
-
 const ROLE_ALLOWED_TRANSITIONS: Partial<Record<UserRole, ReadonlySet<WorkOrderStatus>>> = {
-  OWNER: new Set(['CUSTOMER_ACCEPTED', 'CLOSED', 'REOPENED', 'CANCELLED']),
+  OWNER: new Set(['CANCELLED']),
   TECHNICIAN: new Set([
     'ON_THE_WAY',
     'IN_PROGRESS',
     'WAITING_FOR_PARTS',
     'COMPLETED',
     'CUSTOMER_ACCEPTED',
-    'CLOSED',
-    'REOPENED',
   ]),
   CUSTOMER_SERVICE: new Set(['REOPENED', 'CANCELLED']),
   DISPATCHER: new Set(['CANCELLED']),

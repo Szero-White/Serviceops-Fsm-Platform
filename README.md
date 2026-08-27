@@ -6,7 +6,7 @@
 
 ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
 
-The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a service request, then a work order, then a scheduled technician job; field execution can consume warehouse stock, and the completed job remains traceable through acceptance, closure, history, notifications, invoice export and audit records.
+The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a service request, then a work order, then a scheduled technician job; field execution coordinates requested/issued/used/returned spare parts, and the completed job remains traceable through billing acceptance, payment reconciliation, receipt, closure, history, notifications, inventory ledger and audit records.
 
 ## Business problem
 
@@ -36,10 +36,10 @@ Consider a customer reporting that an air conditioner is no longer cooling prope
 4. **Dispatch plans the visit.** A Dispatcher selects a technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same technician is not silently double-booked.
 5. **The technician receives the assignment.** The technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied technician identifier.
 6. **Field execution begins.** The technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the technician.
-7. **Spare parts participate in the same job.** When a repair needs a part, consumption is recorded against the assigned Work Order only while field execution is active (`ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `REOPENED`) and the stock balance is reduced transactionally. The Work Order activity timeline immediately surfaces `CONSUME`/`RETURN` events with part, quantity, actor and time, while inventory transactions remain the source of truth. No new consumption is accepted after completion/customer acceptance. Negative stock is blocked. Inactive/discontinued parts remain historically traceable but cannot be newly consumed.
-8. **The service result is documented.** Diagnosis, resolution notes and JPG/PNG/WEBP/PDF evidence stay attached to the job so the service record explains both what was found and what was done.
-9. **The result is accepted and the job is closed.** After `COMPLETED`, the assigned Technician can record the customer's on-site acceptance, while Owner has the same acceptance/closure capability as an administrative override. `CUSTOMER_ACCEPTED` exposes the final **Close Work Order** action. If the customer reports that the same issue persists before closure, the Work Order can be `REOPENED`; after `CLOSED`, a later issue starts a new Service Request/Work Order so the original service history remains immutable.
-10. **The organization can trace the result.** Work-order history, notifications, invoice export, dashboard data and audit records provide the operational trail after the field visit is finished.
+7. **Spare parts participate in the same job.** The assigned Technician creates a `REQUEST` without changing stock. Warehouse either marks the request unavailable or physically hands over the exact requested quantity and records `ISSUE`, which is the stock-out event. The Technician later records actual `USED` quantity without reducing stock again. Any unused issued quantity can be physically received back by Warehouse as `RETURN`, including after the Work Order is closed; the inventory ledger remains the stock authority. Legacy `CONSUME` rows remain readable for historical compatibility, but the current UI does not create them.
+8. **The service result and customer charge are frozen.** Diagnosis, resolution notes and evidence stay attached to the job. Through `COMPLETED`, the assigned Technician records actual used parts, labor and any explained incidental fee. Customer acceptance then freezes an immutable billing snapshot so later catalog-price changes or part returns cannot silently rewrite what the customer accepted.
+9. **Payment is reconciled before closure.** After `CUSTOMER_ACCEPTED`, the Technician can show the Owner-configured company bank/QR in read-only form and record that the customer reported a transfer, optionally with evidence, or that cash is being held for handover. Customer Service verifies the actual transfer or cash handover and moves the separate payment state to `SETTLED`. Only then can Customer Service issue the official service-payment receipt and close the Work Order.
+10. **The organization can trace the result.** Work-order history and the unified timeline tell the business story from request/issue/used through completion, acceptance, payment, receipt, closure and any post-closure return. Inventory Movements remains the stock ledger; Audit keeps detailed system traceability; notifications remain attention-only rather than duplicating those histories.
 
 This produces one continuous business chain instead of separate records for each department:
 
@@ -57,18 +57,23 @@ Technician assignment → Schedule / Reschedule
 Technician
 ON_THE_WAY → IN_PROGRESS
         ↓
-        ├── consume part ─────→ Inventory transaction / stock decreases
-        │
-        ├── unused quantity ────→ Warehouse confirms controlled RETURN
-        │                         └── stock increases + ledger trace
+        ├── REQUEST part ─────→ Warehouse request queue (no stock movement)
+        │       ↓
+        │     ISSUE ───────────→ stock decreases exactly once
+        │       ↓
+        │     USED ────────────→ actual customer usage (no stock movement)
         ↓
 Diagnosis → Resolution → Evidence → COMPLETED
         ↓
-Customer Acceptance
+Billing draft → Customer Acceptance → frozen billing snapshot
         ↓
-CLOSED
+Customer payment action → CSKH reconciliation → SETTLED
         ↓
-History / Invoice / Notifications / Dashboard / Audit
+Official receipt → CSKH CLOSED
+        ↓
+Warehouse may RETURN unused outstanding parts → stock increases
+        ↓
+History / Timeline / Inventory Ledger / Notifications / Audit
 ```
 
 ## Core workflow and business rules
@@ -82,9 +87,11 @@ Customer
   → Work Order
   → Technician Scheduling
   → Service Execution
-  → Parts Consumption
+  → Part Request / Issue / Actual Used / Return
   → Completion
-  → Customer Acceptance
+  → Customer Acceptance + Billing Snapshot
+  → Payment Reconciliation
+  → Receipt
   → Closure
 ```
 
@@ -100,7 +107,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 | Dispatcher | `dispatcher` | `Demo@2026` | Work orders, technician assignment and weekly scheduling |
 | Customer Service | `customer-service` | `Demo@2026` | Customers, assets, service requests and request-to-work-order flow |
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
-| Warehouse | `warehouse` | `Demo@2026` | Spare parts, stocktake, Work Order part returns and inventory movement history |
+| Warehouse | `warehouse` | `Demo@2026` | Part-request queue, spare parts, ISSUE/RETURN, stocktake and inventory movement history |
 
 `technician-2` is an additional seeded technician account and also uses `Demo@2026` in the current local portfolio environment. It is intentionally **not** a sixth quick-login card. It is used to verify isolation between two individual technicians who share the `TECHNICIAN` role, especially for `/my-schedule` and assigned work.
 
@@ -113,11 +120,11 @@ For a review, use **one service case across every role** instead of demonstratin
 1. Sign in as **Customer Service**, create or inspect a customer and equipment record, then create a Service Request.
 2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
 3. Sign in as **Dispatcher**, assign a technician and demonstrate schedule/reschedule behavior.
-4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and record the service result.
-5. Sign in as **Warehouse** to review the stock movement created by the Work Order, demonstrate a controlled part return when applicable, and run a stocktake/reconciliation example.
-6. Complete the Work Order as **Technician**, then use **Khách xác nhận** after the customer agrees and **Đóng phiếu** to move the job into Work Order History. Owner can perform the same acceptance/closure as an admin override; if the same issue persists before closure, reopen the existing job. Invoice quantities use net consumption after returns.
-7. Finish as **Owner** by reviewing users, dashboard, history and audit data for the same operational story.
-8. Switch roles or open protected routes directly to verify that frontend visibility and backend authorization remain aligned.
+4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and create a part request if material is needed.
+5. Sign in as **Warehouse**, open **Yêu cầu phụ tùng**, verify the Technician's requested quantity and record `ISSUE` only when the physical part is handed over. Return to **Technician** to record actual `USED`, diagnosis/resolution, complete the job, enter the real service charges and record **Khách xác nhận**.
+6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence) or record cash custody. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
+7. If the Technician still holds an unused issued part, sign in as **Warehouse** after `CLOSED` and record the physical `RETURN`; verify stock/outstanding change while the Work Order remains closed.
+8. Finish as **Owner** by reviewing payment settings, history, timeline, dashboard and audit data for the same operational story, then switch roles/open protected routes directly to verify frontend and backend role ownership remain aligned.
 
 ## Product capabilities
 
@@ -129,10 +136,13 @@ For a review, use **one service case across every role** instead of demonstratin
 - Personal technician schedule derived from the authenticated account.
 - Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
 - Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
-- Warehouse stocktake/reconciliation, editable minimum-stock thresholds, Work Order part returns and a searchable inventory movement ledger; threshold changes are audited and can raise low-stock alerts when the new threshold makes current stock newly low. Invoice quantities use net consumption after returns.
+- Technician part requests, Warehouse ISSUE/RETURN, actual-used tracking and outstanding-material visibility, with inventory movement history as the stock ledger.
+- Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
+- Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
+- Separate payment reconciliation for transfer/cash, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work-order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
-- Service invoice/export view derived from work-order and consumed-parts data.
+- Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.
 - Persistent notifications, audit trail and operational dashboard.
 - Shared-schema multi-tenancy with tenant-scoped data access.
 - Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
@@ -214,10 +224,10 @@ The role-aware AI help assistant is constrained to product guidance and does not
 - Pessimistic locking for scheduling, inventory updates and selected owner invariants.
 - Optimistic concurrency conflicts mapped to HTTP `409 CONCURRENT_MODIFICATION`.
 - Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied technician ID.
-- Technician field transitions remain assignment-scoped; after `COMPLETED`, the assigned Technician can record `CUSTOMER_ACCEPTED`, close the Work Order, or reopen it before closure when the same issue persists.
-- Customer acceptance and closure belong to the assigned Technician with Owner as an administrative override. Customer Service can reopen/cancel when handling a customer follow-up; `CLOSED` and `CANCELLED` remain terminal.
+- Technician field transitions remain assignment-scoped; through `COMPLETED`, the assigned Technician owns actual field results/used parts/billing draft, then records customer acceptance and the customer's payment action. Technician cannot settle payment, issue the official receipt or close the Work Order.
+- Customer Service owns payment reconciliation and normal closure: `CUSTOMER_ACCEPTED` stays open until payment is `SETTLED`; receipt issuance/closure then remain CSKH responsibilities. Owner supervises and configures company bank/QR instead of impersonating those operational actions.
 - Scheduling conflicts use locking plus overlap detection.
-- Inventory consumption prevents negative stock.
+- Part `REQUEST` does not move stock; Warehouse `ISSUE` is transactionally/idempotently stock-out, Technician `USED` records actual customer usage without a second stock movement, and Warehouse `RETURN` is the physical stock-in.
 - Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
 - Login throttling and request correlation IDs are enabled.
 - Public-demo mode protects required seeded identities and system-defined service channels while recruiter-created data remains editable according to RBAC.
@@ -230,7 +240,7 @@ GitHub Actions runs three major verification gates:
 2. **Frontend** — TypeScript/UI-policy lint and production build.
 3. **Production-like runtime** — Docker Compose starts **Nginx → Spring Boot → PostgreSQL**, verifies readiness/frontend/demo login and runs Playwright Chromium against the Nginx-fronted application.
 
-The current Playwright suite contains **11 browser tests across 3 spec files** and covers:
+The current Playwright suite contains **12 browser tests across 4 spec files** and covers:
 
 - route-access policy for all five demo roles;
 - Customer CRUD;
@@ -239,7 +249,8 @@ The current Playwright suite contains **11 browser tests across 3 spec files** a
 - Customer Service request intake and Service Request → Work Order conversion;
 - Technician UI transition restrictions;
 - backend rejection of unauthorized Technician and Dispatcher transitions;
-- Warehouse frontend route isolation from Work Order and operational dashboard data.
+- Warehouse frontend route isolation from Work Order and operational dashboard data;
+- the current full field-service settlement journey: `REQUEST → ISSUE → USED → COMPLETED → CUSTOMER_ACCEPTED → payment → SETTLED → receipt → CLOSED → post-CLOSED RETURN`, including stock/idempotency/freeze/role assertions.
 
 Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
 
@@ -312,6 +323,20 @@ Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 | Health | `http://localhost:8080/actuator/health` |
 
 For manual backend/frontend startup, native PostgreSQL setup and troubleshooting, see [RUN_LOCAL.md](RUN_LOCAL.md).
+
+### Playwright against the local development stack
+
+The E2E suite mutates business data, so it refuses `localhost:3000`/`5173` by default. For local development, point ServiceOps at a **disposable PostgreSQL database** (not data you want to keep), start backend/frontend normally, then opt in explicitly:
+
+```powershell
+cd frontend
+$env:E2E_BASE_URL = "http://localhost:3000"
+$env:E2E_DEMO_PASSWORD = "Demo@2026"
+$env:E2E_ALLOW_LOCAL_MUTATIONS = "true"
+npm run e2e
+```
+
+No Docker is required for this local E2E path. Remove the environment variables after the run if you do not want them reused in the current terminal.
 
 ## Production-like validation
 

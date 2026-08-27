@@ -37,10 +37,13 @@ public class AttachmentService {
     @Transactional
     public AttachmentResponse upload(String referenceType, UUID referenceId, MultipartFile file) {
         String normalizedType = referenceType.trim().toUpperCase(Locale.ROOT);
-        if (!List.of("WORK_ORDER", "ASSET", "SERVICE_REQUEST").contains(normalizedType)) {
+        if (!List.of("WORK_ORDER", "ASSET", "SERVICE_REQUEST", "COMPANY_PAYMENT_PROFILE").contains(normalizedType)) {
             throw BusinessException.badRequest("INVALID_REFERENCE_TYPE", "Loại đối tượng đính kèm không hợp lệ");
         }
         UUID tenantId = CurrentUser.tenantId();
+        if ("COMPANY_PAYMENT_PROFILE".equals(normalizedType) && !CurrentUser.hasRole("OWNER")) {
+            throw BusinessException.forbidden("PAYMENT_PROFILE_UPLOAD_DENIED", "Chỉ chủ sở hữu được tải ảnh QR thanh toán");
+        }
         authorizeReference(normalizedType, referenceId, tenantId);
         var stored = storageService.store(file, tenantId + "/" + normalizedType.toLowerCase(Locale.ROOT));
         deleteStoredFileIfTransactionRollsBack(stored.storageKey());
@@ -169,6 +172,14 @@ public class AttachmentService {
                 }
                 serviceRequestRepository.findDetailed(referenceId, tenantId)
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
+            }
+            case "COMPANY_PAYMENT_PROFILE" -> {
+                if (!tenantId.equals(referenceId)) {
+                    throw BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy cấu hình thanh toán của doanh nghiệp");
+                }
+                if (!hasAnyRole("OWNER", "CUSTOMER_SERVICE", "TECHNICIAN")) {
+                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền xem ảnh QR thanh toán");
+                }
             }
             default -> throw BusinessException.badRequest("INVALID_REFERENCE_TYPE", "Loại đối tượng đính kèm không hợp lệ");
         }

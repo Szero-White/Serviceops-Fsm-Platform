@@ -34,12 +34,21 @@ public final class WorkOrderDtos {
     public enum WorkOrderActivityType {
         STATUS_CHANGE,
         DISPATCH_UPDATED,
+        PART_REQUESTED,
+        PART_REQUEST_CANCELLED,
+        PART_UNAVAILABLE,
+        PART_REQUEST_EXPIRED,
+        PART_ISSUED,
+        PART_USED,
         PART_CONSUMED,
-        PART_RETURNED
+        PART_RETURNED,
+        PAYMENT_REPORTED,
+        PAYMENT_SETTLED,
+        RECEIPT_ISSUED
     }
 
     public record WorkOrderActivityResponse(
-            UUID id,
+            String id,
             WorkOrderActivityType type,
             WorkOrderStatus status,
             String note,
@@ -53,6 +62,9 @@ public final class WorkOrderDtos {
             String sparePartName,
             String unit,
             BigDecimal quantity,
+            BigDecimal amount,
+            String paymentMethod,
+            String referenceCode,
             Instant createdAt
     ) {
     }

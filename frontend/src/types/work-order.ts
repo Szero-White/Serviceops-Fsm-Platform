@@ -27,7 +27,20 @@ export interface WorkOrderHistory {
   createdAt: string
 }
 
-export type WorkOrderActivityType = 'STATUS_CHANGE' | 'DISPATCH_UPDATED' | 'PART_CONSUMED' | 'PART_RETURNED'
+export type WorkOrderActivityType =
+  | 'STATUS_CHANGE'
+  | 'DISPATCH_UPDATED'
+  | 'PART_REQUESTED'
+  | 'PART_REQUEST_CANCELLED'
+  | 'PART_UNAVAILABLE'
+  | 'PART_REQUEST_EXPIRED'
+  | 'PART_ISSUED'
+  | 'PART_USED'
+  | 'PART_CONSUMED'
+  | 'PART_RETURNED'
+  | 'PAYMENT_REPORTED'
+  | 'PAYMENT_SETTLED'
+  | 'RECEIPT_ISSUED'
 
 export interface WorkOrderActivity {
   id: string
@@ -44,6 +57,9 @@ export interface WorkOrderActivity {
   sparePartName?: string
   unit?: string
   quantity?: number
+  amount?: number
+  paymentMethod?: 'BANK_TRANSFER' | 'CASH'
+  referenceCode?: string
   createdAt: string
 }
 

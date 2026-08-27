@@ -18,7 +18,7 @@ Swagger (`http://localhost:8080/swagger-ui.html`) là nguồn request/response r
 ## Dashboard
 
 - `GET /dashboard` — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN.
-- WAREHOUSE_STAFF không nhận operational dashboard; frontend mặc định đưa Warehouse tới `/inventory`.
+- WAREHOUSE_STAFF không nhận operational dashboard; frontend mặc định đưa Warehouse tới `/part-requests` để xử lý hàng đợi yêu cầu phụ tùng.
 
 ## Users — OWNER only
 
@@ -97,8 +97,11 @@ Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 
 - `GET /work-orders?search={text}&status={status}&page={n}&size={n}`
 - `GET /work-orders/history?search={text}&status={CLOSED|CANCELLED}&page={n}&size={n}`
-- `GET /work-orders/{id}` — detail trả cả `history` (status history tương thích cũ) và `activities` operational đã merge theo thời gian từ status history + audit điều phối + inventory `CONSUME` hợp lệ của `TECHNICIAN`. Warehouse `RETURN` vẫn nằm ở stock ledger và invoice net, không xuất hiện như tiến trình hiện trường của Work Order; activity phụ tùng gồm SKU/tên/đơn vị/số lượng/actor/note/time và không tạo bảng timeline duplicate.
-- `GET /work-orders/{id}/invoice` — service guard chỉ cho invoice khi Work Order `CLOSED`
+- `GET /work-orders/{id}` — detail Work Order và status history tương thích.
+- `GET /work-orders/{id}/timeline` — read model business timeline hợp nhất status, điều phối, REQUEST/ISSUE/USED/RETURN, payment reconciliation và receipt theo thời gian; nguồn dữ liệu gốc vẫn nằm ở từng module, không tạo bảng timeline duplicate.
+- `POST /work-orders/{id}/close` — CUSTOMER_SERVICE only; chỉ thành công khi WO `CUSTOMER_ACCEPTED` và payment `SETTLED`. Closure bảo đảm biên nhận đã được phát hành theo cơ chế idempotent trước khi chuyển sang `CLOSED`.
+- `POST /work-orders/{id}/receipt` — CUSTOMER_SERVICE phát hành/tải biên nhận sau `SETTLED`; lần gọi sau idempotent dùng receipt snapshot đã có.
+- `GET /work-orders/{id}/receipt` — OWNER / CUSTOMER_SERVICE tải biên nhận đã phát hành.
 
 TECHNICIAN read được giới hạn tiếp theo ở service/repository vào Work Order được assign cho identity hiện tại.
 
@@ -111,9 +114,9 @@ Mutations:
 
 Transition ownership:
 
-- TECHNICIAN: `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`, sau đó `CUSTOMER_ACCEPTED`, `CLOSED` hoặc `REOPENED` cho assigned Work Order.
-- OWNER: admin override cho `CUSTOMER_ACCEPTED`, `CLOSED`, `REOPENED`, `CANCELLED`; không dùng generic transition để giả lập tiến độ hiện trường và không consume phụ tùng thay Technician.
-- CUSTOMER_SERVICE: `REOPENED`, `CANCELLED`. Không ghi nhận `CUSTOMER_ACCEPTED`/`CLOSED`.
+- TECHNICIAN: `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`; customer acceptance dùng action riêng sau khi Technician kiểm tra actual-used + billing draft.
+- OWNER: supervisory/admin scope; không giả lập field progress, customer acceptance, payment reconciliation hoặc physical stock movement.
+- CUSTOMER_SERVICE: `REOPENED`, `CANCELLED` trước customer acceptance; sau payment `SETTLED` dùng action `close` riêng để đóng phiếu.
 - DISPATCHER: `CANCELLED` theo operational policy; không field progress / acceptance / close / reopen. Mọi transition sang `CANCELLED` đều bắt buộc có reason ở backend.
 
 ## Scheduling
@@ -148,15 +151,25 @@ Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 - `POST /spare-parts/{id}/stocktake` — nhập số lượng đếm thực tế; backend tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT` khi có chênh lệch. Notification được phát qua application event sau commit: Owner nhận chênh lệch, Warehouse nhận thêm cảnh báo nếu tồn xuống **ngưỡng tồn tối thiểu**.
-- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian.
-- `GET /work-orders/{workOrderId}/parts/{sparePartId}/returnable` — số lượng còn có thể hoàn theo net `CONSUME - RETURN`.
-- `POST /work-orders/{workOrderId}/parts/{sparePartId}/return` — Warehouse xác nhận nhận lại phụ tùng chưa sử dụng; không được vượt net consumed.
+- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; transaction workflow mới dùng `ISSUE` khi Warehouse giao phụ tùng thực tế và `RETURN` khi Warehouse nhận lại.
+- `GET /work-orders/{workOrderId}/parts/{sparePartId}/returnable` — số lượng còn có thể hoàn; workflow mới tính `ISSUE - USED - RETURN`, đồng thời vẫn đọc dữ liệu `CONSUME - RETURN` legacy để tương thích lịch sử.
+- `POST /work-orders/{workOrderId}/parts/{sparePartId}/return` — WAREHOUSE_STAFF xác nhận nhận lại phụ tùng chưa sử dụng; lý do bắt buộc, số lượng không được vượt outstanding. RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
 
-Operational consumption:
+Work Order part request / issue / actual usage:
 
-- `POST /work-orders/{workOrderId}/parts/consume` — TECHNICIAN only; chỉ cho Work Order được giao cho chính kỹ thuật viên và đang ở `ASSIGNED`, `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` hoặc `REOPENED`. Từ `COMPLETED` trở đi không ghi nhận CONSUME mới. Giao dịch thành công của Technician xuất hiện ngay trong `activities` của Work Order detail để UI hiển thị ở Tiến trình xử lý.
+- `GET /part-requests` — OWNER / WAREHOUSE_STAFF xem hàng đợi và lịch sử yêu cầu phụ tùng; hỗ trợ status/search/pagination.
+- `GET /work-orders/{workOrderId}/part-requests` — các role vận hành được xem lịch sử yêu cầu của một Work Order.
+- `POST /work-orders/{workOrderId}/part-requests` — TECHNICIAN được phân công tạo yêu cầu; **không giảm tồn kho**.
+- `PATCH /part-requests/{requestId}` — TECHNICIAN sửa quantity/note khi request vẫn `REQUESTED`.
+- `POST /part-requests/{requestId}/cancel` — TECHNICIAN hủy request đang chờ; reason bắt buộc, không hard-delete.
+- `POST /part-requests/{requestId}/unavailable` — WAREHOUSE_STAFF ghi nhận không thể cấp; reason bắt buộc, không tạo stock movement.
+- `POST /part-requests/{requestId}/issue` — WAREHOUSE_STAFF xác nhận giao đúng requested quantity; lúc này mới tạo `ISSUE` và giảm stock.
+- `GET /work-orders/{workOrderId}/part-usage` — xem tổng `ISSUE`, `USED`, `RETURN`, `OUTSTANDING` theo Work Order + part.
+- `PUT /work-orders/{workOrderId}/part-usage` — TECHNICIAN ghi actual used; không tạo stock movement và không được vượt `ISSUE - RETURN`. Cho phép đến trạng thái `COMPLETED`, khóa sau customer acceptance.
 
-Warehouse không consume thay technician. Warehouse chỉ xác nhận stocktake/adjustment, xem ledger và nhận part return; Work Order `CLOSED`/`CANCELLED` không nhận return mới. RETURN là nghiệp vụ kho nên tra ở Lịch sử biến động, không được trình bày như field progress trong Tiến trình Work Order. Invoice vẫn dùng net consumed sau RETURN.
+Legacy compatibility:
+
+- `POST /work-orders/{workOrderId}/parts/consume` vẫn được giữ tạm để đọc/duy trì frontend hoặc dữ liệu cũ trong giai đoạn migration. UI mới **không sử dụng endpoint này**. Không xóa lịch sử `CONSUME` cũ.
 
 ## Attachments
 
@@ -180,7 +193,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Notifications
 
-Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do CONSUME chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại ở mỗi lần consume khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
+Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận **yêu cầu phụ tùng mới** cần xử lý và low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do `ISSUE` workflow mới (và `CONSUME` legacy trong giai đoạn tương thích) chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
 
 - `GET /notifications`
 - `GET /notifications/unread-count`
@@ -190,7 +203,7 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 ## AI assistance
 
 - `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE.
-- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; OWNER nhận overview quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress/consume thay Technician.
+- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; AI nhận biết các workspace mới như `/part-requests`, `/payments`, `/payment-settings`, `/work-order-history`; OWNER nhận overview giám sát/quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress, xác nhận ISSUE/RETURN, customer acceptance hoặc settlement thay role phụ trách.
 
 ### Inventory movement traceability
-Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. New Work Order part consumption requires a non-blank `note` describing the usage purpose.
+Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.

@@ -8,7 +8,7 @@ These conventions define the maintainability bar for ServiceOps. They are intent
 
 1. **One primary responsibility per file.** A file may coordinate several collaborators, but it should have one clear reason to change.
 2. **Business behavior stays in the owning module.** Shared packages contain cross-cutting primitives, not domain-specific shortcuts.
-3. **Names describe intent.** Prefer `WorkOrderInvoiceHtmlRenderer` over generic names such as `Helper`, `Utils` or `Manager`.
+3. **Names describe intent.** Prefer `PaymentReceiptHtmlRenderer` over generic names such as `Helper`, `Utils` or `Manager`.
 4. **Controllers/components orchestrate; services/hooks own behavior.** Avoid embedding unrelated workflows inside route/controller/page files.
 5. **Do not refactor by line count alone.** Size is a signal. Cohesion, change frequency, testability and responsibility boundaries are the actual decision criteria.
 6. **Preserve compatibility during structural refactors.** Public API contracts, persisted data and business transitions require explicit migration/versioning if changed.
@@ -33,8 +33,8 @@ Example:
 
 ```text
 WorkOrderService                 core work-order use cases
-WorkOrderInvoiceService          invoice export orchestration
-WorkOrderInvoiceHtmlRenderer     HTML presentation concern
+PaymentReceiptService           payment receipt orchestration
+PaymentReceiptHtmlRenderer      HTML presentation concern
 ```
 
 ### Transactions and concurrency

@@ -51,15 +51,9 @@ public class WorkOrderService {
             WorkOrderStatus.ON_THE_WAY,
             WorkOrderStatus.IN_PROGRESS,
             WorkOrderStatus.WAITING_FOR_PARTS,
-            WorkOrderStatus.COMPLETED,
-            WorkOrderStatus.CUSTOMER_ACCEPTED,
-            WorkOrderStatus.CLOSED,
-            WorkOrderStatus.REOPENED
+            WorkOrderStatus.COMPLETED
     );
     private static final Set<WorkOrderStatus> OWNER_ALLOWED_TRANSITIONS = EnumSet.of(
-            WorkOrderStatus.CUSTOMER_ACCEPTED,
-            WorkOrderStatus.CLOSED,
-            WorkOrderStatus.REOPENED,
             WorkOrderStatus.CANCELLED
     );
     private static final Set<WorkOrderStatus> CUSTOMER_SERVICE_ALLOWED_TRANSITIONS = EnumSet.of(
@@ -368,7 +362,7 @@ public class WorkOrderService {
             if (!OWNER_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Owner có quyền quản trị bước xác nhận khách, đóng/mở lại và hủy phiếu; tiến độ hiện trường vẫn thuộc kỹ thuật viên"
+                        "Chủ sở hữu giám sát kết quả; thao tác vận hành thông thường thuộc đúng vai trò phụ trách"
                 );
             }
             ensureCancellationReason(request);
@@ -379,7 +373,7 @@ public class WorkOrderService {
             if (!TECHNICIAN_ALLOWED_TRANSITIONS.contains(targetStatus)) {
                 throw BusinessException.forbidden(
                         "WORK_ORDER_TRANSITION_FORBIDDEN",
-                        "Kỹ thuật viên chỉ được cập nhật tiến độ, ghi nhận khách xác nhận, đóng hoặc mở lại công việc được phân công"
+                        "Kỹ thuật viên chỉ được cập nhật tiến độ hiện trường; xác nhận khách và thanh toán dùng thao tác nghiệp vụ riêng"
                 );
             }
             return;

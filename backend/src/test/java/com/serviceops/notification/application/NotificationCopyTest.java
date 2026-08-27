@@ -114,13 +114,15 @@ class NotificationCopyTest {
 
     @Test
     void ownerClosureCopyIsATerminalSummaryRatherThanAnOperationalAlert() {
-        var copy = NotificationCopy.workOrderClosedForOwner(WORK_ORDER, "Kỹ thuật viên Trịnh Quốc Tiến");
+        var copy = NotificationCopy.workOrderClosedForOwner(WORK_ORDER, "Chăm sóc khách hàng Nguyễn An");
 
         assertThat(copy.title()).isEqualTo("Phiếu đã hoàn tất: WO-2026-001010");
         assertThat(copy.message())
-                .contains("Kỹ thuật viên Trịnh Quốc Tiến")
+                .contains("Chăm sóc khách hàng Nguyễn An")
                 .contains("Máy rửa chén không cấp nước")
                 .contains("Trần Minh Anh")
+                .contains("thanh toán đã được đối soát")
+                .contains("biên nhận đã được phát hành")
                 .contains("hoàn tất toàn bộ quy trình")
                 .contains("Lịch sử phiếu");
     }
@@ -136,6 +138,28 @@ class NotificationCopyTest {
                 .contains("Theo dõi phản hồi khách hàng")
                 .contains("mở lại phiếu")
                 .doesNotContain("Đóng phiếu", "Khách xác nhận");
+    }
+
+    @Test
+    void partRequestCopyRoutesWarehouseToTheRequestQueue() {
+        var copy = NotificationCopy.partRequestCreated(
+                "WO-2026-001010",
+                "Máy rửa chén không cấp nước",
+                "DW-INLET-220V",
+                "Van cấp nước máy rửa chén 220V",
+                new BigDecimal("2"),
+                "cái",
+                "Trịnh Quốc Tiến"
+        );
+
+        assertThat(copy.title()).isEqualTo("Có yêu cầu phụ tùng mới: WO-2026-001010");
+        assertThat(copy.message())
+                .contains("Trịnh Quốc Tiến")
+                .contains("2 cái")
+                .contains("DW-INLET-220V")
+                .contains("Yêu cầu phụ tùng")
+                .contains("xác nhận cấp")
+                .doesNotContain("Mở Kho phụ tùng để kiểm tra và xác nhận cấp");
     }
 
     @Test

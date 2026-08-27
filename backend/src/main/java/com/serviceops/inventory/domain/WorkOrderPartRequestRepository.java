@@ -103,4 +103,16 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
                                       @Param("status") WorkOrderPartRequestStatus status,
                                       @Param("search") String search,
                                       Pageable pageable);
+    @Query("""
+            select r from WorkOrderPartRequest r
+            join fetch r.workOrder w
+            join fetch r.sparePart p
+            left join fetch w.technician t
+            left join fetch t.user
+            where r.tenantId = :tenantId
+              and r.status = com.serviceops.inventory.domain.WorkOrderPartRequestStatus.ISSUED
+            order by r.issuedAt asc
+            """)
+    List<WorkOrderPartRequest> findIssuedForOutstanding(@Param("tenantId") UUID tenantId);
+
 }

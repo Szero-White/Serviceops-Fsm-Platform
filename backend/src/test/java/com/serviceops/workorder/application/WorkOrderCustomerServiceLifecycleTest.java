@@ -84,7 +84,7 @@ class WorkOrderCustomerServiceLifecycleTest {
     }
 
     @Test
-    void customerServiceCannotRecordCustomerAcceptanceOrCloseTheWorkOrder() {
+    void customerServiceCannotRecordCustomerAcceptanceThroughGenericTransition() {
         authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
 
         assertThatThrownBy(() -> service.transition(
@@ -140,27 +140,33 @@ class WorkOrderCustomerServiceLifecycleTest {
     }
 
     @Test
-    void reopenByAnotherRoleCreatesCustomerServiceFollowUpNotification() {
-        authenticate(UserRole.OWNER, "owner", "Nguyễn An Owner");
-        when(repository.findDetailed(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));
-        when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
+    void customerServiceCannotReopenAfterCustomerAcceptanceHasFrozenBilling() {
+        workOrder.setStatus(WorkOrderStatus.CUSTOMER_ACCEPTED);
+        authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
 
-        service.transition(
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Khách phản hồi sau xác nhận", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Không thể chuyển trạng thái");
+
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.CUSTOMER_ACCEPTED);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
+    }
+
+    @Test
+    void ownerCannotPerformRoutineReopenOnBehalfOfCustomerService() {
+        authenticate(UserRole.OWNER, "owner", "Nguyễn An Owner");
+
+        assertThatThrownBy(() -> service.transition(
                 WORK_ORDER_ID,
                 new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Khách phản hồi lỗi vẫn còn", null, null)
-        );
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Chủ sở hữu giám sát kết quả");
 
-        var expected = NotificationCopy.workOrderReopenedForCustomerService(
-                new NotificationCopy.WorkOrderContext("WO-UAT-CS-001", "Kiểm tra máy lạnh", "Khách hàng UAT"),
-                "Chủ sở hữu Nguyễn An Owner",
-                "Khách phản hồi lỗi vẫn còn"
-        );
-        verify(notificationService).notifyRoles(
-                eq(TENANT_ID),
-                eq(List.of(UserRole.CUSTOMER_SERVICE)),
-                eq(expected.title()),
-                eq(expected.message())
-        );
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
     }
 
     @Test

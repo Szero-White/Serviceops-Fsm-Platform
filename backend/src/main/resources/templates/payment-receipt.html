@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>%s</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #eef2f5;
+      color: #26343e;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .actions, .document { width: min(920px, calc(100%% - 36px)); margin-left: auto; margin-right: auto; }
+    .actions { padding: 20px 0 10px; text-align: right; }
+    button { border: 1px solid #c9d4db; border-radius: 8px; background: #fff; padding: 9px 14px; cursor: pointer; }
+    .document { margin-bottom: 28px; background: #fff; border: 1px solid #dbe3e8; box-shadow: 0 12px 34px rgba(23,38,51,.08); }
+    .strip { height: 5px; background: #1f3545; }
+    header { display: grid; grid-template-columns: 1fr 320px; gap: 36px; padding: 34px 38px 28px; border-bottom: 1px solid #dbe3e8; }
+    .brand { color: #1f3545; font-size: 22px; font-weight: 700; }
+    .subtitle, .muted { color: #71818c; }
+    .kicker { margin-top: 30px; color: #376c91; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    h1 { margin: 6px 0 8px; font-size: 29px; font-weight: 650; letter-spacing: -.02em; }
+    .meta { border: 1px solid #c9d4db; border-radius: 10px; overflow: hidden; background: #f6f8fa; }
+    .meta-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px 13px; border-bottom: 1px solid #dbe3e8; }
+    .meta-row:last-child { border-bottom: 0; }
+    .meta-row span:last-child { text-align: right; font-weight: 600; color: #1f3545; }
+    main { padding: 28px 38px 36px; }
+    .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+    .card { border: 1px solid #dbe3e8; border-radius: 10px; padding: 16px 18px; }
+    .label { color: #71818c; font-size: 11px; margin-bottom: 5px; }
+    .value { font-size: 14px; font-weight: 600; }
+    .section-title { margin: 0 0 10px; color: #29485c; font-size: 12px; font-weight: 700; }
+    table { width: 100%%; border-collapse: separate; border-spacing: 0; border: 1px solid #dbe3e8; border-radius: 10px; overflow: hidden; }
+    th { background: #f6f8fa; color: #5f707b; font-size: 11.5px; text-align: left; padding: 10px 12px; border-bottom: 1px solid #c9d4db; }
+    td { padding: 12px; border-top: 1px solid #edf1f3; vertical-align: top; }
+    tbody tr:first-child td { border-top: 0; }
+    .right { text-align: right; }
+    .empty { padding: 24px; text-align: center; color: #71818c; }
+    .settlement { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; margin-top: 22px; align-items: start; }
+    .notice { padding: 14px 15px; border-left: 3px solid #90aa9d; background: #f4f8f6; color: #596c62; }
+    .totals { border: 1px solid #c9d4db; border-radius: 10px; overflow: hidden; }
+    .total { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 10px 13px; border-bottom: 1px solid #dbe3e8; }
+    .total:last-child { border-bottom: 0; }
+    .grand { background: #1f3545; color: #fff; padding-top: 13px; padding-bottom: 13px; }
+    .grand strong { font-size: 17px; }
+    .reason { margin-top: 10px; color: #71818c; font-size: 11.5px; }
+    footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #dbe3e8; color: #71818c; font-size: 10.5px; text-align: center; }
+    @media print {
+      body { background: #fff; }
+      .actions { display: none; }
+      .document { width: 100%%; margin: 0; border: 0; box-shadow: none; }
+    }
+    @media (max-width: 720px) {
+      header, .summary, .settlement { grid-template-columns: 1fr; }
+      header, main { padding-left: 20px; padding-right: 20px; }
+      .actions, .document { width: 100%%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions"><button type="button" onclick="window.print()">In / Lưu PDF</button></div>
+  <article class="document">
+    <div class="strip"></div>
+    <header>
+      <div>
+        <div class="brand">ServiceOps</div>
+        <div class="subtitle">Nền tảng quản lý dịch vụ hiện trường</div>
+        <div class="kicker">Chứng từ thanh toán</div>
+        <h1>Biên nhận thanh toán dịch vụ</h1>
+        <div class="subtitle">Biên nhận được phát hành sau khi khoản thanh toán đã được CSKH đối soát vào công ty.</div>
+      </div>
+      <div class="meta">
+        <div class="meta-row"><span>Số biên nhận</span><span>%s</span></div>
+        <div class="meta-row"><span>Mã phiếu</span><span>%s</span></div>
+        <div class="meta-row"><span>Phát hành</span><span>%s</span></div>
+        <div class="meta-row"><span>Trạng thái</span><span>Đã thanh toán</span></div>
+      </div>
+    </header>
+    <main>
+      <section class="summary">
+        <div class="card"><div class="label">Khách hàng</div><div class="value">%s</div></div>
+        <div class="card"><div class="label">Phương thức</div><div class="value">%s</div></div>
+        <div class="card"><div class="label">Đối soát lúc</div><div class="value">%s</div></div>
+        <div class="card"><div class="label">Người xác nhận tiền về công ty</div><div class="value">%s</div></div>
+      </section>
+
+      <div class="section-title">Phụ tùng thực tế tính phí</div>
+      <table>
+        <thead><tr><th style="width:54px">STT</th><th>Hạng mục</th><th class="right">Số lượng</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th></tr></thead>
+        <tbody>%s</tbody>
+      </table>
+
+      <section class="settlement">
+        <div class="notice">
+          <strong>Xác nhận thanh toán:</strong> Số tiền trên biên nhận lấy từ snapshot chi phí đã được khách xác nhận. Hoàn trả vật tư sau khi đóng phiếu không làm thay đổi số tiền trên biên nhận này.
+          <div class="reason"><strong>Lý do phí phát sinh:</strong> %s</div>
+        </div>
+        <div class="totals">
+          <div class="total"><span>Phụ tùng</span><strong>%s</strong></div>
+          <div class="total"><span>Tiền công / dịch vụ</span><strong>%s</strong></div>
+          <div class="total"><span>Phí phát sinh</span><strong>%s</strong></div>
+          <div class="total grand"><span>Tổng đã thanh toán</span><strong>%s</strong></div>
+        </div>
+      </section>
+
+      <footer>Phát hành bởi %s · Chứng từ vận hành nội bộ, không thay thế hóa đơn VAT / hóa đơn điện tử theo quy định thuế.</footer>
+    </main>
+  </article>
+</body>
+</html>

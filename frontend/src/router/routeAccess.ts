@@ -15,6 +15,9 @@ export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
   '/work-order-history': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'],
   '/technicians': ['OWNER', 'DISPATCHER'],
   '/inventory': ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'],
+  '/part-requests': ['OWNER', 'WAREHOUSE_STAFF'],
+  '/payments': ['OWNER', 'CUSTOMER_SERVICE'],
+  '/payment-settings': ['OWNER'],
   '/inventory-stocktake': ['OWNER', 'WAREHOUSE_STAFF'],
   '/inventory-movements': ['OWNER', 'WAREHOUSE_STAFF'],
   '/audit': ['OWNER', 'DISPATCHER'],
@@ -25,5 +28,5 @@ export function canAccessRoute(role: UserRole | undefined, path: string) {
 }
 
 export function defaultRouteForRole(role: UserRole): string {
-  return role === 'WAREHOUSE_STAFF' ? '/inventory' : '/'
+  return role === 'WAREHOUSE_STAFF' ? '/part-requests' : '/'
 }

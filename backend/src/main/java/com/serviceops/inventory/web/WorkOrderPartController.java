@@ -11,6 +11,7 @@ import com.serviceops.inventory.web.WorkOrderPartDtos.PartRequestCreateRequest;
 import com.serviceops.inventory.web.WorkOrderPartDtos.PartRequestReasonRequest;
 import com.serviceops.inventory.web.WorkOrderPartDtos.PartRequestResponse;
 import com.serviceops.inventory.web.WorkOrderPartDtos.PartRequestUpdateRequest;
+import com.serviceops.inventory.web.WorkOrderPartDtos.OutstandingPartResponse;
 import com.serviceops.inventory.web.WorkOrderPartDtos.PartUsageResponse;
 import com.serviceops.inventory.web.WorkOrderPartDtos.PartUsageUpdateRequest;
 import com.serviceops.inventory.web.WorkOrderPartDtos.ReturnPartRequest;
@@ -40,6 +41,12 @@ public class WorkOrderPartController {
     private final WorkOrderPartUsageService usageService;
     private final WorkOrderPartReturnService returnService;
     private final WorkOrderPartQueryService queryService;
+
+    @GetMapping("/part-outstanding")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
+    public List<OutstandingPartResponse> outstandingParts(@RequestParam(defaultValue = "") String search) {
+        return queryService.outstandingParts(search);
+    }
 
     @GetMapping("/part-requests")
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")

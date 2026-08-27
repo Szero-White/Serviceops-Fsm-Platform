@@ -7,8 +7,11 @@ import {
   CustomerServiceOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  DollarOutlined,
+  BankOutlined,
   ControlOutlined,
   HistoryOutlined,
+  InboxOutlined,
   ProfileOutlined,
   ReconciliationOutlined,
   LogoutOutlined,
@@ -92,6 +95,8 @@ export function AppLayout() {
           { key: '/schedule', icon: <CalendarOutlined />, label: <Link to="/schedule">Lịch điều phối</Link> },
           { key: '/my-schedule', icon: <CalendarOutlined />, label: <Link to="/my-schedule">Lịch của tôi</Link> },
           { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link> },
+          { key: '/part-requests', icon: <InboxOutlined />, label: <Link to="/part-requests">Yêu cầu phụ tùng</Link> },
+          { key: '/payments', icon: <DollarOutlined />, label: <Link to="/payments">Xử lý thanh toán</Link> },
         ],
       },
       {
@@ -113,6 +118,7 @@ export function AppLayout() {
         children: [
           { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link> },
           { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link> },
+          { key: '/payment-settings', icon: <BankOutlined />, label: <Link to="/payment-settings">Tài khoản thanh toán</Link> },
         ],
       },
     ]

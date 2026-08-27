@@ -26,18 +26,21 @@ export const ROUTES: Record<string, string> = {
   '/my-schedule': 'Lịch của tôi',
   '/work-order-history': 'Lịch sử phiếu công việc',
   '/technicians': 'Đội ngũ kỹ thuật',
+  '/part-requests': 'Yêu cầu phụ tùng',
   '/inventory': 'Kho phụ tùng',
   '/inventory-stocktake': 'Kiểm kê tồn kho',
   '/inventory-movements': 'Lịch sử biến động kho',
+  '/payments': 'Cần xử lý thanh toán',
+  '/payment-settings': 'Tài khoản nhận thanh toán',
   '/audit': 'Nhật ký hệ thống',
 }
 
 export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
-  owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/inventory', '/inventory-stocktake', '/inventory-movements', '/audit'],
+  owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/part-requests', '/inventory', '/inventory-stocktake', '/inventory-movements', '/payments', '/payment-settings', '/audit'],
   dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
-  'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history'],
+  'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history', '/payments'],
   technician: ['/', '/work-orders', '/my-schedule', '/work-order-history', '/inventory'],
-  warehouse: ['/inventory', '/inventory-stocktake', '/inventory-movements'],
+  warehouse: ['/part-requests', '/inventory', '/inventory-stocktake', '/inventory-movements'],
 }
 
 export function dashboardHeading(username: DemoUser) {
@@ -45,11 +48,11 @@ export function dashboardHeading(username: DemoUser) {
 }
 
 export function defaultRoute(username: DemoUser) {
-  return username === 'warehouse' ? '/inventory' : '/'
+  return username === 'warehouse' ? '/part-requests' : '/'
 }
 
 export function defaultHeading(username: DemoUser) {
-  return username === 'warehouse' ? ROUTES['/inventory'] : dashboardHeading(username)
+  return username === 'warehouse' ? ROUTES['/part-requests'] : dashboardHeading(username)
 }
 
 export function watchRuntime(page: Page) {

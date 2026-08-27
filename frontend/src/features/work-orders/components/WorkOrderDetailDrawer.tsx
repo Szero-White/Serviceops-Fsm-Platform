@@ -2,19 +2,21 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloudUploadOutlined,
-  ToolOutlined,
 } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { Button, Descriptions, Drawer, Input, Popconfirm, Space, Tabs, Typography, Upload } from 'antd'
 import { AttachmentList } from '../../attachments/components/AttachmentList'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
-import type { AttachmentItem, WorkOrder, WorkOrderStatus } from '../../../types'
+import type { AttachmentItem, UserRole, WorkOrder, WorkOrderStatus } from '../../../types'
 import { useState } from 'react'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
-import { canConsumePartInStatus, TRANSITION_LABELS } from '../model/workOrderPresentation'
+import { TRANSITION_LABELS } from '../model/workOrderPresentation'
 import type { WorkOrderPermissions } from '../model/workOrderPermissions'
-import { WorkOrderActivityTimeline, workOrderActivityCount } from './WorkOrderActivityTimeline'
+import { WorkOrderActivityTimeline } from './WorkOrderActivityTimeline'
+import { WorkOrderPartsPanel } from '../../inventory/components/WorkOrderPartsPanel'
+import { WorkOrderBillingPanel } from '../../payments/components/WorkOrderBillingPanel'
+import { WorkOrderPaymentPanel } from '../../payments/components/WorkOrderPaymentPanel'
 
 export function WorkOrderDetailDrawer({
   workOrder,
@@ -28,10 +30,12 @@ export function WorkOrderDetailDrawer({
   permissions,
   transitions,
   transitionPending,
+  activeTabKey,
+  onTabChange,
   onClose,
   onSchedule,
   onComplete,
-  onConsumePart,
+  role,
   onTransition,
   onUpload,
   onAttachmentsChanged,
@@ -47,10 +51,12 @@ export function WorkOrderDetailDrawer({
   permissions: WorkOrderPermissions
   transitions: WorkOrderStatus[]
   transitionPending: boolean
+  activeTabKey?: string
+  onTabChange?: (key: string) => void
   onClose: () => void
   onSchedule: () => void
   onComplete: () => void
-  onConsumePart: () => void
+  role?: UserRole
   onTransition: (targetStatus: WorkOrderStatus, note?: string) => void
   onUpload: (options: UploadRequestOption) => Promise<void>
   onAttachmentsChanged: () => void
@@ -126,9 +132,6 @@ export function WorkOrderDetailDrawer({
                 ) : (
                   <Button key={target} onClick={() => onTransition(target)} loading={transitionPending}>{TRANSITION_LABELS[target]}</Button>
                 ))}
-              {permissions.canConsumePart && canConsumePartInStatus(workOrder.status) && (
-                <Button icon={<ToolOutlined />} onClick={onConsumePart}>Dùng phụ tùng</Button>
-              )}
               {permissions.canTransition && transitions.includes('CUSTOMER_ACCEPTED') && (
                 <Button
                   type="primary"
@@ -155,7 +158,10 @@ export function WorkOrderDetailDrawer({
             </Space>
           </div>
 
-          <Tabs items={[
+          <Tabs
+            activeKey={activeTabKey}
+            onChange={onTabChange}
+            items={[
             {
               key: 'overview',
               label: 'Tổng quan',
@@ -180,10 +186,28 @@ export function WorkOrderDetailDrawer({
               ),
             },
             {
+              key: 'parts',
+              label: 'Phụ tùng',
+              children: <WorkOrderPartsPanel workOrder={workOrder} role={role} />,
+            },
+            ...((role && ['OWNER', 'CUSTOMER_SERVICE', 'TECHNICIAN'].includes(role)) ? [
+              {
+                key: 'billing',
+                label: 'Chi phí',
+                children: <WorkOrderBillingPanel workOrder={workOrder} role={role} />,
+              },
+              {
+                key: 'payment',
+                label: 'Thanh toán',
+                children: <WorkOrderPaymentPanel workOrder={workOrder} role={role} attachments={attachments} onViewBilling={() => onTabChange?.('billing')} />,
+              },
+            ] : []),
+            {
               key: 'timeline',
-              label: `Tiến trình (${workOrderActivityCount(workOrder.activities, workOrder.history)})`,
+              label: 'Tiến trình',
               children: (
                 <WorkOrderActivityTimeline
+                  workOrderId={workOrder.id}
                   activities={workOrder.activities}
                   history={workOrder.history}
                 />
@@ -200,7 +224,8 @@ export function WorkOrderDetailDrawer({
                 />
               ) : <AttachmentList attachments={attachments} onChanged={onAttachmentsChanged} />,
             },
-          ]} />
+            ]}
+          />
         </>
       ) : null}
     </Drawer>

@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WorkOrderActivityMapperTest {
 
     @Test
-    void keepsOperationalTimelineFocusedOnStatusAndTechnicianConsumption() {
+    void keepsLegacyDetailProjectionFocusedOnStatusAndTechnicianConsumption() {
         SparePart part = part("FILTER-AC-01", "Lưới lọc máy lạnh tiêu chuẩn", "cái");
         WorkOrderStatusHistory started = statusHistory(
                 WorkOrderStatus.IN_PROGRESS,
@@ -95,6 +95,49 @@ class WorkOrderActivityMapperTest {
 
 
     @Test
+    void completeTimelineIncludesCurrentIssueAndReturnStockMovements() {
+        SparePart part = part("VALVE-220V", "Van cấp nước 220V", "cái");
+        InventoryTransaction issued = partTransaction(
+                part,
+                InventoryTransactionType.ISSUE,
+                "3.000",
+                "warehouse",
+                "Đặng Nam Kho",
+                "WAREHOUSE_STAFF",
+                "Đã giao đủ cho kỹ thuật viên",
+                "2026-08-24T03:40:00Z"
+        );
+        InventoryTransaction returned = partTransaction(
+                part,
+                InventoryTransactionType.RETURN,
+                "1.000",
+                "warehouse",
+                "Đặng Nam Kho",
+                "WAREHOUSE_STAFF",
+                "Nhận lại phần chưa dùng",
+                "2026-08-24T05:00:00Z"
+        );
+
+        var activities = WorkOrderActivityMapper.mergeComplete(
+                List.of(),
+                List.of(issued, returned),
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                null
+        );
+
+        assertThat(activities).extracting(activity -> activity.type()).containsExactly(
+                WorkOrderActivityType.PART_ISSUED,
+                WorkOrderActivityType.PART_RETURNED
+        );
+        assertThat(activities).extracting(activity -> activity.actorRole()).containsOnly("WAREHOUSE_STAFF");
+        assertThat(activities.getFirst().quantity()).isEqualByComparingTo("3.000");
+        assertThat(activities.getLast().quantity()).isEqualByComparingTo("1.000");
+    }
+
+    @Test
     void preservesDifferentCompletionSnapshotsAcrossReopenedRepairCycles() {
         WorkOrderStatusHistory firstCompletion = statusHistory(
                 WorkOrderStatus.COMPLETED,
@@ -142,7 +185,7 @@ class WorkOrderActivityMapperTest {
     }
 
     @Test
-    void ignoresNonTechnicianConsumeAndWarehouseReturnInOperationalTimeline() {
+    void legacyDetailProjectionIgnoresNonTechnicianConsumeAndWarehouseReturn() {
         SparePart part = part("SENSOR-TEMP-10K", "Cảm biến nhiệt độ 10K", "cái");
         InventoryTransaction legacyWarehouseConsume = partTransaction(
                 part,

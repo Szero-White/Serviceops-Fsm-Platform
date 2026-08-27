@@ -1,7 +1,6 @@
 package com.serviceops.workorder.web;
 
 import com.serviceops.common.web.PageResponse;
-import com.serviceops.workorder.application.WorkOrderInvoiceService;
 import com.serviceops.workorder.application.WorkOrderService;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
@@ -9,10 +8,6 @@ import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -32,7 +26,6 @@ import java.util.UUID;
 @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
 public class WorkOrderController {
     private final WorkOrderService service;
-    private final WorkOrderInvoiceService invoiceService;
 
     @GetMapping
     public PageResponse<WorkOrderResponse> search(@RequestParam(defaultValue = "") String search,
@@ -54,18 +47,6 @@ public class WorkOrderController {
     @GetMapping("/{id}")
     public WorkOrderResponse get(@PathVariable UUID id) {
         return service.get(id);
-    }
-
-    @GetMapping("/{id}/invoice")
-    public ResponseEntity<byte[]> invoice(@PathVariable UUID id) {
-        WorkOrderResponse workOrder = service.get(id);
-        return ResponseEntity.ok()
-                .contentType(new MediaType("text", "html", StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename("hoa-don-dich-vu-" + workOrder.code() + ".html", StandardCharsets.UTF_8)
-                        .build()
-                        .toString())
-                .body(invoiceService.exportInvoice(workOrder));
     }
 
     @PostMapping("/from-service-request/{serviceRequestId}")

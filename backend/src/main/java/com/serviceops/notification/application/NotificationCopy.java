@@ -219,7 +219,8 @@ public final class NotificationCopy {
         return copy(
                 "Phiếu đã hoàn tất: " + context.code(),
                 actor(actorLabel) + " đã đóng " + workOrderContext(context)
-                        + " sau khi khách xác nhận. Phiếu đã hoàn tất toàn bộ quy trình; mở Lịch sử phiếu nếu cần đối soát."
+                        + " sau khi thanh toán đã được đối soát và biên nhận đã được phát hành. "
+                        + "Phiếu đã hoàn tất toàn bộ quy trình; mở Lịch sử phiếu nếu cần đối soát."
         );
     }
 
@@ -227,7 +228,7 @@ public final class NotificationCopy {
         return copy(
                 "Phiếu đã đóng: " + context.code(),
                 actor(actorLabel) + " đã đóng " + workOrderContext(context)
-                        + " sau khi khách xác nhận. Công việc đã kết thúc; bạn không cần thao tác thêm."
+                        + " sau khi CSKH đối soát thanh toán. Công việc đã kết thúc; bạn không cần thao tác thêm."
         );
     }
 
@@ -286,7 +287,7 @@ public final class NotificationCopy {
                         + fallback(partName, sku) + "\" (" + fallback(sku, "Chưa có SKU") + ") cho phiếu \""
                         + limit(fallback(workOrderSummary, "Nội dung chưa có tiêu đề"), CONTEXT_LIMIT) + "\" ("
                         + fallback(workOrderCode, "Phiếu công việc")
-                        + "). Mở Kho phụ tùng để kiểm tra và xác nhận cấp khi đã giao hàng thực tế."
+                        + "). Mở Yêu cầu phụ tùng để kiểm tra và xác nhận cấp khi đã giao hàng thực tế."
         );
     }
 

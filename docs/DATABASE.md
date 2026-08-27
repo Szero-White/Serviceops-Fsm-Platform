@@ -33,8 +33,9 @@
 - `tenant_id` trên dữ liệu tenant-scoped.
 - `version` dùng cho optimistic locking ở các entity hỗ trợ concurrency.
 - Timestamp lưu theo UTC.
-- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `balance_after` giữ snapshot tồn sau mỗi movement.
-- Stocktake/return mới tái sử dụng schema ledger hiện có, không cần migration mới.
+- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `ISSUE`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `ISSUE` là stock-out của workflow mới, còn `CONSUME` được giữ cho lịch sử legacy. `balance_after` giữ snapshot tồn sau mỗi movement.
+- `work_order_part_requests` lưu lifecycle request (`REQUESTED/ISSUED/CANCELLED/UNAVAILABLE/EXPIRED`); partial unique index chỉ cho tối đa một `REQUESTED` active trên cùng Work Order + part.
+- `work_order_part_usage` lưu actual `USED` aggregate theo Work Order + part; outstanding được suy ra từ `ISSUE - USED - RETURN`. Schema này được thêm bằng Flyway V11, không sửa V1–V10.
 - Flyway là nguồn schema; Hibernate dùng `ddl-auto=validate`, không auto-create production schema.
 - FK/unique/index được đặt ở database khi quan hệ là relational trực tiếp.
 - Query/service vẫn phải giữ tenant scope; FK không thay thế authorization.

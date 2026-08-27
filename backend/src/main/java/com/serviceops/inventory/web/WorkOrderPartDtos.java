@@ -97,4 +97,22 @@ public final class WorkOrderPartDtos {
             BigDecimal returnableQuantity
     ) {
     }
+    public record OutstandingPartResponse(
+            UUID workOrderId,
+            String workOrderCode,
+            String workOrderSummary,
+            UUID technicianUserId,
+            String technicianName,
+            UUID sparePartId,
+            String sparePartSku,
+            String sparePartName,
+            String unit,
+            BigDecimal issuedQuantity,
+            BigDecimal usedQuantity,
+            BigDecimal returnedQuantity,
+            BigDecimal outstandingQuantity,
+            Instant since
+    ) {
+    }
+
 }

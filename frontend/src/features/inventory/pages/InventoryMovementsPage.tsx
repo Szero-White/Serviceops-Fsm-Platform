@@ -21,7 +21,8 @@ type ReturnValues = { quantity: number; note: string }
 
 const TYPE_LABELS: Record<InventoryTransactionType, string> = {
   IMPORT: 'Nhập kho',
-  CONSUME: 'Sử dụng',
+  ISSUE: 'Cấp cho kỹ thuật viên',
+  CONSUME: 'Sử dụng (legacy)',
   RETURN: 'Hoàn trả',
   ADJUSTMENT_IN: 'Điều chỉnh tăng',
   ADJUSTMENT_OUT: 'Điều chỉnh giảm',
@@ -107,7 +108,7 @@ export function InventoryMovementsPage() {
     <div className="page-stack">
       <PageHeader
         title="Lịch sử biến động kho"
-        description="Theo dõi nhập kho, sử dụng theo phiếu công việc, hoàn trả và điều chỉnh kiểm kê. Dòng Sử dụng còn số lượng khả dụng sẽ có nút Hoàn trả ở cột Thao tác."
+        description="Theo dõi nhập kho, cấp cho kỹ thuật viên, dữ liệu legacy sử dụng, hoàn trả và điều chỉnh kiểm kê. Dòng Cấp hoặc Sử dụng còn số lượng khả dụng sẽ có nút Hoàn trả ở cột Thao tác."
         meta={<><MetaBadge>{data?.totalElements ?? 0} giao dịch</MetaBadge><MetaBadge tone="info">Theo thời gian thực</MetaBadge></>}
       />
 
@@ -130,14 +131,14 @@ export function InventoryMovementsPage() {
         locale={{ emptyText: <Empty description="Chưa có giao dịch kho phù hợp" /> }}
         columns={[
           { title: 'Thời gian', dataIndex: 'createdAt', width: 165, render: formatDateTime },
-          { title: 'Loại', width: 150, render: (_, record) => <MetaBadge tone={isIncrease(record.type) ? 'success' : record.type === 'CONSUME' ? 'info' : 'neutral'}>{TYPE_LABELS[record.type]}</MetaBadge> },
+          { title: 'Loại', width: 150, render: (_, record) => <MetaBadge tone={isIncrease(record.type) ? 'success' : ['ISSUE', 'CONSUME'].includes(record.type) ? 'info' : 'neutral'}>{TYPE_LABELS[record.type]}</MetaBadge> },
           { title: 'Phụ tùng', width: 240, render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{record.sparePartSku}</Typography.Text></div> },
           { title: 'Biến động', width: 140, render: (_, record) => <Typography.Text strong type={isIncrease(record.type) ? 'success' : undefined}>{isIncrease(record.type) ? '+' : '-'}{formatQuantityWithUnit(record.quantity, record.unit)}</Typography.Text> },
           { title: 'Tồn sau', width: 130, render: (_, record) => formatQuantityWithUnit(record.balanceAfter, record.unit) },
           { title: 'Phiếu công việc', width: 220, render: (_, record) => record.workOrderCode ? <div className="table-primary-cell"><Typography.Text code>{record.workOrderCode}</Typography.Text><Typography.Text type="secondary" ellipsis={{ tooltip: record.workOrderSummary }}>{record.workOrderSummary ?? 'Nghiệp vụ theo phiếu công việc'}</Typography.Text></div> : '—' },
           { title: 'Người thực hiện', width: 230, render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.actorDisplayName || record.createdBy}</Typography.Text><Typography.Text type="secondary">{actorRoleLabel(record.actorRole)}</Typography.Text></div> },
           { title: 'Mục đích / ghi chú', dataIndex: 'note', width: 260, ellipsis: true, render: (value: string | undefined, record) => value || record.workOrderSummary || '—' },
-          { title: 'Thao tác', width: 120, fixed: 'right', render: (_, record) => record.type === 'CONSUME' && record.workOrderId ? <Button size="small" icon={<RollbackOutlined />} onClick={() => void openReturn(record)}>Hoàn trả</Button> : null },
+          { title: 'Thao tác', width: 120, fixed: 'right', render: (_, record) => ['ISSUE', 'CONSUME'].includes(record.type) && record.workOrderId ? <Button size="small" icon={<RollbackOutlined />} onClick={() => void openReturn(record)}>Hoàn trả</Button> : null },
         ]}
       />
 
