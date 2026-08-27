@@ -46,13 +46,6 @@ public final class InventoryDtos {
     public record SparePartStatusRequest(@NotNull Boolean active) {
     }
 
-    public record ConsumePartRequest(
-            @NotNull UUID sparePartId,
-            @NotNull @DecimalMin(value = "0.001") BigDecimal quantity,
-            @NotBlank @Size(max = 300) String note
-    ) {
-    }
-
     public record SparePartResponse(
             UUID id, String sku, String name, String unit, BigDecimal stockQuantity,
             BigDecimal reorderLevel, BigDecimal unitPrice, boolean lowStock, boolean active, Instant updatedAt

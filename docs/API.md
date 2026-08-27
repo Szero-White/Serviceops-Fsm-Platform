@@ -169,7 +169,7 @@ Work Order part request / issue / actual usage:
 
 Legacy compatibility:
 
-- `POST /work-orders/{workOrderId}/parts/consume` vẫn được giữ tạm để đọc/duy trì frontend hoặc dữ liệu cũ trong giai đoạn migration. UI mới **không sử dụng endpoint này**. Không xóa lịch sử `CONSUME` cũ.
+- Không còn write endpoint `CONSUME`. Workflow hiện hành chỉ ghi stock-out bằng Warehouse `ISSUE`, Technician ghi actual-used bằng `PUT /work-orders/{workOrderId}/part-usage`, và Warehouse `RETURN` phần chưa dùng. Các row `CONSUME` cũ vẫn được đọc trong history/timeline/legacy return compatibility; không rewrite destructive lịch sử.
 
 ## Attachments
 
@@ -198,7 +198,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Notifications
 
-Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận **yêu cầu phụ tùng mới** cần xử lý và low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do `ISSUE` workflow mới (và `CONSUME` legacy trong giai đoạn tương thích) chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
+Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận **yêu cầu phụ tùng mới** cần xử lý và low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do `ISSUE` workflow hiện hành chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
 
 - `GET /notifications`
 - `GET /notifications/unread-count`

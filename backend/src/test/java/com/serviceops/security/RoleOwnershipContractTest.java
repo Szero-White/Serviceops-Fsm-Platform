@@ -39,7 +39,6 @@ class RoleOwnershipContractTest {
         assertMethodAuthorization(WorkOrderController.class, "schedule", "hasAnyRole('OWNER','DISPATCHER')");
         assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
         assertMethodAuthorization(InventoryController.class, "stocktake", "hasAnyRole('OWNER','WAREHOUSE_STAFF')");
-        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
     }
 
     @Test
@@ -87,7 +86,7 @@ class RoleOwnershipContractTest {
 
 
     @Test
-    void warehouseOwnsStockReconciliationMovementAndPhysicalReturnsButNotLegacyConsumption() {
+    void warehouseOwnsStockReconciliationMovementAndPhysicalReturnsWhileLegacyConsumptionIsReadOnlyHistory() {
         String warehouseOwners = "hasAnyRole('OWNER','WAREHOUSE_STAFF')";
         assertMethodAuthorization(InventoryController.class, "updateReorderLevel", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "stocktake", warehouseOwners);
@@ -102,7 +101,8 @@ class RoleOwnershipContractTest {
         assertMethodAuthorization(WorkOrderPartController.class, "updatePartUsage", "hasRole('TECHNICIAN')");
         assertMethodAuthorization(WorkOrderPartController.class, "returnable", warehouseOwners);
         assertMethodAuthorization(WorkOrderPartController.class, "returnPart", "hasRole('WAREHOUSE_STAFF')");
-        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
+        assertThat(Arrays.stream(InventoryController.class.getDeclaredMethods()).map(Method::getName))
+                .doesNotContain("consume");
     }
 
     @Test

@@ -24,7 +24,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,10 +60,13 @@ class WorkOrderPartQueryServiceTest {
         usage.setUsedQuantity(new BigDecimal("2"));
 
         when(requestRepository.findIssuedForOutstanding(TENANT_ID)).thenReturn(List.of(request));
-        when(stockService.totals(TENANT_ID, workOrder.getId(), part.getId()))
-                .thenReturn(new WorkOrderPartStockService.PartStockTotals(new BigDecimal("3"), BigDecimal.ZERO));
-        when(usageRepository.findByTenantIdAndWorkOrderIdAndSparePartId(TENANT_ID, workOrder.getId(), part.getId()))
-                .thenReturn(Optional.of(usage));
+        when(stockService.totalsForWorkOrders(TENANT_ID, Set.of(workOrder.getId())))
+                .thenReturn(Map.of(
+                        new WorkOrderPartStockService.WorkOrderPartKey(workOrder.getId(), part.getId()),
+                        new WorkOrderPartStockService.PartStockTotals(new BigDecimal("3"), BigDecimal.ZERO)
+                ));
+        when(usageRepository.findDetailedByWorkOrders(TENANT_ID, Set.of(workOrder.getId())))
+                .thenReturn(List.of(usage));
 
         WorkOrderPartQueryService service = new WorkOrderPartQueryService(
                 requestRepository,

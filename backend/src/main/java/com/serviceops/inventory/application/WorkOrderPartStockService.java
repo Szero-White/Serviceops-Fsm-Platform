@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -32,7 +33,7 @@ public class WorkOrderPartStockService {
     public void issue(SparePart part, WorkOrder workOrder, BigDecimal quantity, String note) {
         BigDecimal stockBeforeIssue = part.getStockQuantity();
         try {
-            part.consume(quantity);
+            part.decreaseStock(quantity);
         } catch (IllegalStateException ex) {
             throw BusinessException.conflict(
                     "INSUFFICIENT_STOCK",
@@ -72,6 +73,56 @@ public class WorkOrderPartStockService {
             }
         }
         return new PartStockTotals(issued, returned);
+    }
+
+    public Map<WorkOrderPartKey, PartStockTotals> totalsForWorkOrders(
+            UUID tenantId,
+            Set<UUID> workOrderIds
+    ) {
+        if (workOrderIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<InventoryTransaction> transactions = transactionRepository
+                .findWorkflowPartTransactionsForWorkOrders(tenantId, workOrderIds);
+        Map<WorkOrderPartKey, PartStockTotalsBuilder> builders = new LinkedHashMap<>();
+
+        for (InventoryTransaction transaction : transactions) {
+            WorkOrderPartKey key = new WorkOrderPartKey(
+                    transaction.getWorkOrder().getId(),
+                    transaction.getSparePart().getId()
+            );
+            PartStockTotalsBuilder builder = builders.computeIfAbsent(key, ignored -> new PartStockTotalsBuilder());
+            if (transaction.getTransactionType() == InventoryTransactionType.ISSUE) {
+                builder.issued = builder.issued.add(transaction.getQuantity());
+                if (builder.firstIssueAt == null || transaction.getCreatedAt().isBefore(builder.firstIssueAt)) {
+                    builder.firstIssueAt = transaction.getCreatedAt();
+                }
+            }
+        }
+
+        for (InventoryTransaction transaction : transactions) {
+            if (transaction.getTransactionType() != InventoryTransactionType.RETURN) {
+                continue;
+            }
+            WorkOrderPartKey key = new WorkOrderPartKey(
+                    transaction.getWorkOrder().getId(),
+                    transaction.getSparePart().getId()
+            );
+            PartStockTotalsBuilder builder = builders.get(key);
+            if (builder != null
+                    && builder.firstIssueAt != null
+                    && !transaction.getCreatedAt().isBefore(builder.firstIssueAt)) {
+                builder.returned = builder.returned.add(transaction.getQuantity());
+            }
+        }
+
+        Map<WorkOrderPartKey, PartStockTotals> totals = new LinkedHashMap<>();
+        builders.forEach((key, builder) -> totals.put(
+                key,
+                new PartStockTotals(builder.issued, builder.returned)
+        ));
+        return totals;
     }
 
     public Map<UUID, PartStockSummary> summariesForWorkOrder(UUID tenantId, UUID workOrderId) {
@@ -176,10 +227,19 @@ public class WorkOrderPartStockService {
         }
     }
 
+    public record WorkOrderPartKey(UUID workOrderId, UUID sparePartId) {
+    }
+
     public record PartStockTotals(BigDecimal issued, BigDecimal returned) {
     }
 
     public record PartStockSummary(SparePart part, BigDecimal issued, BigDecimal returned) {
+    }
+
+    private static final class PartStockTotalsBuilder {
+        private BigDecimal issued = BigDecimal.ZERO;
+        private BigDecimal returned = BigDecimal.ZERO;
+        private Instant firstIssueAt;
     }
 
     private static final class PartStockSummaryBuilder {

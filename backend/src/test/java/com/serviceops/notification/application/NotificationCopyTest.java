@@ -163,20 +163,20 @@ class NotificationCopyTest {
     }
 
     @Test
-    void inventoryCopyKeepsSkuPartNameQuantitiesAndNextAction() {
-        var copy = NotificationCopy.lowStock(
+    void issueLowStockCopyKeepsSkuPartNameQuantitiesAndNextAction() {
+        var copy = NotificationCopy.lowStockAfterIssue(
                 "DW-INLET-220V",
                 "Van cấp nước máy rửa chén 220V",
                 new BigDecimal("2"),
                 "cái",
                 new BigDecimal("3"),
                 "WO-2026-001010",
-                "Trịnh Quốc Tiến"
+                "Đặng Nam Kho"
         );
 
         assertThat(copy.title()).isEqualTo("Tồn kho thấp: DW-INLET-220V");
         assertThat(copy.message())
-                .contains("Trịnh Quốc Tiến")
+                .contains("Đặng Nam Kho")
                 .contains("WO-2026-001010")
                 .contains("Van cấp nước máy rửa chén 220V")
                 .contains("còn 2 cái")

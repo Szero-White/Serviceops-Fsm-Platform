@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +34,18 @@ public interface WorkOrderPartUsageRepository extends JpaRepository<WorkOrderPar
             """)
     List<WorkOrderPartUsage> findDetailedByWorkOrder(@Param("tenantId") UUID tenantId,
                                                      @Param("workOrderId") UUID workOrderId);
+
+    @Query("""
+            select u from WorkOrderPartUsage u
+            join fetch u.workOrder
+            join fetch u.sparePart
+            where u.tenantId = :tenantId
+              and u.workOrder.id in :workOrderIds
+            """)
+    List<WorkOrderPartUsage> findDetailedByWorkOrders(
+            @Param("tenantId") UUID tenantId,
+            @Param("workOrderIds") Collection<UUID> workOrderIds
+    );
 
     Optional<WorkOrderPartUsage> findByTenantIdAndWorkOrderIdAndSparePartId(
             UUID tenantId, UUID workOrderId, UUID sparePartId);

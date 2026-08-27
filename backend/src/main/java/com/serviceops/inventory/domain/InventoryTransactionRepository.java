@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -100,6 +101,23 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
             """)
     List<InventoryTransaction> findWorkflowPartTransactionsForWorkOrder(@Param("tenantId") UUID tenantId,
                                                                          @Param("workOrderId") UUID workOrderId);
+
+    @Query("""
+            select tx from InventoryTransaction tx
+            join fetch tx.workOrder
+            join fetch tx.sparePart
+            where tx.tenantId = :tenantId
+              and tx.workOrder.id in :workOrderIds
+              and tx.transactionType in (
+                  com.serviceops.inventory.domain.InventoryTransactionType.ISSUE,
+                  com.serviceops.inventory.domain.InventoryTransactionType.RETURN
+              )
+            order by tx.workOrder.id, tx.createdAt asc
+            """)
+    List<InventoryTransaction> findWorkflowPartTransactionsForWorkOrders(
+            @Param("tenantId") UUID tenantId,
+            @Param("workOrderIds") Collection<UUID> workOrderIds
+    );
 
     @Query("""
             select tx from InventoryTransaction tx

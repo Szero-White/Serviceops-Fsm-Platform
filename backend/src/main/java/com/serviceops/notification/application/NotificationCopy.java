@@ -311,26 +311,6 @@ public final class NotificationCopy {
         );
     }
 
-    public static Copy lowStock(
-            String sku,
-            String partName,
-            BigDecimal stockQuantity,
-            String unit,
-            BigDecimal reorderLevel,
-            String workOrderCode,
-            String technicianName
-    ) {
-        return copy(
-                "Tồn kho thấp: " + sku,
-                "Sau khi kỹ thuật viên " + fallback(technicianName, "được phân công")
-                        + " ghi nhận sử dụng cho " + fallback(workOrderCode, "phiếu công việc")
-                        + ", phụ tùng \"" + fallback(partName, sku) + "\" (" + sku + ") còn "
-                        + quantity(stockQuantity) + " " + unit + "; ngưỡng tồn tối thiểu là "
-                        + quantity(reorderLevel) + " " + unit
-                        + ". Mở Kho phụ tùng để kiểm tra và bổ sung nếu cần."
-        );
-    }
-
     public static Copy lowStockAfterReorderLevelChange(
             String sku,
             String partName,

@@ -89,7 +89,8 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 12. `V12__billing_payment_reconciliation.sql` — billing snapshot, payment state và cấu hình tài khoản công ty.
 13. `V13__payment_receipt.sql` — official payment receipt sau `SETTLED`.
 14. `V14__attachment_lifecycle.sql` — phân loại attachment purpose và khóa payment evidence đã liên kết.
+15. `V15__inventory_work_order_query_index.sql` — index theo tenant + Work Order + transaction type để các truy vấn ISSUE/RETURN/outstanding chạy theo batch hiệu quả.
 
-V1–V13 là migration lịch sử bất biến ở checkpoint hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới thay vì sửa file cũ.
+V1–V15 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V16+) thay vì sửa file đã có.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

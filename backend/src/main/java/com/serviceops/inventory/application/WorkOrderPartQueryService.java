@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,16 +74,33 @@ public class WorkOrderPartQueryService {
             OutstandingKey key = new OutstandingKey(request.getWorkOrder().getId(), request.getSparePart().getId());
             unique.putIfAbsent(key, request);
         }
+        if (unique.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> workOrderIds = unique.keySet().stream()
+                .map(OutstandingKey::workOrderId)
+                .collect(Collectors.toSet());
+        Map<WorkOrderPartStockService.WorkOrderPartKey, WorkOrderPartStockService.PartStockTotals> stockTotals =
+                stockService.totalsForWorkOrders(tenantId, workOrderIds);
+        Map<OutstandingKey, WorkOrderPartUsage> usages = usageRepository
+                .findDetailedByWorkOrders(tenantId, workOrderIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        usage -> new OutstandingKey(usage.getWorkOrder().getId(), usage.getSparePart().getId()),
+                        Function.identity()
+                ));
 
         return unique.values().stream()
                 .map(request -> {
                     var workOrder = request.getWorkOrder();
                     var part = request.getSparePart();
-                    var totals = stockService.totals(tenantId, workOrder.getId(), part.getId());
-                    BigDecimal used = usageRepository
-                            .findByTenantIdAndWorkOrderIdAndSparePartId(tenantId, workOrder.getId(), part.getId())
-                            .map(WorkOrderPartUsage::getUsedQuantity)
-                            .orElse(BigDecimal.ZERO);
+                    var totals = stockTotals.getOrDefault(
+                            new WorkOrderPartStockService.WorkOrderPartKey(workOrder.getId(), part.getId()),
+                            new WorkOrderPartStockService.PartStockTotals(BigDecimal.ZERO, BigDecimal.ZERO)
+                    );
+                    WorkOrderPartUsage usage = usages.get(new OutstandingKey(workOrder.getId(), part.getId()));
+                    BigDecimal used = usage == null ? BigDecimal.ZERO : usage.getUsedQuantity();
                     BigDecimal outstanding = totals.issued().subtract(used).subtract(totals.returned()).max(BigDecimal.ZERO);
                     String technicianName = workOrder.getTechnician() == null || workOrder.getTechnician().getUser() == null
                             ? null

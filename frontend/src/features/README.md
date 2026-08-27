@@ -24,4 +24,4 @@ Rules:
 - Keep domain UI under `features/<domain>/components/`.
 - Keep only truly shared UI in `components/`.
 - Keep cross-domain types in `types/` until a feature owns enough types to justify a local `types.ts`.
-- Do not add new domain logic to `api/services.ts`; it is only a compatibility export surface.
+- Import each feature API from its owning feature module; there is no cross-domain API barrel.

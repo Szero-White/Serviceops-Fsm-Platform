@@ -3,7 +3,6 @@ package com.serviceops.inventory.web;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.inventory.application.InventoryService;
 import com.serviceops.inventory.domain.InventoryTransactionType;
-import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.InventoryTransactionResponse;
 import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportResult;
@@ -120,15 +119,6 @@ public class InventoryController {
         return service.searchTransactions(search, type, fromTime, toTime, page, size);
     }
 
-    /**
-     * Legacy endpoint kept while the current frontend is migrated to request/issue flow.
-     * New UI must use WorkOrderPartController endpoints.
-     */
-    @PostMapping("/work-orders/{workOrderId}/parts/consume")
-    @PreAuthorize("hasRole('TECHNICIAN')")
-    public SparePartResponse consume(@PathVariable UUID workOrderId, @Valid @RequestBody ConsumePartRequest request) {
-        return service.consume(workOrderId, request);
-    }
 
     private static ResponseEntity<byte[]> csv(String filename, byte[] content) {
         return ResponseEntity.ok()

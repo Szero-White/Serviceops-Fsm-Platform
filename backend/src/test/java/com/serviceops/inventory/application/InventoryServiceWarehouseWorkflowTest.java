@@ -8,8 +8,6 @@ import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
 import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.StocktakeRequest;
-import com.serviceops.notification.application.NotificationService;
-import com.serviceops.workorder.domain.WorkOrderRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,10 +43,8 @@ class InventoryServiceWarehouseWorkflowTest {
 
     @Mock private SparePartRepository sparePartRepository;
     @Mock private InventoryTransactionRepository transactionRepository;
-    @Mock private WorkOrderRepository workOrderRepository;
     @Mock private InventoryCsvService csvService;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private InventoryService service;
@@ -56,8 +52,13 @@ class InventoryServiceWarehouseWorkflowTest {
     @BeforeEach
     void setUp() {
         authenticateWarehouse();
-        service = new InventoryService(sparePartRepository, transactionRepository, workOrderRepository,
-                csvService, auditService, notificationService, eventPublisher);
+        service = new InventoryService(
+                sparePartRepository,
+                transactionRepository,
+                csvService,
+                auditService,
+                eventPublisher
+        );
     }
 
     @AfterEach

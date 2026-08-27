@@ -131,3 +131,5 @@ Working tree              clean
 ```
 
 A refactor is incomplete if behavior changes unintentionally or verification becomes weaker.
+
+- Queue/list use case phải batch-load dữ liệu liên quan; không gọi repository/service theo từng row. `part-outstanding` tải request + ISSUE/RETURN + USED theo batch để tránh N+1.

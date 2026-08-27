@@ -10,6 +10,9 @@ import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
+import com.serviceops.inventory.domain.WorkOrderPartRequest;
+import com.serviceops.inventory.domain.WorkOrderPartRequestRepository;
+import com.serviceops.inventory.domain.WorkOrderPartRequestStatus;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.workorder.domain.WorkOrder;
@@ -67,8 +70,11 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
     @Autowired
     private InventoryTransactionRepository inventoryTransactionRepository;
 
+    @Autowired
+    private WorkOrderPartRequestRepository workOrderPartRequestRepository;
+
     @Test
-    void inactiveSparePartCannotBeConsumed() {
+    void inactiveSparePartCannotBeRequested() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
         Customer customer = customer(
@@ -92,7 +98,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         sparePartRepository.saveAndFlush(part);
 
         ResponseEntity<String> response = postJson(
-                "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
+                "/api/v1/work-orders/" + workOrder.getId() + "/part-requests",
                 login("technician", "123456"),
                 Map.of(
                         "sparePartId", part.getId(),
@@ -111,17 +117,23 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void concurrentInventoryConsumptionShouldNeverCreateNegativeStock() throws Exception {
+    void concurrentPartIssueShouldNeverCreateNegativeStock() throws Exception {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
-        Customer customer = customer(
+        Customer firstCustomer = customer(
                 owner.getTenantId(),
-                uniqueCode("STOCK-CUST-"),
-                "Stock Concurrency Customer"
+                uniqueCode("STOCK-CUST-A-"),
+                "Stock Concurrency Customer A"
         );
-        customerRepository.saveAndFlush(customer);
+        Customer secondCustomer = customer(
+                owner.getTenantId(),
+                uniqueCode("STOCK-CUST-B-"),
+                "Stock Concurrency Customer B"
+        );
+        customerRepository.saveAllAndFlush(List.of(firstCustomer, secondCustomer));
 
-        WorkOrder workOrder = assignedInProgressWorkOrder(owner, customer, "STOCK-WO-");
+        WorkOrder firstWorkOrder = assignedInProgressWorkOrder(owner, firstCustomer, "STOCK-WO-A-");
+        WorkOrder secondWorkOrder = assignedInProgressWorkOrder(owner, secondCustomer, "STOCK-WO-B-");
 
         SparePart part = new SparePart();
         part.setTenantId(owner.getTenantId());
@@ -134,17 +146,15 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         part.setActive(true);
         sparePartRepository.saveAndFlush(part);
 
-        String token = login("technician", "123456");
-        Map<String, Object> body = Map.of(
-                "sparePartId", part.getId(),
-                "quantity", new BigDecimal("4.000"),
-                "note", "concurrency integration test"
-        );
+        WorkOrderPartRequest firstRequest = requestedPart(owner, firstWorkOrder, part, new BigDecimal("4.000"));
+        WorkOrderPartRequest secondRequest = requestedPart(owner, secondWorkOrder, part, new BigDecimal("4.000"));
+        String warehouseToken = login("warehouse", "123456");
 
-        List<Integer> statuses = runTwoConcurrentPosts(
-                "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
-                token,
-                body
+        List<Integer> statuses = runConcurrentPosts(
+                "/api/v1/part-requests/" + firstRequest.getId() + "/issue",
+                "/api/v1/part-requests/" + secondRequest.getId() + "/issue",
+                warehouseToken,
+                Map.of()
         );
 
         assertThat(statuses).containsExactlyInAnyOrder(200, 409);
@@ -275,14 +285,15 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         SparePart part = sparePart(owner, "WH-PART-", new BigDecimal("5.000"));
         sparePartRepository.saveAndFlush(part);
 
-        ResponseEntity<String> consumeResponse = postJson(
-                "/api/v1/work-orders/" + workOrder.getId() + "/parts/consume",
-                login("technician", "123456"),
-                Map.of("sparePartId", part.getId(), "quantity", new BigDecimal("2.000"), "note", "Warehouse return test")
-        );
-        assertThat(consumeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-
+        WorkOrderPartRequest request = requestedPart(owner, workOrder, part, new BigDecimal("2.000"));
         String warehouseToken = login("warehouse", "123456");
+        ResponseEntity<String> issueResponse = postJson(
+                "/api/v1/part-requests/" + request.getId() + "/issue",
+                warehouseToken,
+                Map.of()
+        );
+        assertThat(issueResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
         ResponseEntity<String> returnResponse = postJson(
                 "/api/v1/work-orders/" + workOrder.getId() + "/parts/" + part.getId() + "/return",
                 warehouseToken,
@@ -304,7 +315,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 null
         );
         assertThat(historyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(historyResponse.getBody()).contains("CONSUME", "RETURN", "ADJUSTMENT_OUT", part.getSku());
+        assertThat(historyResponse.getBody()).contains("ISSUE", "RETURN", "ADJUSTMENT_OUT", part.getSku());
 
         ResponseEntity<String> unfilteredHistoryResponse = exchangeInventory(
                 "/api/v1/inventory-transactions",
@@ -329,6 +340,26 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         workOrder.setTechnician(technician);
         workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
         return workOrderRepository.saveAndFlush(workOrder);
+    }
+
+    private WorkOrderPartRequest requestedPart(
+            UserAccount owner,
+            WorkOrder workOrder,
+            SparePart part,
+            BigDecimal quantity
+    ) {
+        UserAccount technicianUser = userAccountRepository.findByUsernameIgnoreCase("technician").orElseThrow();
+        WorkOrderPartRequest request = new WorkOrderPartRequest();
+        request.setTenantId(owner.getTenantId());
+        request.setWorkOrder(workOrder);
+        request.setSparePart(part);
+        request.setRequestedQuantity(quantity);
+        request.setRequestNote("Integration test request");
+        request.setStatus(WorkOrderPartRequestStatus.REQUESTED);
+        request.setRequestedByUserId(technicianUser.getId());
+        request.setRequestedByUsername(technicianUser.getUsername());
+        request.setRequestedByDisplayName(technicianUser.getDisplayName());
+        return workOrderPartRequestRepository.saveAndFlush(request);
     }
 
     private SparePart sparePart(UserAccount owner, String skuPrefix, BigDecimal stock) {
