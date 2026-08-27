@@ -19,7 +19,7 @@ ServiceOps provides one operational record that follows the work across those ha
 | Real-world responsibility | ServiceOps role | Main responsibilities in the system |
 | --- | --- | --- |
 | Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, work-order management and oversight |
-| Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling, operational history and audit review |
+| Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling and operational history |
 | Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, service requests and Service Request → Work Order handoff |
 | Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence and spare-part consumption |
 | Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock receiving, stocktake/reconciliation, returns and movement traceability |

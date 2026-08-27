@@ -2,6 +2,7 @@ package com.serviceops.security;
 
 import com.serviceops.ai.web.AiController;
 import com.serviceops.asset.web.AssetController;
+import com.serviceops.audit.web.AuditController;
 import com.serviceops.customer.web.CustomerController;
 import com.serviceops.dashboard.web.DashboardController;
 import com.serviceops.inventory.web.InventoryController;
@@ -138,6 +139,12 @@ class RoleOwnershipContractTest {
                 "hasAnyRole('OWNER','CUSTOMER_SERVICE')"
         );
         assertMethodAuthorization(WorkOrderClosureController.class, "close", "hasRole('CUSTOMER_SERVICE')");
+    }
+
+
+    @Test
+    void systemAuditRemainsAnOwnerGovernanceCapability() {
+        assertClassAuthorization(AuditController.class, "hasRole('OWNER')");
     }
 
     @Test

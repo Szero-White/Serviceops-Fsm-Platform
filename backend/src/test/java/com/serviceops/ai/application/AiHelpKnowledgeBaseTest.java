@@ -299,7 +299,7 @@ class AiHelpKnowledgeBaseTest {
 
     @Test
     void technicianInventoryManagementQuestionIsBlockedInsteadOfLeakingWarehouseActions() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/inventory");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Tôi muốn sửa ngưỡng tồn tối thiểu và kiểm kê điều chỉnh kho",
@@ -312,7 +312,7 @@ class AiHelpKnowledgeBaseTest {
 
     @Test
     void technicianPartQuestionOnlyExplainsAssignedJobUsage() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/inventory");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("TECHNICIAN", "Kỹ thuật viên", "/work-orders");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Tôi xem phụ tùng và ghi vật tư dùng cho công việc được giao như thế nào?",
@@ -320,7 +320,7 @@ class AiHelpKnowledgeBaseTest {
         );
 
         assertThat(decision.allowed()).isTrue();
-        assertThat(decision.topic().route()).isEqualTo("/inventory");
+        assertThat(decision.topic().route()).isEqualTo("/work-orders");
         assertThat(decision.topic().answer())
                 .contains("Work Order được giao")
                 .contains("không nhập kho")
@@ -374,7 +374,8 @@ class AiHelpKnowledgeBaseTest {
                 .contains("Kiểm kê tồn kho")
                 .contains("Nhật ký hệ thống");
         assertThat(technicianKnowledge)
-                .contains("Phụ tùng cho công việc được giao")
+                .contains("Phụ tùng cho công việc được giao (/work-orders)")
+                .doesNotContain("Kho phụ tùng (/inventory)")
                 .doesNotContain("Tạo hoặc cập nhật tài khoản")
                 .doesNotContain("Dùng Sửa ngưỡng");
         assertThat(warehouseKnowledge)
@@ -402,6 +403,35 @@ class AiHelpKnowledgeBaseTest {
                 .contains("không sửa số lượng")
                 .contains("ISSUE")
                 .contains("Không thể cấp");
+    }
+
+    @Test
+    void dispatcherCustomerAssetQuestionStaysInOperationalContextInsteadOfMasterDataMenu() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi cần xem khách hàng, thiết bị và serial để điều phối kỹ thuật viên",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/work-orders");
+        assertThat(decision.topic().answer())
+                .contains("không phải workspace quản lý dữ liệu chính")
+                .contains("Phiếu công việc");
+    }
+
+    @Test
+    void dispatcherAuditQuestionIsOutsideRoleScope() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/work-orders");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi mở Nhật ký hệ thống audit để xem toàn bộ thay đổi ở đâu?",
+                context
+        );
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.refusalReason()).contains("ngoài phạm vi");
     }
 
     @Test

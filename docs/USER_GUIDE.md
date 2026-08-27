@@ -3,13 +3,23 @@
 ## 1. Chọn tài khoản theo vai trò
 
 - `owner`: quản trị tổng thể các module được cấp: người dùng, Customer/Asset, Service Request, kênh, Work Order/điều phối, đội kỹ thuật, kho/kiểm kê/lịch sử biến động và audit; chỉ giám sát yêu cầu/vật tư, không giả lập thao tác hiện trường hoặc xác nhận hàng ra/vào kho thay role nghiệp vụ.
-- `dispatcher`: quản lý bảng điều phối tuần, gán kỹ thuật viên và xếp lịch work order.
+- `dispatcher`: quản lý Work Order, đội ngũ kỹ thuật, phân công/xếp lịch và lịch sử nghiệp vụ điều phối; không có quyền Nhật ký hệ thống.
 - `customer-service`: tạo khách hàng, thiết bị và yêu cầu dịch vụ.
-- `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch và công việc được giao cho chính mình.
+- `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch/công việc được giao và thao tác phụ tùng ngay trong Work Order, không có workspace Kho phụ tùng riêng.
 - `technician-2`: tài khoản cá nhân của Võ Hoàng; dùng để kiểm tra dữ liệu lịch không bị lẫn giữa kỹ thuật viên.
 - `warehouse`: vào thẳng **Yêu cầu phụ tùng**; xác nhận cấp/không thể cấp, quản lý catalog/import, kiểm kê, nhận hoàn trả và tra cứu lịch sử biến động; không có Work Order operational dashboard.
 
 Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`. Đây chỉ là credential demo; production secrets phải được cấu hình riêng.
+
+
+## 1.1. Điều hướng theo vai trò
+
+- `OWNER`: **Vận hành** → **Khách hàng & nguồn lực** → **Kho & vật tư** → **Quản trị**. Owner nhìn rộng toàn hệ thống nhưng các action chuyên môn vẫn thuộc đúng role.
+- `CUSTOMER_SERVICE`: **Công việc** (Tổng quan, Yêu cầu dịch vụ, Phiếu công việc, Xử lý thanh toán, Lịch sử phiếu) + **Khách hàng** (Khách hàng, Thiết bị, Kênh tiếp nhận).
+- `DISPATCHER`: **Điều phối** (Tổng quan, Phiếu công việc, Lịch điều phối, Lịch sử phiếu) + **Nguồn lực** (Kỹ thuật viên). Customer/Asset chỉ là dữ liệu đọc hỗ trợ trong nghiệp vụ, không phải workspace chính; Audit là Owner-only.
+- `TECHNICIAN`: **Công việc của tôi** (Tổng quan, Lịch của tôi, Phiếu công việc, Lịch sử phiếu). Tìm/request phụ tùng ngay trong Work Order thay vì mở Kho phụ tùng.
+- `WAREHOUSE_STAFF`: **Kho & vật tư** (Yêu cầu phụ tùng, Kho phụ tùng, Kiểm kê tồn kho, Lịch sử biến động), trong đó Yêu cầu phụ tùng là queue ưu tiên.
+- Menu điều hướng cuộn độc lập; **Đăng xuất** nằm ở footer cố định và không che item cuối. **Thiết lập thanh toán** nằm trong Quản trị của Owner, không nằm cạnh footer tài khoản.
 
 ## 2. Kịch bản demo chuẩn
 
@@ -70,7 +80,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 
 - Phản hồi biểu mẫu: các trường bắt buộc có dấu đánh dấu. Nếu bấm Lưu/Hoàn thành khi còn thiếu dữ liệu, hệ thống không gửi request; form cuộn tới lỗi đầu tiên và hiển thị cảnh báo ngắn để biết cần bổ sung gì. Các nút xác nhận dùng tên hành động cụ thể thay cho “Đồng ý” ở các flow chính.
 - Hoàn thành Work Order: kỹ thuật viên phải nhập **Chẩn đoán / nguyên nhân** và **Giải pháp đã thực hiện**. Sau đó Technician ghi actual-used/chi phí, ghi nhận khách xác nhận và phương thức thanh toán tại hiện trường; CSKH mới đối soát tiền, phát hành biên nhận và đóng phiếu. Owner giám sát outcome thay vì thao tác routine.
-- Notification drawer là hàng đợi **việc cần chú ý**, không phải lịch sử CRUD. Title cho biết việc gì + mã `WO-...`/SKU; body cho biết **ai vừa thao tác, đang nói tới khách hàng/công việc/phụ tùng nào và cần làm gì tiếp theo**. Ví dụ Dispatcher thấy **Cần phân công kỹ thuật viên: WO-...** kèm summary + tên khách và hướng dẫn mở Lịch điều phối; Technician thấy **Bạn có công việc mới: WO-...** kèm người giao, khách hàng và hướng dẫn mở Lịch của tôi. CRUD/master-data/import/attachment bình thường không tạo chuông. Tiến độ một Work Order xem ở **Tiến trình**, ledger kho xem ở **Lịch sử biến động**, truy vết toàn hệ thống xem ở **Audit**.
+- Notification drawer là hàng đợi **việc cần chú ý**, không phải lịch sử CRUD. Title cho biết việc gì + mã `WO-...`/SKU; body cho biết **ai vừa thao tác, đang nói tới khách hàng/công việc/phụ tùng nào và cần làm gì tiếp theo**. Ví dụ Dispatcher thấy **Cần phân công kỹ thuật viên: WO-...** kèm summary + tên khách và hướng dẫn mở Lịch điều phối; Technician thấy **Bạn có công việc mới: WO-...** kèm người giao, khách hàng và hướng dẫn mở Lịch của tôi. CRUD/master-data/import/attachment bình thường không tạo chuông. Tiến độ một Work Order xem ở **Tiến trình**, ledger kho xem ở **Lịch sử biến động**, truy vết toàn hệ thống xem ở **Audit** (Owner-only).
 - Bấm biểu tượng chuông để xem; thông báo chưa đọc có nền nổi bật. Bấm dòng chưa đọc để chuyển sang đã đọc. Mỗi dòng có nút trạng thái ở ngoài cùng bên phải để chuyển Đã đọc ↔ Chưa đọc; dùng Đánh dấu chưa đọc khi cần giữ một thông báo để theo dõi lại.
 - Work order phải đi đúng vòng đời; không thể nhảy trạng thái tùy ý.
 - Work order đã đóng hoặc hủy không được tạo yêu cầu mới/cấp mới/chỉnh actual-used; Warehouse vẫn có thể nhận RETURN phần outstanding hợp lệ sau CLOSED.

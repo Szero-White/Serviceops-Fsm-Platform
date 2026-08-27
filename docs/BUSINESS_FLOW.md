@@ -100,7 +100,7 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 ## 5. Quyền thao tác
 
 - `OWNER`: quản trị tài khoản/cấu hình và có quyền quản lý trên các module nghiệp vụ dành cho Owner: Customer/Asset, Service Request (kể cả chuyển sang Work Order), Channel, điều phối, kỹ thuật viên, kho/kiểm kê/lịch sử biến động, Work Order history và audit. Trong Work Order, Owner là admin override cho điều phối và hậu xử lý nhưng không giả lập field progress hoặc xác nhận vật tư/actual-used thay role nghiệp vụ.
-- `DISPATCHER`: Customer/Asset read-only; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation; xem lịch sử/audit. Không tiếp nhận Service Request hoặc xác nhận/đóng phiếu.
+- `DISPATCHER`: Customer/Asset read-only để lấy ngữ cảnh điều phối; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation và lịch sử phiếu. Không tiếp nhận Service Request, không xem Audit toàn hệ thống hoặc xác nhận/đóng phiếu.
 - `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
 - `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; tạo/sửa/hủy yêu cầu phụ tùng, ghi actual-used, billing draft và ghi nhận khách xác nhận tại hiện trường.
 - `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
@@ -117,7 +117,7 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 
 ## 7. Workspace theo vai trò
 
-- Owner/Dispatcher dùng **Lịch điều phối**.
+- Owner/Dispatcher dùng **Lịch điều phối**. Dispatcher không có menu Customer/Asset riêng dù backend vẫn cho đọc dữ liệu nền cần thiết; ngữ cảnh chính được xem từ Work Order. **Nhật ký hệ thống** là workspace quản trị của Owner.
 - Technician dùng **Lịch của tôi**; backend suy ra `TechnicianProfile` từ JWT `userId`, client không gửi `technicianId`.
 - Warehouse đăng nhập/điều hướng mặc định vào **Yêu cầu phụ tùng** (`/part-requests`) để xử lý request đang chờ; Kho phụ tùng/kiểm kê/lịch sử biến động là các workspace kho kế tiếp. Warehouse không vào operational dashboard.
 - Hai Technician cùng role vẫn là hai identity riêng; role quyết định quyền, `UserAccount` quyết định ownership/audit accountability.
@@ -130,7 +130,7 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 
 - Role của AI Help được backend suy ra từ JWT; client không được tự chọn role để mở rộng phạm vi hướng dẫn.
 - Câu hỏi tổng quát như “Tôi được làm gì?” trả overview đúng workspace của role hiện tại. OWNER được mô tả toàn bộ phạm vi quản trị; các role khác chỉ nhận hướng dẫn thuộc trách nhiệm được cấp.
-- Knowledge base tách nghiệp vụ dễ nhầm quyền: Dispatcher có điều phối/reschedule nhưng không User Management/Service Request intake/kho; Customer Service có intake/convert/follow-up nhưng không điều phối/accept/close; Technician chỉ job được giao/My Schedule/phụ tùng cho job, không quản trị kho; Warehouse không có operational Work Order/dashboard.
+- Knowledge base tách nghiệp vụ dễ nhầm quyền: Dispatcher có điều phối/reschedule nhưng không User Management/Service Request intake/kho; Customer Service có intake/convert/follow-up nhưng không điều phối/accept/close; Technician chỉ job được giao/My Schedule/phụ tùng ngay trong Work Order, không có workspace Kho phụ tùng và không quản trị kho; Warehouse không có operational Work Order/dashboard.
 - AI chỉ hướng dẫn thao tác; không đọc runtime database và không tự thực hiện mutation.
 
 ## 8. Chính sách phản hồi người dùng và notification

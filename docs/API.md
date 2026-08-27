@@ -194,7 +194,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Audit
 
-- `GET /audit-logs?page={n}&size={n}&q={keyword}&actor={username}&action={action}&entityType={type}&from={ISO-8601}&to={ISO-8601}` — OWNER / DISPATCHER.
+- `GET /audit-logs?page={n}&size={n}&q={keyword}&actor={username}&action={action}&entityType={type}&from={ISO-8601}&to={ISO-8601}` — OWNER only.
 
 ## Notifications
 

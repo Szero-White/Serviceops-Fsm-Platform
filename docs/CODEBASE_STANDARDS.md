@@ -84,6 +84,13 @@ Complex drawers, dialogs, tables and role rules should live in focused feature f
 
 Domain contracts are separated by area under `src/types/`. `src/types/index.ts` is only a stable public barrel and must not become a monolithic type declaration file.
 
+### Navigation and authorization
+
+- `router/routeAccess.ts` defines frontend route availability; backend `@PreAuthorize`/service guards remain the real security boundary.
+- `navigation/navigationConfig.tsx` defines role-focused sidebar grouping/order only. It may intentionally hide auxiliary read-only routes from the main menu, but it must never grant access that `routeAccess` or the backend denies.
+- Sidebar labels should describe the user's task/workspace, not database/module names. Keep the navigation registry centralized instead of duplicating role menus inside layout components.
+- AI Help and E2E role contracts must be updated whenever a role workspace or navigation label changes.
+
 ### UI consistency
 
 Operational pages should use the shared application language:

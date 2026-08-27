@@ -14,13 +14,13 @@ export const ROUTE_ACCESS: Record<string, readonly UserRole[]> = {
   '/my-schedule': ['TECHNICIAN'],
   '/work-order-history': ['OWNER', 'DISPATCHER', 'CUSTOMER_SERVICE', 'TECHNICIAN'],
   '/technicians': ['OWNER', 'DISPATCHER'],
-  '/inventory': ['OWNER', 'WAREHOUSE_STAFF', 'TECHNICIAN'],
+  '/inventory': ['OWNER', 'WAREHOUSE_STAFF'],
   '/part-requests': ['OWNER', 'WAREHOUSE_STAFF'],
   '/payments': ['OWNER', 'CUSTOMER_SERVICE'],
   '/payment-settings': ['OWNER'],
   '/inventory-stocktake': ['OWNER', 'WAREHOUSE_STAFF'],
   '/inventory-movements': ['OWNER', 'WAREHOUSE_STAFF'],
-  '/audit': ['OWNER', 'DISPATCHER'],
+  '/audit': ['OWNER'],
 }
 
 export function canAccessRoute(role: UserRole | undefined, path: string) {

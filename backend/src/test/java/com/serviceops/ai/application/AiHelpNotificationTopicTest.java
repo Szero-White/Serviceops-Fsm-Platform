@@ -30,34 +30,47 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("kết quả cuối của Work Order")
-                .contains("đóng/hủy")
-                .contains("kiểm kê có chênh lệch")
-                .contains("tránh spam")
-                .contains("Timeline/Audit");
+                .contains("CLOSED/CANCELLED")
+                .contains("chênh lệch kiểm kê")
+                .contains("không nhận routine")
+                .contains("Audit");
     }
 
     @Test
-    void notificationGuidanceExplainsRoleRelevantQueuesInsteadOfRoutineCrudSpam() {
+    void dispatcherNotificationGuidanceOnlyDescribesDispatcherAttentionQueue() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
-                "Thông báo của từng vai trò dùng để làm gì?",
+                "Thông báo của tôi dùng để làm gì?",
                 context
         );
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("Cần phân công kỹ thuật viên")
-                .contains("Cần theo dõi khách sau sửa chữa")
-                .contains("Bạn có công việc mới")
-                .contains("Có yêu cầu phụ tùng mới")
-                .contains("Yêu cầu phụ tùng")
-                .contains("cảnh báo tồn kho")
-                .contains("CRUD thường ngày")
-                .contains("khách hàng")
-                .contains("người thực hiện")
-                .contains("tránh spam");
+                .contains("cần phân công")
+                .contains("chờ phụ tùng")
+                .contains("quá hạn")
+                .doesNotContain("Xử lý thanh toán")
+                .doesNotContain("yêu cầu phụ tùng mới");
+    }
+
+    @Test
+    void warehouseNotificationGuidanceDoesNotLeakOtherRoleTasks() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi sẽ nhận thông báo gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
+        assertThat(decision.topic().answer())
+                .contains("yêu cầu phụ tùng mới")
+                .contains("tồn thấp")
+                .contains("không nhận notification về")
+                .doesNotContain("SETTLED")
+                .doesNotContain("phát hành biên nhận");
     }
 
 }

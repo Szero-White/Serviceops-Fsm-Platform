@@ -37,10 +37,34 @@ export const ROUTES: Record<string, string> = {
 
 export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
   owner: ['/', '/users', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/part-requests', '/inventory', '/inventory-stocktake', '/inventory-movements', '/payments', '/payment-settings', '/audit'],
-  dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians', '/audit'],
+  dispatcher: ['/', '/customers', '/assets', '/work-orders', '/schedule', '/work-order-history', '/technicians'],
   'customer-service': ['/', '/customers', '/assets', '/service-requests', '/service-channels', '/work-orders', '/work-order-history', '/payments'],
-  technician: ['/', '/work-orders', '/my-schedule', '/work-order-history', '/inventory'],
+  technician: ['/', '/work-orders', '/my-schedule', '/work-order-history'],
   warehouse: ['/part-requests', '/inventory', '/inventory-stocktake', '/inventory-movements'],
+}
+
+
+export const SIDEBAR_NAVIGATION: Record<DemoUser, { sections: string[]; items: string[] }> = {
+  owner: {
+    sections: ['Vận hành', 'Khách hàng & nguồn lực', 'Kho & vật tư', 'Quản trị'],
+    items: ['Tổng quan', 'Yêu cầu dịch vụ', 'Phiếu công việc', 'Lịch điều phối', 'Lịch sử phiếu', 'Xử lý thanh toán', 'Khách hàng', 'Thiết bị', 'Kênh tiếp nhận', 'Kỹ thuật viên', 'Yêu cầu phụ tùng', 'Kho phụ tùng', 'Kiểm kê tồn kho', 'Lịch sử biến động', 'Người dùng', 'Nhật ký hệ thống', 'Thiết lập thanh toán'],
+  },
+  dispatcher: {
+    sections: ['Điều phối', 'Nguồn lực'],
+    items: ['Tổng quan', 'Phiếu công việc', 'Lịch điều phối', 'Lịch sử phiếu', 'Kỹ thuật viên'],
+  },
+  'customer-service': {
+    sections: ['Công việc', 'Khách hàng'],
+    items: ['Tổng quan', 'Yêu cầu dịch vụ', 'Phiếu công việc', 'Xử lý thanh toán', 'Lịch sử phiếu', 'Khách hàng', 'Thiết bị', 'Kênh tiếp nhận'],
+  },
+  technician: {
+    sections: ['Công việc của tôi'],
+    items: ['Tổng quan', 'Lịch của tôi', 'Phiếu công việc', 'Lịch sử phiếu'],
+  },
+  warehouse: {
+    sections: ['Kho & vật tư'],
+    items: ['Yêu cầu phụ tùng', 'Kho phụ tùng', 'Kiểm kê tồn kho', 'Lịch sử biến động'],
+  },
 }
 
 export function dashboardHeading(username: DemoUser) {

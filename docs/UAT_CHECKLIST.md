@@ -21,6 +21,10 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | RBAC-11 | Dispatcher thử xóa/ẩn Work Order khỏi history | UI không có action; backend DELETE trả 403; Owner-only archive |
 | RBAC-12 | Owner mở Work Order `COMPLETED`/`CUSTOMER_ACCEPTED` | Chỉ giám sát; không có action khách xác nhận, settlement hoặc normal closure thay role phụ trách |
 | RBAC-13 | Customer Service gọi generic transition `CUSTOMER_ACCEPTED`/`CLOSED` | HTTP 403 `WORK_ORDER_TRANSITION_FORBIDDEN`; acceptance và close dùng dedicated workflow. Sau `SETTLED`, CSKH dùng action `close` riêng |
+| RBAC-14 | Dispatcher mở trực tiếp `/audit` hoặc gọi API audit | Frontend điều hướng về dashboard; backend trả 403. Dispatcher dùng Lịch sử phiếu/Timeline cho truy vết nghiệp vụ điều phối; Audit toàn hệ thống là Owner-only |
+| RBAC-15 | Technician mở trực tiếp `/inventory` | Frontend điều hướng về dashboard; KTV vẫn tìm/request phụ tùng từ tab Phụ tùng của Work Order được giao |
+| NAV-01 | Đăng nhập từng role và đọc sidebar | Section/item đúng workflow của role; không xuất hiện menu ngoài nhiệm vụ chính; Owner vẫn thấy đủ 4 nhóm Vận hành / Khách hàng & nguồn lực / Kho & vật tư / Quản trị |
+| NAV-02 | Owner cuộn sidebar đến cuối ở màn hình thấp | Menu cuộn riêng; **Thiết lập thanh toán** không bị footer che; **Đăng xuất** luôn nằm riêng ở footer |
 | DEMO-01 | Owner/Dispatcher mở Kỹ thuật viên ở public demo | Seeded technician hiển thị “Demo cố định” và nút sửa bị khóa; user tự tạo vẫn chỉnh được |
 | TENANT-01 | Truy cập ID không thuộc tenant | Không trả dữ liệu |
 | CUS-01 | Tạo khách hàng hợp lệ | Khách hàng xuất hiện trong danh sách |
@@ -80,7 +84,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | FILE-07 | Technician tải ảnh payment evidence nhưng chưa báo chuyển khoản | Có thể chụp lại/bỏ ảnh nháp; ảnh không xuất hiện lẫn trong tab **Hình ảnh & tài liệu** |
 | FILE-08 | Technician báo chuyển khoản với payment evidence rồi thử rename/delete attachment đó | Payment → `TRANSFER_PENDING_VERIFICATION`; evidence bị lock và API chặn rename/delete |
 | AUD-01 | Thực hiện thao tác quan trọng | Có audit log tương ứng |
-| AUD-02 | Mở Nhật ký hệ thống | Mặc định 30 ngày gần nhất, 20 dòng/trang, mới nhất trước |
+| AUD-02 | Owner mở Nhật ký hệ thống | Mặc định 30 ngày gần nhất, 20 dòng/trang, mới nhất trước; role khác không có quyền truy cập |
 | AUD-03 | Lọc theo ngày / người thao tác / hành động / đối tượng | Backend chỉ trả dữ liệu phù hợp và tổng số bản ghi đúng |
 | AUD-04 | Tìm theo nội dung hoặc mã nghiệp vụ có trong chi tiết audit | Kết quả phù hợp, đổi bộ lọc quay về trang đầu |
 | SEARCH-01 | Tìm ở Khách hàng / Thiết bị / Yêu cầu / Phiếu / Lịch sử / Kho | Chờ debounce ngắn, backend trả đúng kết quả và tổng số bản ghi; không tải toàn bộ danh sách về browser |
@@ -120,7 +124,9 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | NOTIF-02 | Làm API Mark Read/Unread lỗi | Hiện thông báo lỗi; nút không bị treo; trạng thái hiển thị không giả vờ đã đổi |
 | AI-01 | Mỗi role hỏi “Trong vai trò này tôi được làm những gì?” | AI trả overview đúng role lấy từ backend/JWT; OWNER thấy phạm vi quản trị rộng, các role khác chỉ thấy chức năng được giao |
 | AI-02 | Warehouse hỏi về yêu cầu phụ tùng, kiểm kê, lịch sử biến động và hoàn trả | AI đưa part request tới `/part-requests`, các câu kiểm kê/lịch sử tới `/inventory-stocktake` hoặc `/inventory-movements`; nêu rõ Warehouse không sửa requested quantity và không gợi ý operational dashboard |
-| AI-03 | Dispatcher hỏi quản trị user/kho hoặc Technician hỏi sửa ngưỡng/kiểm kê | AI từ chối là ngoài phạm vi thay vì hướng dẫn thao tác của role khác |
+| AI-03 | Dispatcher hỏi quản trị user/kho/audit hoặc Technician hỏi sửa ngưỡng/kiểm kê | AI từ chối là ngoài phạm vi thay vì hướng dẫn thao tác của role khác |
+| AI-03A | Technician hỏi phụ tùng cho job được giao | AI hướng dẫn thao tác trong Work Order/tab Phụ tùng và không điều hướng sang `/inventory` |
+| AI-03B | Mỗi role hỏi về thông báo của mình | AI chỉ mô tả attention queue của role hiện tại, không hướng dẫn action của role khác |
 | AI-04 | Dispatcher hỏi điều phối lại kỹ thuật viên trước khi bắt đầu | AI hướng dẫn reason + notification/timeline và nêu rõ không reschedule khi WO đã `ON_THE_WAY`/`IN_PROGRESS` |
 | AI-05 | Customer Service hỏi chung về hậu xử lý | AI hướng dẫn payment reconciliation → biên nhận → close; không khẳng định CS được ghi nhận khách xác nhận tại hiện trường |
 | AI-06 | Owner hỏi cấu hình tài khoản/QR nhận tiền | AI điều hướng `/payment-settings`, nêu Owner cấu hình còn Technician chỉ xem read-only tại Work Order |

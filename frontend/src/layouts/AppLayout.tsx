@@ -1,27 +1,11 @@
 import {
-  AppstoreOutlined,
-  AuditOutlined,
   BellOutlined,
-  CalendarOutlined,
   CheckOutlined,
-  CustomerServiceOutlined,
-  DashboardOutlined,
-  DatabaseOutlined,
-  DollarOutlined,
-  BankOutlined,
-  ControlOutlined,
-  HistoryOutlined,
-  InboxOutlined,
-  ProfileOutlined,
-  ReconciliationOutlined,
   LogoutOutlined,
-  MenuFoldOutlined,
   MailOutlined,
+  MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
-  TeamOutlined,
-  ToolOutlined,
-  UserSwitchOutlined,
 } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Avatar, Badge, Button, Drawer, Dropdown, Empty, Layout, List, Menu, Pagination, Segmented, Space, Tooltip, Typography } from 'antd'
@@ -34,7 +18,7 @@ import { notificationDisplayText } from '../features/notifications/presentation'
 import { useAuth } from '../features/auth/AuthContext'
 import { AiHelpAssistant } from '../features/ai/components/AiHelpAssistant'
 import { formatDateTime } from '../utils/format'
-import { canAccessRoute } from '../router/routeAccess'
+import { navigationSectionsForRole } from '../navigation/navigationConfig'
 import { USER_ROLE_LABELS } from '../constants/userRoles'
 
 const { Header, Sider, Content } = Layout
@@ -82,57 +66,16 @@ export function AppLayout() {
     }
   }, [notificationPage, notifications])
 
-  const items = useMemo(() => {
-    const role = user?.role
-    const sections = [
-      {
-        key: 'operations',
-        label: 'Vận hành',
-        children: [
-          { key: '/', icon: <DashboardOutlined />, label: <Link to="/">Tổng quan</Link> },
-          { key: '/service-requests', icon: <CustomerServiceOutlined />, label: <Link to="/service-requests">Yêu cầu dịch vụ</Link> },
-          { key: '/work-orders', icon: <CalendarOutlined />, label: <Link to="/work-orders">Phiếu công việc</Link> },
-          { key: '/schedule', icon: <CalendarOutlined />, label: <Link to="/schedule">Lịch điều phối</Link> },
-          { key: '/my-schedule', icon: <CalendarOutlined />, label: <Link to="/my-schedule">Lịch của tôi</Link> },
-          { key: '/work-order-history', icon: <HistoryOutlined />, label: <Link to="/work-order-history">Lịch sử phiếu</Link> },
-          { key: '/part-requests', icon: <InboxOutlined />, label: <Link to="/part-requests">Yêu cầu phụ tùng</Link> },
-          { key: '/payments', icon: <DollarOutlined />, label: <Link to="/payments">Xử lý thanh toán</Link> },
-        ],
-      },
-      {
-        key: 'master-data',
-        label: 'Danh mục & nguồn lực',
-        children: [
-          { key: '/customers', icon: <TeamOutlined />, label: <Link to="/customers">Khách hàng</Link> },
-          { key: '/assets', icon: <AppstoreOutlined />, label: <Link to="/assets">Thiết bị</Link> },
-          { key: '/service-channels', icon: <ControlOutlined />, label: <Link to="/service-channels">Kênh tiếp nhận</Link> },
-          { key: '/technicians', icon: <ToolOutlined />, label: <Link to="/technicians">Kỹ thuật viên</Link> },
-          { key: '/inventory', icon: <DatabaseOutlined />, label: <Link to="/inventory">Kho phụ tùng</Link> },
-          { key: '/inventory-stocktake', icon: <ReconciliationOutlined />, label: <Link to="/inventory-stocktake">Kiểm kê tồn kho</Link> },
-          { key: '/inventory-movements', icon: <ProfileOutlined />, label: <Link to="/inventory-movements">Lịch sử biến động</Link> },
-        ],
-      },
-      {
-        key: 'governance',
-        label: 'Quản trị',
-        children: [
-          { key: '/audit', icon: <AuditOutlined />, label: <Link to="/audit">Nhật ký hệ thống</Link> },
-          { key: '/users', icon: <UserSwitchOutlined />, label: <Link to="/users">Người dùng</Link> },
-          { key: '/payment-settings', icon: <BankOutlined />, label: <Link to="/payment-settings">Tài khoản thanh toán</Link> },
-        ],
-      },
-    ]
-
-    return sections
-      .map((section) => ({
-        type: 'group' as const,
-        key: section.key,
-        label: section.label,
-        children: section.children
-          .filter((item) => canAccessRoute(role, item.key)),
-      }))
-      .filter((section) => section.children.length > 0)
-  }, [user?.role])
+  const items = useMemo(() => navigationSectionsForRole(user?.role).map((section) => ({
+    type: 'group' as const,
+    key: section.key,
+    label: section.label,
+    children: section.items.map((item) => ({
+      key: item.path,
+      icon: item.icon,
+      label: <Link to={item.path}>{item.label}</Link>,
+    })),
+  })), [user?.role])
 
   const selectedKey = location.pathname === '/' ? '/' : `/${location.pathname.split('/')[1]}`
   const refreshNotifications = async () => {
@@ -177,7 +120,7 @@ export function AppLayout() {
           )}
         </div>
 
-        <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} items={items} className="app-menu" />
+        <Menu aria-label="Điều hướng chính" theme="dark" mode="inline" selectedKeys={[selectedKey]} items={items} className="app-menu" />
 
         {!collapsed && (
           <div className="sider-footer">

@@ -88,6 +88,10 @@ final class AiHelpKnowledgeBase {
             return topicFormFeedback();
         }
 
+        if (isNotificationReadStateRequest(normalizedQuestion)) {
+            return notificationReadStateTopic(context.role());
+        }
+
         HelpTopic topic = TOPICS.stream()
                 .filter(item -> item.allowedRoles().contains(context.role()))
                 .max((left, right) -> Integer.compare(
@@ -155,7 +159,7 @@ final class AiHelpKnowledgeBase {
     private static String roleGuide(String role) {
         return switch (role) {
             case "OWNER" -> "Phạm vi OWNER: quản trị và giám sát toàn hệ thống trong các màn hình dành cho Owner. Owner quản lý người dùng, dữ liệu nền, điều phối, kho, audit và cấu hình tài khoản/QR thanh toán công ty; có thể xem payment/biên nhận để giám sát. Owner không ghi nhận khách xác nhận, không đối soát thanh toán, không đóng phiếu thay CSKH, không giả lập tiến độ hiện trường và không xác nhận hàng ra/vào kho thay đúng vai trò.";
-            case "DISPATCHER" -> "Phạm vi DISPATCHER: đọc dữ liệu khách hàng/thiết bị cần cho điều phối, theo dõi Work Order, phân công hoặc điều phối lại kỹ thuật viên/lịch trước khi field work bắt đầu, operational cancellation và audit. Không quản trị tài khoản, không tiếp nhận Service Request và không thao tác kho.";
+            case "DISPATCHER" -> "Phạm vi DISPATCHER: đọc ngữ cảnh khách hàng/thiết bị cần cho điều phối, theo dõi Work Order, phân công hoặc điều phối lại kỹ thuật viên/lịch trước khi field work bắt đầu và operational cancellation. Không quản trị tài khoản, không tiếp nhận Service Request, không xem nhật ký hệ thống và không thao tác kho.";
             case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, chuyển yêu cầu đủ thông tin sang Work Order và hậu xử lý dịch vụ. CSKH đối soát chuyển khoản/tiền mặt, phát hành biên nhận và đóng phiếu sau khi tiền đã về công ty; có thể mở lại hoặc hủy theo policy trước khi khách xác nhận. Không phân công kỹ thuật viên, không ghi nhận khách xác nhận tại hiện trường và không quản trị kho/người dùng.";
             case "TECHNICIAN" -> "Phạm vi TECHNICIAN: chỉ Work Order được giao, Lịch của tôi, tiến độ/chẩn đoán/giải pháp, bằng chứng, yêu cầu phụ tùng và actual-used cho chính job. Sau COMPLETED, kỹ thuật viên ghi nhận khách xác nhận, chi phí thực tế và phương thức khách đã thanh toán tại hiện trường; không đối soát tiền, không phát hành biên nhận và không đóng/mở lại phiếu. Không quản trị người dùng, khách hàng, điều phối hoặc nghiệp vụ quản trị kho.";
             case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: ưu tiên xử lý hàng đợi Yêu cầu phụ tùng do kỹ thuật viên gửi, xác nhận ISSUE thực tế hoặc Không thể cấp; đồng thời quản lý danh mục phụ tùng, nhập kho, ngưỡng tồn, kiểm kê/điều chỉnh, hoàn trả và lịch sử biến động. Không sửa số lượng kỹ thuật viên đã yêu cầu, không thao tác Work Order hiện trường, Customer/Asset, User Management hoặc dashboard vận hành.";
@@ -183,7 +187,7 @@ final class AiHelpKnowledgeBase {
                     List.of("DISPATCHER"),
                     List.of(),
                     "Bạn tập trung vào Work Order đã chuyển sang điều phối: xem dữ liệu liên quan, phân công kỹ thuật viên, xếp lịch hoặc điều phối lại trước khi công việc bắt đầu, theo dõi lịch và xử lý hủy vận hành khi cần. Bạn không quản trị tài khoản, không tiếp nhận Service Request và không thao tác kho.",
-                    List.of("Mở Phiếu công việc để xem hàng việc", "Mở Lịch điều phối để phân công hoặc điều phối lại", "Kiểm tra đội ngũ kỹ thuật trước khi chọn người", "Dùng Nhật ký hệ thống khi cần truy vết thay đổi")
+                    List.of("Mở Phiếu công việc để xem hàng việc", "Mở Lịch điều phối để phân công hoặc điều phối lại", "Kiểm tra đội ngũ kỹ thuật trước khi chọn người", "Mở Lịch sử phiếu hoặc tab Tiến trình khi cần truy vết nghiệp vụ điều phối")
             );
             case "CUSTOMER_SERVICE" -> new HelpTopic(
                     "Phạm vi Chăm sóc khách hàng",
@@ -365,11 +369,12 @@ final class AiHelpKnowledgeBase {
     }
 
     private static final List<HelpTopic> TOPICS = List.of(
-            topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicWorkOrders(), topicDispatch(),
+            topicDashboard(), topicServiceRequests(), topicCustomers(), topicAssets(), topicDispatcherCustomerAssetContext(), topicWorkOrders(), topicDispatch(),
             topicTechnicianWork(), topicTechnicianParts(), topicTechnicianPayment(), topicMySchedule(), topicTechnicians(), topicPartRequests(),
             topicInventory(), topicInventoryStocktake(), topicInventoryMovements(), topicInventoryReturns(), topicPayments(),
             topicPaymentSettings(), topicWorkOrderHistory(), topicChannelsManage(), topicChannelsReadOnly(), topicUsers(),
-            topicAudit(), topicFormFeedback(), topicNotifications()
+            topicAudit(), topicFormFeedback(), topicOwnerNotifications(), topicDispatcherNotifications(),
+            topicCustomerServiceNotifications(), topicTechnicianNotifications(), topicWarehouseNotifications()
     );
 
     private static HelpTopic topicDashboard() {
@@ -387,17 +392,25 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicCustomers() {
-        return new HelpTopic("Khách hàng", "/customers", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE"),
+        return new HelpTopic("Khách hàng", "/customers", List.of("OWNER", "CUSTOMER_SERVICE"),
                 List.of("khach hang", "tao khach", "so dien thoai", "dia chi", "customer", "ho so khach"),
                 "Dùng để quản lý hồ sơ khách hàng và dữ liệu nền cho thiết bị/yêu cầu theo quyền của vai trò.",
                 List.of("Mở menu Khách hàng", "Tìm khách hàng cần xử lý", "Nếu giao diện cho phép, bấm Thêm khách hàng", "Nhập thông tin cần thiết", "Lưu hồ sơ rồi tiếp tục với thiết bị hoặc yêu cầu dịch vụ"));
     }
 
     private static HelpTopic topicAssets() {
-        return new HelpTopic("Thiết bị", "/assets", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE"),
+        return new HelpTopic("Thiết bị", "/assets", List.of("OWNER", "CUSTOMER_SERVICE"),
                 List.of("thiet bi", "serial", "bao hanh", "may lanh", "tu lanh", "asset", "model"),
                 "Dùng để theo dõi thiết bị theo khách hàng, serial, bảo hành và trạng thái phục vụ.",
                 List.of("Mở menu Thiết bị", "Tìm thiết bị theo khách hàng hoặc serial", "Nếu giao diện cho phép, bấm Thêm thiết bị", "Nhập thông tin thiết bị và bảo hành", "Lưu để dùng khi tiếp nhận yêu cầu hoặc tạo phiếu"));
+    }
+
+
+    private static HelpTopic topicDispatcherCustomerAssetContext() {
+        return new HelpTopic("Ngữ cảnh khách hàng và thiết bị khi điều phối", "/work-orders", List.of("DISPATCHER"),
+                List.of("khach hang", "thiet bi", "serial", "dia chi", "customer", "asset"),
+                "Điều phối viên được đọc thông tin khách hàng/thiết bị cần thiết để phân công đúng Work Order, nhưng đây không phải workspace quản lý dữ liệu chính của Dispatcher. Hãy xem ngữ cảnh khách hàng và thiết bị ngay trong Phiếu công việc; việc tạo/sửa hồ sơ thuộc Owner hoặc Chăm sóc khách hàng.",
+                List.of("Mở Phiếu công việc", "Chọn phiếu cần điều phối", "Kiểm tra khách hàng, thiết bị và địa chỉ phục vụ", "Mở Lịch điều phối để chọn kỹ thuật viên và thời gian phù hợp"));
     }
 
     private static HelpTopic topicWorkOrders() {
@@ -422,7 +435,7 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicTechnicianParts() {
-        return new HelpTopic("Phụ tùng cho công việc được giao", "/inventory", List.of("TECHNICIAN"),
+        return new HelpTopic("Phụ tùng cho công việc được giao", "/work-orders", List.of("TECHNICIAN"),
                 List.of("phu tung", "ton kho", "inventory", "sku", "yeu cau phu tung", "cap phu tung", "vat tu"),
                 "Kỹ thuật viên được xem danh mục phụ tùng và tạo yêu cầu từ Work Order được giao khi trạng thái cho phép. Yêu cầu không làm giảm tồn; Warehouse xác nhận cấp thực tế mới tạo ISSUE và trừ kho. Sau khi nhận, kỹ thuật viên ghi số lượng thực tế đã dùng. Kỹ thuật viên không nhập kho, không sửa ngưỡng tồn, không kiểm kê/điều chỉnh và không hoàn trả thay Warehouse.",
                 List.of("Mở Work Order được giao", "Mở tab Phụ tùng", "Tạo Yêu cầu phụ tùng và nhập số lượng/mục đích", "Sửa hoặc hủy yêu cầu nếu cần trước khi kho cấp", "Sau khi Warehouse xác nhận cấp, ghi số lượng thực tế đã dùng"));
@@ -492,10 +505,10 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicPaymentSettings() {
-        return new HelpTopic("Tài khoản nhận thanh toán", "/payment-settings", List.of("OWNER"),
+        return new HelpTopic("Thiết lập thanh toán", "/payment-settings", List.of("OWNER"),
                 List.of("tai khoan thanh toan", "tai khoan ngan hang", "ngan hang cong ty", "qr cong ty", "payment settings", "bank account", "bank qr"),
                 "Chỉ Chủ sở hữu cấu hình tài khoản ngân hàng và QR nhận tiền của công ty. Đây là thông tin kỹ thuật viên chỉ được xem trong Work Order để hướng dẫn khách chuyển khoản; kỹ thuật viên, CSKH và các vai trò khác không được tự thay đổi tài khoản nhận tiền.",
-                List.of("Mở Tài khoản thanh toán", "Nhập ngân hàng, chủ tài khoản và số tài khoản của công ty", "Gắn QR công ty nếu có", "Lưu cấu hình", "Kiểm tra lại thông tin hiển thị cho kỹ thuật viên trước khi dùng tại hiện trường"));
+                List.of("Mở Thiết lập thanh toán", "Nhập ngân hàng, chủ tài khoản và số tài khoản của công ty", "Gắn QR công ty nếu có", "Lưu cấu hình", "Kiểm tra lại thông tin hiển thị cho kỹ thuật viên trước khi dùng tại hiện trường"));
     }
 
     private static HelpTopic topicWorkOrderHistory() {
@@ -532,7 +545,7 @@ final class AiHelpKnowledgeBase {
     }
 
     private static HelpTopic topicAudit() {
-        return new HelpTopic("Nhật ký hệ thống", "/audit", List.of("OWNER", "DISPATCHER"),
+        return new HelpTopic("Nhật ký hệ thống", "/audit", List.of("OWNER"),
                 List.of("nhat ky", "audit", "ai da sua", "ai sua", "lich su thay doi", "truy vet"),
                 "Dùng để truy vết hoạt động hệ thống trong phạm vi vai trò được phép xem.",
                 List.of("Mở menu Nhật ký hệ thống", "Lọc theo thời gian, người thao tác hoặc đối tượng", "Mở bản ghi liên quan", "Đối chiếu khi cần rà soát thay đổi bất thường"));
@@ -545,11 +558,64 @@ final class AiHelpKnowledgeBase {
                 List.of("Đọc cảnh báo vừa hiện", "Tìm trường có dấu bắt buộc hoặc viền lỗi", "Bổ sung dữ liệu theo thông báo", "Bấm lại nút hành động có tên cụ thể như Hoàn thành công việc hoặc Lưu thay đổi", "Nếu là lỗi tải dữ liệu, bấm Thử lại hoặc kiểm tra backend"));
     }
 
-    private static HelpTopic topicNotifications() {
-        return new HelpTopic("Thông báo", "/", List.of("OWNER", "DISPATCHER", "CUSTOMER_SERVICE", "TECHNICIAN", "WAREHOUSE_STAFF"),
-                List.of("thong bao", "thong bao nao", "chuong thong bao", "notification", "bell notification", "chua doc", "da doc", "danh dau chua doc", "mark unread", "mark as unread", "bam nham da doc"),
-                "Mở biểu tượng chuông ở góc phải để xem các việc thực sự cần chú ý hoặc hành động. Dispatcher nhận “Cần phân công kỹ thuật viên”, “Phiếu đang chờ phụ tùng” và “Phiếu cần xử lý lại”; Customer Service nhận “Cần theo dõi khách sau sửa chữa”; Technician nhận “Bạn có công việc mới”, “Lịch của bạn đã thay đổi”, chuyển giao, mở lại, hủy hoặc đóng phiếu khi sự kiện do người khác thực hiện; Warehouse nhận “Có yêu cầu phụ tùng mới” để mở hàng đợi Yêu cầu phụ tùng và nhận cảnh báo tồn kho; Owner chỉ nhận kết quả cuối của Work Order (đóng/hủy) và ngoại lệ quản trị kiểm kê có chênh lệch. Mỗi notification Work Order phải cho biết mã phiếu, nội dung công việc, khách hàng và người thực hiện khi có hành động của người khác; reopen/cancel giữ lý do nghiệp vụ; body luôn nói bước tiếp theo. CRUD thường ngày, hồ sơ/danh mục, attachment, import và các bước tiến độ bình thường không tạo bell để tránh spam vì đã có workspace/Timeline/Audit. Các bell row routine cũ được migration dọn khỏi notification feed; actionable legacy còn lại được giao diện chuyển sang cách đọc thân thiện. Nếu lỡ đánh dấu một thông báo là đã đọc, bấm biểu tượng ở bên phải và chọn Đánh dấu chưa đọc.",
-                List.of("Đọc tiêu đề để biết việc cần chú ý", "Đọc dòng mô tả để biết bước tiếp theo", "Bấm một thông báo chưa đọc để đánh dấu đã đọc", "Nếu lỡ đánh dấu đã đọc, bấm nút ngoài cùng bên phải để chuyển lại Chưa đọc", "Dùng mã WO/SKU trong thông báo để tìm đúng phiếu hoặc phụ tùng khi cần"));
+    private static boolean isNotificationReadStateRequest(String normalizedQuestion) {
+        return containsAny(
+                normalizedQuestion,
+                "danh dau chua doc",
+                "danh dau lai chua doc",
+                "bam nham da doc",
+                "mark unread",
+                "mark as unread"
+        );
+    }
+
+    private static HelpTopic notificationReadStateTopic(String role) {
+        return new HelpTopic(
+                "Thông báo",
+                "/",
+                List.of(role),
+                List.of(),
+                "Nếu lỡ đánh dấu một thông báo đã đọc, bấm nút Đánh dấu chưa đọc ở cuối dòng để đưa nó về hàng chờ của bạn. Thao tác này chỉ thay đổi trạng thái đọc/chưa đọc, không thay đổi nghiệp vụ hoặc quyền của vai trò.",
+                List.of("Mở chuông thông báo", "Tìm thông báo đã lỡ đánh dấu đọc", "Bấm Đánh dấu chưa đọc", "Kiểm tra thông báo trở lại hàng chờ")
+        );
+    }
+
+    private static List<String> notificationKeywords() {
+        return List.of("thong bao", "thong bao nao", "chuong thong bao", "notification", "bell notification", "chua doc", "da doc", "danh dau chua doc", "mark unread", "mark as unread", "bam nham da doc");
+    }
+
+    private static List<String> notificationSteps() {
+        return List.of("Đọc tiêu đề để biết việc cần chú ý", "Đọc dòng mô tả để biết bước tiếp theo", "Bấm một thông báo chưa đọc để đánh dấu đã đọc", "Nếu lỡ đánh dấu đã đọc, bấm nút ngoài cùng bên phải để chuyển lại Chưa đọc", "Dùng mã WO/SKU trong thông báo để tìm đúng phiếu hoặc phụ tùng khi cần");
+    }
+
+    private static HelpTopic topicOwnerNotifications() {
+        return new HelpTopic("Thông báo", "/", List.of("OWNER"), notificationKeywords(),
+                "Chuông của Chủ sở hữu chỉ dành cho kết quả/ngoại lệ cần giám sát: Work Order đã CLOSED/CANCELLED và chênh lệch kiểm kê cần chú ý. Owner không nhận routine reopen, overdue, waiting-for-parts, part-request hoặc low-stock để tránh biến bell thành audit log; dùng Dashboard, Timeline, Audit và các workspace chuyên môn để xem chi tiết.",
+                notificationSteps());
+    }
+
+    private static HelpTopic topicDispatcherNotifications() {
+        return new HelpTopic("Thông báo", "/", List.of("DISPATCHER"), notificationKeywords(),
+                "Chuông của Điều phối viên tập trung vào việc cần điều phối: Work Order cần phân công, đang chờ phụ tùng, cần xử lý lại và lịch thực hiện đã quá hạn. Hãy mở Phiếu công việc hoặc Lịch điều phối để xử lý; CRUD khách hàng/thiết bị và audit hệ thống không phải notification queue của Dispatcher.",
+                notificationSteps());
+    }
+
+    private static HelpTopic topicCustomerServiceNotifications() {
+        return new HelpTopic("Thông báo", "/", List.of("CUSTOMER_SERVICE"), notificationKeywords(),
+                "Chuông của Chăm sóc khách hàng tập trung vào việc cần liên hệ/hậu xử lý khách: Work Order vừa hoàn thành, bị mở lại/hủy bởi vai trò khác hoặc quá hạn kéo dài qua grace period. Thanh toán chờ xác minh chủ yếu được xử lý trong hàng đợi Xử lý thanh toán thay vì spam bell.",
+                notificationSteps());
+    }
+
+    private static HelpTopic topicTechnicianNotifications() {
+        return new HelpTopic("Thông báo", "/", List.of("TECHNICIAN"), notificationKeywords(),
+                "Chuông của Kỹ thuật viên chỉ nhắc các công việc được giao cho chính mình: phân công mới, đổi lịch/chuyển giao, mở lại, hủy, đóng hoặc quá lịch. Kỹ thuật viên không nhận cảnh báo quản trị kho, đối soát thanh toán hoặc quản trị người dùng.",
+                notificationSteps());
+    }
+
+    private static HelpTopic topicWarehouseNotifications() {
+        return new HelpTopic("Thông báo", "/part-requests", List.of("WAREHOUSE_STAFF"), notificationKeywords(),
+                "Chuông của Nhân viên kho tập trung vào yêu cầu phụ tùng mới cần xử lý và cảnh báo tồn thấp. Yêu cầu mới được xử lý tại Yêu cầu phụ tùng; kiểm kê và lịch sử stock nằm trong workspace Kho & vật tư. Warehouse không nhận notification về tiến độ Work Order, đối soát thanh toán hoặc quản trị người dùng.",
+                notificationSteps());
     }
 
     record UserGuideContext(String role, String roleLabel, String currentPath) {
