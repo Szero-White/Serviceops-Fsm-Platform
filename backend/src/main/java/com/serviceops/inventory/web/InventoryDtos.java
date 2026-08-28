@@ -75,6 +75,8 @@ public final class InventoryDtos {
             String workOrderSummary,
             String note,
             String createdBy,
+            UUID recipientUserId,
+            String recipientDisplayName,
             String actorDisplayName,
             String actorRole,
             Instant createdAt

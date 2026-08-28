@@ -29,6 +29,8 @@ export interface InventoryTransaction {
   workOrderSummary?: string
   note?: string
   createdBy: string
+  recipientUserId?: string
+  recipientDisplayName?: string
   actorDisplayName?: string
   actorRole?: UserRole | 'SYSTEM'
   createdAt: string

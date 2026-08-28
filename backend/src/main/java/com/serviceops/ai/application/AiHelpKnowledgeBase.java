@@ -486,8 +486,8 @@ final class AiHelpKnowledgeBase {
     private static HelpTopic topicInventoryMovements() {
         return new HelpTopic("Lịch sử biến động kho", "/inventory-movements", List.of("OWNER", "WAREHOUSE_STAFF"),
                 List.of("lich su bien dong kho", "lich su bien dong", "bien dong kho", "giao dich kho", "inventory movement", "inventory transaction", "ledger", "receive", "consume", "adjustment"),
-                "Dùng để truy vết các thay đổi tồn kho như nhập kho, Warehouse cấp phụ tùng cho Work Order, hoàn trả và điều chỉnh kiểm kê; hiển thị actor, thời gian, số lượng, tồn sau và mã Work Order khi có. CONSUME chỉ còn để đọc dữ liệu lịch sử cũ.",
-                List.of("Mở menu Lịch sử biến động", "Tìm theo SKU, tên, mã WO, người thực hiện hoặc ghi chú", "Lọc theo loại giao dịch hoặc khoảng ngày", "Đối chiếu số lượng biến động và tồn sau", "Với ISSUE còn outstanding, Warehouse có thể mở thao tác Hoàn trả"));
+                "Dùng để truy vết các thay đổi tồn kho như nhập kho, Warehouse cấp phụ tùng cho Work Order, hoàn trả và điều chỉnh kiểm kê; hiển thị actor, thời gian, số lượng, tồn sau và mã Work Order khi có. Riêng ISSUE còn hiển thị snapshot kỹ thuật viên nhận để phân biệt rõ ai cấp và ai nhận; CONSUME chỉ còn để đọc dữ liệu lịch sử cũ.",
+                List.of("Mở menu Lịch sử biến động", "Tìm theo SKU, tên, mã WO, kỹ thuật viên nhận, người thực hiện hoặc ghi chú", "Lọc theo loại giao dịch hoặc khoảng ngày", "Đối chiếu số lượng biến động, kỹ thuật viên nhận và tồn sau", "Với ISSUE còn outstanding, Warehouse có thể mở thao tác Hoàn trả"));
     }
 
     private static HelpTopic topicInventoryReturns() {

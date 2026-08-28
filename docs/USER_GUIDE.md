@@ -46,7 +46,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 4. Chuyển trạng thái lần lượt `ON_THE_WAY` và `IN_PROGRESS`.
 5. Upload ảnh/PDF minh chứng.
 6. Nếu cần vật tư, mở tab **Phụ tùng** và bấm **Yêu cầu phụ tùng**. Yêu cầu đang chờ có thể sửa số lượng/note hoặc hủy với lý do thực tế; bước này **không giảm tồn kho**.
-7. Sau khi Warehouse cấp, tab **Phụ tùng** hiển thị lượng đã cấp. Technician ghi **Thực tế đã dùng**; thao tác này không làm giảm tồn lần nữa và có thể cập nhật đến trạng thái `COMPLETED`.
+7. Sau khi Warehouse cấp, tab **Phụ tùng** hiển thị lượng đã cấp. Technician ghi **Thực tế đã dùng**; thao tác này không làm giảm tồn lần nữa và có thể cập nhật đến trạng thái `COMPLETED`. Sau khi lưu, tab **Chi phí** tự lấy lại billing draft nên số lượng/thành tiền mới hiển thị ngay, không cần F5; sau `CUSTOMER_ACCEPTED` billing đã freeze nên không tự tính lại.
 8. Nhập chẩn đoán và giải pháp, sau đó chuyển sang `COMPLETED`.
 
 
@@ -54,7 +54,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 
 1. Đăng nhập `warehouse`; hệ thống mở **Yêu cầu phụ tùng**.
 2. Với request `REQUESTED`, bấm **Xác nhận cấp** khi giao thực tế cho Technician. Chỉ lúc này tồn kho mới giảm và ledger tạo `ISSUE`. Nếu không thể cấp, chọn **Không thể cấp** và nhập lý do thực tế; không có stock movement.
-3. Mở **Lịch sử biến động** để đối chiếu `ISSUE`, actor, Work Order và tồn sau giao dịch. Dữ liệu `CONSUME` cũ vẫn được hiển thị để tương thích lịch sử; active API/UI không còn tạo `CONSUME`.
+3. Mở **Lịch sử biến động** để đối chiếu `ISSUE`, Work Order, **Kỹ thuật viên nhận**, **Người thực hiện cấp** và tồn sau giao dịch. Tên kỹ thuật viên nhận là snapshot tại lúc cấp nên không bị đổi theo việc điều phối lại Work Order. Dữ liệu `CONSUME` cũ vẫn được hiển thị để tương thích lịch sử; active API/UI không còn tạo `CONSUME`.
 4. Nếu Technician trả lại phần đã cấp nhưng không dùng, bấm **Hoàn trả**, nhập số lượng và lý do. Backend chặn RETURN vượt `ISSUE - USED - RETURN`; RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
 5. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Thao tác này không đổi stock và có audit.
 6. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn thấp.

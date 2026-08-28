@@ -393,6 +393,7 @@ public class InventoryService {
                 workOrder == null ? null : workOrder.getCode(),
                 workOrder == null ? null : workOrder.getSummary(),
                 tx.getNote(), tx.getCreatedBy(),
+                tx.getRecipientUserId(), tx.getRecipientDisplayName(),
                 tx.getActorDisplayName() == null || tx.getActorDisplayName().isBlank() ? tx.getCreatedBy() : tx.getActorDisplayName(),
                 tx.getActorRole(),
                 tx.getCreatedAt());

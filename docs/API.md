@@ -151,7 +151,7 @@ Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 - `POST /spare-parts/{id}/stocktake` — nhập số lượng đếm thực tế; backend tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT` khi có chênh lệch. Notification được phát qua application event sau commit: Owner nhận chênh lệch, Warehouse nhận thêm cảnh báo nếu tồn xuống **ngưỡng tồn tối thiểu**.
-- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; transaction workflow mới dùng `ISSUE` khi Warehouse giao phụ tùng thực tế và `RETURN` khi Warehouse nhận lại.
+- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; search bao gồm SKU/tên part, Work Order, người thực hiện, kỹ thuật viên nhận trên `ISSUE` và ghi chú. Response `ISSUE` mới trả `recipientUserId`/`recipientDisplayName` snapshot tại thời điểm Warehouse giao hàng; ISSUE legacy chỉ backfill khi có đúng một match đủ chắc, trường hợp mơ hồ để null thay vì đoán sai; `RETURN` và movement không có người nhận để null.
 - `GET /work-orders/{workOrderId}/parts/{sparePartId}/returnable` — số lượng còn có thể hoàn; workflow mới tính `ISSUE - USED - RETURN`, đồng thời vẫn đọc dữ liệu `CONSUME - RETURN` legacy để tương thích lịch sử.
 - `POST /work-orders/{workOrderId}/parts/{sparePartId}/return` — WAREHOUSE_STAFF xác nhận nhận lại phụ tùng chưa sử dụng; lý do bắt buộc, số lượng không được vượt outstanding. RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
 

@@ -33,7 +33,7 @@
 - `tenant_id` trên dữ liệu tenant-scoped.
 - `version` dùng cho optimistic locking ở các entity hỗ trợ concurrency.
 - Timestamp lưu theo UTC.
-- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `ISSUE`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `ISSUE` là stock-out của workflow mới, còn `CONSUME` được giữ cho lịch sử legacy. `balance_after` giữ snapshot tồn sau mỗi movement.
+- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `ISSUE`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `ISSUE` là stock-out của workflow mới, còn `CONSUME` được giữ cho lịch sử legacy. `balance_after` giữ snapshot tồn sau mỗi movement; `recipient_user_id`/`recipient_display_name` snapshot kỹ thuật viên nhận hàng trên `ISSUE` để lịch sử không đổi nếu Work Order được điều phối lại sau đó.
 - `work_order_part_requests` lưu lifecycle request (`REQUESTED/ISSUED/CANCELLED/UNAVAILABLE/EXPIRED`); partial unique index chỉ cho tối đa một `REQUESTED` active trên cùng Work Order + part.
 - `work_order_part_usage` lưu actual `USED` aggregate theo Work Order + part; outstanding được suy ra từ `ISSUE - USED - RETURN`. Schema này được thêm bằng Flyway V11, không sửa V1–V10.
 - Flyway là nguồn schema; Hibernate dùng `ddl-auto=validate`, không auto-create production schema.
@@ -90,7 +90,8 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 13. `V13__payment_receipt.sql` — official payment receipt sau `SETTLED`.
 14. `V14__attachment_lifecycle.sql` — phân loại attachment purpose và khóa payment evidence đã liên kết.
 15. `V15__inventory_work_order_query_index.sql` — index theo tenant + Work Order + transaction type để các truy vấn ISSUE/RETURN/outstanding chạy theo batch hiệu quả.
+16. `V16__inventory_issue_recipient_snapshot.sql` — thêm snapshot kỹ thuật viên nhận trên inventory `ISSUE`; dữ liệu legacy chỉ backfill khi có đúng một candidate đủ chắc theo tenant/WO/part/quantity/actor và cửa sổ thời gian, còn trường hợp mơ hồ giữ null thay vì đoán sai.
 
-V1–V15 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V16+) thay vì sửa file đã có.
+V1–V16 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V17+) thay vì sửa file đã có.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

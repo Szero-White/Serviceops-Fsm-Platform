@@ -113,7 +113,7 @@ export function InventoryMovementsPage() {
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên, mã WO, họ tên người thực hiện hoặc mục đích" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên, mã WO, KTV nhận, người thực hiện hoặc mục đích" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         <Select<InventoryTransactionType> allowClear placeholder="Loại giao dịch" value={type} onChange={setType} style={{ minWidth: 190 }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value: value as InventoryTransactionType, label }))} />
         <RangePicker value={period} onChange={(value) => setPeriod(value as [Dayjs, Dayjs] | null)} format="DD/MM/YYYY" />
       </div>
@@ -125,7 +125,7 @@ export function InventoryMovementsPage() {
         loading={transactionsQuery.isLoading || transactionsQuery.isFetching}
         dataSource={transactionsQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
-        scroll={{ x: 1480 }}
+        scroll={{ x: 1680 }}
         pagination={{ current: page + 1, pageSize: LIST_PAGE_SIZE, total: transactionsQuery.isError ? 0 : (data?.totalElements ?? 0), showSizeChanger: false }}
         onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
         locale={{ emptyText: <Empty description="Chưa có giao dịch kho phù hợp" /> }}
@@ -136,6 +136,7 @@ export function InventoryMovementsPage() {
           { title: 'Biến động', width: 140, render: (_, record) => <Typography.Text strong type={isIncrease(record.type) ? 'success' : undefined}>{isIncrease(record.type) ? '+' : '-'}{formatQuantityWithUnit(record.quantity, record.unit)}</Typography.Text> },
           { title: 'Tồn sau', width: 130, render: (_, record) => formatQuantityWithUnit(record.balanceAfter, record.unit) },
           { title: 'Phiếu công việc', width: 220, render: (_, record) => record.workOrderCode ? <div className="table-primary-cell"><Typography.Text code>{record.workOrderCode}</Typography.Text><Typography.Text type="secondary" ellipsis={{ tooltip: record.workOrderSummary }}>{record.workOrderSummary ?? 'Nghiệp vụ theo phiếu công việc'}</Typography.Text></div> : '—' },
+          { title: 'Kỹ thuật viên nhận', width: 200, render: (_, record) => record.type === 'ISSUE' ? (record.recipientDisplayName || '—') : '—' },
           { title: 'Người thực hiện', width: 230, render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.actorDisplayName || record.createdBy}</Typography.Text><Typography.Text type="secondary">{actorRoleLabel(record.actorRole)}</Typography.Text></div> },
           { title: 'Mục đích / ghi chú', dataIndex: 'note', width: 260, ellipsis: true, render: (value: string | undefined, record) => value || record.workOrderSummary || '—' },
           { title: 'Thao tác', width: 120, fixed: 'right', render: (_, record) => ['ISSUE', 'CONSUME'].includes(record.type) && record.workOrderId ? <Button size="small" icon={<RollbackOutlined />} onClick={() => void openReturn(record)}>Hoàn trả</Button> : null },

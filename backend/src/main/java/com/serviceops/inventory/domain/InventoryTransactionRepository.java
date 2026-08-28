@@ -30,6 +30,7 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
                    or lower(coalesce(w.summary, '')) like lower(concat('%', :search, '%'))
                    or lower(tx.createdBy) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.actorDisplayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(tx.recipientDisplayName, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.actorRole, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.note, '')) like lower(concat('%', :search, '%')))
             """,
@@ -48,6 +49,7 @@ public interface InventoryTransactionRepository extends JpaRepository<InventoryT
                    or lower(coalesce(w.summary, '')) like lower(concat('%', :search, '%'))
                    or lower(tx.createdBy) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.actorDisplayName, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(tx.recipientDisplayName, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.actorRole, '')) like lower(concat('%', :search, '%'))
                    or lower(coalesce(tx.note, '')) like lower(concat('%', :search, '%')))
             """)

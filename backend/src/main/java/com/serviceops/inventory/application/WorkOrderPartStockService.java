@@ -202,6 +202,13 @@ public class WorkOrderPartStockService {
         transaction.setCreatedBy(CurrentUser.username());
         transaction.setActorDisplayName(CurrentUser.displayName());
         transaction.setActorRole(CurrentUser.primaryRole());
+        if (type == InventoryTransactionType.ISSUE
+                && workOrder != null
+                && workOrder.getTechnician() != null
+                && workOrder.getTechnician().getUser() != null) {
+            transaction.setRecipientUserId(workOrder.getTechnician().getUser().getId());
+            transaction.setRecipientDisplayName(workOrder.getTechnician().getUser().getDisplayName());
+        }
         transactionRepository.save(transaction);
     }
 

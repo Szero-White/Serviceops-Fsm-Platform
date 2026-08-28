@@ -9,6 +9,7 @@ type WorkOrderResponse = {
 
 type TechnicianResponse = {
   id: string
+  name: string
   username: string
 }
 
@@ -50,6 +51,13 @@ type PaymentResponse = {
 
 type ReturnablePartResponse = {
   returnableQuantity: number
+}
+
+type InventoryTransactionResponse = {
+  type: string
+  workOrderCode?: string
+  recipientDisplayName?: string
+  actorDisplayName?: string
 }
 
 type TimelineItem = {
@@ -171,6 +179,18 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
 
   const duplicateIssue = await apiJson(page, 'POST', `/part-requests/${requested.body.id}/issue`)
   expectStatus(duplicateIssue.status, 409, 'Retry ISSUE không được double-decrement')
+
+  const issueLedger = await apiJson<PageResponse<InventoryTransactionResponse>>(
+    page,
+    'GET',
+    `/inventory-transactions?search=${encodeURIComponent(workOrderCode)}&type=ISSUE&page=0&size=20`,
+  )
+  expectStatus(issueLedger.status, 200, 'Warehouse đọc ISSUE ledger có snapshot người nhận')
+  const issueMovement = issueLedger.body.content.find((item) => item.workOrderCode === workOrderCode && item.type === 'ISSUE')
+  expect(issueMovement, 'ISSUE vừa cấp phải xuất hiện trong inventory ledger').toBeTruthy()
+  expect(issueMovement!.recipientDisplayName).toBe(technician!.name)
+  expect(issueMovement!.actorDisplayName).toBeTruthy()
+  expect(issueMovement!.actorDisplayName).not.toBe(issueMovement!.recipientDisplayName)
 
   const stockAfterIssue = await apiJson<PageResponse<SparePartResponse>>(
     page,

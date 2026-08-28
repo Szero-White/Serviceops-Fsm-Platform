@@ -192,7 +192,10 @@ class AiHelpKnowledgeBaseTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
-        assertThat(decision.topic().answer()).contains("tồn sau");
+        assertThat(decision.topic().answer())
+                .contains("tồn sau")
+                .contains("kỹ thuật viên nhận")
+                .contains("ai cấp và ai nhận");
     }
 
     @Test

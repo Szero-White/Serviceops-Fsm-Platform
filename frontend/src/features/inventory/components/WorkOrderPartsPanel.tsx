@@ -102,6 +102,7 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
         description: `${usage.sparePartName} · Đã dùng ${formatQuantityWithUnit(usage.usedQuantity, usage.unit)} · ${workOrder.code}.`,
       })
       setEditingUsage(undefined)
+      queryClient.invalidateQueries({ queryKey: ['work-order-billing', workOrder.id] })
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),

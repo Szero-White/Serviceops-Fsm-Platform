@@ -7,8 +7,11 @@ import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.WorkOrderPartUsageRepository;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.workorder.domain.WorkOrder;
+import com.serviceops.workorder.domain.WorkOrderStatus;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,6 +30,36 @@ class WorkOrderPartStockServiceTest {
     @Mock private InventoryTransactionRepository transactionRepository;
     @Mock private WorkOrderPartUsageRepository usageRepository;
     @Mock private NotificationService notificationService;
+
+    @AfterEach
+    void tearDown() {
+        WorkOrderPartTestFixtures.clearAuthentication();
+    }
+
+    @Test
+    void issueSnapshotsAssignedTechnicianAsInventoryRecipient() {
+        WorkOrderPartTestFixtures.authenticateWarehouse();
+        WorkOrder workOrder = WorkOrderPartTestFixtures.workOrder(WorkOrderStatus.IN_PROGRESS);
+        SparePart part = WorkOrderPartTestFixtures.sparePart("10");
+
+        WorkOrderPartStockService service = new WorkOrderPartStockService(
+                transactionRepository,
+                usageRepository,
+                notificationService
+        );
+
+        service.issue(part, workOrder, new BigDecimal("1"), "Issue recipient snapshot test");
+
+        ArgumentCaptor<InventoryTransaction> captor = ArgumentCaptor.forClass(InventoryTransaction.class);
+        verify(transactionRepository).save(captor.capture());
+        InventoryTransaction transaction = captor.getValue();
+
+        assertThat(transaction.getTransactionType()).isEqualTo(InventoryTransactionType.ISSUE);
+        assertThat(transaction.getRecipientUserId()).isEqualTo(WorkOrderPartTestFixtures.TECHNICIAN_USER_ID);
+        assertThat(transaction.getRecipientDisplayName()).isEqualTo("Trịnh Quốc Tiến");
+        assertThat(transaction.getActorDisplayName()).isEqualTo("Nguyễn Nhân viên Kho");
+        assertThat(transaction.getActorRole()).isEqualTo("WAREHOUSE_STAFF");
+    }
 
     @Test
     void bulkTotalsAggregateIssueAndReturnForAllRequestedWorkOrders() {

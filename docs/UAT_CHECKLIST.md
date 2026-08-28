@@ -70,9 +70,10 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | INV-03C | Technician hoàn thành/cancel WO khi còn request `REQUESTED` | Request hết hiệu lực theo lifecycle; Warehouse queue không còn request rác |
 | INV-04A | Sau ISSUE 3, Technician ghi actual used = 2 | `USED=2`; tồn kho không đổi thêm; outstanding = 1 |
 | INV-04B | Technician cập nhật actual used khi WO `COMPLETED` | Cho phép; sau `CUSTOMER_ACCEPTED` thì bị khóa |
+| INV-04C | Technician sửa actual used từ 6 thành 8 rồi chuyển sang tab **Chi phí** | Billing draft hiển thị quantity/thành tiền theo 8 ngay sau khi lưu, không cần F5; stock không giảm lần hai |
 | INV-05 | Warehouse hoàn 1 part sau ISSUE 3 và USED 2 | Tồn tăng 1; ledger tạo `RETURN`; outstanding về 0; thử hoàn quá outstanding nhận HTTP 409 |
 | INV-05A | Warehouse hoàn outstanding sau khi WO đã `CLOSED` | RETURN thành công, stock tăng, WO vẫn `CLOSED`, không reopen |
-| INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự, actor và tồn sau giao dịch |
+| INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date hoặc tên KTV nhận | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự; dòng `ISSUE` phân biệt rõ **Kỹ thuật viên nhận** với **Người thực hiện** và giữ đúng snapshot lịch sử |
 | INV-07 | Warehouse kiểm kê part: system 10, actual 8 | Tồn thành 8; tạo `ADJUSTMENT_OUT 2` với reason/actor và `balanceAfter=8`; Owner nhận notification chênh lệch sau commit; nếu tồn `<= reorderLevel` (ngưỡng tồn tối thiểu), Warehouse nhận cảnh báo tồn thấp |
 | INV-08 | Warehouse/Owner sửa ngưỡng tồn tối thiểu từ 3 lên 6 khi stock hiện tại = 5 | Stock vẫn = 5; `reorderLevel=6`; không tạo inventory transaction; có audit `UPDATE_REORDER_LEVEL`; vì trạng thái chuyển từ bình thường sang tồn thấp nên WAREHOUSE_STAFF khác người thao tác nhận notification sau commit; OWNER không nhận low-stock vận hành |
 | FILE-01 | Upload JPG/PNG/WEBP/PDF dưới 10 MB | File lưu và tải lại được |

@@ -2,12 +2,12 @@
 
 ## Recorded local release-candidate baseline
 
-The P1/P2 baseline at commit `3c8b5f9` was locally verified on 2026-08-27 with:
+The latest pre-commit release-candidate working tree based on `f143a6c` was locally verified on 2026-08-28 with:
 
-- Backend Maven suite: **242 total tests, 0 failures, 0 errors, 25 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
+- Backend Maven suite: **243 total tests, 0 failures, 0 errors, 25 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
 - Frontend TypeScript/UI-policy lint: **PASS**.
 - Frontend production build: **PASS** with **3269 modules transformed** in that run.
-- Flyway reset/boot drill on a clean local `serviceops` database: migrations **V1 → V15** applied successfully and the backend started normally.
+- The earlier clean local database drill applied **V1 → V15** successfully. New **V16** is append-only and had not yet been applied to the developer database during this verification; the GitHub Actions clean PostgreSQL/Testcontainers run is the required V1 → V16 migration gate before release.
 
 This is local evidence, not a substitute for the repository CI. Before merge/release, the GitHub Actions backend/frontend jobs and isolated production-like Docker + Playwright job must also be green, followed by the manual UAT gate below.
 
@@ -54,8 +54,10 @@ Only do this when the endpoint is backed by disposable isolated data. Port numbe
 - Asset and Service Request hard-delete is blocked while attachments still reference the parent.
 - Dispatcher technician profile editing is blocked; profile updates are Owner-only.
 - Work Order history archive/delete is Owner-only.
-- E2E route policy treats Warehouse home as `/inventory`, not the operational dashboard.
+- E2E route policy treats Warehouse home as `/part-requests`, not the operational dashboard.
 - E2E workflow verifies Dispatcher field-transition denial in addition to Technician transition boundaries.
+- The settlement E2E verifies an `ISSUE` ledger row exposes the assigned Technician recipient separately from the Warehouse actor.
+- Inventory unit/integration coverage verifies new `ISSUE` transactions snapshot the recipient while ambiguous legacy backfill remains conservative.
 - JWT validation rejects inactive/deleted/stale user identities even while an old access token is otherwise unexpired.
 - Username is immutable after account creation so audit/attachment ownership strings cannot drift.
 - Technician deactivation/profile pause uses the same pessimistic technician row lock as scheduling to close the schedule-vs-deactivate race.
@@ -88,7 +90,8 @@ Before `v1.0.0`, perform the real-world role sequence from `docs/UAT_CHECKLIST.m
 - Technician/technician-2 isolation and field execution;
 - Warehouse inventory-only behavior;
 - cancellation side effects;
-- part request → Warehouse `ISSUE` → Technician actual `USED` → Warehouse `RETURN`, including inventory balance;
+- part request → Warehouse `ISSUE` → Technician actual `USED` → Warehouse `RETURN`, including inventory balance and the ISSUE recipient/actor split;
+- updating actual `USED` and immediately opening **Chi phí** to confirm the billing draft refreshes without F5;
 - Technician customer acceptance/payment action, Customer Service reconciliation/receipt/closure, and Owner oversight/history/audit;
 - logout/login between roles to confirm no stale cross-account UI cache.
 

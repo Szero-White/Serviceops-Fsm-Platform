@@ -294,6 +294,17 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         );
         assertThat(issueResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
 
+        InventoryTransaction issuedTransaction = inventoryTransactionRepository
+                .findWorkflowPartTransactionsForWorkOrderAndSparePart(
+                        owner.getTenantId(), workOrder.getId(), part.getId()
+                )
+                .stream()
+                .filter(transaction -> transaction.getTransactionType() == InventoryTransactionType.ISSUE)
+                .findFirst()
+                .orElseThrow();
+        assertThat(issuedTransaction.getRecipientUserId()).isEqualTo(workOrder.getTechnician().getUser().getId());
+        assertThat(issuedTransaction.getRecipientDisplayName()).isEqualTo(workOrder.getTechnician().getUser().getDisplayName());
+
         ResponseEntity<String> returnResponse = postJson(
                 "/api/v1/work-orders/" + workOrder.getId() + "/parts/" + part.getId() + "/return",
                 warehouseToken,
@@ -315,7 +326,14 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 null
         );
         assertThat(historyResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(historyResponse.getBody()).contains("ISSUE", "RETURN", "ADJUSTMENT_OUT", part.getSku());
+        assertThat(historyResponse.getBody()).contains(
+                "ISSUE",
+                "RETURN",
+                "ADJUSTMENT_OUT",
+                part.getSku(),
+                "recipientDisplayName",
+                workOrder.getTechnician().getUser().getDisplayName()
+        );
 
         ResponseEntity<String> unfilteredHistoryResponse = exchangeInventory(
                 "/api/v1/inventory-transactions",
