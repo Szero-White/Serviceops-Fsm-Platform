@@ -14,7 +14,6 @@ import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive'

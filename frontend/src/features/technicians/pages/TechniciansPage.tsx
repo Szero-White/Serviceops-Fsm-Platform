@@ -13,8 +13,8 @@ import type { Technician } from '../../../types'
 import { EMPTY_VALUE } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
 import { techniciansApi } from '../api'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
 type TechnicianProfileValues = {
   phone?: string
   skills?: string

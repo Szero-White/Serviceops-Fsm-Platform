@@ -46,7 +46,6 @@ const auditDatePresets: Array<{ label: string; value: [Dayjs, Dayjs] }> = [
   { label: '90 ngày gần nhất', value: recentDateRange(90) },
 ]
 
-
 function formatAuditEntityType(value?: string) {
   if (!value) return EMPTY_VALUE
   if (auditEntityLabels[value]) return auditEntityLabels[value]

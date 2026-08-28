@@ -17,8 +17,8 @@ import { ChannelTag, PriorityTag, StatusTag } from '../../../components/StatusTa
 import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
 const priorityOptions = [
   { value: 'LOW', label: 'Thấp' },
   { value: 'NORMAL', label: 'Bình thường' },
@@ -81,7 +81,6 @@ export function ServiceRequestsPage() {
     queryKey: ['assets', 'service-request-customer', watchedCustomerId, assetOptionSearch],
     queryFn: () => assetsApi.list(assetOptionSearch, 0, LIST_PAGE_SIZE, watchedCustomerId),
     enabled: open && Boolean(watchedCustomerId),
-    placeholderData: keepPreviousData,
   })
   const assets = assetsQuery.data
   const assetsLoading = assetsQuery.isFetching

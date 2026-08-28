@@ -160,9 +160,9 @@ Script:
 
 - đọc `POSTGRES_HOST/PORT/DB/USER/PASSWORD` từ process environment hoặc `.env`;
 - từ chối chạy nếu `POSTGRES_HOST` không phải `localhost`, `127.0.0.1` hoặc `::1`;
-- kiểm tra role owner tồn tại **trước** khi drop database;
+- kiểm tra role ứng dụng tồn tại/có quyền `LOGIN`, đồng thời admin là `SUPERUSER` hoặc có `CREATEDB` và đủ quyền sở hữu **trước** khi drop database;
 - mặc định tạo custom-format backup vào `db-backups/` và kiểm tra archive bằng `pg_restore -l`;
-- yêu cầu gõ lại đúng tên database trước khi `DROP DATABASE`;
+- yêu cầu gõ lại đúng tên database trước khi `DROP DATABASE ... WITH (FORCE)` để đóng các connection local còn giữ database;
 - tạo lại database với owner đúng theo `POSTGRES_USER`;
 - không tự chạy Flyway: sau khi reset thành công, chạy `.\scripts\dev-start.ps1`; backend sẽ migrate V1 → latest và seeder local sẽ tạo lại dữ liệu demo.
 
@@ -172,7 +172,7 @@ Nếu PostgreSQL binaries chưa nằm trong `PATH`, chỉ rõ thư mục `bin`:
 .\scripts\reset-local-db.ps1 -PostgresBin "D:\PostgreSQL\bin"
 ```
 
-Nếu account ứng dụng không có quyền drop/create database, truyền role quản trị và nhập password khi script hỏi:
+Nếu account ứng dụng không có quyền `CREATEDB`/drop database (trường hợp thường gặp với PostgreSQL cài native), truyền role quản trị và nhập password khi script hỏi:
 
 ```powershell
 .\scripts\reset-local-db.ps1 -AdminUser postgres
@@ -184,7 +184,7 @@ Nếu account ứng dụng không có quyền drop/create database, truyền rol
 
 Không chạy mutating Playwright E2E vào frontend/backend developer local hoặc database `serviceops` đang dùng để UAT.
 
-Playwright yêu cầu `E2E_BASE_URL` rõ ràng và CI chạy nó trên stack Docker cô lập. Dữ liệu `E2E-*` được tạo bởi browser workflow là stateful test data; không nên dùng script xóa hàng loạt trên database local nếu chưa kiểm tra quan hệ Work Order, appointment, history, inventory và attachment.
+Playwright yêu cầu `E2E_BASE_URL` rõ ràng và **luôn yêu cầu opt-in `E2E_ALLOW_MUTATIONS=true`** vì suite có thay đổi dữ liệu. GitHub Actions chỉ đặt opt-in này cho stack Docker cô lập của CI; khi chạy local, chỉ bật nó nếu endpoint đang dùng database disposable. Dữ liệu `E2E-*` được tạo bởi browser workflow là stateful test data; không nên dùng script xóa hàng loạt trên database local nếu chưa kiểm tra quan hệ Work Order, appointment, history, inventory và attachment.
 
 ## 9. Lỗi thường gặp
 

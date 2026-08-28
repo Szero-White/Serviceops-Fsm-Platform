@@ -43,7 +43,6 @@ export const ALLOWED_ROUTES: Record<DemoUser, string[]> = {
   warehouse: ['/part-requests', '/inventory', '/inventory-stocktake', '/inventory-movements'],
 }
 
-
 export const SIDEBAR_NAVIGATION: Record<DemoUser, { sections: string[]; items: string[] }> = {
   owner: {
     sections: ['Vận hành', 'Khách hàng & nguồn lực', 'Kho & vật tư', 'Quản trị'],

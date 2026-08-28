@@ -116,11 +116,13 @@ Use shared status tags, spacing, empty states and form patterns before introduci
 - A table should not require a fixed action column by default. Use it only when real width/interaction requirements justify the additional scroll/sticky complexity.
 - Public landing claims must be traceable to implemented code or explicit roadmap documentation. Do not invent customers, metrics, prices, integrations or testimonials.
 
-## Demo safety
+## Demo and destructive-tooling safety
 
 - Public demo credentials are intentionally disposable and must never be reused for real administrative accounts.
 - `DEMO_MODE` protects destructive administration while preserving the core editable service workflow.
 - Public demo frontend convenience may expose the public demo password because it is a presentation credential, not a secret. The underlying environment/database/JWT secrets remain private.
+- Destructive local maintenance scripts must fail closed: reject non-local targets, verify role/capability prerequisites before the first destructive statement, preserve/verify a backup by default and require an explicit target confirmation.
+- Stateful browser tests must require an explicit mutation opt-in for every target. CI may set it only for an isolated test stack; local runs must use disposable data.
 
 ## Pull-request acceptance gate
 
@@ -130,7 +132,7 @@ Before merging a structural or production change:
 Backend tests             PASS
 Frontend type/lint        PASS
 Frontend production build PASS
-npm audit                 no known vulnerabilities
+Dependency changes        lockfile reviewed; audit when dependencies change
 Docker build              PASS
 Production-like health    backend/frontend/postgres healthy
 Manual smoke flow         PASS

@@ -57,6 +57,13 @@ if ($postgresDb -in @("postgres", "template0", "template1")) {
     throw "Refusing reset of PostgreSQL system database '$postgresDb'."
 }
 
+function Quote-SqlIdentifier([string]$Name) {
+    return '"' + $Name.Replace('"', '""') + '"'
+}
+
+$quotedPostgresDb = Quote-SqlIdentifier $postgresDb
+$quotedPostgresUser = Quote-SqlIdentifier $postgresUser
+
 function Resolve-PostgresTool([string]$Name) {
     if ($PostgresBin) {
         $candidate = Join-Path $PostgresBin "$Name.exe"
@@ -103,15 +110,40 @@ try {
     Write-Host "`n=== LOCAL DATABASE RESET PRECHECK ===" -ForegroundColor Cyan
     Write-Host "Target: $postgresHost`:$postgresPort / $postgresDb / owner $postgresUser" -ForegroundColor DarkGray
 
-    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "SELECT current_user;"
-    if ($LASTEXITCODE -ne 0) { throw "Admin authentication failed. Database was not reset." }
-
-    $roleExists = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_roles WHERE rolname='$postgresUser';").Trim()
-    if ($LASTEXITCODE -ne 0 -or $roleExists -ne "1") {
-        throw "Configured POSTGRES_USER '$postgresUser' does not exist. Database was not reset."
+    $currentAdmin = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT current_user;").Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $currentAdmin) {
+        throw "Admin authentication failed. Database was not reset."
     }
 
-    $databaseExists = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname='$postgresDb';").Trim() -eq "1"
+    $adminCapabilities = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN rolsuper THEN '1' ELSE '0' END || '|' || CASE WHEN rolcreatedb THEN '1' ELSE '0' END FROM pg_roles WHERE rolname=current_user;").Trim()
+    if ($LASTEXITCODE -ne 0 -or $adminCapabilities -notmatch '^[01]\|[01]$') {
+        throw "Could not verify database-admin capabilities. Database was not reset."
+    }
+    $capabilityParts = $adminCapabilities.Split('|')
+    $adminIsSuperuser = $capabilityParts[0] -eq '1'
+    $adminCanCreateDb = $capabilityParts[1] -eq '1'
+    if (-not $adminIsSuperuser -and -not $adminCanCreateDb) {
+        throw "Admin role '$currentAdmin' cannot create databases. Re-run with -AdminUser postgres or another SUPERUSER/CREATEDB role. Database was not reset."
+    }
+
+    $targetRoleCanLogin = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN rolcanlogin THEN '1' ELSE '0' END FROM pg_roles WHERE rolname='$postgresUser';").Trim()
+    if ($LASTEXITCODE -ne 0 -or $targetRoleCanLogin -ne "1") {
+        throw "Configured POSTGRES_USER '$postgresUser' does not exist or cannot LOGIN. Database was not reset."
+    }
+
+    $databaseOwner = (& $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -tA -v ON_ERROR_STOP=1 -c "SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname='$postgresDb';").Trim()
+    if ($LASTEXITCODE -ne 0) { throw "Could not inspect target database ownership. Database was not reset." }
+    $databaseExists = -not [string]::IsNullOrWhiteSpace($databaseOwner)
+
+    if ($databaseExists -and -not $adminIsSuperuser -and $databaseOwner -ne $currentAdmin) {
+        throw "Admin role '$currentAdmin' does not own database '$postgresDb' (owner: '$databaseOwner'). Use a PostgreSQL superuser. Database was not reset."
+    }
+    if (-not $adminIsSuperuser -and $currentAdmin -ne $postgresUser) {
+        throw "A non-superuser admin can only recreate a database owned by itself. Use -AdminUser postgres to recreate '$postgresDb' for owner '$postgresUser'. Database was not reset."
+    }
+
+    $adminCapabilityLabel = if ($adminIsSuperuser) { 'SUPERUSER' } elseif ($adminCanCreateDb) { 'CREATEDB' } else { 'NONE' }
+    Write-Host "Admin: $currentAdmin ($adminCapabilityLabel)" -ForegroundColor DarkGray
 
     if ($databaseExists -and -not $SkipBackup) {
         New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
@@ -141,14 +173,11 @@ try {
     }
 
     Write-Host "`n=== RESET LOCAL DATABASE ===" -ForegroundColor Cyan
-    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$postgresDb' AND pid <> pg_backend_pid();"
-    if ($LASTEXITCODE -ne 0) { throw "Could not terminate database connections." }
+    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS $quotedPostgresDb WITH (FORCE);"
+    if ($LASTEXITCODE -ne 0) { throw "DROP DATABASE failed. Backup remains available if one was created." }
 
-    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS $postgresDb;"
-    if ($LASTEXITCODE -ne 0) { throw "DROP DATABASE failed." }
-
-    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $postgresDb OWNER $postgresUser;"
-    if ($LASTEXITCODE -ne 0) { throw "CREATE DATABASE failed." }
+    & $psql -h $postgresHost -p $postgresPort -U $AdminUser -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $quotedPostgresDb OWNER $quotedPostgresUser;"
+    if ($LASTEXITCODE -ne 0) { throw "CREATE DATABASE failed. Restore from the verified backup before continuing." }
 
     Write-Host "`nLocal database recreated successfully." -ForegroundColor Green
     Write-Host "Next: .\scripts\dev-start.ps1" -ForegroundColor Green

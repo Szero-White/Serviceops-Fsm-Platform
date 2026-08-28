@@ -94,7 +94,15 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 
 ## 4. Reset dữ liệu demo
 
-Nếu dùng PostgreSQL qua Docker và **thật sự muốn xóa toàn bộ dữ liệu local**:
+Khi cần làm sạch toàn bộ database local, ưu tiên script có guard + backup:
+
+```powershell
+.\scripts\reset-local-db.ps1
+```
+
+Script chỉ cho phép host local, kiểm quyền admin/role ứng dụng trước khi drop, mặc định tạo + verify backup và yêu cầu gõ lại đúng tên database. Với PostgreSQL native mà account ứng dụng không có `CREATEDB`, chạy `.\scripts\reset-local-db.ps1 -AdminUser postgres` và nhập password quản trị khi được hỏi.
+
+Nếu PostgreSQL chạy bằng Docker và bạn **chủ động chấp nhận xóa cả volume** thay vì giữ backup:
 
 ```powershell
 docker compose -f docker-compose.local.yml down -v

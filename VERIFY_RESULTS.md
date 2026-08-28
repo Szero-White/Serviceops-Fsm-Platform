@@ -1,15 +1,17 @@
 # Verification Results
 
-## Current release-consistency checkpoint — revalidation required
+## Recorded local release-candidate baseline
 
-The previous merged `main` baseline before this release-consistency patch had the following recorded evidence:
+The P1/P2 baseline at commit `3c8b5f9` was locally verified on 2026-08-27 with:
 
-- Backend: **99 total tests, 0 failures, 0 errors, 22 skipped** — therefore **77 executed/passed**, not “99 passed”.
-- Frontend TypeScript/UI-policy lint: PASS.
-- Frontend production build: PASS (~3250 modules in that recorded run).
-- PR #7 was merged and its three GitHub checks were green.
+- Backend Maven suite: **242 total tests, 0 failures, 0 errors, 25 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
+- Frontend TypeScript/UI-policy lint: **PASS**.
+- Frontend production build: **PASS** with **3269 modules transformed** in that run.
+- Flyway reset/boot drill on a clean local `serviceops` database: migrations **V1 → V15** applied successfully and the backend started normally.
 
-This branch now changes authorization, live JWT account-state validation, technician lifecycle locking, attachment-parent delete guards, username immutability, dashboard status accounting, reschedule audit behavior, frontend identity/cache handling, route policy, cross-module query invalidation, local startup tooling and documentation. **The old green result must not be copied onto the changed source.** Run the gates below before merge/release.
+This is local evidence, not a substitute for the repository CI. Before merge/release, the GitHub Actions backend/frontend jobs and isolated production-like Docker + Playwright job must also be green, followed by the manual UAT gate below.
+
+The Playwright suite currently expands to **17 browser tests across 4 spec files**: 7 directly declared CRUD/workflow/settlement tests plus 10 per-role route/sidebar checks generated for the five demo roles.
 
 ## Required fast local gates
 
@@ -29,20 +31,21 @@ Interpret Maven results exactly. If Docker is unavailable, Testcontainers suites
 
 Do **not** run mutating Playwright against the developer `:3000`/`:5173` environment or the local PostgreSQL database used for manual UAT.
 
-`playwright.config.ts` requires an explicit `E2E_BASE_URL` and rejects local development ports. GitHub Actions is the intended clean browser gate: it creates an isolated Docker Compose **Nginx → Spring Boot → PostgreSQL** stack and runs Playwright against `http://127.0.0.1:8088`.
+`playwright.config.ts` requires both an explicit `E2E_BASE_URL` and `E2E_ALLOW_MUTATIONS=true` because the suite changes business data. GitHub Actions sets that opt-in only for its isolated Docker Compose **Nginx → Spring Boot → PostgreSQL** stack at `http://127.0.0.1:8088`.
 
-For an explicitly isolated production-like stack:
+For an explicitly isolated local production-like stack:
 
 ```powershell
 $env:E2E_BASE_URL="http://127.0.0.1:8088"
 $env:E2E_DEMO_PASSWORD=$env:DEMO_PASSWORD
+$env:E2E_ALLOW_MUTATIONS="true"
 cd frontend
 npm run e2e
 ```
 
-Only do this when the endpoint is backed by disposable isolated data. Port number alone is not proof of database isolation.
+Only do this when the endpoint is backed by disposable isolated data. Port number or hostname alone is not proof of database isolation; every mutating E2E target requires the explicit opt-in above.
 
-## Regression coverage added/strengthened by this patch
+## Regression coverage currently enforced
 
 - Work Order/Dashboard controller role contracts exclude Warehouse.
 - Warehouse direct API checks cover Work Order list/history and dashboard.
@@ -85,8 +88,8 @@ Before `v1.0.0`, perform the real-world role sequence from `docs/UAT_CHECKLIST.m
 - Technician/technician-2 isolation and field execution;
 - Warehouse inventory-only behavior;
 - cancellation side effects;
-- parts consumption and inventory balance;
-- Owner acceptance/closure/history/audit/invoice;
+- part request → Warehouse `ISSUE` → Technician actual `USED` → Warehouse `RETURN`, including inventory balance;
+- Technician customer acceptance/payment action, Customer Service reconciliation/receipt/closure, and Owner oversight/history/audit;
 - logout/login between roles to confirm no stale cross-account UI cache.
 
 `v1.0.0` must remain uncreated until the changed source passes automated gates and final manual UAT.

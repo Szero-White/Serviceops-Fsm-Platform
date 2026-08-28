@@ -21,7 +21,7 @@ ServiceOps provides one operational record that follows the work across those ha
 | Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, work-order management and oversight |
 | Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling and operational history |
 | Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, service requests and Service Request → Work Order handoff |
-| Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence and spare-part consumption |
+| Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence, part requests and actual-used reporting |
 | Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock receiving, stocktake/reconciliation, returns and movement traceability |
 
 The frontend hides routes and actions that are outside a role's responsibility, while the backend remains the authoritative authorization boundary.
@@ -240,7 +240,7 @@ GitHub Actions runs three major verification gates:
 2. **Frontend** — TypeScript/UI-policy lint and production build.
 3. **Production-like runtime** — Docker Compose starts **Nginx → Spring Boot → PostgreSQL**, verifies readiness/frontend/demo login and runs Playwright Chromium against the Nginx-fronted application.
 
-The current Playwright suite contains **12 browser tests across 4 spec files** and covers:
+The current Playwright suite expands to **17 browser tests across 4 spec files** (including per-role route/sidebar checks) and covers:
 
 - route-access policy for all five demo roles;
 - Customer CRUD;
@@ -254,7 +254,7 @@ The current Playwright suite contains **12 browser tests across 4 spec files** a
 
 Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
 
-See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the previous verified baseline and the revalidation required after the current release-consistency patch.
+See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the latest recorded local baseline and the remaining pre-merge CI/UAT gates.
 
 ## Run locally
 
@@ -330,17 +330,17 @@ When local UAT data needs a clean rebuild, use the guarded reset script instead 
 .\scripts\reset-local-db.ps1
 ```
 
-It refuses non-local hosts, verifies the configured owner role, creates and validates a local backup by default, asks for explicit database-name confirmation, and then recreates the database. Start ServiceOps normally afterward so Flyway migrates V1 → latest and the local seeder recreates demo data.
+It refuses non-local hosts, verifies the admin can safely recreate the database and that the configured application role can log in, creates and validates a local backup by default, asks for explicit database-name confirmation, force-closes local connections during drop, and recreates the database with the configured owner. If the application role is not a database administrator, run it with `-AdminUser postgres`. Start ServiceOps normally afterward so Flyway migrates V1 → latest and the local seeder recreates demo data.
 
 ### Playwright against the local development stack
 
-The E2E suite mutates business data, so it refuses `localhost:3000`/`5173` by default. For local development, point ServiceOps at a **disposable PostgreSQL database** (not data you want to keep), start backend/frontend normally, then opt in explicitly:
+The E2E suite mutates business data, so every target requires an explicit mutation opt-in. For local development, point ServiceOps at a **disposable PostgreSQL database** (not data you want to keep), start backend/frontend normally, then opt in explicitly:
 
 ```powershell
 cd frontend
 $env:E2E_BASE_URL = "http://localhost:3000"
 $env:E2E_DEMO_PASSWORD = "Demo@2026"
-$env:E2E_ALLOW_LOCAL_MUTATIONS = "true"
+$env:E2E_ALLOW_MUTATIONS = "true"
 npm run e2e
 ```
 

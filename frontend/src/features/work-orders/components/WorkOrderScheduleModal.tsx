@@ -66,6 +66,9 @@ export function WorkOrderScheduleModal({
           Thay đổi kỹ thuật viên, thời gian hoặc cả hai sẽ được ghi vào Tiến trình và thông báo cho kỹ thuật viên liên quan.
         </Typography.Paragraph>
       ) : null}
+      <Typography.Paragraph type="secondary">
+        Hệ thống sẽ kiểm tra và cảnh báo nếu kỹ thuật viên đã có lịch trùng với khoảng thời gian này.
+      </Typography.Paragraph>
       <Form
         form={form}
         layout="vertical"
