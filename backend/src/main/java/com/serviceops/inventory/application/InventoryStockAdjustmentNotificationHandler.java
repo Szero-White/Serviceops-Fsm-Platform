@@ -57,7 +57,8 @@ public class InventoryStockAdjustmentNotificationHandler {
                     event.partName(),
                     event.actualQuantity(),
                     event.unit(),
-                    event.reorderLevel()
+                    event.reorderLevel(),
+                    event.actorDisplayName()
             );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),

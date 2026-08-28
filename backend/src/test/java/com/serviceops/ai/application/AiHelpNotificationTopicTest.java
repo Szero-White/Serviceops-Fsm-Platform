@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AiHelpNotificationTopicTest {
     @Test
     void markUnreadQuestionExplainsNotificationToggle() {
-        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory");
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
                 "Tôi lỡ đánh dấu thông báo đã đọc, làm sao đánh dấu lại chưa đọc?",
@@ -16,7 +16,7 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().name()).isEqualTo("Thông báo");
-        assertThat(decision.topic().answer()).contains("đánh dấu lại chưa đọc");
+        assertThat(decision.topic().answer()).contains("Đánh dấu chưa đọc");
     }
 
     @Test
@@ -30,28 +30,47 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("phiếu mở lại/hủy")
-                .contains("tránh spam")
-                .contains("Timeline/Audit");
+                .contains("CLOSED/CANCELLED")
+                .contains("chênh lệch kiểm kê")
+                .contains("không nhận routine")
+                .contains("Audit");
     }
 
     @Test
-    void notificationGuidanceExplainsRoleRelevantQueuesInsteadOfRoutineCrudSpam() {
+    void dispatcherNotificationGuidanceOnlyDescribesDispatcherAttentionQueue() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("DISPATCHER", "Điều phối viên", "/");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
-                "Thông báo của từng vai trò dùng để làm gì?",
+                "Thông báo của tôi dùng để làm gì?",
                 context
         );
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("Phiếu mới chờ điều phối")
-                .contains("Phiếu đã hoàn thành")
-                .contains("Bạn được phân công")
-                .contains("Tồn kho thấp")
-                .contains("CRUD thường ngày")
-                .contains("tránh spam");
+                .contains("cần phân công")
+                .contains("chờ phụ tùng")
+                .contains("quá hạn")
+                .doesNotContain("Xử lý thanh toán")
+                .doesNotContain("yêu cầu phụ tùng mới");
+    }
+
+    @Test
+    void warehouseNotificationGuidanceDoesNotLeakOtherRoleTasks() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "Tôi sẽ nhận thông báo gì?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
+        assertThat(decision.topic().answer())
+                .contains("yêu cầu phụ tùng mới")
+                .contains("tồn thấp")
+                .contains("không nhận notification về")
+                .doesNotContain("SETTLED")
+                .doesNotContain("phát hành biên nhận");
     }
 
 }

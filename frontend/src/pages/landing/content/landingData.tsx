@@ -101,7 +101,7 @@ export const HOW_IT_WORKS: Step[] = [
   { step: '01', title: 'Tiếp nhận yêu cầu', desc: 'Khách hàng gửi yêu cầu, hệ thống tạo ticket và phân loại ưu tiên.' },
   { step: '02', title: 'Điều phối kỹ thuật viên', desc: 'Phiếu công việc được bàn giao từ Service Request; điều phối viên chọn kỹ thuật viên và xếp lịch phù hợp.' },
   { step: '03', title: 'Thực hiện và cập nhật', desc: 'Kỹ thuật viên cập nhật tiến độ, phụ tùng và bằng chứng tại hiện trường.' },
-  { step: '04', title: 'Hoàn thành và truy vết', desc: 'Hoàn tất công việc, giữ lịch sử trạng thái, inventory ledger, invoice và audit trail để đối soát.' },
+  { step: '04', title: 'Hoàn thành và truy vết', desc: 'Hoàn tất công việc, giữ lịch sử trạng thái, inventory ledger, biên nhận thanh toán và audit trail để đối soát.' },
 ]
 
 export const OPERATIONAL_SCENARIOS: OperationalScenario[] = [

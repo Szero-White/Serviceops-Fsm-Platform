@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -51,4 +52,10 @@ public class InventoryTransaction extends TenantScopedEntity {
 
     @Column(name = "actor_role", length = 40)
     private String actorRole;
+
+    @Column(name = "recipient_user_id")
+    private UUID recipientUserId;
+
+    @Column(name = "recipient_display_name", length = 150)
+    private String recipientDisplayName;
 }

@@ -12,8 +12,8 @@ import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
 const colorOptions = [
   { value: 'blue', label: 'Xanh dương' },
   { value: 'green', label: 'Xanh lá' },
@@ -85,7 +85,7 @@ export function ServiceChannelsPage() {
   const remove = useMutation({
     mutationFn: (id: string) => serviceChannelsApi.delete(id),
     onSuccess: () => {
-      message.success('Đã xoá kênh tiếp nhận')
+      message.success('Đã xóa kênh tiếp nhận')
       queryClient.invalidateQueries({ queryKey: ['service-channels'] })
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -166,14 +166,14 @@ export function ServiceChannelsPage() {
               <Space size={4}>
                 <Button aria-label="Sửa kênh" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
-                  title="Xoá kênh này?"
-                  description="Chỉ xoá được khi kênh chưa được dùng trong yêu cầu dịch vụ."
-                  okText="Xoá"
-                  cancelText="Huỷ"
+                  title="Xóa kênh này?"
+                  description="Chỉ xóa được khi kênh chưa được dùng trong yêu cầu dịch vụ."
+                  okText="Xóa"
+                  cancelText="Hủy"
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xoá kênh" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa kênh" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ) : null,

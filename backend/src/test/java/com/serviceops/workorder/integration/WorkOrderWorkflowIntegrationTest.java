@@ -131,15 +131,49 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
                 "diagnosis", "Integration test diagnosis",
                 "resolution", "Integration test resolution"
         ));
-        assertTransition(workOrderId, technicianToken, "CUSTOMER_ACCEPTED", Map.of("note", "Customer accepted result"));
-
-        String ownerToken = login("owner", "123456");
-        ResponseEntity<Map<String, Object>> closed = assertTransition(
-                workOrderId,
-                ownerToken,
-                "CLOSED",
-                Map.of("note", "Workflow closed by owner override")
+        ResponseEntity<Map<String, Object>> genericAcceptance = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/transition",
+                technicianToken,
+                Map.of("targetStatus", "CUSTOMER_ACCEPTED", "note", "Customer accepted result")
         );
+        assertThat(genericAcceptance.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(genericAcceptance.getBody()).isNotNull();
+        assertThat(genericAcceptance.getBody().get("code")).isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
+
+        ResponseEntity<Map<String, Object>> accepted = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/customer-acceptance",
+                technicianToken,
+                Map.of("note", "Customer accepted result")
+        );
+        assertThat(accepted.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(accepted.getBody()).isNotNull();
+        assertThat(accepted.getBody().get("status")).isEqualTo("CUSTOMER_ACCEPTED");
+
+        ResponseEntity<Map<String, Object>> cash = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/payment/collect-cash",
+                technicianToken,
+                Map.of()
+        );
+        assertThat(cash.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(cash.getBody()).isNotNull();
+        assertThat(cash.getBody().get("status")).isEqualTo("CASH_PENDING_HANDOVER");
+        String paymentId = String.valueOf(cash.getBody().get("id"));
+
+        ResponseEntity<Map<String, Object>> settled = postJsonMap(
+                "/api/v1/payments/" + paymentId + "/settle-cash",
+                customerServiceToken,
+                Map.of()
+        );
+        assertThat(settled.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(settled.getBody()).isNotNull();
+        assertThat(settled.getBody().get("status")).isEqualTo("SETTLED");
+
+        ResponseEntity<Map<String, Object>> closed = postJsonMap(
+                "/api/v1/work-orders/" + workOrderId + "/close",
+                customerServiceToken,
+                Map.of()
+        );
+        assertThat(closed.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(closed.getBody()).isNotNull();
         assertThat(closed.getBody().get("status")).isEqualTo("CLOSED");
     }

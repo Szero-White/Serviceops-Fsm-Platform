@@ -1,19 +1,13 @@
 package com.serviceops.inventory.application;
 
 import com.serviceops.audit.application.AuditService;
-import com.serviceops.common.exception.BusinessException;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
 import com.serviceops.inventory.domain.SparePart;
 import com.serviceops.inventory.domain.SparePartRepository;
-import com.serviceops.inventory.web.InventoryDtos.ReturnPartRequest;
 import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.StocktakeRequest;
-import com.serviceops.notification.application.NotificationService;
-import com.serviceops.workorder.domain.WorkOrder;
-import com.serviceops.workorder.domain.WorkOrderRepository;
-import com.serviceops.workorder.domain.WorkOrderStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +29,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,10 +43,8 @@ class InventoryServiceWarehouseWorkflowTest {
 
     @Mock private SparePartRepository sparePartRepository;
     @Mock private InventoryTransactionRepository transactionRepository;
-    @Mock private WorkOrderRepository workOrderRepository;
     @Mock private InventoryCsvService csvService;
     @Mock private AuditService auditService;
-    @Mock private NotificationService notificationService;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private InventoryService service;
@@ -61,8 +52,13 @@ class InventoryServiceWarehouseWorkflowTest {
     @BeforeEach
     void setUp() {
         authenticateWarehouse();
-        service = new InventoryService(sparePartRepository, transactionRepository, workOrderRepository,
-                csvService, auditService, notificationService, eventPublisher);
+        service = new InventoryService(
+                sparePartRepository,
+                transactionRepository,
+                csvService,
+                auditService,
+                eventPublisher
+        );
     }
 
     @AfterEach
@@ -158,49 +154,6 @@ class InventoryServiceWarehouseWorkflowTest {
         verify(eventPublisher, never()).publishEvent(any());
     }
 
-    @Test
-    void returnCannotExceedNetConsumedQuantity() {
-        WorkOrder workOrder = workOrder();
-        SparePart part = part(new BigDecimal("5.000"));
-        when(workOrderRepository.findForUpdate(workOrder.getId(), TENANT_ID)).thenReturn(Optional.of(workOrder));
-        when(sparePartRepository.findForUpdate(part.getId(), TENANT_ID)).thenReturn(Optional.of(part));
-        when(transactionRepository.findPartUsageForWorkOrderAndSparePart(TENANT_ID, workOrder.getId(), part.getId()))
-                .thenReturn(List.of(usage(part, workOrder, InventoryTransactionType.CONSUME, "2.000")));
-
-        assertThatThrownBy(() -> service.returnPart(workOrder.getId(), part.getId(),
-                new ReturnPartRequest(new BigDecimal("3.000"), "Trả dư")))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("không được vượt quá 2");
-
-        assertThat(part.getStockQuantity()).isEqualByComparingTo("5.000");
-        verify(transactionRepository, never()).save(any(InventoryTransaction.class));
-    }
-
-    @Test
-    void returnRestoresStockAndRecordsReturnTransaction() {
-        WorkOrder workOrder = workOrder();
-        SparePart part = part(new BigDecimal("5.000"));
-        when(workOrderRepository.findForUpdate(workOrder.getId(), TENANT_ID)).thenReturn(Optional.of(workOrder));
-        when(sparePartRepository.findForUpdate(part.getId(), TENANT_ID)).thenReturn(Optional.of(part));
-        when(transactionRepository.findPartUsageForWorkOrderAndSparePart(TENANT_ID, workOrder.getId(), part.getId()))
-                .thenReturn(List.of(
-                        usage(part, workOrder, InventoryTransactionType.CONSUME, "3.000"),
-                        usage(part, workOrder, InventoryTransactionType.RETURN, "1.000")
-                ));
-
-        var result = service.returnPart(workOrder.getId(), part.getId(),
-                new ReturnPartRequest(new BigDecimal("1.000"), "Không sử dụng hết"));
-
-        assertThat(part.getStockQuantity()).isEqualByComparingTo("6.000");
-        assertThat(result.returnableQuantity()).isEqualByComparingTo("1.000");
-
-        ArgumentCaptor<InventoryTransaction> transaction = ArgumentCaptor.forClass(InventoryTransaction.class);
-        verify(transactionRepository).save(transaction.capture());
-        assertThat(transaction.getValue().getTransactionType()).isEqualTo(InventoryTransactionType.RETURN);
-        assertThat(transaction.getValue().getQuantity()).isEqualByComparingTo("1.000");
-        assertThat(transaction.getValue().getWorkOrder()).isSameAs(workOrder);
-    }
-
     private static SparePart part(BigDecimal stock) {
         SparePart part = new SparePart();
         part.setId(UUID.randomUUID());
@@ -213,24 +166,6 @@ class InventoryServiceWarehouseWorkflowTest {
         part.setUnitPrice(new BigDecimal("10000"));
         part.setActive(true);
         return part;
-    }
-
-    private static WorkOrder workOrder() {
-        WorkOrder workOrder = new WorkOrder();
-        workOrder.setId(UUID.randomUUID());
-        workOrder.setTenantId(TENANT_ID);
-        workOrder.setCode("WO-RETURN-TEST");
-        workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
-        return workOrder;
-    }
-
-    private static InventoryTransaction usage(SparePart part, WorkOrder workOrder, InventoryTransactionType type, String quantity) {
-        InventoryTransaction transaction = new InventoryTransaction();
-        transaction.setSparePart(part);
-        transaction.setWorkOrder(workOrder);
-        transaction.setTransactionType(type);
-        transaction.setQuantity(new BigDecimal(quantity));
-        return transaction;
     }
 
     private static void authenticateWarehouse() {

@@ -16,11 +16,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/audit-logs")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('OWNER')")
 public class AuditController {
     private final AuditService service;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER')")
     public PageResponse<AuditResponse> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

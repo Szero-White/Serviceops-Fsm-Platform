@@ -10,19 +10,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SparePartTest {
 
     @Test
-    void shouldConsumeAvailableStock() {
+    void shouldDecreaseAvailableStock() {
         SparePart part = partWithStock("10.000");
 
-        part.consume(new BigDecimal("2.500"));
+        part.decreaseStock(new BigDecimal("2.500"));
 
         assertThat(part.getStockQuantity()).isEqualByComparingTo("7.500");
     }
 
     @Test
-    void shouldAllowConsumingExactAvailableStock() {
+    void shouldAllowDecreasingExactAvailableStock() {
         SparePart part = partWithStock("2.000");
 
-        part.consume(new BigDecimal("2.000"));
+        part.decreaseStock(new BigDecimal("2.000"));
 
         assertThat(part.getStockQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
     }
@@ -31,21 +31,21 @@ class SparePartTest {
     void shouldRejectInsufficientStockWithoutMutatingBalance() {
         SparePart part = partWithStock("2.000");
 
-        assertThatThrownBy(() -> part.consume(new BigDecimal("3.000")))
+        assertThatThrownBy(() -> part.decreaseStock(new BigDecimal("3.000")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Không đủ tồn kho");
         assertThat(part.getStockQuantity()).isEqualByComparingTo("2.000");
     }
 
     @Test
-    void shouldRejectNonPositiveConsumeQuantity() {
+    void shouldRejectNonPositiveDecreaseQuantity() {
         SparePart part = partWithStock("10");
 
-        assertThatThrownBy(() -> part.consume(BigDecimal.ZERO))
+        assertThatThrownBy(() -> part.decreaseStock(BigDecimal.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> part.consume(new BigDecimal("-1")))
+        assertThatThrownBy(() -> part.decreaseStock(new BigDecimal("-1")))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> part.consume(null))
+        assertThatThrownBy(() -> part.decreaseStock(null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -5,6 +5,7 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
@@ -51,6 +52,7 @@ class WorkOrderDispatchReassignmentTest {
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
+    @Mock private WorkOrderPartRequestService workOrderPartRequestService;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private TechnicianRepository technicianRepository;
     @Mock private AppointmentRepository appointmentRepository;
@@ -70,6 +72,7 @@ class WorkOrderDispatchReassignmentTest {
                 repository,
                 historyRepository,
                 inventoryTransactionRepository,
+                workOrderPartRequestService,
                 serviceRequestRepository,
                 technicianRepository,
                 appointmentRepository,
@@ -92,6 +95,7 @@ class WorkOrderDispatchReassignmentTest {
         customer.setName("Công ty TNHH An Phát");
 
         workOrder.setCode("WO-2026-001006");
+        workOrder.setSummary("Máy rửa chén không cấp nước");
         workOrder.setCustomer(customer);
         workOrder.setStatus(WorkOrderStatus.ASSIGNED);
         workOrder.setTechnician(previousTechnician);
@@ -153,8 +157,12 @@ class WorkOrderDispatchReassignmentTest {
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("Điều phối viên Lê Thu Điều phối đã phân công phiếu cho bạn")
+                eq("Bạn có công việc mới: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Điều phối viên Lê Thu Điều phối")
+                                && message.contains("Máy rửa chén không cấp nước")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
     }
 
@@ -203,14 +211,20 @@ class WorkOrderDispatchReassignmentTest {
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(previousTechnician.getUser()),
-                eq("Bạn không còn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("Kỹ thuật viên B")
+                eq("Bạn không còn phụ trách: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Kỹ thuật viên B")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
         verify(notificationService).create(
                 eq(TENANT_ID),
                 eq(replacementTechnician.getUser()),
-                eq("Bạn được phân công: WO-2026-001006"),
-                org.mockito.ArgumentMatchers.contains("đã chuyển phiếu cho bạn")
+                eq("Bạn có công việc mới: WO-2026-001006"),
+                org.mockito.ArgumentMatchers.argThat(message ->
+                        message.contains("Điều phối viên Lê Thu Điều phối")
+                                && message.contains("Công ty TNHH An Phát")
+                                && message.contains("Lịch của tôi"))
         );
     }
 
@@ -257,8 +271,17 @@ class WorkOrderDispatchReassignmentTest {
                                 && details.contains("Lý do: Khách hàng đề nghị dời khung giờ tiếp nhận"))
         );
         var expectedNotification = NotificationCopy.technicianScheduleChanged(
-                "WO-2026-001006",
-                "Điều phối viên Lê Thu Điều phối"
+                new NotificationCopy.WorkOrderContext(
+                        "WO-2026-001006",
+                        "Máy rửa chén không cấp nước",
+                        "Công ty TNHH An Phát"
+                ),
+                "Điều phối viên Lê Thu Điều phối",
+                Instant.parse("2026-08-25T02:00:00Z"),
+                Instant.parse("2026-08-25T04:00:00Z"),
+                newStart,
+                newEnd,
+                "Khách hàng đề nghị dời khung giờ tiếp nhận"
         );
         verify(notificationService).create(
                 eq(TENANT_ID),

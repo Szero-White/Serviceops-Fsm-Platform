@@ -2,12 +2,14 @@ package com.serviceops.attachment.application;
 
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.attachment.domain.Attachment;
+import com.serviceops.attachment.domain.AttachmentPurpose;
 import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
+import com.serviceops.workorder.domain.WorkOrderStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,8 +63,11 @@ class AttachmentOwnershipTest {
                 assetRepository,
                 serviceRequestRepository
         );
+        WorkOrder activeWorkOrder = workOrder(WorkOrderStatus.IN_PROGRESS);
         org.mockito.Mockito.lenient().when(workOrderRepository.findDetailed(WORK_ORDER_ID, TENANT_ID))
-                .thenReturn(Optional.of(new WorkOrder()));
+                .thenReturn(Optional.of(activeWorkOrder));
+        org.mockito.Mockito.lenient().when(workOrderRepository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, USER_ID))
+                .thenReturn(Optional.of(activeWorkOrder));
     }
 
     @AfterEach
@@ -131,6 +136,52 @@ class AttachmentOwnershipTest {
         verify(storageService, never()).delete(attachment.getStorageKey());
     }
 
+    @Test
+    void workEvidenceBecomesReadOnlyAfterCustomerAcceptance() {
+        authenticate("owner", "OWNER");
+        Attachment attachment = attachmentUploadedBy("owner");
+        when(repository.findByIdAndTenantId(ATTACHMENT_ID, TENANT_ID)).thenReturn(Optional.of(attachment));
+        when(workOrderRepository.findDetailed(WORK_ORDER_ID, TENANT_ID))
+                .thenReturn(Optional.of(workOrder(WorkOrderStatus.CUSTOMER_ACCEPTED)));
+
+        assertThatThrownBy(() -> service.rename(ATTACHMENT_ID, "cannot-change.pdf"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo("ATTACHMENT_LOCKED");
+    }
+
+    @Test
+    void dispatcherCannotDownloadPaymentEvidence() {
+        authenticate("dispatcher", "DISPATCHER");
+        Attachment attachment = attachmentUploadedBy("technician");
+        attachment.setPurpose(AttachmentPurpose.PAYMENT_EVIDENCE);
+        attachment.setLockedAt(Instant.now());
+        when(repository.findByIdAndTenantId(ATTACHMENT_ID, TENANT_ID)).thenReturn(Optional.of(attachment));
+
+        assertThatThrownBy(() -> service.download(ATTACHMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo("PAYMENT_EVIDENCE_ACCESS_DENIED");
+
+        verify(storageService, never()).load(attachment.getStorageKey());
+    }
+
+    @Test
+    void paymentEvidenceCannotBeDeletedAfterItIsLocked() {
+        authenticate("technician", "TECHNICIAN");
+        Attachment attachment = attachmentUploadedBy("technician");
+        attachment.setPurpose(AttachmentPurpose.PAYMENT_EVIDENCE);
+        attachment.setLockedAt(Instant.now());
+        when(repository.findByIdAndTenantId(ATTACHMENT_ID, TENANT_ID)).thenReturn(Optional.of(attachment));
+
+        assertThatThrownBy(() -> service.delete(ATTACHMENT_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo("ATTACHMENT_LOCKED");
+
+        verify(repository, never()).delete(attachment);
+    }
+
     private static Attachment attachmentUploadedBy(String username) {
         Attachment attachment = new Attachment();
         attachment.setId(ATTACHMENT_ID);
@@ -142,9 +193,18 @@ class AttachmentOwnershipTest {
         attachment.setReferenceType("WORK_ORDER");
         attachment.setReferenceId(WORK_ORDER_ID);
         attachment.setUploadedBy(username);
+        attachment.setPurpose(AttachmentPurpose.WORK_EVIDENCE);
         attachment.setCreatedAt(Instant.now());
         attachment.setUpdatedAt(Instant.now());
         return attachment;
+    }
+
+    private static WorkOrder workOrder(WorkOrderStatus status) {
+        WorkOrder workOrder = new WorkOrder();
+        workOrder.setId(WORK_ORDER_ID);
+        workOrder.setTenantId(TENANT_ID);
+        workOrder.setStatus(status);
+        return workOrder;
     }
 
     private static void authenticate(String username, String role) {

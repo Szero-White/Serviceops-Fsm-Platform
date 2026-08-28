@@ -11,8 +11,8 @@ import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import type { SparePart } from '../../../types'
 import { formatCompactDecimalInput, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
 import { inventoryApi } from '../api'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+
 type StocktakeValues = { actualQuantity: number; reason: string }
 
 export function InventoryStocktakePage() {

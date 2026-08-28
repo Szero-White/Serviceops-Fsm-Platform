@@ -142,6 +142,6 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 curl -f http://127.0.0.1:8088/actuator/health/readiness
 ```
 
-Then smoke-test login, cross-tenant access rejection, work-order workflow, concurrent scheduling, inventory consumption and attachment upload/download.
+Then smoke-test login, cross-tenant access rejection, work-order workflow, concurrent scheduling, part REQUEST/ISSUE/USED/RETURN inventory behavior and attachment upload/download.
 
 Use Flyway migrations through application startup. Never run schema recreation, destructive reset, or local fresh-seed commands against a persistent production database.

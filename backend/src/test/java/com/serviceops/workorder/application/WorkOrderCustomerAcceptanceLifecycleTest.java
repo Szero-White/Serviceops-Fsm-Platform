@@ -2,11 +2,12 @@ package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.domain.Priority;
+import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
-import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
@@ -33,9 +34,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +48,7 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
+    @Mock private WorkOrderPartRequestService workOrderPartRequestService;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private TechnicianRepository technicianRepository;
     @Mock private AppointmentRepository appointmentRepository;
@@ -57,7 +57,6 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
 
     private WorkOrderService service;
     private WorkOrder workOrder;
-    private UserAccount technicianUser;
 
     @BeforeEach
     void setUp() {
@@ -65,6 +64,7 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
                 repository,
                 historyRepository,
                 inventoryTransactionRepository,
+                workOrderPartRequestService,
                 serviceRequestRepository,
                 technicianRepository,
                 appointmentRepository,
@@ -73,7 +73,6 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
         );
         workOrder = completedAssignedWorkOrder();
         when(repository.findForUpdate(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));
-        when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
     }
 
     @AfterEach
@@ -82,70 +81,50 @@ class WorkOrderCustomerAcceptanceLifecycleTest {
     }
 
     @Test
-    void assignedTechnicianCanRecordCustomerAcceptanceAndClose() {
+    void technicianCannotBypassDedicatedCustomerAcceptanceWorkflow() {
         authenticate(UserRole.TECHNICIAN, TECHNICIAN_USER_ID, "technician", "Phạm Quốc Kỹ thuật");
-        when(repository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, TECHNICIAN_USER_ID)).thenReturn(Optional.of(workOrder));
 
-        var accepted = service.transition(
+        assertThatThrownBy(() -> service.transition(
                 WORK_ORDER_ID,
-                new TransitionWorkOrder(WorkOrderStatus.CUSTOMER_ACCEPTED, "Khách đã kiểm tra và đồng ý", null, null)
-        );
-        assertThat(accepted.status()).isEqualTo(WorkOrderStatus.CUSTOMER_ACCEPTED);
+                new TransitionWorkOrder(WorkOrderStatus.CUSTOMER_ACCEPTED, "Khách đã đồng ý", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("xác nhận khách và thanh toán dùng thao tác nghiệp vụ riêng");
 
-        var closed = service.transition(
-                WORK_ORDER_ID,
-                new TransitionWorkOrder(WorkOrderStatus.CLOSED, "Đã bàn giao và kết thúc công việc", null, null)
-        );
-        assertThat(closed.status()).isEqualTo(WorkOrderStatus.CLOSED);
-        verifyNoInteractions(notificationService);
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
     }
 
     @Test
-    void assignedTechnicianCanReopenBeforeClosureWhenSameIssuePersists() {
+    void technicianCannotCloseOrReopenThroughFieldProgressTransition() {
         authenticate(UserRole.TECHNICIAN, TECHNICIAN_USER_ID, "technician", "Phạm Quốc Kỹ thuật");
-        when(repository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, TECHNICIAN_USER_ID)).thenReturn(Optional.of(workOrder));
 
-        var reopened = service.transition(
+        assertThatThrownBy(() -> service.transition(
                 WORK_ORDER_ID,
-                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Khách báo lỗi vẫn còn trước khi đóng", null, null)
-        );
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Khách báo lỗi vẫn còn", null, null)
+        )).isInstanceOf(BusinessException.class);
 
-        assertThat(reopened.status()).isEqualTo(WorkOrderStatus.REOPENED);
-        var expectedNotification = NotificationCopy.workOrderReopenedAttention("WO-UAT-ACCEPT-001");
-        verify(notificationService).notifyRoles(
-                eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.DISPATCHER)),
-                eq(expectedNotification.title()),
-                eq(expectedNotification.message())
-        );
+        workOrder.setStatus(WorkOrderStatus.CUSTOMER_ACCEPTED);
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.CLOSED, "Đóng phiếu", null, null)
+        )).isInstanceOf(BusinessException.class);
     }
 
     @Test
-    void ownerCanRecordCustomerAcceptanceAndCloseAsAdminOverride() {
-        authenticate(UserRole.OWNER, OWNER_USER_ID, "owner", "Quản trị hệ thống");
-        when(repository.findDetailed(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));
+    void ownerCannotPerformRoutineAcceptanceClosureOrReopen() {
+        authenticate(UserRole.OWNER, OWNER_USER_ID, "owner", "Chủ sở hữu");
 
-        var accepted = service.transition(
+        assertThatThrownBy(() -> service.transition(
                 WORK_ORDER_ID,
-                new TransitionWorkOrder(WorkOrderStatus.CUSTOMER_ACCEPTED, "Owner ghi nhận khách đã đồng ý", null, null)
-        );
-        assertThat(accepted.status()).isEqualTo(WorkOrderStatus.CUSTOMER_ACCEPTED);
+                new TransitionWorkOrder(WorkOrderStatus.CUSTOMER_ACCEPTED, "Owner ghi nhận", null, null)
+        )).isInstanceOf(BusinessException.class);
 
-        var closed = service.transition(
-                WORK_ORDER_ID,
-                new TransitionWorkOrder(WorkOrderStatus.CLOSED, "Owner đóng phiếu", null, null)
-        );
-        assertThat(closed.status()).isEqualTo(WorkOrderStatus.CLOSED);
-        verify(notificationService).create(
-                eq(TENANT_ID),
-                eq(technicianUser),
-                eq("Phiếu đã đóng: WO-UAT-ACCEPT-001"),
-                contains("không cần thao tác thêm")
-        );
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
     }
 
     private WorkOrder completedAssignedWorkOrder() {
-        technicianUser = new UserAccount();
+        UserAccount technicianUser = new UserAccount();
         technicianUser.setId(TECHNICIAN_USER_ID);
         technicianUser.setTenantId(TENANT_ID);
         technicianUser.setUsername("technician");

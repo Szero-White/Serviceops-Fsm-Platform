@@ -14,7 +14,6 @@ import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
-
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive'
@@ -85,7 +84,7 @@ export function CustomersPage() {
   const remove = useMutation({
     mutationFn: (id: string) => customersApi.delete(id),
     onSuccess: () => {
-      message.success('Đã xoá khách hàng')
+      message.success('Đã xóa khách hàng')
       refreshRelatedViews()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -285,14 +284,14 @@ export function CustomersPage() {
               <Space size={4}>
                 <Button aria-label="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
-                  title="Xoá khách hàng này?"
-                  description="Chỉ xoá được khi khách hàng chưa được dùng trong dữ liệu nghiệp vụ."
-                  okText="Xoá"
-                  cancelText="Huỷ"
+                  title="Xóa khách hàng này?"
+                  description="Chỉ xóa được khi khách hàng chưa được dùng trong dữ liệu nghiệp vụ."
+                  okText="Xóa"
+                  cancelText="Hủy"
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xoá khách hàng" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa khách hàng" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ),

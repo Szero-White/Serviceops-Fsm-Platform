@@ -28,13 +28,37 @@ public class AuditService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(String action, String entityType, UUID entityId, String details) {
-        recordAs(CurrentUser.tenantId(), CurrentUser.username(), action, entityType, entityId, details);
+        recordAs(
+                CurrentUser.tenantId(),
+                CurrentUser.username(),
+                CurrentUser.displayName(),
+                CurrentUser.primaryRole(),
+                action,
+                entityType,
+                entityId,
+                details
+        );
     }
 
     public void recordAs(UUID tenantId, String actor, String action, String entityType, UUID entityId, String details) {
+        recordAs(tenantId, actor, null, null, action, entityType, entityId, details);
+    }
+
+    public void recordAs(
+            UUID tenantId,
+            String actor,
+            String actorDisplayName,
+            String actorRole,
+            String action,
+            String entityType,
+            UUID entityId,
+            String details
+    ) {
         AuditLog log = new AuditLog();
         log.setTenantId(tenantId);
         log.setActorUsername(actor);
+        log.setActorDisplayName(actorDisplayName);
+        log.setActorRole(actorRole);
         log.setAction(action);
         log.setEntityType(entityType);
         log.setEntityId(entityId);
@@ -112,9 +136,11 @@ public class AuditService {
                 predicates.add(builder.lessThanOrEqualTo(root.get("createdAt"), to));
             }
             if (actor != null) {
-                predicates.add(builder.like(
-                        builder.lower(root.get("actorUsername")),
-                        likePattern(actor)
+                String pattern = likePattern(actor);
+                predicates.add(builder.or(
+                        builder.like(builder.lower(root.get("actorUsername")), pattern),
+                        builder.like(builder.lower(root.get("actorDisplayName")), pattern),
+                        builder.like(builder.lower(root.get("actorRole")), pattern)
                 ));
             }
             if (action != null) {
@@ -127,6 +153,8 @@ public class AuditService {
                 String pattern = likePattern(query);
                 List<Predicate> searchPredicates = new ArrayList<>();
                 searchPredicates.add(builder.like(builder.lower(root.get("actorUsername")), pattern));
+                searchPredicates.add(builder.like(builder.lower(root.get("actorDisplayName")), pattern));
+                searchPredicates.add(builder.like(builder.lower(root.get("actorRole")), pattern));
                 searchPredicates.add(builder.like(builder.lower(root.get("action")), pattern));
                 searchPredicates.add(builder.like(builder.lower(root.get("entityType")), pattern));
                 searchPredicates.add(builder.like(builder.lower(root.get("details")), pattern));

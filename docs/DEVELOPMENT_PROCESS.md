@@ -20,7 +20,7 @@
 
 ## 3. Khi code frontend
 
-- API tập trung ở `src/api`.
+- HTTP dùng chung tập trung ở `src/api`; API nghiệp vụ đặt trong `features/<domain>/api.ts` theo module sở hữu.
 - Kiểu dữ liệu tập trung ở `src/types`.
 - Page không tự tạo nhiều Axios instance.
 - Mọi request có loading/error/empty state.

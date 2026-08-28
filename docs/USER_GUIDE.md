@@ -2,14 +2,24 @@
 
 ## 1. Chọn tài khoản theo vai trò
 
-- `owner`: quản trị tổng thể các module được cấp: người dùng, Customer/Asset, Service Request, kênh, Work Order/điều phối, đội kỹ thuật, kho/kiểm kê/lịch sử biến động và audit; không giả lập tiến độ hiện trường hoặc consume thay Technician.
-- `dispatcher`: quản lý bảng điều phối tuần, gán kỹ thuật viên và xếp lịch work order.
+- `owner`: quản trị tổng thể các module được cấp: người dùng, Customer/Asset, Service Request, kênh, Work Order/điều phối, đội kỹ thuật, kho/kiểm kê/lịch sử biến động và audit; chỉ giám sát yêu cầu/vật tư, không giả lập thao tác hiện trường hoặc xác nhận hàng ra/vào kho thay role nghiệp vụ.
+- `dispatcher`: quản lý Work Order, đội ngũ kỹ thuật, phân công/xếp lịch và lịch sử nghiệp vụ điều phối; không có quyền Nhật ký hệ thống.
 - `customer-service`: tạo khách hàng, thiết bị và yêu cầu dịch vụ.
-- `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch và công việc được giao cho chính mình.
+- `technician`: tài khoản cá nhân của Phạm Quốc; chỉ xem lịch/công việc được giao và thao tác phụ tùng ngay trong Work Order, không có workspace Kho phụ tùng riêng.
 - `technician-2`: tài khoản cá nhân của Võ Hoàng; dùng để kiểm tra dữ liệu lịch không bị lẫn giữa kỹ thuật viên.
-- `warehouse`: vào thẳng **Kho phụ tùng**; quản lý catalog/import, kiểm kê chênh lệch, xác nhận hoàn trả phụ tùng theo Work Order và tra cứu lịch sử biến động; không có Work Order operational dashboard.
+- `warehouse`: vào thẳng **Yêu cầu phụ tùng**; xác nhận cấp/không thể cấp, quản lý catalog/import, kiểm kê, nhận hoàn trả và tra cứu lịch sử biến động; không có Work Order operational dashboard.
 
 Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`. Đây chỉ là credential demo; production secrets phải được cấu hình riêng.
+
+
+## 1.1. Điều hướng theo vai trò
+
+- `OWNER`: **Vận hành** → **Khách hàng & nguồn lực** → **Kho & vật tư** → **Quản trị**. Owner nhìn rộng toàn hệ thống nhưng các action chuyên môn vẫn thuộc đúng role.
+- `CUSTOMER_SERVICE`: **Công việc** (Tổng quan, Yêu cầu dịch vụ, Phiếu công việc, Xử lý thanh toán, Lịch sử phiếu) + **Khách hàng** (Khách hàng, Thiết bị, Kênh tiếp nhận).
+- `DISPATCHER`: **Điều phối** (Tổng quan, Phiếu công việc, Lịch điều phối, Lịch sử phiếu) + **Nguồn lực** (Kỹ thuật viên). Customer/Asset chỉ là dữ liệu đọc hỗ trợ trong nghiệp vụ, không phải workspace chính; Audit là Owner-only.
+- `TECHNICIAN`: **Công việc của tôi** (Tổng quan, Lịch của tôi, Phiếu công việc, Lịch sử phiếu). Tìm/request phụ tùng ngay trong Work Order thay vì mở Kho phụ tùng.
+- `WAREHOUSE_STAFF`: **Kho & vật tư** (Yêu cầu phụ tùng, Kho phụ tùng, Kiểm kê tồn kho, Lịch sử biến động), trong đó Yêu cầu phụ tùng là queue ưu tiên.
+- Menu điều hướng cuộn độc lập; **Đăng xuất** nằm ở footer cố định và không che item cuối. **Thiết lập thanh toán** nằm trong Quản trị của Owner, không nằm cạnh footer tài khoản.
 
 ## 2. Kịch bản demo chuẩn
 
@@ -35,39 +45,48 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 3. Mở **Phiếu công việc**; chỉ các work order được giao cho tài khoản này mới xuất hiện.
 4. Chuyển trạng thái lần lượt `ON_THE_WAY` và `IN_PROGRESS`.
 5. Upload ảnh/PDF minh chứng.
-6. Ghi nhận phụ tùng đã sử dụng. Hệ thống không cho số lượng tồn âm; sau khi ghi nhận thành công, mở tab **Tiến trình** của phiếu để thấy ngay tên/SKU, số lượng, Technician thực hiện, thời gian và ghi chú của phụ tùng đã dùng.
-7. Nhập chẩn đoán và giải pháp, sau đó chuyển sang `COMPLETED`.
+6. Nếu cần vật tư, mở tab **Phụ tùng** và bấm **Yêu cầu phụ tùng**. Yêu cầu đang chờ có thể sửa số lượng/note hoặc hủy với lý do thực tế; bước này **không giảm tồn kho**.
+7. Sau khi Warehouse cấp, tab **Phụ tùng** hiển thị lượng đã cấp. Technician ghi **Thực tế đã dùng**; thao tác này không làm giảm tồn lần nữa và có thể cập nhật đến trạng thái `COMPLETED`. Sau khi lưu, tab **Chi phí** tự lấy lại billing draft nên số lượng/thành tiền mới hiển thị ngay, không cần F5; sau `CUSTOMER_ACCEPTED` billing đã freeze nên không tự tính lại.
+8. Nhập chẩn đoán và giải pháp, sau đó chuyển sang `COMPLETED`.
 
 
-### Bước 3.5 — Kho xác nhận và đối soát vật tư
+### Bước 3.5 — Kho cấp và đối soát vật tư
 
-1. Đăng nhập `warehouse`.
-2. Mở **Lịch sử biến động** để xem giao dịch `CONSUME` vừa phát sinh từ Work Order.
-3. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Đây là mốc cảnh báo tồn thấp, không phải số lượng đặt mua; thay đổi được audit và nếu ngưỡng mới làm tồn hiện tại mới rơi vào trạng thái tồn thấp thì hệ thống phát notification sau commit.
-4. Nếu kỹ thuật viên trả lại phần chưa dùng, bấm **Hoàn trả**, nhập số lượng và lý do; backend chặn tổng RETURN vượt tổng CONSUME của cùng part/Work Order. Giao dịch RETURN được theo dõi ở **Lịch sử biến động** của kho và vẫn được trừ khi đối soát hóa đơn; nó không xuất hiện như field progress trong **Tiến trình** Work Order.
-5. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tự tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Sau khi giao dịch thành công, Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn chạm hoặc thấp hơn ngưỡng tồn tối thiểu.
-6. Quay lại **Lịch sử biến động** để kiểm tra actor, thời gian, số lượng, tồn sau giao dịch và Work Order liên quan.
+1. Đăng nhập `warehouse`; hệ thống mở **Yêu cầu phụ tùng**.
+2. Với request `REQUESTED`, bấm **Xác nhận cấp** khi giao thực tế cho Technician. Chỉ lúc này tồn kho mới giảm và ledger tạo `ISSUE`. Nếu không thể cấp, chọn **Không thể cấp** và nhập lý do thực tế; không có stock movement.
+3. Mở **Lịch sử biến động** để đối chiếu `ISSUE`, Work Order, **Kỹ thuật viên nhận**, **Người thực hiện cấp** và tồn sau giao dịch. Tên kỹ thuật viên nhận là snapshot tại lúc cấp nên không bị đổi theo việc điều phối lại Work Order. Dữ liệu `CONSUME` cũ vẫn được hiển thị để tương thích lịch sử; active API/UI không còn tạo `CONSUME`.
+4. Nếu Technician trả lại phần đã cấp nhưng không dùng, bấm **Hoàn trả**, nhập số lượng và lý do. Backend chặn RETURN vượt `ISSUE - USED - RETURN`; RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
+5. Trong **Kho phụ tùng**, OWNER/WAREHOUSE_STAFF có thể dùng **Sửa ngưỡng** để cập nhật **Ngưỡng tồn tối thiểu**. Thao tác này không đổi stock và có audit.
+6. Mở **Kiểm kê tồn kho** khi cần đối chiếu số đếm thực tế với hệ thống; chênh lệch tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT`. Owner nhận thông báo chênh lệch; Warehouse nhận cảnh báo nếu tồn thấp.
+7. Quay lại **Lịch sử biến động** để kiểm tra toàn bộ hàng thực sự ra/vào kho.
 
-### Bước 4 — Khách xác nhận và đóng phiếu
+### Hình ảnh & tài liệu trong quá trình sửa chữa
 
-1. Sau khi kỹ thuật viên chuyển phiếu sang `COMPLETED`, giữ nguyên tài khoản Technician được giao hoặc đăng nhập `owner` nếu cần admin override.
-2. Mở chi tiết phiếu bằng icon mắt. Trong hàng thao tác cạnh **Tải ảnh / PDF**, khi khách đã đồng ý kết quả sẽ có nút **Khách xác nhận**.
-3. Bấm **Khách xác nhận** để chuyển `COMPLETED → CUSTOMER_ACCEPTED`.
-4. Sau đó nút **Đóng phiếu** xuất hiện. Bấm để chuyển `CUSTOMER_ACCEPTED → CLOSED`; giao diện tự chuyển sang **Lịch sử phiếu công việc** và mở đúng phiếu vừa đóng.
-5. Nếu cùng sự cố vẫn còn trước khi đóng, dùng **Khách yêu cầu xử lý lại** để chuyển `COMPLETED/CUSTOMER_ACCEPTED → REOPENED`.
-6. Khi phiếu đã `CLOSED`, không mở lại nữa. Nếu khách báo lỗi phát sinh sau đó, Customer Service tiếp nhận Service Request mới để tạo Work Order mới, giữ lịch sử cũ nguyên vẹn.
+- Trong Work Order, assigned Technician có thể **Chụp ảnh** hoặc **Tải file lên** để lưu nhiều ảnh/PDF phục vụ hồ sơ sửa chữa; OWNER cũng có thể bổ sung khi phiếu còn active.
+- File sửa chữa do chính uploader tải lên có thể đổi tên/xóa khi hồ sơ còn mutable; OWNER có thể quản lý work evidence active. Sau `CUSTOMER_ACCEPTED`, `CLOSED` hoặc `CANCELLED`, hồ sơ chuyển read-only và chỉ còn **Xem/Tải xuống**.
+- Ảnh giao dịch chuyển khoản là `PAYMENT_EVIDENCE` riêng và chỉ hiển thị trong tab **Thanh toán**. Technician có thể chụp lại/bỏ ảnh nháp trước khi báo chuyển khoản; sau khi báo chuyển khoản, evidence bị khóa để CSKH đối soát và không thể rename/delete.
+
+### Bước 4 — Khách xác nhận, thanh toán và đóng phiếu
+
+1. Technician hoàn thành công việc (`COMPLETED`), nhập đủ actual-used, tiền công và phí phát sinh thực tế rồi cho khách xem kết quả/tổng tiền.
+2. Khi khách đồng ý, Technician bấm **Ghi nhận khách xác nhận**. Hệ thống chuyển `COMPLETED → CUSTOMER_ACCEPTED` và freeze billing snapshot.
+3. Technician ghi nhận cách khách thanh toán: **Khách báo đã chuyển khoản** vào tài khoản công ty hoặc **Đã nhận tiền mặt từ khách**. Ảnh giao dịch chỉ là bằng chứng hỗ trợ, không đồng nghĩa tiền đã SETTLED.
+4. Customer Service mở **Xử lý thanh toán**. Khoản chuyển khoản/tiền mặt đang chờ có nút **Đối soát thanh toán**; bấm nút này để mở thẳng đúng Work Order ở tab **Thanh toán**. CSKH kiểm lại snapshot chi phí khách đã xác nhận, số tiền/phương thức, ảnh bằng chứng chuyển khoản nếu có hoặc tiền mặt Technician bàn giao rồi mới xác nhận. Xác nhận thành công đưa payment về `SETTLED`.
+5. Sau `SETTLED`, ngay trong Work Order hiện **Phát hành / tải biên nhận** và **Đóng phiếu**. Nếu CSKH rời Work Order trước khi hoàn tất, hai action này vẫn hiện tại **Xử lý thanh toán** để tránh bỏ sót. Backend bảo đảm receipt tồn tại trước khi chuyển `CUSTOMER_ACCEPTED → CLOSED`; sau khi đóng, hàng đợi chỉ còn **Tải biên nhận** + trạng thái **Đã đóng phiếu**.
+6. Vật tư outstanding không chặn closure. Warehouse vẫn được RETURN phần hợp lệ sau CLOSED; Work Order giữ nguyên `CLOSED`.
+7. Nếu khách báo cùng sự cố trước customer acceptance, CSKH có thể reopen theo policy. Sau `CUSTOMER_ACCEPTED`/`CLOSED`, không reopen silent; sự cố mới đi qua Service Request/Work Order mới.
 
 ## 3. Quy tắc người dùng cần biết
 
 - Phản hồi biểu mẫu: các trường bắt buộc có dấu đánh dấu. Nếu bấm Lưu/Hoàn thành khi còn thiếu dữ liệu, hệ thống không gửi request; form cuộn tới lỗi đầu tiên và hiển thị cảnh báo ngắn để biết cần bổ sung gì. Các nút xác nhận dùng tên hành động cụ thể thay cho “Đồng ý” ở các flow chính.
-- Hoàn thành Work Order: kỹ thuật viên phải nhập **Chẩn đoán / nguyên nhân** và **Giải pháp đã thực hiện**. Thành công thì kỹ thuật viên nhận success feedback và có thể bấm **Khách xác nhận** ngay trong phiếu khi khách đồng ý; Owner theo dõi completion bình thường qua Dashboard/Work Order thay vì nhận chuông cho từng phiếu.
-- Notification drawer: tiêu đề nói rõ **chuyện gì vừa xảy ra hoặc việc cần làm**, dòng mô tả nói **bước tiếp theo**. Dispatcher nhận việc điều phối/chờ phụ tùng/mở lại; Customer Service nhận **Phiếu đã hoàn thành** để follow-up; Technician nhận phân công hoặc thay đổi trực tiếp tới lịch/job của mình; Warehouse nhận tồn kho thấp; Owner chỉ nhận ngoại lệ quản trị đáng chú ý. CRUD/master-data/import/attachment bình thường không tạo chuông. Tiến độ một Work Order xem ở **Tiến trình**, còn truy vết toàn hệ thống xem ở **Audit**. Mã WO/SKU được giữ để tra cứu; enum, raw timestamp hoặc mã test/kỹ thuật không dùng làm nội dung chính và notification cũ được giao diện đổi sang cách đọc thân thiện khi có thể.
+- Hoàn thành Work Order: kỹ thuật viên phải nhập **Chẩn đoán / nguyên nhân** và **Giải pháp đã thực hiện**. Sau đó Technician ghi actual-used/chi phí, ghi nhận khách xác nhận và phương thức thanh toán tại hiện trường; CSKH mới đối soát tiền, phát hành biên nhận và đóng phiếu. Owner giám sát outcome thay vì thao tác routine.
+- Notification drawer là hàng đợi **việc cần chú ý**, không phải lịch sử CRUD. Title cho biết việc gì + mã `WO-...`/SKU; body cho biết **ai vừa thao tác, đang nói tới khách hàng/công việc/phụ tùng nào và cần làm gì tiếp theo**. Ví dụ Dispatcher thấy **Cần phân công kỹ thuật viên: WO-...** kèm summary + tên khách và hướng dẫn mở Lịch điều phối; Technician thấy **Bạn có công việc mới: WO-...** kèm người giao, khách hàng và hướng dẫn mở Lịch của tôi. CRUD/master-data/import/attachment bình thường không tạo chuông. Tiến độ một Work Order xem ở **Tiến trình**, ledger kho xem ở **Lịch sử biến động**, truy vết toàn hệ thống xem ở **Audit** (Owner-only).
 - Bấm biểu tượng chuông để xem; thông báo chưa đọc có nền nổi bật. Bấm dòng chưa đọc để chuyển sang đã đọc. Mỗi dòng có nút trạng thái ở ngoài cùng bên phải để chuyển Đã đọc ↔ Chưa đọc; dùng Đánh dấu chưa đọc khi cần giữ một thông báo để theo dõi lại.
 - Work order phải đi đúng vòng đời; không thể nhảy trạng thái tùy ý.
-- Work order đã đóng hoặc hủy không được dùng thêm phụ tùng.
+- Work order đã đóng hoặc hủy không được tạo yêu cầu mới/cấp mới/chỉnh actual-used; Warehouse vẫn có thể nhận RETURN phần outstanding hợp lệ sau CLOSED.
 - Mỗi kỹ thuật viên có tài khoản riêng liên kết 1-1 với `technician_profile`; lịch cá nhân được backend suy ra từ JWT và không thể đổi ID để xem lịch người khác.
 - Kỹ thuật viên chỉ nhận thông tin khách hàng cần thiết trong Work Order được giao; không thể dùng Work Order/My Schedule để đọc job của kỹ thuật viên khác.
-- Kỹ thuật viên chỉ thao tác Work Order được giao: tiến độ hiện trường và, sau `COMPLETED`, **Khách xác nhận / Đóng phiếu / Mở lại** trước khi đóng. Owner có admin override cho các bước hậu xử lý và hủy. Customer Service tiếp nhận follow-up để mở lại/hủy khi khách thay đổi nhu cầu. Dispatcher phụ trách điều phối/schedule/reschedule và operational cancellation.
+- Kỹ thuật viên chỉ thao tác Work Order được giao: tiến độ hiện trường, phụ tùng/actual-used, billing draft, ghi nhận khách xác nhận và payment action tại hiện trường. Customer Service phụ trách reopen/cancel theo policy trước acceptance, payment reconciliation, biên nhận và normal closure. Owner giám sát/cấu hình; Dispatcher phụ trách điều phối/schedule/reschedule và operational cancellation.
 - Username tài khoản được cố định sau khi tạo để giữ ổn định audit/ownership; Owner vẫn có thể đổi họ tên hiển thị, mật khẩu và trạng thái tài khoản theo policy. Trang **Người dùng** có bộ lọc **Tất cả trạng thái / Hoạt động / Tạm ngưng** kết hợp với tìm kiếm; các guard self-disable, last-owner và demo account vẫn bắt buộc.
 - **Trợ lý AI** tự dùng role của tài khoản đang đăng nhập. Có thể hỏi tổng quát “Trong vai trò này tôi được làm gì?” để nhận overview; sau đó hỏi sâu từng chức năng. AI không mở rộng sang quyền role khác: ví dụ Dispatcher không được hướng dẫn quản trị user/kho, Technician không được hướng dẫn kiểm kê/sửa ngưỡng, Warehouse không được hướng dẫn Work Order hiện trường.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
@@ -75,7 +94,15 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 
 ## 4. Reset dữ liệu demo
 
-Nếu dùng PostgreSQL qua Docker và **thật sự muốn xóa toàn bộ dữ liệu local**:
+Khi cần làm sạch toàn bộ database local, ưu tiên script có guard + backup:
+
+```powershell
+.\scripts\reset-local-db.ps1
+```
+
+Script chỉ cho phép host local, kiểm quyền admin/role ứng dụng trước khi drop, mặc định tạo + verify backup và yêu cầu gõ lại đúng tên database. Với PostgreSQL native mà account ứng dụng không có `CREATEDB`, chạy `.\scripts\reset-local-db.ps1 -AdminUser postgres` và nhập password quản trị khi được hỏi.
+
+Nếu PostgreSQL chạy bằng Docker và bạn **chủ động chấp nhận xóa cả volume** thay vì giữ backup:
 
 ```powershell
 docker compose -f docker-compose.local.yml down -v

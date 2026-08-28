@@ -13,7 +13,7 @@ const statusLabels: Record<string, string> = {
   COMPLETED: 'Đã hoàn thành',
   CUSTOMER_ACCEPTED: 'Khách xác nhận',
   CLOSED: 'Đã đóng',
-  CANCELLED: 'Đã huỷ',
+  CANCELLED: 'Đã hủy',
   REOPENED: 'Mở lại',
   CONVERTED: 'Đã tạo phiếu',
   ACTIVE: 'Hoạt động',

@@ -36,4 +36,16 @@ public class WorkOrderStatusHistory extends TenantScopedEntity {
 
     @Column(name = "changed_by", nullable = false, length = 100)
     private String changedBy;
+
+    @Column(name = "actor_display_name", length = 150)
+    private String actorDisplayName;
+
+    @Column(name = "actor_role", length = 40)
+    private String actorRole;
+
+    @Column(name = "diagnosis_snapshot", columnDefinition = "text")
+    private String diagnosisSnapshot;
+
+    @Column(name = "resolution_snapshot", columnDefinition = "text")
+    private String resolutionSnapshot;
 }

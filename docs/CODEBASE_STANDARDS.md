@@ -8,7 +8,7 @@ These conventions define the maintainability bar for ServiceOps. They are intent
 
 1. **One primary responsibility per file.** A file may coordinate several collaborators, but it should have one clear reason to change.
 2. **Business behavior stays in the owning module.** Shared packages contain cross-cutting primitives, not domain-specific shortcuts.
-3. **Names describe intent.** Prefer `WorkOrderInvoiceHtmlRenderer` over generic names such as `Helper`, `Utils` or `Manager`.
+3. **Names describe intent.** Prefer `PaymentReceiptHtmlRenderer` over generic names such as `Helper`, `Utils` or `Manager`.
 4. **Controllers/components orchestrate; services/hooks own behavior.** Avoid embedding unrelated workflows inside route/controller/page files.
 5. **Do not refactor by line count alone.** Size is a signal. Cohesion, change frequency, testability and responsibility boundaries are the actual decision criteria.
 6. **Preserve compatibility during structural refactors.** Public API contracts, persisted data and business transitions require explicit migration/versioning if changed.
@@ -33,8 +33,8 @@ Example:
 
 ```text
 WorkOrderService                 core work-order use cases
-WorkOrderInvoiceService          invoice export orchestration
-WorkOrderInvoiceHtmlRenderer     HTML presentation concern
+PaymentReceiptService           payment receipt orchestration
+PaymentReceiptHtmlRenderer      HTML presentation concern
 ```
 
 ### Transactions and concurrency
@@ -84,6 +84,20 @@ Complex drawers, dialogs, tables and role rules should live in focused feature f
 
 Domain contracts are separated by area under `src/types/`. `src/types/index.ts` is only a stable public barrel and must not become a monolithic type declaration file.
 
+### Data selectors and query scale
+
+- A `Select` backed by a paginated/searchable API must debounce user input and search server-side; do not fetch an arbitrary first 100 records and treat it as the complete option set.
+- Preserve the currently selected/editing entity even when it falls outside the latest search page.
+- Small bounded reference sets (roles, status enums, service channels, a technician roster at current scale) may remain client-filtered when the backend intentionally returns the full set.
+- Prefer correctness-first query invalidation after business mutations; introduce shared query-key factories only when they reduce repeated mistakes without hiding domain dependencies.
+
+### Navigation and authorization
+
+- `router/routeAccess.ts` defines frontend route availability; backend `@PreAuthorize`/service guards remain the real security boundary.
+- `navigation/navigationConfig.tsx` defines role-focused sidebar grouping/order only. It may intentionally hide auxiliary read-only routes from the main menu, but it must never grant access that `routeAccess` or the backend denies.
+- Sidebar labels should describe the user's task/workspace, not database/module names. Keep the navigation registry centralized instead of duplicating role menus inside layout components.
+- AI Help and E2E role contracts must be updated whenever a role workspace or navigation label changes.
+
 ### UI consistency
 
 Operational pages should use the shared application language:
@@ -102,11 +116,13 @@ Use shared status tags, spacing, empty states and form patterns before introduci
 - A table should not require a fixed action column by default. Use it only when real width/interaction requirements justify the additional scroll/sticky complexity.
 - Public landing claims must be traceable to implemented code or explicit roadmap documentation. Do not invent customers, metrics, prices, integrations or testimonials.
 
-## Demo safety
+## Demo and destructive-tooling safety
 
 - Public demo credentials are intentionally disposable and must never be reused for real administrative accounts.
 - `DEMO_MODE` protects destructive administration while preserving the core editable service workflow.
 - Public demo frontend convenience may expose the public demo password because it is a presentation credential, not a secret. The underlying environment/database/JWT secrets remain private.
+- Destructive local maintenance scripts must fail closed: reject non-local targets, verify role/capability prerequisites before the first destructive statement, preserve/verify a backup by default and require an explicit target confirmation.
+- Stateful browser tests must require an explicit mutation opt-in for every target. CI may set it only for an isolated test stack; local runs must use disposable data.
 
 ## Pull-request acceptance gate
 
@@ -116,7 +132,7 @@ Before merging a structural or production change:
 Backend tests             PASS
 Frontend type/lint        PASS
 Frontend production build PASS
-npm audit                 no known vulnerabilities
+Dependency changes        lockfile reviewed; audit when dependencies change
 Docker build              PASS
 Production-like health    backend/frontend/postgres healthy
 Manual smoke flow         PASS
@@ -124,3 +140,5 @@ Working tree              clean
 ```
 
 A refactor is incomplete if behavior changes unintentionally or verification becomes weaker.
+
+- Queue/list use case phải batch-load dữ liệu liên quan; không gọi repository/service theo từng row. `part-outstanding` tải request + ISSUE/RETURN + USED theo batch để tránh N+1.

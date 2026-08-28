@@ -10,7 +10,6 @@ import {
 import { App, Button, Empty, Form, Input, List, Modal, Popconfirm, Spin } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
-import { useAuth } from '../../auth/AuthContext'
 import type { AttachmentItem } from '../../../types'
 import { formatNumber } from '../../../utils/format'
 import { attachmentsApi } from '../api'
@@ -45,7 +44,6 @@ type AttachmentListProps = {
 
 export function AttachmentList({ attachments, onChanged }: AttachmentListProps) {
   const { message } = App.useApp()
-  const { user } = useAuth()
   const [renameForm] = Form.useForm<{ originalFilename: string }>()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewFile, setPreviewFile] = useState<AttachmentItem | null>(null)
@@ -133,12 +131,12 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       const values = await renameForm.validateFields()
       setRenaming(true)
       await attachmentsApi.rename(renameFile.id, values.originalFilename)
-      message.success('Đã đổi tên tệp đính kèm')
+      message.success('Đã đổi tên file đính kèm')
       closeRename()
       onChanged?.()
     } catch (error) {
       if (isFormValidationError(error)) {
-        message.warning('Vui lòng nhập tên tệp trước khi lưu')
+        message.warning('Vui lòng nhập tên file trước khi lưu')
         return
       }
       message.error(apiErrorMessage(error))
@@ -154,7 +152,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       if (previewFile?.id === file.id) {
         closePreview()
       }
-      message.success('Đã xoá tệp đính kèm')
+      message.success('Đã xóa file đính kèm')
       onChanged?.()
     } catch (error) {
       message.error(apiErrorMessage(error))
@@ -172,7 +170,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       <List
         dataSource={attachments}
         renderItem={(item) => {
-          const canManage = user?.role === 'OWNER' || item.uploadedBy === user?.username
+          const canManage = item.manageable
 
           return (
             <List.Item
@@ -196,15 +194,15 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                       </Button>,
                       <Popconfirm
                         key="delete"
-                        title="Xoá tệp đính kèm này?"
-                        description="File sẽ bị xoá khỏi phiếu công việc và không còn tải xuống được."
-                        okText="Xoá"
+                        title="Xóa file đính kèm này?"
+                        description="File sẽ bị xóa khỏi phiếu công việc và không còn tải xuống được."
+                        okText="Xóa"
                         cancelText="Giữ lại"
                         okButtonProps={{ danger: true, loading: deletingId === item.id }}
                         onConfirm={() => handleDelete(item)}
                       >
                         <Button type="text" danger icon={<DeleteOutlined />} loading={deletingId === item.id}>
-                          Xoá
+                          Xóa
                         </Button>
                       </Popconfirm>,
                     ]
@@ -222,7 +220,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                   )
                 }
                 title={item.originalFilename}
-                description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}`}
+                description={`${item.contentType} · ${formatNumber(item.fileSize / 1024, 1)} KB · ${item.uploadedBy}${item.locked ? ' · Đã khóa' : ''}`}
               />
             </List.Item>
           )
@@ -268,13 +266,13 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       </Modal>
 
       <Modal
-        title="Đổi tên tệp đính kèm"
+        title="Đổi tên file đính kèm"
         open={Boolean(renameFile)}
         onCancel={closeRename}
         onOk={handleRename}
         confirmLoading={renaming}
         okText="Lưu"
-        cancelText="Huỷ"
+        cancelText="Hủy"
         destroyOnHidden
       >
         <Form form={renameForm} layout="vertical" requiredMark>

@@ -42,11 +42,11 @@
 | Kỹ thuật viên sửa phiếu người khác | Role/assignment authorization tại service/controller |
 | Kỹ thuật viên xem lịch người khác | `/my-schedule` suy ra `TechnicianProfile` từ signed-in `userId`; client không gửi `technicianId` |
 | Double booking | Transaction + pessimistic technician lock + overlap query + concurrency test |
-| Technician thao tác Work Order ngoài phạm vi | Backend giới hạn Technician vào Work Order được assign; field progress và bước `CUSTOMER_ACCEPTED`/`CLOSED`/`REOPENED` chỉ áp trên chính job đó. `CANCELLED` vẫn không thuộc Technician |
+| Technician thao tác Work Order ngoài phạm vi | Backend giới hạn Technician vào Work Order được assign; field progress, part workflow, billing draft, customer acceptance và payment report chỉ áp trên chính job đó. Technician không được normal-close/reopen/settle payment. |
 | Dispatcher thực hiện field/management transition | Service-level target-status policy chỉ cho Dispatcher operational cancellation; field progress/acceptance/close/reopen trả 403 |
-| Owner admin override Work Order | OWNER được ghi nhận `CUSTOMER_ACCEPTED`, `CLOSED`, `REOPENED`, `CANCELLED` qua service policy; không được dùng generic transition để giả lập field progress và không consume phụ tùng thay Technician |
-| Customer acceptance không có tài khoản CUSTOMER | Assigned Technician hoặc OWNER ghi nhận **Khách xác nhận** sau khi khách đồng ý ngoài hệ thống; Customer Service chỉ tiếp nhận follow-up để `REOPENED`/`CANCELLED`. Actor thật vẫn được lưu history/audit |
-| Warehouse đọc Work Order/dashboard | Controller authorization loại Warehouse khỏi Work Order và operational dashboard; frontend default workspace là `/inventory` |
+| Owner thao tác routine Work Order/payment | OWNER giám sát, quản trị/cấu hình và cancellation theo policy; không customer-accept, settle payment, normal-close, ISSUE/RETURN hoặc ghi actual-used thay role phụ trách. |
+| Customer acceptance không có tài khoản CUSTOMER | Assigned Technician ghi nhận **Khách xác nhận** sau khi khách đồng ý ngoài hệ thống; actor thật được lưu history/audit và billing snapshot được freeze. Customer Service xử lý reconciliation/closure, không giả làm khách. |
+| Warehouse đọc Work Order/dashboard | Controller authorization loại Warehouse khỏi Work Order và operational dashboard; frontend default workspace là `/part-requests`, còn `/inventory` là workspace catalog/tồn kho |
 | Đổi account nhưng UI giữ cache role cũ | AuthProvider cancel/clear TanStack Query cache khi login/logout để dữ liệu identity trước không được tái sử dụng |
 | Tài khoản bị tạm ngưng nhưng JWT cũ còn hạn | JWT validator kiểm tra lại UserAccount hiện tại; inactive/deleted/stale identity bị từ chối |
 | Đổi username làm lệch audit/attachment ownership | Username được cố định sau khi tạo; chỉ display name/password/active profile được cập nhật |

@@ -27,7 +27,7 @@ class InventoryReorderLevelNotificationHandlerTest {
     private NotificationService notificationService;
 
     @Test
-    void thresholdCrossingIntoLowStockNotifiesOwnerAndWarehouseWithoutEchoingActor() {
+    void thresholdCrossingIntoLowStockNotifiesWarehouseWithoutEchoingActor() {
         var handler = new InventoryReorderLevelNotificationHandler(notificationService);
 
         handler.onReorderLevelChanged(event("5", "3", "6", true));
@@ -35,15 +35,16 @@ class InventoryReorderLevelNotificationHandlerTest {
         ArgumentCaptor<String> message = ArgumentCaptor.forClass(String.class);
         verify(notificationService).notifyRolesIndependently(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
+                eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 eq(ACTOR_ID),
-                eq("Tồn kho thấp: PART-TEST"),
+                eq("Tồn kho thấp theo ngưỡng mới: PART-TEST"),
                 message.capture()
         );
         assertThat(message.getValue())
-                .contains("hiện còn 5 cái")
+                .contains("Đặng Nam Kho")
+                .contains("còn 5 cái")
                 .contains("ngưỡng mới là 6 cái")
-                .contains("Kiểm tra và bổ sung tồn kho");
+                .contains("Kho phụ tùng");
     }
 
     @Test
@@ -54,7 +55,7 @@ class InventoryReorderLevelNotificationHandlerTest {
 
         verify(notificationService, never()).notifyRolesIndependently(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
+                eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 eq(ACTOR_ID),
                 anyString(),
                 anyString()
@@ -69,7 +70,7 @@ class InventoryReorderLevelNotificationHandlerTest {
 
         verify(notificationService, never()).notifyRolesIndependently(
                 eq(TENANT_ID),
-                eq(List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF)),
+                eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 eq(ACTOR_ID),
                 anyString(),
                 anyString()

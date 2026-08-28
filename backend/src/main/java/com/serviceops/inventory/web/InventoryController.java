@@ -3,10 +3,7 @@ package com.serviceops.inventory.web;
 import com.serviceops.common.web.PageResponse;
 import com.serviceops.inventory.application.InventoryService;
 import com.serviceops.inventory.domain.InventoryTransactionType;
-import com.serviceops.inventory.web.InventoryDtos.ConsumePartRequest;
 import com.serviceops.inventory.web.InventoryDtos.InventoryTransactionResponse;
-import com.serviceops.inventory.web.InventoryDtos.ReturnablePartResponse;
-import com.serviceops.inventory.web.InventoryDtos.ReturnPartRequest;
 import com.serviceops.inventory.web.InventoryDtos.ReorderLevelRequest;
 import com.serviceops.inventory.web.InventoryDtos.SparePartImportResult;
 import com.serviceops.inventory.web.InventoryDtos.SparePartRequest;
@@ -80,7 +77,7 @@ public class InventoryController {
     }
 
     @GetMapping("/spare-parts/export")
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF','TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public ResponseEntity<byte[]> export(@RequestParam(defaultValue = "") String search) {
         return csv("serviceops-spare-parts.csv", service.exportSpareParts(search));
     }
@@ -122,29 +119,14 @@ public class InventoryController {
         return service.searchTransactions(search, type, fromTime, toTime, page, size);
     }
 
-    @GetMapping("/work-orders/{workOrderId}/parts/{sparePartId}/returnable")
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
-    public ReturnablePartResponse returnable(@PathVariable UUID workOrderId, @PathVariable UUID sparePartId) {
-        return service.getReturnablePart(workOrderId, sparePartId);
-    }
-
-    @PostMapping("/work-orders/{workOrderId}/parts/{sparePartId}/return")
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
-    public ReturnablePartResponse returnPart(@PathVariable UUID workOrderId, @PathVariable UUID sparePartId,
-                                             @Valid @RequestBody ReturnPartRequest request) {
-        return service.returnPart(workOrderId, sparePartId, request);
-    }
-
-    @PostMapping("/work-orders/{workOrderId}/parts/consume")
-    @PreAuthorize("hasRole('TECHNICIAN')")
-    public SparePartResponse consume(@PathVariable UUID workOrderId, @Valid @RequestBody ConsumePartRequest request) {
-        return service.consume(workOrderId, request);
-    }
 
     private static ResponseEntity<byte[]> csv(String filename, byte[] content) {
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString()
+                )
                 .body(content);
     }
 }

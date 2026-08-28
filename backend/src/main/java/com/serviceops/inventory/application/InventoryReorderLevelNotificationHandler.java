@@ -29,11 +29,12 @@ public class InventoryReorderLevelNotificationHandler {
                     event.partName(),
                     event.stockQuantity(),
                     event.unit(),
-                    event.newReorderLevel()
+                    event.newReorderLevel(),
+                    event.actorDisplayName()
             );
             notificationService.notifyRolesIndependently(
                     event.tenantId(),
-                    List.of(UserRole.OWNER, UserRole.WAREHOUSE_STAFF),
+                    List.of(UserRole.WAREHOUSE_STAFF),
                     event.actorUserId(),
                     copy.title(),
                     copy.message()

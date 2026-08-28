@@ -13,7 +13,10 @@ import type { WorkOrder, WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { attachmentsApi } from '../../attachments/api'
+import { AttachmentList } from '../../attachments/components/AttachmentList'
 import { useAuth } from '../../auth/AuthContext'
+import { paymentsApi } from '../../payments/api'
 import { workOrdersApi } from '../api'
 import { WorkOrderActivityTimeline } from '../components/WorkOrderActivityTimeline'
 
@@ -26,6 +29,7 @@ export function WorkOrderHistoryPage() {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const canDelete = user?.role === 'OWNER'
+  const canDownloadReceipt = Boolean(user?.role && ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role))
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const search = useDebouncedValue(searchInput.trim())
@@ -66,6 +70,12 @@ export function WorkOrderHistoryPage() {
   })
   const detail = detailQuery.data
   const detailLoading = detailQuery.isLoading
+  const attachmentsQuery = useQuery({
+    queryKey: ['attachments', selectedId],
+    queryFn: () => attachmentsApi.list('WORK_ORDER', selectedId!),
+    enabled: Boolean(selectedId),
+  })
+  const workAttachments = attachmentsQuery.data?.filter((item) => item.purpose === 'WORK_EVIDENCE')
 
   const remove = useMutation({
     mutationFn: (id: string) => workOrdersApi.deleteFromHistory(id),
@@ -79,9 +89,9 @@ export function WorkOrderHistoryPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
-  const exportInvoice = async (workOrder: WorkOrder) => {
+  const downloadReceipt = async (workOrder: WorkOrder) => {
     try {
-      downloadBlob(await workOrdersApi.invoice(workOrder.id), `hoa-don-dich-vu-${workOrder.code}.html`)
+      downloadBlob(await paymentsApi.downloadReceipt(workOrder.id), `bien-nhan-thanh-toan-${workOrder.code}.html`)
     } catch (error) {
       message.error(apiErrorMessage(error))
     }
@@ -92,7 +102,7 @@ export function WorkOrderHistoryPage() {
       <PageHeader
         eyebrow="Lưu trữ dịch vụ"
         title="Lịch sử phiếu công việc"
-        description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại tiến trình xử lý và tải hóa đơn cho phiếu đã đóng khi cần đối soát."
+        description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại toàn bộ tiến trình và tải biên nhận thanh toán đã phát hành."
         meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu lưu trữ`}</MetaBadge>}
       />
 
@@ -171,8 +181,8 @@ export function WorkOrderHistoryPage() {
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => selectHistoryWorkOrder(record.id)} />
-                {record.status === 'CLOSED' && (
-                  <Button aria-label="Tải hóa đơn" type="text" icon={<DownloadOutlined />} onClick={() => exportInvoice(record)} />
+                {record.status === 'CLOSED' && canDownloadReceipt && (
+                  <Button aria-label="Tải biên nhận" type="text" icon={<DownloadOutlined />} onClick={() => downloadReceipt(record)} />
                 )}
                 {canDelete && (
                   <Popconfirm
@@ -206,8 +216,8 @@ export function WorkOrderHistoryPage() {
         loading={detailLoading}
         extra={detail ? (
           <Space>
-            {detail.status === 'CLOSED' && (
-              <Button icon={<DownloadOutlined />} onClick={() => exportInvoice(detail)}>Xuất hóa đơn</Button>
+            {detail.status === 'CLOSED' && canDownloadReceipt && (
+              <Button icon={<DownloadOutlined />} onClick={() => downloadReceipt(detail)}>Tải biên nhận</Button>
             )}
             {canDelete && (
               <Popconfirm
@@ -245,8 +255,22 @@ export function WorkOrderHistoryPage() {
             </Descriptions>
 
             <section className="detail-section">
+              <h3 className="detail-section-title">Hình ảnh & tài liệu</h3>
+              {attachmentsQuery.isError ? (
+                <QueryErrorAlert
+                  title="Chưa tải được hình ảnh và tài liệu"
+                  error={attachmentsQuery.error}
+                  onRetry={() => attachmentsQuery.refetch()}
+                />
+              ) : (
+                <AttachmentList attachments={workAttachments} />
+              )}
+            </section>
+
+            <section className="detail-section">
               <h3 className="detail-section-title">Tiến trình xử lý</h3>
               <WorkOrderActivityTimeline
+                workOrderId={detail.id}
                 activities={detail.activities}
                 history={detail.history}
                 emptyDescription="Chưa có tiến trình xử lý"

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ALLOWED_ROUTES, dashboardHeading, defaultHeading, defaultRoute, login, ROUTES, type DemoUser, watchRuntime } from './support/serviceops'
+import { ALLOWED_ROUTES, dashboardHeading, defaultHeading, defaultRoute, login, ROUTES, SIDEBAR_NAVIGATION, type DemoUser, watchRuntime } from './support/serviceops'
 
 for (const username of Object.keys(ALLOWED_ROUTES) as DemoUser[]) {
   test(`${username}: route access matches the role policy`, async ({ page }) => {
@@ -17,6 +17,25 @@ for (const username of Object.keys(ALLOWED_ROUTES) as DemoUser[]) {
         await expect(page.getByRole('heading', { level: 1, name: defaultHeading(username) })).toBeVisible()
       }
     }
+
+    assertRuntimeClean()
+  })
+}
+
+for (const username of Object.keys(SIDEBAR_NAVIGATION) as DemoUser[]) {
+  test(`${username}: sidebar follows the role workflow`, async ({ page }) => {
+    const assertRuntimeClean = watchRuntime(page)
+    await login(page, username)
+
+    const menu = page.getByRole('menu', { name: 'Điều hướng chính' })
+    await expect(menu).toBeVisible()
+
+    const sectionTitles = (await menu.locator('.ant-menu-item-group-title').allTextContents()).map((value) => value.trim()).filter(Boolean)
+    const itemLabels = (await menu.locator('.ant-menu-item').allTextContents()).map((value) => value.trim()).filter(Boolean)
+
+    expect(sectionTitles).toEqual(SIDEBAR_NAVIGATION[username].sections)
+    expect(itemLabels).toEqual(SIDEBAR_NAVIGATION[username].items)
+    await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible()
 
     assertRuntimeClean()
   })

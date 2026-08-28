@@ -11,7 +11,7 @@ Roadmap này ưu tiên **độ sâu nghiệp vụ và chất lượng vận hàn
 - Work-order lifecycle/FSM và lịch sử trạng thái.
 - Phân công kỹ thuật viên và kiểm tra lịch chồng lấn.
 - Inventory current state + transaction ledger + chống âm kho + configurable minimum-stock threshold + stocktake/adjustment + controlled Work Order part return.
-- Attachment bằng chứng, invoice/export, CSV import/export.
+- Attachment bằng chứng, biên nhận thanh toán/export, CSV import/export.
 - Notification, audit trail, dashboard và trợ lý hướng dẫn theo vai trò.
 - Năm vai trò nghiệp vụ với tenant isolation; mỗi kỹ thuật viên là một `UserAccount` riêng liên kết 1-1 với `TechnicianProfile`.
 
@@ -71,7 +71,7 @@ Increment tương lai chỉ khi có nhu cầu hiện trường thật: deep-link
 - Recurrence rule có timezone rõ ràng.
 - Job an toàn/idempotent để sinh work order trước ngày thực hiện.
 - Lịch sử nguồn gốc: agreement → generated work order.
-- Có thể mở rộng invoice định kỳ sau khi nghiệp vụ thật yêu cầu.
+- Có thể mở rộng báo cáo doanh thu/đối soát sau khi nghiệp vụ thật yêu cầu.
 
 ### P2 — Technician Mobile/PWA
 

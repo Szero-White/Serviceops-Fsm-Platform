@@ -107,7 +107,7 @@ jobs:
           set -a
           . ../.env.ci
           set +a
-          E2E_BASE_URL=http://127.0.0.1:8088 E2E_DEMO_PASSWORD="$DEMO_PASSWORD" npm run e2e
+          E2E_ALLOW_MUTATIONS=true E2E_BASE_URL=http://127.0.0.1:8088 E2E_DEMO_PASSWORD="$DEMO_PASSWORD" npm run e2e
       - name: Upload browser test artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4

@@ -6,7 +6,9 @@ import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
+import com.serviceops.notification.application.NotificationCopy;
 import com.serviceops.notification.application.NotificationService;
 import com.serviceops.scheduling.domain.AppointmentRepository;
 import com.serviceops.security.CurrentUser;
@@ -16,12 +18,14 @@ import com.serviceops.technician.domain.TechnicianRepository;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import com.serviceops.workorder.domain.WorkOrderStatus;
+import com.serviceops.workorder.domain.WorkOrderStatusHistory;
 import com.serviceops.workorder.domain.WorkOrderStatusHistoryRepository;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -36,6 +40,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,10 +54,12 @@ class WorkOrderCompletionNotificationTest {
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID WORK_ORDER_ID = UUID.randomUUID();
+    private static final UUID COMPLETION_HISTORY_ID = UUID.randomUUID();
 
     @Mock private WorkOrderRepository repository;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
+    @Mock private WorkOrderPartRequestService workOrderPartRequestService;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private TechnicianRepository technicianRepository;
     @Mock private AppointmentRepository appointmentRepository;
@@ -70,6 +77,7 @@ class WorkOrderCompletionNotificationTest {
                 repository,
                 historyRepository,
                 inventoryTransactionRepository,
+                workOrderPartRequestService,
                 serviceRequestRepository,
                 technicianRepository,
                 appointmentRepository,
@@ -115,6 +123,11 @@ class WorkOrderCompletionNotificationTest {
 
     @Test
     void successfulCompletionNotifiesCustomerServiceForFollowUpWithoutSpammingOwner() {
+        when(historyRepository.save(any(WorkOrderStatusHistory.class))).thenAnswer(invocation -> {
+            WorkOrderStatusHistory history = invocation.getArgument(0);
+            history.setId(COMPLETION_HISTORY_ID);
+            return history;
+        });
         when(repository.findDetailedAssigned(WORK_ORDER_ID, TENANT_ID, USER_ID)).thenReturn(Optional.of(workOrder));
         when(historyRepository.findByTenantIdAndWorkOrderIdOrderByCreatedAtAsc(TENANT_ID, WORK_ORDER_ID)).thenReturn(List.of());
 
@@ -129,11 +142,38 @@ class WorkOrderCompletionNotificationTest {
         );
 
         assertThat(response.status()).isEqualTo(WorkOrderStatus.COMPLETED);
-        verify(notificationService).notifyRoles(
+        assertThat(response.diagnosis()).isEqualTo("Tụ khởi động suy giảm");
+        assertThat(response.resolution()).isEqualTo("Thay tụ và chạy thử ổn định");
+
+        ArgumentCaptor<WorkOrderStatusHistory> historyCaptor =
+                ArgumentCaptor.forClass(WorkOrderStatusHistory.class);
+        verify(historyRepository).save(historyCaptor.capture());
+        var completionHistory = historyCaptor.getValue();
+        assertThat(completionHistory.getToStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        assertThat(completionHistory.getDiagnosisSnapshot()).isEqualTo("Tụ khởi động suy giảm");
+        assertThat(completionHistory.getResolutionSnapshot()).isEqualTo("Thay tụ và chạy thử ổn định");
+        assertThat(completionHistory.getNote()).isEqualTo("Đã bàn giao vận hành");
+
+        var expectedNotification = NotificationCopy.workOrderCompletedForCustomerService(
+                new NotificationCopy.WorkOrderContext(
+                        "WO-UAT-001",
+                        "Kiểm tra máy lạnh không khởi động",
+                        "Khách hàng UAT"
+                ),
+                "Phạm Quốc Kỹ thuật"
+        );
+        verify(notificationService).notifyRolesUnique(
                 eq(TENANT_ID),
                 eq(List.of(UserRole.CUSTOMER_SERVICE)),
-                eq("Phiếu đã hoàn thành: WO-UAT-001"),
-                contains("Theo dõi phản hồi khách hàng")
+                eq("WORK_ORDER_COMPLETED:" + COMPLETION_HISTORY_ID),
+                eq(expectedNotification.title()),
+                eq(expectedNotification.message())
+        );
+        verify(notificationService, never()).notifyRoles(
+                eq(TENANT_ID),
+                eq(List.of(UserRole.CUSTOMER_SERVICE)),
+                anyString(),
+                anyString()
         );
         verify(notificationService, never()).notifyRoles(
                 eq(TENANT_ID),

@@ -22,7 +22,7 @@ const auditEntityLabels: Record<string, string> = {
   SPARE_PART: 'Phụ tùng',
   INVENTORY: 'Kho phụ tùng',
   USER_ACCOUNT: 'Tài khoản người dùng',
-  ATTACHMENT: 'Tệp đính kèm',
+  ATTACHMENT: 'File đính kèm',
   AI: 'Trợ lý AI',
   SYSTEM: 'Hệ thống',
 }
@@ -45,7 +45,6 @@ const auditDatePresets: Array<{ label: string; value: [Dayjs, Dayjs] }> = [
   { label: '30 ngày gần nhất', value: recentDateRange(30) },
   { label: '90 ngày gần nhất', value: recentDateRange(90) },
 ]
-
 
 function formatAuditEntityType(value?: string) {
   if (!value) return EMPTY_VALUE

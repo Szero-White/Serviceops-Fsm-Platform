@@ -11,20 +11,15 @@ import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { WorkOrderStatus } from '../../../types'
-import { formatQuantity } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { attachmentsApi } from '../../attachments/api'
 import { useAuth } from '../../auth/AuthContext'
-import { inventoryApi } from '../../inventory/api'
 import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../api'
+import { paymentsApi } from '../../payments/api'
 import { WorkOrderDetailDrawer } from '../components/WorkOrderDetailDrawer'
-import {
-  WorkOrderDialogs,
-  type CompleteWorkOrderValues,
-  type ConsumePartValues,
-  type ScheduleWorkOrderValues,
-} from '../components/WorkOrderDialogs'
+import { CompleteWorkOrderModal, type CompleteWorkOrderValues } from '../components/CompleteWorkOrderModal'
+import { WorkOrderScheduleModal, type ScheduleWorkOrderValues } from '../components/WorkOrderScheduleModal'
 import { WorkOrderTable } from '../components/WorkOrderTable'
 import { ACTIVE_WORK_ORDER_STATUS_OPTIONS, availableWorkOrderTransitions, WORK_ORDER_STATUS_OPTIONS } from '../model/workOrderPresentation'
 import { workOrderPermissions } from '../model/workOrderPermissions'
@@ -41,19 +36,38 @@ export function WorkOrdersPage() {
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
-  const [consumeOpen, setConsumeOpen] = useState(false)
   const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const [completeForm] = Form.useForm<CompleteWorkOrderValues>()
-  const [consumeForm] = Form.useForm<ConsumePartValues>()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
   const selectWorkOrder = (id?: string) => {
     setSelectedId(id)
     const next = new URLSearchParams(searchParams)
-    if (id) next.set('open', id)
-    else next.delete('open')
+    if (id) {
+      next.set('open', id)
+      next.delete('tab')
+      next.delete('from')
+    } else {
+      next.delete('open')
+      next.delete('tab')
+      next.delete('from')
+    }
     setSearchParams(next, { replace: true })
+  }
+
+  const changeDetailTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', tab)
+    setSearchParams(next, { replace: true })
+  }
+
+  const closeDetail = () => {
+    if (searchParams.get('from') === 'payments') {
+      navigate('/payments')
+      return
+    }
+    selectWorkOrder(undefined)
   }
 
   const workOrdersQuery = useQuery({
@@ -87,13 +101,6 @@ export function WorkOrdersPage() {
   })
   const technicians = techniciansQuery.data
 
-  const partsQuery = useQuery({
-    queryKey: ['spare-parts', 'all'],
-    queryFn: () => inventoryApi.list('', 0, 100),
-    enabled: permissions.canConsumePart,
-  })
-  const parts = partsQuery.data
-
   const attachmentsQuery = useQuery({
     queryKey: ['attachments', selectedId],
     queryFn: () => attachmentsApi.list('WORK_ORDER', selectedId!),
@@ -105,10 +112,14 @@ export function WorkOrdersPage() {
     queryClient.invalidateQueries({ queryKey: ['work-orders'] })
     queryClient.invalidateQueries({ queryKey: ['work-order'] })
     queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-timeline'] })
     queryClient.invalidateQueries({ queryKey: ['schedule-board'] })
     queryClient.invalidateQueries({ queryKey: ['my-schedule'] })
     queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['audit'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-billing'] })
+    queryClient.invalidateQueries({ queryKey: ['work-order-payment'] })
+    queryClient.invalidateQueries({ queryKey: ['payments'] })
   }
 
   const refreshAttachments = () => {
@@ -154,13 +165,15 @@ export function WorkOrdersPage() {
   })
 
   const transition = useMutation({
-    mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) => workOrdersApi.transition(selectedId!, { targetStatus, note }),
+    mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) => targetStatus === 'CUSTOMER_ACCEPTED'
+      ? paymentsApi.customerAcceptance(selectedId!, note)
+      : workOrdersApi.transition(selectedId!, { targetStatus, note }),
     onSuccess: (workOrder) => {
       const statusLabel = WORK_ORDER_STATUS_OPTIONS.find((option) => option.value === workOrder.status)?.label ?? workOrder.status
       if (workOrder.status === 'CUSTOMER_ACCEPTED') {
         notification.success({
           message: `Khách đã xác nhận · ${workOrder.code}`,
-          description: 'Có thể đóng phiếu ngay, hoặc mở lại nếu khách báo lỗi trước khi phiếu được đóng.',
+          description: 'Chi phí đã được khóa theo xác nhận của khách. Tiếp theo ghi nhận phương thức thanh toán; CSKH sẽ đối soát tiền về công ty.',
         })
       } else if (workOrder.status === 'CLOSED') {
         notification.success({
@@ -181,32 +194,30 @@ export function WorkOrdersPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
+  const closeComplete = () => {
+    setCompleteOpen(false)
+    completeForm.resetFields()
+  }
+
+  const openComplete = () => {
+    if (!detail) return
+    completeForm.resetFields()
+    completeForm.setFieldsValue({
+      diagnosis: detail.diagnosis ?? '',
+      resolution: detail.resolution ?? '',
+      note: undefined,
+    })
+    setCompleteOpen(true)
+  }
+
   const complete = useMutation({
     mutationFn: (values: CompleteWorkOrderValues) => workOrdersApi.transition(selectedId!, { targetStatus: 'COMPLETED', ...values }),
     onSuccess: (workOrder) => {
       notification.success({
         message: `Đã hoàn thành ${workOrder.code}`,
-        description: 'Kết quả đã được lưu. Sau khi khách đồng ý, kỹ thuật viên được giao hoặc Owner có thể bấm Khách xác nhận ngay trong phiếu.',
+        description: 'Kết quả đã được lưu. Kỹ thuật viên kiểm tra phụ tùng thực tế và chi phí trước khi ghi nhận khách xác nhận.',
       })
-      setCompleteOpen(false)
-      completeForm.resetFields()
-      refreshOperations()
-    },
-    onError: (error) => message.error(apiErrorMessage(error)),
-  })
-
-  const consume = useMutation({
-    mutationFn: (values: ConsumePartValues) => workOrdersApi.consumePart(selectedId!, values),
-    onSuccess: (part, values) => {
-      notification.success({
-        message: `Đã ghi nhận phụ tùng · ${part.sku}`,
-        description: `${part.name} · Đã dùng ${formatQuantity(values.quantity)} ${part.unit} · Tồn còn ${formatQuantity(part.stockQuantity)} ${part.unit}${detail?.code ? ` · ${detail.code}` : ''}.`,
-      })
-      setConsumeOpen(false)
-      consumeForm.resetFields()
-      queryClient.invalidateQueries({ queryKey: ['spare-parts'] })
-      queryClient.invalidateQueries({ queryKey: ['stocktake-parts'] })
-      queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
+      closeComplete()
       refreshOperations()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -214,8 +225,8 @@ export function WorkOrdersPage() {
 
   const uploadFile = async (options: UploadRequestOption) => {
     try {
-      await attachmentsApi.upload('WORK_ORDER', selectedId!, options.file as File)
-      message.success('Đã tải file lên')
+      await attachmentsApi.upload('WORK_ORDER', selectedId!, options.file as File, 'WORK_EVIDENCE')
+      message.success('Đã lưu hình ảnh / tài liệu vào hồ sơ công việc')
       options.onSuccess?.({})
       refreshAttachments()
     } catch (error) {
@@ -256,15 +267,6 @@ export function WorkOrdersPage() {
       reason: undefined,
     })
     setScheduleOpen(true)
-  }
-
-  const openConsumePart = () => {
-    if (partsQuery.isError) {
-      message.error('Chưa tải được danh mục phụ tùng. Vui lòng thử lại.')
-      void partsQuery.refetch()
-      return
-    }
-    setConsumeOpen(true)
   }
 
   const transitions = useMemo(
@@ -317,29 +319,37 @@ export function WorkOrdersPage() {
         permissions={permissions}
         transitions={transitions}
         transitionPending={transition.isPending}
-        onClose={() => selectWorkOrder(undefined)}
+        activeTabKey={searchParams.get('tab') ?? 'overview'}
+        onTabChange={changeDetailTab}
+        onClose={closeDetail}
         onSchedule={openSchedule}
-        onComplete={() => setCompleteOpen(true)}
-        onConsumePart={openConsumePart}
+        onComplete={openComplete}
+        role={user?.role}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
         onUpload={uploadFile}
         onAttachmentsChanged={refreshAttachments}
       />
 
-      <WorkOrderDialogs
-        schedule={{
-          open: scheduleOpen,
-          form: scheduleForm,
-          pending: schedule.isPending,
-          redispatching: Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd),
-          currentTechnicianName: detail?.technicianName,
-          onClose: () => setScheduleOpen(false),
-          onSubmit: submitSchedule,
-        }}
-        complete={{ open: completeOpen, form: completeForm, pending: complete.isPending, onClose: () => setCompleteOpen(false), onSubmit: (values) => complete.mutate(values) }}
-        consume={{ open: consumeOpen, form: consumeForm, pending: consume.isPending, onClose: () => setConsumeOpen(false), onSubmit: (values) => consume.mutate(values) }}
+      <WorkOrderScheduleModal
+        open={scheduleOpen}
+        workOrderCode={detail?.code}
+        workOrderSummary={detail?.summary}
+        currentTechnicianName={detail?.technicianName}
+        form={scheduleForm}
         technicians={technicians}
-        parts={parts}
+        pending={schedule.isPending}
+        redispatching={Boolean(detail?.technicianId || detail?.scheduledStart || detail?.scheduledEnd)}
+        onClose={() => setScheduleOpen(false)}
+        onSubmit={submitSchedule}
+      />
+
+      <CompleteWorkOrderModal
+        open={completeOpen}
+        form={completeForm}
+        pending={complete.isPending}
+        hasPreviousResult={Boolean(detail?.diagnosis || detail?.resolution)}
+        onClose={closeComplete}
+        onSubmit={(values) => complete.mutate(values)}
       />
     </div>
   )

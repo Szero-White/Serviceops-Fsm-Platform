@@ -14,6 +14,12 @@
   box-shadow: none;
 }
 
+.app-sider .ant-layout-sider-children {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
 .brand {
   height: 60px;
   display: flex;
@@ -55,10 +61,16 @@
 }
 
 .app-menu {
+  min-height: 0;
+  flex: 1 1 auto;
   margin-top: 8px;
-  padding: 0 9px 70px;
+  padding: 0 9px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: transparent !important;
   border: 0 !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 
 .app-menu .ant-menu-item {
@@ -112,10 +124,8 @@
 }
 
 .sider-footer {
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  bottom: 12px;
+  flex: 0 0 auto;
+  margin: 8px 11px 12px;
 }
 
 .sider-logout {

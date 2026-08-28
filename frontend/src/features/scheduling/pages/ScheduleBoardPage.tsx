@@ -14,16 +14,14 @@ import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
-import type { DispatchQueueItem, ScheduleAppointment, Technician } from '../../../types'
+import type { DispatchQueueItem, ScheduleAppointment, Technician, WorkOrderStatus } from '../../../types'
 import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../../work-orders/api'
 import { scheduleBoardApi } from '../api'
-import {
-  ScheduleAppointmentModal,
-  type ScheduleAppointmentValues,
-} from '../components/ScheduleAppointmentModal'
+import { WorkOrderScheduleModal, type ScheduleWorkOrderValues } from '../../work-orders/components/WorkOrderScheduleModal'
 
 const DAY_COUNT = 7
+const RESCHEDULABLE_STATUSES = new Set<WorkOrderStatus>(['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'])
 
 function startOfWeek(value: Dayjs) {
   const day = value.day()
@@ -39,6 +37,10 @@ function timeRange(appointment: ScheduleAppointment) {
   return `${dayjs(appointment.startTime).format('HH:mm')}–${dayjs(appointment.endTime).format('HH:mm')}`
 }
 
+function isOverdueAppointment(appointment: ScheduleAppointment) {
+  return RESCHEDULABLE_STATUSES.has(appointment.status) && dayjs(appointment.endTime).isBefore(dayjs())
+}
+
 export function ScheduleBoardPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(dayjs()))
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<{
@@ -52,7 +54,7 @@ export function ScheduleBoardPage() {
     redispatching?: boolean
   }>()
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [scheduleForm] = Form.useForm<ScheduleAppointmentValues>()
+  const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
 
@@ -95,7 +97,7 @@ export function ScheduleBoardPage() {
   }, [boardQuery.data?.appointments, days])
 
   const scheduleMutation = useMutation({
-    mutationFn: (values: ScheduleAppointmentValues) => workOrdersApi.schedule(selectedWorkOrder!.id, {
+    mutationFn: (values: ScheduleWorkOrderValues) => workOrdersApi.schedule(selectedWorkOrder!.id, {
       technicianId: values.technicianId,
       startTime: values.period[0].toISOString(),
       endTime: values.period[1].toISOString(),
@@ -278,10 +280,11 @@ export function ScheduleBoardPage() {
         </div>
       )}
 
-      <ScheduleAppointmentModal
+      <WorkOrderScheduleModal
         open={scheduleOpen}
         workOrderCode={selectedWorkOrder?.code}
         workOrderSummary={selectedWorkOrder?.summary}
+        currentTechnicianName={selectedWorkOrder?.technicianName}
         form={scheduleForm}
         technicians={technicians}
         pending={scheduleMutation.isPending}
@@ -323,19 +326,34 @@ function TechnicianScheduleRow({
           <div key={`${technician.id}:${dayKey(day)}`} className={`schedule-board-cell${day.isSame(dayjs(), 'day') ? ' is-today' : ''}`}>
             {appointments.length === 0 ? (
               <span className="schedule-board-empty-slot" aria-label="Không có lịch" />
-            ) : appointments.map((appointment) => (
-              <Tooltip key={appointment.appointmentId} title="Bấm để đổi kỹ thuật viên hoặc thời gian">
-                <button type="button" className="schedule-appointment-card" onClick={() => onOpenAppointment(appointment)}>
-                  <div className="schedule-appointment-topline">
-                    <span>{timeRange(appointment)}</span>
-                    <PriorityTag priority={appointment.priority} />
-                  </div>
-                  <strong>{appointment.workOrderCode}</strong>
-                  <span className="schedule-appointment-summary">{appointment.summary}</span>
-                  <span className="schedule-appointment-customer">{appointment.customerName}</span>
-                </button>
-              </Tooltip>
-            ))}
+            ) : appointments.map((appointment) => {
+              const overdue = isOverdueAppointment(appointment)
+              return (
+                <Tooltip
+                  key={appointment.appointmentId}
+                  title={overdue
+                    ? 'Lịch hẹn đã qua nhưng công việc chưa bắt đầu. Bấm để điều phối lại.'
+                    : 'Bấm để đổi kỹ thuật viên hoặc thời gian'}
+                >
+                  <button
+                    type="button"
+                    className={`schedule-appointment-card${overdue ? ' is-overdue' : ''}`}
+                    onClick={() => onOpenAppointment(appointment)}
+                  >
+                    <div className="schedule-appointment-topline">
+                      <span>{timeRange(appointment)}</span>
+                      <div className="schedule-appointment-badges">
+                        {overdue ? <span className="schedule-overdue-badge">Quá hạn</span> : null}
+                        <PriorityTag priority={appointment.priority} />
+                      </div>
+                    </div>
+                    <strong>{appointment.workOrderCode}</strong>
+                    <span className="schedule-appointment-summary">{appointment.summary}</span>
+                    <span className="schedule-appointment-customer">{appointment.customerName}</span>
+                  </button>
+                </Tooltip>
+              )
+            })}
           </div>
         )
       })}

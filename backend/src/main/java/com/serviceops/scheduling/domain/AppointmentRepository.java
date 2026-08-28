@@ -74,6 +74,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
                                           @Param("rangeEnd") Instant rangeEnd,
                                           @Param("status") AppointmentStatus status);
 
+    @Query("""
+            select a from Appointment a
+            join fetch a.workOrder w
+            join fetch w.customer
+            join fetch a.technician t
+            join fetch t.user
+            where a.status = :status
+              and a.endTime < :now
+              and w.deletedAt is null
+              and w.status in (
+                  com.serviceops.workorder.domain.WorkOrderStatus.SCHEDULED,
+                  com.serviceops.workorder.domain.WorkOrderStatus.ASSIGNED
+              )
+            order by a.endTime asc
+            """)
+    List<Appointment> findOverdueNotificationCandidates(@Param("now") Instant now,
+                                                        @Param("status") AppointmentStatus status);
+
     Optional<Appointment> findByTenantIdAndWorkOrderId(UUID tenantId, UUID workOrderId);
     long countByTenantIdAndTechnicianId(UUID tenantId, UUID technicianId);
 }

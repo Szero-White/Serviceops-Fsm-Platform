@@ -214,7 +214,7 @@ public class CustomerService {
         if ("false".equals(normalized)) {
             return false;
         }
-        throw new IllegalArgumentException("Cot active chi nhan true hoac false");
+        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
     }
 
 

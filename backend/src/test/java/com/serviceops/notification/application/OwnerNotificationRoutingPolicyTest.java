@@ -3,7 +3,11 @@ package com.serviceops.notification.application;
 import com.serviceops.asset.application.AssetService;
 import com.serviceops.attachment.application.AttachmentService;
 import com.serviceops.customer.application.CustomerService;
+import com.serviceops.inventory.application.InventoryReorderLevelNotificationHandler;
 import com.serviceops.inventory.application.InventoryService;
+import com.serviceops.inventory.application.InventoryStockAdjustmentNotificationHandler;
+import com.serviceops.inventory.application.WorkOrderPartRequestService;
+import com.serviceops.inventory.application.WorkOrderPartStockService;
 import com.serviceops.servicerequest.application.ServiceChannelService;
 import com.serviceops.servicerequest.application.ServiceRequestService;
 import com.serviceops.technician.application.TechnicianService;
@@ -24,12 +28,16 @@ class OwnerNotificationRoutingPolicyTest {
         assertNoNotificationService(ServiceChannelService.class);
         assertNoNotificationService(TechnicianService.class);
         assertNoNotificationService(AttachmentService.class);
+        assertNoNotificationService(InventoryService.class);
     }
 
     @Test
-    void attentionAndAssignmentDomainsKeepNotificationRouting() {
+    void actionableWorkflowComponentsKeepNotificationRouting() {
         assertHasNotificationService(WorkOrderService.class);
-        assertHasNotificationService(InventoryService.class);
+        assertHasNotificationService(WorkOrderPartRequestService.class);
+        assertHasNotificationService(WorkOrderPartStockService.class);
+        assertHasNotificationService(InventoryReorderLevelNotificationHandler.class);
+        assertHasNotificationService(InventoryStockAdjustmentNotificationHandler.class);
     }
 
     private static void assertNoNotificationService(Class<?> type) {

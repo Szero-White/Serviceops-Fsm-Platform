@@ -2,13 +2,19 @@ package com.serviceops.security;
 
 import com.serviceops.ai.web.AiController;
 import com.serviceops.asset.web.AssetController;
+import com.serviceops.audit.web.AuditController;
 import com.serviceops.customer.web.CustomerController;
 import com.serviceops.dashboard.web.DashboardController;
 import com.serviceops.inventory.web.InventoryController;
+import com.serviceops.inventory.web.WorkOrderPartController;
 import com.serviceops.identity.web.UserManagementController;
+import com.serviceops.payment.web.PaymentController;
+import com.serviceops.payment.web.PaymentReceiptController;
 import com.serviceops.servicerequest.web.ServiceChannelController;
 import com.serviceops.servicerequest.web.ServiceRequestController;
 import com.serviceops.technician.web.TechnicianController;
+import com.serviceops.workorder.web.WorkOrderBillingController;
+import com.serviceops.workorder.web.WorkOrderClosureController;
 import com.serviceops.workorder.web.WorkOrderController;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,7 +39,6 @@ class RoleOwnershipContractTest {
         assertMethodAuthorization(WorkOrderController.class, "schedule", "hasAnyRole('OWNER','DISPATCHER')");
         assertMethodAuthorization(WorkOrderController.class, "deleteFromHistory", "hasRole('OWNER')");
         assertMethodAuthorization(InventoryController.class, "stocktake", "hasAnyRole('OWNER','WAREHOUSE_STAFF')");
-        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
     }
 
     @Test
@@ -81,14 +86,66 @@ class RoleOwnershipContractTest {
 
 
     @Test
-    void warehouseOwnsStockReconciliationAndMovementTraceabilityButNotConsumption() {
+    void warehouseOwnsStockReconciliationMovementAndPhysicalReturnsWhileLegacyConsumptionIsReadOnlyHistory() {
         String warehouseOwners = "hasAnyRole('OWNER','WAREHOUSE_STAFF')";
+        assertMethodAuthorization(InventoryController.class, "export", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "updateReorderLevel", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "stocktake", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "transactions", warehouseOwners);
-        assertMethodAuthorization(InventoryController.class, "returnable", warehouseOwners);
-        assertMethodAuthorization(InventoryController.class, "returnPart", warehouseOwners);
-        assertMethodAuthorization(InventoryController.class, "consume", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderPartController.class, "outstandingParts", warehouseOwners);
+        assertMethodAuthorization(WorkOrderPartController.class, "partRequests", warehouseOwners);
+        assertMethodAuthorization(WorkOrderPartController.class, "createPartRequest", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderPartController.class, "updatePartRequest", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderPartController.class, "cancelPartRequest", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderPartController.class, "markPartRequestUnavailable", "hasRole('WAREHOUSE_STAFF')");
+        assertMethodAuthorization(WorkOrderPartController.class, "issuePartRequest", "hasRole('WAREHOUSE_STAFF')");
+        assertMethodAuthorization(WorkOrderPartController.class, "updatePartUsage", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderPartController.class, "returnable", warehouseOwners);
+        assertMethodAuthorization(WorkOrderPartController.class, "returnPart", "hasRole('WAREHOUSE_STAFF')");
+        assertThat(Arrays.stream(InventoryController.class.getDeclaredMethods()).map(Method::getName))
+                .doesNotContain("consume");
+    }
+
+    @Test
+    void billingPaymentReceiptAndClosureFollowTheApprovedRoleOwnership() {
+        assertMethodAuthorization(
+                WorkOrderBillingController.class,
+                "billing",
+                "hasAnyRole('OWNER','CUSTOMER_SERVICE','TECHNICIAN')"
+        );
+        assertMethodAuthorization(WorkOrderBillingController.class, "updateBilling", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(WorkOrderBillingController.class, "customerAcceptance", "hasRole('TECHNICIAN')");
+
+        assertMethodAuthorization(PaymentController.class, "payments", "hasAnyRole('OWNER','CUSTOMER_SERVICE')");
+        assertMethodAuthorization(
+                PaymentController.class,
+                "workOrderPayment",
+                "hasAnyRole('OWNER','CUSTOMER_SERVICE','TECHNICIAN')"
+        );
+        assertMethodAuthorization(PaymentController.class, "reportTransfer", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(PaymentController.class, "collectCash", "hasRole('TECHNICIAN')");
+        assertMethodAuthorization(PaymentController.class, "settleTransfer", "hasRole('CUSTOMER_SERVICE')");
+        assertMethodAuthorization(PaymentController.class, "settleCash", "hasRole('CUSTOMER_SERVICE')");
+        assertMethodAuthorization(
+                PaymentController.class,
+                "paymentProfile",
+                "hasAnyRole('OWNER','CUSTOMER_SERVICE','TECHNICIAN')"
+        );
+        assertMethodAuthorization(PaymentController.class, "updatePaymentProfile", "hasRole('OWNER')");
+
+        assertMethodAuthorization(PaymentReceiptController.class, "issue", "hasRole('CUSTOMER_SERVICE')");
+        assertMethodAuthorization(
+                PaymentReceiptController.class,
+                "download",
+                "hasAnyRole('OWNER','CUSTOMER_SERVICE')"
+        );
+        assertMethodAuthorization(WorkOrderClosureController.class, "close", "hasRole('CUSTOMER_SERVICE')");
+    }
+
+
+    @Test
+    void systemAuditRemainsAnOwnerGovernanceCapability() {
+        assertClassAuthorization(AuditController.class, "hasRole('OWNER')");
     }
 
     @Test

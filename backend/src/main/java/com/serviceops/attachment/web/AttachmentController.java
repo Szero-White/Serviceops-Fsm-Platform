@@ -1,6 +1,7 @@
 package com.serviceops.attachment.web;
 
 import com.serviceops.attachment.application.AttachmentService;
+import com.serviceops.attachment.domain.AttachmentPurpose;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -31,8 +32,9 @@ public class AttachmentController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AttachmentResponse upload(@RequestParam String referenceType,
                                      @RequestParam UUID referenceId,
+                                     @RequestParam(required = false) AttachmentPurpose purpose,
                                      @RequestParam MultipartFile file) {
-        return service.upload(referenceType, referenceId, file);
+        return service.upload(referenceType, referenceId, purpose, file);
     }
 
     @GetMapping
@@ -64,6 +66,7 @@ public class AttachmentController {
     }
 
     public record AttachmentResponse(UUID id, String originalFilename, String contentType, long fileSize,
-                                     String referenceType, UUID referenceId, String uploadedBy, Instant createdAt) {
+                                     String referenceType, UUID referenceId, String uploadedBy,
+                                     AttachmentPurpose purpose, boolean locked, boolean manageable, Instant createdAt) {
     }
 }

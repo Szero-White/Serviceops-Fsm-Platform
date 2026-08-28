@@ -37,7 +37,7 @@ public class SparePart extends TenantScopedEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    public void consume(BigDecimal quantity) {
+    public void decreaseStock(BigDecimal quantity) {
         validateQuantity(quantity);
         if (stockQuantity.compareTo(quantity) < 0) {
             throw new IllegalStateException("Không đủ tồn kho");
