@@ -33,8 +33,8 @@ test('Owner can create, edit and delete recruiter-created customer data through 
   row = page.locator('tbody tr').filter({ hasText: code })
   await expect(row).toContainText(updatedName)
 
-  await row.getByRole('button', { name: 'Xoá khách hàng' }).click()
-  await page.getByRole('button', { name: 'Xoá', exact: true }).click()
+  await row.getByRole('button', { name: 'Xóa khách hàng' }).click()
+  await page.getByRole('button', { name: 'Xóa', exact: true }).click()
   await expect(page.getByText('Đã xoá khách hàng').last()).toBeVisible()
   await expect(page.locator('tbody tr').filter({ hasText: code })).toHaveCount(0)
 
@@ -72,8 +72,8 @@ test('Owner can CRUD a custom service channel while public-demo seeds remain sep
 
   row = page.locator('tbody tr').filter({ hasText: code })
   await expect(row).toContainText(updatedName)
-  await row.getByRole('button', { name: 'Xoá kênh' }).click()
-  await page.getByRole('button', { name: 'Xoá', exact: true }).click()
+  await row.getByRole('button', { name: 'Xóa kênh' }).click()
+  await page.getByRole('button', { name: 'Xóa', exact: true }).click()
   await expect(page.getByText('Đã xoá kênh tiếp nhận').last()).toBeVisible()
   await expect(page.locator('tbody tr').filter({ hasText: code })).toHaveCount(0)
 
