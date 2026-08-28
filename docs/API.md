@@ -136,7 +136,7 @@ Profile không thể chuyển inactive khi còn operational Work Order assignmen
 Read:
 
 - `GET /spare-parts?search={text}&page={n}&size={n}` — OWNER / WAREHOUSE_STAFF / TECHNICIAN
-- `GET /spare-parts/export` — OWNER / WAREHOUSE_STAFF / TECHNICIAN
+- `GET /spare-parts/export` — OWNER / WAREHOUSE_STAFF
 
 Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 

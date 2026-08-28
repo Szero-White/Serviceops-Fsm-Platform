@@ -77,7 +77,7 @@ public class InventoryController {
     }
 
     @GetMapping("/spare-parts/export")
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF','TECHNICIAN')")
+    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public ResponseEntity<byte[]> export(@RequestParam(defaultValue = "") String search) {
         return csv("serviceops-spare-parts.csv", service.exportSpareParts(search));
     }

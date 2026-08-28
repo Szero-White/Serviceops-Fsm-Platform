@@ -88,6 +88,7 @@ class RoleOwnershipContractTest {
     @Test
     void warehouseOwnsStockReconciliationMovementAndPhysicalReturnsWhileLegacyConsumptionIsReadOnlyHistory() {
         String warehouseOwners = "hasAnyRole('OWNER','WAREHOUSE_STAFF')";
+        assertMethodAuthorization(InventoryController.class, "export", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "updateReorderLevel", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "stocktake", warehouseOwners);
         assertMethodAuthorization(InventoryController.class, "transactions", warehouseOwners);
