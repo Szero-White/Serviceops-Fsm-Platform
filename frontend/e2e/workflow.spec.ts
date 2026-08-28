@@ -111,7 +111,7 @@ test('Technician and Dispatcher transition boundaries are enforced by UI and bac
   await page.goto(`/work-orders?open=${workOrder.body.id}`)
   await expect(page.getByText(workOrder.body.code).last()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bắt đầu di chuyển' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Huỷ phiếu' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Hủy phiếu' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Khách xác nhận' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Đóng phiếu' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Mở lại' })).toHaveCount(0)

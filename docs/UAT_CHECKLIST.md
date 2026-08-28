@@ -12,7 +12,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | RBAC-02 | Role truy cập trực tiếp URL không thuộc quyền trên frontend | Bị điều hướng về workspace mặc định của role; Warehouse về `/part-requests`, các operational role về dashboard; API backend vẫn là lớp bảo vệ cuối |
 | RBAC-03 | Warehouse gọi trực tiếp API lịch sử phiếu | Bị từ chối HTTP 403 dù bỏ qua frontend |
 | RBAC-04 | Warehouse gọi attachment của Asset/Service Request/Work Order | Bị từ chối HTTP 403; Warehouse chỉ sở hữu nghiệp vụ kho |
-| RBAC-05 | Customer Service mở Kênh tiếp nhận | Xem được danh sách nhưng không thấy action thêm/sửa/xoá; cấu hình kênh là OWNER-only |
+| RBAC-05 | Customer Service mở Kênh tiếp nhận | Xem được danh sách nhưng không thấy action thêm/sửa/xóa; cấu hình kênh là OWNER-only |
 | RBAC-06 | Warehouse mở trực tiếp /work-orders hoặc gọi API Work Order/attachment | Frontend từ chối route; backend không cấp quyền Work Order cho Warehouse |
 | RBAC-07 | Dispatcher gọi API Service Request hoặc Service Channel write | Bị từ chối HTTP 403; Dispatcher chỉ điều phối Work Order đã được handoff |
 | RBAC-08 | Warehouse gọi `GET /api/v1/work-orders` hoặc `GET /api/v1/dashboard` | HTTP 403; Warehouse không đọc operational Work Order/dashboard data |
