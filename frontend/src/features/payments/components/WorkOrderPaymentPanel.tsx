@@ -1,7 +1,7 @@
-import { CameraOutlined, CheckCircleOutlined, DeleteOutlined, DollarOutlined, PictureOutlined, SwapOutlined } from '@ant-design/icons'
+import { CameraOutlined, CheckCircleOutlined, DeleteOutlined, DollarOutlined, DownloadOutlined, EyeOutlined, PictureOutlined, SwapOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Descriptions, Empty, Popconfirm, Space, Typography, Upload } from 'antd'
+import { App, Button, Descriptions, Empty, Modal, Popconfirm, Space, Tooltip, Typography, Upload } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
@@ -39,6 +39,8 @@ export function WorkOrderPaymentPanel({
   const returnToPayments = searchParams.get('from') === 'payments'
   const [evidence, setEvidence] = useState<AttachmentItem>()
   const [evidencePreview, setEvidencePreview] = useState<string>()
+  const [transferEvidencePreview, setTransferEvidencePreview] = useState<string>()
+  const [transferEvidencePreviewOpen, setTransferEvidencePreviewOpen] = useState(false)
   const paymentReady = ['CUSTOMER_ACCEPTED', 'CLOSED'].includes(workOrder.status)
   const profileQuery = useQuery({
     queryKey: ['company-payment-profile'],
@@ -60,9 +62,15 @@ export function WorkOrderPaymentPanel({
     if (evidencePreview) URL.revokeObjectURL(evidencePreview)
   }, [evidencePreview])
 
+  useEffect(() => () => {
+    if (transferEvidencePreview) URL.revokeObjectURL(transferEvidencePreview)
+  }, [transferEvidencePreview])
+
   useEffect(() => {
     setEvidence(undefined)
     setEvidencePreview(undefined)
+    setTransferEvidencePreviewOpen(false)
+    setTransferEvidencePreview(undefined)
   }, [workOrder.id])
 
   const refresh = () => {
@@ -101,11 +109,30 @@ export function WorkOrderPaymentPanel({
     onSuccess: () => { message.success('Đã đối soát tiền mặt'); refresh() },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
+  const previewTransferEvidence = useMutation({
+    mutationFn: () => attachmentsApi.download(payment!.transferEvidenceAttachmentId!),
+    onSuccess: (blob) => {
+      setTransferEvidencePreview((current) => {
+        if (current) URL.revokeObjectURL(current)
+        return URL.createObjectURL(blob)
+      })
+      setTransferEvidencePreviewOpen(true)
+    },
+    onError: (error) => message.error(apiErrorMessage(error)),
+  })
   const downloadTransferEvidence = useMutation({
     mutationFn: () => attachmentsApi.download(payment!.transferEvidenceAttachmentId!),
     onSuccess: (blob) => downloadBlob(blob, transferEvidence?.originalFilename ?? `bang-chung-chuyen-khoan-${workOrder.code}`),
     onError: (error) => message.error(apiErrorMessage(error)),
   })
+
+  const closeTransferEvidencePreview = () => {
+    setTransferEvidencePreviewOpen(false)
+    setTransferEvidencePreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return undefined
+    })
+  }
   const issueReceipt = useMutation({
     mutationFn: () => paymentsApi.issueReceipt(workOrder.id),
     onSuccess: (blob) => {
@@ -192,9 +219,30 @@ export function WorkOrderPaymentPanel({
         {payment.transferReportedAt ? <Descriptions.Item label="Khách báo chuyển khoản">{formatDateTime(payment.transferReportedAt)}</Descriptions.Item> : null}
         {payment.transferEvidenceAttachmentId ? (
           <Descriptions.Item label="Bằng chứng chuyển khoản">
-            <Space wrap>
+            <Space size={4} wrap>
               <Typography.Text>{transferEvidence?.originalFilename ?? 'Ảnh giao dịch khách cung cấp'}</Typography.Text>
-              <Button size="small" loading={downloadTransferEvidence.isPending} onClick={() => downloadTransferEvidence.mutate()}>Tải để kiểm tra</Button>
+              <Tooltip title="Xem bằng chứng">
+                <Button
+                  type="text"
+                  size="small"
+                  shape="circle"
+                  aria-label="Xem bằng chứng chuyển khoản"
+                  icon={<EyeOutlined />}
+                  loading={previewTransferEvidence.isPending}
+                  onClick={() => previewTransferEvidence.mutate()}
+                />
+              </Tooltip>
+              <Tooltip title="Tải xuống">
+                <Button
+                  type="text"
+                  size="small"
+                  shape="circle"
+                  aria-label="Tải bằng chứng chuyển khoản"
+                  icon={<DownloadOutlined />}
+                  loading={downloadTransferEvidence.isPending}
+                  onClick={() => downloadTransferEvidence.mutate()}
+                />
+              </Tooltip>
             </Space>
           </Descriptions.Item>
         ) : null}
@@ -308,6 +356,23 @@ export function WorkOrderPaymentPanel({
           </div>
         </div>
       ) : null}
+
+      <Modal
+        open={transferEvidencePreviewOpen}
+        title={transferEvidence?.originalFilename ?? 'Bằng chứng chuyển khoản'}
+        footer={null}
+        width={860}
+        destroyOnHidden
+        onCancel={closeTransferEvidencePreview}
+      >
+        {transferEvidencePreview ? (
+          <img
+            src={transferEvidencePreview}
+            alt={transferEvidence?.originalFilename ?? 'Bằng chứng chuyển khoản'}
+            style={{ display: 'block', width: '100%', maxHeight: '72vh', objectFit: 'contain' }}
+          />
+        ) : null}
+      </Modal>
 
       {payment.status === 'SETTLED' && role && ['CUSTOMER_SERVICE', 'OWNER'].includes(role) ? (
         <div className="payment-company-card">
