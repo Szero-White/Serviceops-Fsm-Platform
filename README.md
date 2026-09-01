@@ -2,15 +2,63 @@
 
 [![CI](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml)
 
-**Live demo:** Not deployed publicly yet. The repository includes a complete local setup and production-like Docker validation path.
+## 🚀 Live demo
+
+**Open ServiceOps:** https://serviceops-fsm.centralindia.cloudapp.azure.com
+
+No local setup is required. The hosted portfolio demo includes seeded accounts for all five business roles and is intended for recruiter/reviewer walkthroughs.
+
+| Role | Username | Password | Good first area to review |
+| --- | --- | --- | --- |
+| Owner | `owner` | `Demo@2026` | Dashboard, users, audit and overall operations |
+| Dispatcher | `dispatcher` | `Demo@2026` | Work orders, assignment and weekly scheduling |
+| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, service requests and conversion to Work Orders |
+| Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
+| Warehouse | `warehouse` | `Demo@2026` | Part requests, ISSUE/RETURN, stocktake and inventory history |
+
+> Recommended first login: use **Owner** for a quick system overview, or follow the [Recruiter walkthrough](#recruiter-walkthrough) to trace one service case across all five roles.
+>
+> The public demo uses disposable seeded credentials. Do not enter real personal, confidential or production data.
+
+## What ServiceOps is
 
 ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
 
-The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a service request, then a work order, then a scheduled technician job; field execution coordinates requested/issued/used/returned spare parts, and the completed job remains traceable through billing acceptance, payment reconciliation, receipt, closure, history, notifications, inventory ledger and audit records.
+The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a Service Request, then a Work Order, then a scheduled Technician job; field execution coordinates requested/issued/used/returned spare parts, and the completed job remains traceable through billing acceptance, payment reconciliation, receipt, closure, history, notifications, inventory ledger and audit records.
+
+```text
+Customer → Equipment → Service Request → Work Order → Scheduling
+         → Field Execution → Parts → Billing → Payment → Receipt
+         → Closure → History / Audit
+```
+
+## At a glance
+
+- **Backend:** Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway, PostgreSQL.
+- **Frontend:** React 19, TypeScript, Vite, Ant Design, TanStack Query, React Router and Axios.
+- **Architecture:** modular monolith with explicit business-module boundaries and server-side authorization.
+- **Security:** stateless JWT authentication, BCrypt, role/ownership checks, tenant scoping, login throttling and request correlation IDs.
+- **Business correctness:** transaction boundaries, pessimistic/optimistic locking, schedule-overlap protection, stock invariants and immutable billing snapshots.
+- **Testing:** JUnit 5, Mockito, Testcontainers and Playwright Chromium end-to-end coverage.
+- **CI:** GitHub Actions verifies backend, frontend and a production-like Nginx → Spring Boot → PostgreSQL runtime.
+- **Hosted demo:** Azure VM, Nginx, HTTPS with Let's Encrypt, Spring Boot managed by systemd and Gemini API integration on the server side.
+
+## Recruiter walkthrough
+
+For a review, use **one service case across every role** instead of demonstrating unrelated CRUD records:
+
+1. Sign in as **Customer Service**, create or inspect a customer and equipment record, then create a Service Request.
+2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
+3. Sign in as **Dispatcher**, assign a Technician and demonstrate schedule/reschedule behavior.
+4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and create a part request if material is needed.
+5. Sign in as **Warehouse**, open **Yêu cầu phụ tùng**, verify the Technician's requested quantity and record `ISSUE` only when the physical part is handed over. Return to **Technician** to record actual `USED`, diagnosis/resolution, complete the job, enter the real service charges and record **Khách xác nhận**.
+6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence) or record cash custody. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
+7. If the Technician still holds an unused issued part, sign in as **Warehouse** after `CLOSED` and record the physical `RETURN`; verify stock/outstanding change while the Work Order remains closed.
+8. Finish as **Owner** by reviewing payment settings, history, timeline, dashboard and audit data for the same operational story, then switch roles/open protected routes directly to verify frontend and backend role ownership remain aligned.
 
 ## Business problem
 
-A field-service company has to keep several departments synchronized around the same service case. Customer Service needs accurate customer and equipment context. Dispatchers need assignable technicians and conflict-free schedules. Technicians need only the jobs assigned to them and a clear execution workflow. Warehouse staff need reliable stock balances and spare-part lifecycle controls. Management needs visibility, accountability and a durable history of what happened.
+A field-service company has to keep several departments synchronized around the same service case. Customer Service needs accurate customer and equipment context. Dispatchers need assignable Technicians and conflict-free schedules. Technicians need only the jobs assigned to them and a clear execution workflow. Warehouse staff need reliable stock balances and spare-part lifecycle controls. Management needs visibility, accountability and a durable history of what happened.
 
 ServiceOps provides one operational record that follows the work across those handoffs so the organization does not have to coordinate the same job through disconnected spreadsheets, chat messages or department-specific records.
 
@@ -18,13 +66,13 @@ ServiceOps provides one operational record that follows the work across those ha
 
 | Real-world responsibility | ServiceOps role | Main responsibilities in the system |
 | --- | --- | --- |
-| Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, work-order management and oversight |
-| Dispatch / service coordination | `DISPATCHER` | Work orders, technician resources, assignment, scheduling/rescheduling and operational history |
-| Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, service requests and Service Request → Work Order handoff |
+| Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, Work Order management and oversight |
+| Dispatch / service coordination | `DISPATCHER` | Work Orders, Technician resources, assignment, scheduling/rescheduling and operational history |
+| Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, Service Requests and Service Request → Work Order handoff |
 | Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence, part requests and actual-used reporting |
 | Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock receiving, stocktake/reconciliation, returns and movement traceability |
 
-The frontend hides routes and actions that are outside a role's responsibility, while the backend remains the authoritative authorization boundary.
+The frontend hides routes and actions outside a role's responsibility, while the backend remains the authoritative authorization boundary.
 
 ## End-to-end operating story
 
@@ -33,13 +81,13 @@ Consider a customer reporting that an air conditioner is no longer cooling prope
 1. **Customer Service receives the issue.** The agent finds or creates the customer, records the customer's equipment and selects the configured intake channel such as phone or email. If a technical identifier such as the serial number is not available during the first call, the equipment can still be registered and the serial can be completed later after verification.
 2. **A Service Request is opened.** The request keeps the customer, optional equipment, issue description, priority and intake channel together. Asset selection is scoped to the selected customer, and the backend rejects a mismatched customer/asset relationship.
 3. **The request becomes a Work Order.** The operational job is created from the request while preserving the source customer and equipment relationship.
-4. **Dispatch plans the visit.** A Dispatcher selects a technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same technician is not silently double-booked.
-5. **The technician receives the assignment.** The technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied technician identifier.
-6. **Field execution begins.** The technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the technician.
+4. **Dispatch plans the visit.** A Dispatcher selects a Technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same Technician is not silently double-booked.
+5. **The Technician receives the assignment.** The Technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied Technician identifier.
+6. **Field execution begins.** The Technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the Technician.
 7. **Spare parts participate in the same job.** The assigned Technician creates a `REQUEST` without changing stock. Warehouse either marks the request unavailable or physically hands over the exact requested quantity and records `ISSUE`, which is the stock-out event. The Technician later records actual `USED` quantity without reducing stock again. Any unused issued quantity can be physically received back by Warehouse as `RETURN`, including after the Work Order is closed; the inventory ledger remains the stock authority. Legacy `CONSUME` rows remain readable for historical compatibility, but the active API/UI no longer creates them.
 8. **The service result and customer charge are frozen.** Diagnosis, resolution notes and evidence stay attached to the job. Through `COMPLETED`, the assigned Technician records actual used parts, labor and any explained incidental fee. Customer acceptance then freezes an immutable billing snapshot so later catalog-price changes or part returns cannot silently rewrite what the customer accepted.
 9. **Payment is reconciled before closure.** After `CUSTOMER_ACCEPTED`, the Technician can show the Owner-configured company bank/QR in read-only form and record that the customer reported a transfer, optionally with evidence, or that cash is being held for handover. Customer Service verifies the actual transfer or cash handover and moves the separate payment state to `SETTLED`. Only then can Customer Service issue the official service-payment receipt and close the Work Order.
-10. **The organization can trace the result.** Work-order history and the unified timeline tell the business story from request/issue/used through completion, acceptance, payment, receipt, closure and any post-closure return. Inventory Movements remains the stock ledger and distinguishes the Warehouse actor from the Technician recipient on `ISSUE`; Audit keeps detailed system traceability; notifications remain attention-only rather than duplicating those histories.
+10. **The organization can trace the result.** Work Order history and the unified timeline tell the business story from request/issue/used through completion, acceptance, payment, receipt, closure and any post-closure return. Inventory Movements remains the stock ledger and distinguishes the Warehouse actor from the Technician recipient on `ISSUE`; Audit keeps detailed system traceability; notifications remain attention-only rather than duplicating those histories.
 
 This produces one continuous business chain instead of separate records for each department:
 
@@ -95,7 +143,7 @@ Customer
   → Closure
 ```
 
-The Work Order state machine also supports controlled branches such as `WAITING_FOR_PARTS`, `REOPENED` and `CANCELLED`. Invalid or unauthorized transitions are rejected by the backend. Customer/asset consistency, technician ownership, schedule conflicts, inventory balance and tenant scope are also enforced server-side rather than relying only on frontend visibility.
+The Work Order state machine also supports controlled branches such as `WAITING_FOR_PARTS`, `REOPENED` and `CANCELLED`. Invalid or unauthorized transitions are rejected by the backend. Customer/asset consistency, Technician ownership, schedule conflicts, inventory balance and tenant scope are also enforced server-side rather than relying only on frontend visibility.
 
 ## Demo accounts
 
@@ -104,51 +152,40 @@ The login screen exposes **five quick-login cards**, one for each business role.
 | Role | Username | Password | Main area to review |
 | --- | --- | --- | --- |
 | Owner | `owner` | `Demo@2026` | User administration, dashboard, audit and overall operations |
-| Dispatcher | `dispatcher` | `Demo@2026` | Work orders, technician assignment and weekly scheduling |
-| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, service requests and request-to-work-order flow |
+| Dispatcher | `dispatcher` | `Demo@2026` | Work Orders, Technician assignment and weekly scheduling |
+| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, Service Requests and request-to-Work Order flow |
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
 | Warehouse | `warehouse` | `Demo@2026` | Part-request queue, spare parts, ISSUE/RETURN, stocktake and inventory movement history |
 
-`technician-2` is an additional seeded technician account and also uses `Demo@2026` in the current local portfolio environment. It is intentionally **not** a sixth quick-login card. It is used to verify isolation between two individual technicians who share the `TECHNICIAN` role, especially for `/my-schedule` and assigned work.
+`technician-2` is an additional seeded Technician account and also uses `Demo@2026` in the current demo environment. It is intentionally **not** a sixth quick-login card. It is used to verify isolation between two individual Technicians who share the `TECHNICIAN` role, especially for `/my-schedule` and assigned work.
 
-> `Demo@2026` is the disposable credential used by the current local/demo portfolio setup. Production database, JWT and infrastructure secrets must remain separate and must not be committed.
-
-## Recruiter walkthrough
-
-For a review, use **one service case across every role** instead of demonstrating unrelated CRUD records:
-
-1. Sign in as **Customer Service**, create or inspect a customer and equipment record, then create a Service Request.
-2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
-3. Sign in as **Dispatcher**, assign a technician and demonstrate schedule/reschedule behavior.
-4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and create a part request if material is needed.
-5. Sign in as **Warehouse**, open **Yêu cầu phụ tùng**, verify the Technician's requested quantity and record `ISSUE` only when the physical part is handed over. Return to **Technician** to record actual `USED`, diagnosis/resolution, complete the job, enter the real service charges and record **Khách xác nhận**.
-6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence) or record cash custody. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
-7. If the Technician still holds an unused issued part, sign in as **Warehouse** after `CLOSED` and record the physical `RETURN`; verify stock/outstanding change while the Work Order remains closed.
-8. Finish as **Owner** by reviewing payment settings, history, timeline, dashboard and audit data for the same operational story, then switch roles/open protected routes directly to verify frontend and backend role ownership remain aligned.
+> `Demo@2026` is a disposable credential used only by the seeded public/local demo accounts. Database credentials, JWT secrets, infrastructure secrets and AI credentials are configured separately and must never be committed.
 
 ## Product capabilities
 
 - Customer and customer-equipment management, including equipment whose serial is not yet known at service intake.
-- Configurable service-request intake channels.
+- Configurable Service Request intake channels.
 - Service Request → Work Order conversion with customer/asset consistency checks.
-- Work-order lifecycle with controlled role-aware transitions and history.
-- Technician assignment, overlap-safe scheduling and weekly dispatcher schedule board.
-- Personal technician schedule derived from the authenticated account.
+- Work Order lifecycle with controlled role-aware transitions and history.
+- Technician assignment, overlap-safe scheduling and weekly Dispatcher schedule board.
+- Personal Technician schedule derived from the authenticated account.
 - Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
 - Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
-- Technician part requests, Warehouse ISSUE/RETURN, actual-used tracking and outstanding-material visibility, with inventory movement history as the stock ledger.
+- Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and outstanding-material visibility, with inventory movement history as the stock ledger.
 - Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
 - Separate payment reconciliation for transfer/cash, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
-- Work-order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
+- Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.
 - Persistent notifications, audit trail and operational dashboard.
 - Shared-schema multi-tenancy with tenant-scoped data access.
 - Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
-- Optional AI-assisted service-request drafting and a role-aware in-app help assistant.
+- AI-assisted Service Request drafting and a role-aware in-app help assistant. The hosted demo uses Gemini through the backend, with application fallback behavior when the external provider is unavailable.
 
 ## Architecture
+
+### Application architecture
 
 ```text
 Browser
@@ -157,7 +194,7 @@ Browser
 React 19 + TypeScript + Ant Design
   │  /api/v1
   ▼
-Vite proxy (development) / Nginx (production-like)
+Vite proxy (development) / Nginx (hosted demo and production-like runtime)
   │
   ▼
 Spring Boot 3.5 modular monolith
@@ -174,12 +211,36 @@ Spring Boot 3.5 modular monolith
         │
         ├── PostgreSQL 17
         ├── filesystem-backed attachment storage
-        └── Gemini API (optional, server-side)
+        └── Gemini API (server-side when enabled)
 ```
 
 ServiceOps intentionally remains a **modular monolith**. The current requirements benefit from explicit business-module boundaries and transactional use cases without the operational overhead of a distributed architecture.
 
-The role-aware AI help assistant is constrained to product guidance and does not receive raw customer, work-order or inventory runtime records. Spring Security and the application backend remain the authorization boundary.
+The role-aware AI help assistant is constrained to product guidance and does not receive raw customer, Work Order or inventory runtime records. Spring Security and the application backend remain the authorization boundary.
+
+### Hosted portfolio demo
+
+```text
+Internet
+   │
+   │ HTTPS
+   ▼
+Azure VM — Central India
+   │
+   ▼
+Nginx
+   ├── /                 → React static build
+   ├── /api/v1/*         → Spring Boot :8080
+   └── /actuator/health  → Spring Boot health endpoint
+                              │
+                              ├── PostgreSQL
+                              ├── filesystem upload storage
+                              └── Gemini API
+```
+
+The hosted demo runs the backend as a `systemd` service and serves the frontend through Nginx. Public traffic is terminated over HTTPS with a Let's Encrypt certificate and automatic Certbot renewal. Application secrets are stored server-side and are not committed to the repository.
+
+The repository also keeps a separate **production-like Docker Compose validation path** so CI/local verification can exercise the same Nginx → Spring Boot → PostgreSQL topology without depending on the public demo infrastructure.
 
 ## Technology stack
 
@@ -207,13 +268,18 @@ The role-aware AI help assistant is constrained to product guidance and does not
 
 ### Operations
 
-- Multi-stage backend/frontend Docker builds
-- Production-like Docker Compose topology: **Nginx → Spring Boot → PostgreSQL**
-- PostgreSQL private to the production Compose network
-- Health/readiness checks
-- Persistent database/upload volumes
-- PostgreSQL backup and guarded restore scripts
-- GitHub Actions quality gates and production-like runtime validation
+- Public Azure VM portfolio deployment.
+- Nginx static frontend hosting and reverse proxy for `/api/v1`.
+- HTTPS/TLS with Let's Encrypt and scheduled Certbot renewal.
+- Spring Boot backend managed by `systemd`.
+- Server-side environment configuration for database, JWT and Gemini credentials.
+- Multi-stage backend/frontend Docker builds.
+- Production-like Docker Compose topology: **Nginx → Spring Boot → PostgreSQL**.
+- PostgreSQL private to the production Compose network.
+- Health/readiness checks.
+- Persistent database/upload volumes in the Docker validation path.
+- PostgreSQL backup and guarded restore scripts.
+- GitHub Actions quality gates and production-like runtime validation.
 
 ## Security and business correctness
 
@@ -223,14 +289,15 @@ The role-aware AI help assistant is constrained to product guidance and does not
 - Server-side search and pagination for operational lists.
 - Pessimistic locking for scheduling, inventory updates and selected owner invariants.
 - Optimistic concurrency conflicts mapped to HTTP `409 CONCURRENT_MODIFICATION`.
-- Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied technician ID.
+- Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied Technician ID.
 - Technician field transitions remain assignment-scoped; through `COMPLETED`, the assigned Technician owns actual field results/used parts/billing draft, then records customer acceptance and the customer's payment action. Technician cannot settle payment, issue the official receipt or close the Work Order.
-- Customer Service owns payment reconciliation and normal closure: `CUSTOMER_ACCEPTED` stays open until payment is `SETTLED`; receipt issuance/closure then remain CSKH responsibilities. Owner supervises and configures company bank/QR instead of impersonating those operational actions.
+- Customer Service owns payment reconciliation and normal closure: `CUSTOMER_ACCEPTED` stays open until payment is `SETTLED`; receipt issuance/closure then remain Customer Service responsibilities. Owner supervises and configures company bank/QR instead of impersonating those operational actions.
 - Scheduling conflicts use locking plus overlap detection.
 - Part `REQUEST` does not move stock; Warehouse `ISSUE` is transactionally/idempotently stock-out, Technician `USED` records actual customer usage without a second stock movement, and Warehouse `RETURN` is the physical stock-in.
 - Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
 - Login throttling and request correlation IDs are enabled.
 - Public-demo mode protects required seeded identities and system-defined service channels while recruiter-created data remains editable according to RBAC.
+- Gemini credentials remain server-side; the frontend never receives the provider API key.
 
 ## Verification and CI
 
@@ -254,7 +321,7 @@ The current Playwright suite expands to **17 browser tests across 4 spec files**
 
 Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
 
-See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the latest recorded local baseline and the remaining pre-merge CI/UAT gates.
+See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the latest recorded baseline and remaining CI/UAT gates.
 
 ## Run locally
 
@@ -367,7 +434,7 @@ http://localhost:8088
 
 Use `docker compose ... down` when finished. Do **not** add `-v` unless persistent PostgreSQL/upload volumes are intentionally being deleted.
 
-For an Internet-facing demo, follow [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md).
+The hosted public demo is separate from this Docker validation path. For Internet-facing deployment and operational notes, see [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md).
 
 ## Repository structure
 
@@ -387,6 +454,7 @@ scripts/                  Local developer helpers
   reset-local-db.ps1      Guarded backup + local database recreation
   check-local.ps1         Local backend/frontend verification
   production/             Backup and guarded restore utilities
+
 docs/                     Architecture, security, business and operations docs
 .github/workflows/        CI pipeline
 docker-compose.local.yml  Optional local PostgreSQL container
@@ -417,4 +485,4 @@ Further work should prioritize verified bugs, security/business correctness, aut
 
 Microservices, Kafka, Redis, Kubernetes, Elasticsearch and similar infrastructure are intentionally not added merely to make the portfolio appear more complex. They should be introduced only when a concrete scaling, availability or integration requirement justifies their operational cost.
 
-Possible future additions such as SLA/service windows, preventive-maintenance agreements and technician mobile/PWA support remain optional roadmap items rather than unfinished requirements of the current portfolio baseline.
+Possible future additions such as SLA/service windows, preventive-maintenance agreements and Technician mobile/PWA support remain optional roadmap items rather than unfinished requirements of the current portfolio baseline.
