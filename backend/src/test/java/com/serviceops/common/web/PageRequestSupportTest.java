@@ -3,6 +3,8 @@ package com.serviceops.common.web;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PageRequestSupportTest {
@@ -22,6 +24,33 @@ class PageRequestSupportTest {
 
         assertEquals(3, pageable.getPageNumber());
         assertEquals(PageRequestSupport.MAX_PAGE_SIZE, pageable.getPageSize());
+    }
+
+    @Test
+    void safeSortAcceptsOnlyWhitelistedFieldsAndAddsStableNewestTieBreak() {
+        var sort = PageRequestSupport.safeSort(
+                "customerName",
+                "asc",
+                Map.of("customerName", "customer.name", "createdAt", "createdAt"),
+                "createdAt",
+                Sort.Direction.DESC
+        );
+
+        assertEquals(Sort.Direction.ASC, sort.getOrderFor("customer.name").getDirection());
+        assertEquals(Sort.Direction.DESC, sort.getOrderFor("createdAt").getDirection());
+    }
+
+    @Test
+    void safeSortFallsBackWhenClientRequestsUnknownField() {
+        var sort = PageRequestSupport.safeSort(
+                "drop table users",
+                "asc",
+                Map.of("createdAt", "createdAt"),
+                "createdAt",
+                Sort.Direction.DESC
+        );
+
+        assertEquals(Sort.Direction.DESC, sort.getOrderFor("createdAt").getDirection());
     }
 
     @Test

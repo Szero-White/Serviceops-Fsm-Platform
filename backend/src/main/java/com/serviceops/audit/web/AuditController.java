@@ -29,9 +29,11 @@ public class AuditController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String entityType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
     ) {
-        return service.list(page, size, q, actor, action, entityType, from, to);
+        return service.list(page, size, q, actor, action, entityType, from, to, sortBy, sortDir);
     }
 
     public record AuditResponse(UUID id, String actorUsername, String action, String entityType, UUID entityId, String details, Instant createdAt) {

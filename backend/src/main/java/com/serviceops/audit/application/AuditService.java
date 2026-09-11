@@ -19,11 +19,20 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuditService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("createdAt", "createdAt"),
+            Map.entry("actorUsername", "actorUsername"),
+            Map.entry("action", "action"),
+            Map.entry("entityType", "entityType"),
+            Map.entry("details", "details"),
+            Map.entry("entityId", "entityId")
+    );
     private final AuditLogRepository repository;
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -80,6 +89,11 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<AuditResponse> list(int page, int size, String query, String actor, String action, String entityType, Instant from, Instant to) {
+        return list(page, size, query, actor, action, entityType, from, to, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<AuditResponse> list(
             int page,
             int size,
@@ -88,11 +102,14 @@ public class AuditService {
             String action,
             String entityType,
             Instant from,
-            Instant to
+            Instant to,
+            String sortBy,
+            String sortDir
     ) {
         validateRange(from, to);
 
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
 
         String normalizedQuery = trimToNull(query);
         String normalizedActor = trimToNull(actor);

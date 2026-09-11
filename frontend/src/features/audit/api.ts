@@ -10,6 +10,8 @@ export interface AuditListParams {
   entityType?: string
   from?: string
   to?: string
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
 }
 
 function clean(value?: string) {
@@ -28,6 +30,8 @@ export const auditApi = {
       entityType: params.entityType,
       from: params.from,
       to: params.to,
+      sortBy: params.sortBy ?? 'createdAt',
+      sortDir: params.sortDir ?? 'desc',
     },
   }).then((response) => response.data),
 }

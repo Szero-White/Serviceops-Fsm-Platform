@@ -21,6 +21,7 @@ import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { formatDateTime } from '../../../utils/format'
 import { API_URL } from '../../../api/http'
 import { useNavigate } from 'react-router-dom'
+import { compareDate, compareText } from '../../../utils/tableSort'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -148,11 +149,11 @@ export function DashboardPage() {
               className="content-table"
               locale={{ emptyText: <Empty description="Chưa có phiếu công việc gần đây" /> }}
               columns={[
-                { title: 'Phiếu', dataIndex: 'code', width: 145, render: (value: string) => <Typography.Text code>{value}</Typography.Text> },
-                { title: 'Nội dung', dataIndex: 'summary', ellipsis: true },
-                { title: 'Ưu tiên', dataIndex: 'priority', width: 105, render: (value) => <PriorityTag priority={value} /> },
-                { title: 'Trạng thái', dataIndex: 'status', width: 135, render: (value) => <StatusTag status={value} /> },
-                { title: 'Lịch hẹn', dataIndex: 'scheduledStart', width: 145, render: formatDateTime },
+                { title: 'Phiếu', dataIndex: 'code', width: 145, sorter: (a, b) => compareText(a.code, b.code), render: (value: string) => <Typography.Text code>{value}</Typography.Text> },
+                { title: 'Nội dung', dataIndex: 'summary', ellipsis: true, sorter: (a, b) => compareText(a.summary, b.summary) },
+                { title: 'Ưu tiên', dataIndex: 'priority', width: 105, sorter: (a, b) => compareText(a.priority, b.priority), render: (value) => <PriorityTag priority={value} /> },
+                { title: 'Trạng thái', dataIndex: 'status', width: 135, sorter: (a, b) => compareText(a.status, b.status), render: (value) => <StatusTag status={value} /> },
+                { title: 'Lịch hẹn', dataIndex: 'scheduledStart', width: 145, sorter: (a, b) => compareDate(a.scheduledStart, b.scheduledStart), render: formatDateTime },
               ]}
             />
           </Card>

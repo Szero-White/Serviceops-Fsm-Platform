@@ -36,4 +36,10 @@ export function apiErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Đã xảy ra lỗi ngoài dự kiến'
 }
 
+export function apiErrorCode(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) return undefined
+  const data = error.response?.data as { code?: string } | undefined
+  return data?.code
+}
+
 export { API_URL }

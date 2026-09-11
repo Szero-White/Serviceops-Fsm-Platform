@@ -13,6 +13,7 @@ import type { ServiceChannel } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareDate, compareNumber, compareText } from '../../../utils/tableSort'
 
 const colorOptions = [
   { value: 'blue', label: 'Xanh dương' },
@@ -144,6 +145,7 @@ export function ServiceChannelsPage() {
           {
             title: 'Kênh',
             width: 320,
+            sorter: (a, b) => compareText(a.name, b.name),
             render: (_, record) => (
               <div className="channel-name-cell">
                 <span className={`channel-color-swatch channel-color-${record.color}`} />
@@ -154,17 +156,18 @@ export function ServiceChannelsPage() {
               </div>
             ),
           },
-          { title: 'Mô tả', dataIndex: 'description', ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Màu nhận diện', dataIndex: 'color', width: 140, render: (value: string) => <span className="channel-color-value"><span className={`channel-color-dot channel-color-${value}`} />{colorLabels[value] ?? 'Trung tính'}</span> },
-          { title: 'Thứ tự', dataIndex: 'sortOrder', width: 110 },
-          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (value: boolean) => <BinaryStatusTag active={value} activeLabel="Đang dùng" /> },
-          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
+          { title: 'Mô tả', dataIndex: 'description', ellipsis: true, sorter: (a, b) => compareText(a.description, b.description), render: (value) => value || EMPTY_VALUE },
+          { title: 'Màu nhận diện', dataIndex: 'color', width: 140, sorter: (a, b) => compareText(a.color, b.color), render: (value: string) => <span className="channel-color-value"><span className={`channel-color-dot channel-color-${value}`} />{colorLabels[value] ?? 'Trung tính'}</span> },
+          { title: 'Thứ tự', dataIndex: 'sortOrder', width: 110, sorter: (a, b) => compareNumber(a.sortOrder, b.sortOrder) },
+          { title: 'Trạng thái', dataIndex: 'active', width: 140, sorter: (a, b) => compareNumber(Number(a.active), Number(b.active)), render: (value: boolean) => <BinaryStatusTag active={value} activeLabel="Đang dùng" /> },
+          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, sorter: (a, b) => compareDate(a.updatedAt, b.updatedAt), render: formatDateTime },
           {
-            title: '',
-            width: 92,
+            title: 'Thao tác',
+            width: 100,
+            fixed: 'right' as const,
             render: (_, record) => canManage ? (
               <Space size={4}>
-                <Button aria-label="Sửa kênh" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                <Button aria-label="Sửa kênh" title="Sửa kênh" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
                   title="Xóa kênh này?"
                   description="Chỉ xóa được khi kênh chưa được dùng trong yêu cầu dịch vụ."
@@ -173,7 +176,7 @@ export function ServiceChannelsPage() {
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xóa kênh" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa kênh" title="Xóa kênh" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ) : null,

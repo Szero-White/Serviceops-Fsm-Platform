@@ -37,8 +37,10 @@ public class CustomerController {
     public PageResponse<CustomerResponse> search(@RequestParam(defaultValue = "") String search,
                                                  @RequestParam(required = false) Boolean active,
                                                  @RequestParam(defaultValue = "0") int page,
-                                                 @RequestParam(defaultValue = "20") int size) {
-        return service.search(search, active, page, size);
+                                                 @RequestParam(defaultValue = "20") int size,
+                                                 @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                 @RequestParam(defaultValue = "desc") String sortDir) {
+        return service.search(search, active, page, size, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")

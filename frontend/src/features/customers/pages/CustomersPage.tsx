@@ -15,6 +15,7 @@ import { EMPTY_VALUE, formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareText, resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive'
 
@@ -30,6 +31,7 @@ export function CustomersPage() {
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<CustomerStatusFilter>('all')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
   const activeFilter = statusFilter === 'all' ? undefined : statusFilter === 'active'
   const [open, setOpen] = useState(false)
@@ -42,8 +44,8 @@ export function CustomersPage() {
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const customersQuery = useQuery({
-    queryKey: ['customers', { search, statusFilter, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE, activeFilter),
+    queryKey: ['customers', { search, statusFilter, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE, activeFilter, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = customersQuery
@@ -73,6 +75,10 @@ export function CustomersPage() {
     mutationFn: (values: Record<string, unknown>) => editing ? customersApi.update(editing.id, values) : customersApi.create(values),
     onSuccess: () => {
       message.success(editing ? 'Đã cập nhật khách hàng' : 'Đã tạo khách hàng')
+      if (!editing) {
+        setPage(0)
+        setSort({ sortBy: 'createdAt', sortDir: 'desc' })
+      }
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
@@ -112,6 +118,8 @@ export function CustomersPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
+        setPage(0)
+        setSort({ sortBy: 'createdAt', sortDir: 'desc' })
         refreshRelatedViews()
       }
     },
@@ -249,13 +257,17 @@ export function CustomersPage() {
           showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} khách hàng`,
         }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          setSort(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
+        }}
         locale={{ emptyText: <Empty description={customersQuery.isError ? 'Không thể tải dữ liệu khách hàng' : 'Chưa có khách hàng phù hợp'} /> }}
         columns={[
           {
             title: 'Khách hàng',
             dataIndex: 'name',
             width: 280,
+            ...serverSortable(sort, 'name'),
             render: (value: string, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{value}</Typography.Text>
@@ -266,6 +278,7 @@ export function CustomersPage() {
           {
             title: 'Liên hệ',
             width: 240,
+            ...serverSortable(sort, 'contact'),
             render: (_, record) => (
               <div className="table-secondary-stack">
                 <span>{record.phone || EMPTY_VALUE}</span>
@@ -273,16 +286,17 @@ export function CustomersPage() {
               </div>
             ),
           },
-          { title: 'Địa chỉ', dataIndex: 'address', ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Trạng thái', dataIndex: 'active', width: 130, render: (value: boolean) => <BinaryStatusTag active={value} inactiveLabel="Ngừng hoạt động" /> },
-          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 130, render: formatDate },
+          { title: 'Địa chỉ', dataIndex: 'address', ellipsis: true, ...serverSortable(sort, 'address'), render: (value) => value || EMPTY_VALUE },
+          { title: 'Trạng thái', dataIndex: 'active', width: 130, ...serverSortable(sort, 'active'), render: (value: boolean) => <BinaryStatusTag active={value} inactiveLabel="Ngừng hoạt động" /> },
+          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 130, ...serverSortable(sort, 'createdAt'), render: formatDate },
           {
-            title: '',
-            width: 92,
+            title: 'Thao tác',
+            width: 100,
+            fixed: 'right' as const,
             hidden: !canManage,
             render: (_, record) => (
               <Space size={4}>
-                <Button aria-label="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                <Button aria-label="Sửa khách hàng" title="Sửa khách hàng" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
                   title="Xóa khách hàng này?"
                   description="Chỉ xóa được khi khách hàng chưa được dùng trong dữ liệu nghiệp vụ."
@@ -291,7 +305,7 @@ export function CustomersPage() {
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xóa khách hàng" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa khách hàng" title="Xóa khách hàng" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ),
@@ -321,8 +335,8 @@ export function CustomersPage() {
         onCancel={() => setBulkImportOpen(false)}
         onCommit={() => commitImport.mutate()}
         columns={[
-          { title: 'Mã', dataIndex: 'code', width: 140 },
-          { title: 'Tên khách hàng', dataIndex: 'name', ellipsis: true },
+          { title: 'Mã', dataIndex: 'code', width: 140, sorter: (a, b) => compareText(a.code, b.code) },
+          { title: 'Tên khách hàng', dataIndex: 'name', ellipsis: true, sorter: (a, b) => compareText(a.name, b.name) },
         ]}
       />
     </div>

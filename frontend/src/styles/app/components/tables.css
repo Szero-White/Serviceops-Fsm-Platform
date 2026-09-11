@@ -200,3 +200,60 @@
   font-weight: 400 !important;
   line-height: 1.4 !important;
 }
+
+/* Sorting stays visible without painting the selected data column. */
+.content-table .ant-table-column-sort {
+  background: transparent !important;
+}
+.content-table .ant-table-thead > tr > th.ant-table-column-sort {
+  background: #f7f9fa !important;
+}
+.content-table .ant-table-column-sorters {
+  justify-content: flex-start;
+  gap: 8px;
+}
+.content-table .ant-table-column-sorter {
+  flex: 0 0 auto;
+  margin-inline-start: 0 !important;
+}
+
+/* Keep operational row actions compact and always visible on wide tables. */
+.content-table .service-request-actions {
+  white-space: nowrap;
+}
+.content-table .service-request-actions .ant-space {
+  flex-wrap: nowrap;
+}
+.content-table .table-action-primary.ant-btn-text {
+  color: var(--app-primary) !important;
+}
+.content-table .table-action-primary.ant-btn-text:hover {
+  background: #eef5fa !important;
+  color: var(--app-primary-active) !important;
+}
+
+.service-request-convert-summary {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+.service-request-convert-summary > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+  border-bottom: 1px solid #edf1f3;
+}
+.service-request-convert-summary > div:last-child {
+  border-bottom: 0;
+}
+.service-request-convert-summary span {
+  color: var(--app-text-secondary);
+}
+.service-request-convert-summary strong {
+  min-width: 0;
+  color: var(--app-text);
+  font-weight: 500;
+}

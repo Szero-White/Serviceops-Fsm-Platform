@@ -10,6 +10,7 @@ import { AUDIT_ACTION_LABELS, AuditActionTag, MetaBadge } from '../../../compone
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { auditApi } from '../api'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 const { RangePicker } = DatePicker
 const auditEntityLabels: Record<string, string> = {
@@ -55,6 +56,7 @@ function formatAuditEntityType(value?: string) {
 
 export function AuditPage() {
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [searchInput, setSearchInput] = useState('')
   const [actorInput, setActorInput] = useState('')
   const [action, setAction] = useState<string>()
@@ -72,12 +74,12 @@ export function AuditPage() {
 
   const queryKey = useMemo(() => [
     'audit',
-    { page, size: LIST_PAGE_SIZE, search, actor, action, entityType, from, to },
-  ], [page, search, actor, action, entityType, from, to])
+    { page, size: LIST_PAGE_SIZE, search, actor, action, entityType, from, to, sort },
+  ], [page, search, actor, action, entityType, from, to, sort])
 
   const auditQuery = useQuery({
     queryKey,
-    queryFn: () => auditApi.list({ page, size: LIST_PAGE_SIZE, query: search, actor, action, entityType, from, to }),
+    queryFn: () => auditApi.list({ page, size: LIST_PAGE_SIZE, query: search, actor, action, entityType, from, to, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = auditQuery
@@ -173,15 +175,18 @@ export function AuditPage() {
           showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} sự kiện`,
         }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          setSort(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
+        }}
         locale={{ emptyText: <Empty description={auditQuery.isError ? 'Không thể tải dữ liệu audit' : 'Không có sự kiện phù hợp bộ lọc'} /> }}
         columns={[
-          { title: 'Thời gian', dataIndex: 'createdAt', width: 180, render: formatDateTime },
-          { title: 'Người thao tác', dataIndex: 'actorUsername', width: 160, render: (value: string) => <span className="audit-actor">{value}</span> },
-          { title: 'Hành động', dataIndex: 'action', width: 170, render: (value: string) => <AuditActionTag action={value} /> },
-          { title: 'Đối tượng', dataIndex: 'entityType', width: 190, render: (value: string) => <span className="audit-entity-label">{formatAuditEntityType(value)}</span> },
-          { title: 'Chi tiết', dataIndex: 'details', ellipsis: true, render: (value) => value || EMPTY_VALUE },
-          { title: 'Mã đối tượng', dataIndex: 'entityId', width: 230, render: (value) => value ? <span className="entity-code" title={value}>{value}</span> : EMPTY_VALUE },
+          { title: 'Thời gian', dataIndex: 'createdAt', width: 180, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
+          { title: 'Người thao tác', dataIndex: 'actorUsername', width: 160, ...serverSortable(sort, 'actorUsername'), render: (value: string) => <span className="audit-actor">{value}</span> },
+          { title: 'Hành động', dataIndex: 'action', width: 170, ...serverSortable(sort, 'action'), render: (value: string) => <AuditActionTag action={value} /> },
+          { title: 'Đối tượng', dataIndex: 'entityType', width: 190, ...serverSortable(sort, 'entityType'), render: (value: string) => <span className="audit-entity-label">{formatAuditEntityType(value)}</span> },
+          { title: 'Chi tiết', dataIndex: 'details', ellipsis: true, ...serverSortable(sort, 'details'), render: (value) => value || EMPTY_VALUE },
+          { title: 'Mã đối tượng', dataIndex: 'entityId', width: 230, ...serverSortable(sort, 'entityId'), render: (value) => value ? <span className="entity-code" title={value}>{value}</span> : EMPTY_VALUE },
         ]}
       />
     </div>
