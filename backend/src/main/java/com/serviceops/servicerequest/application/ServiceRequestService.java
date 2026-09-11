@@ -22,11 +22,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ServiceRequestService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("title", "title"),
+            Map.entry("customerName", "customer.name"),
+            Map.entry("assetLabel", "asset.serialNumber"),
+            Map.entry("priority", "priority"),
+            Map.entry("channel", "channel"),
+            Map.entry("status", "status"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final ServiceRequestRepository repository;
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
@@ -37,7 +47,13 @@ public class ServiceRequestService {
 
     @Transactional(readOnly = true)
     public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return search(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String keyword = PageRequestSupport.normalizeSearch(search);
         return PageResponse.from(repository.search(CurrentUser.tenantId(), status, keyword, pageable).map(ServiceRequestService::toResponse));
     }
