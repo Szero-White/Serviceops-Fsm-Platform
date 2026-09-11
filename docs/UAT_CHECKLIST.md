@@ -56,6 +56,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | USER-01 | Owner sửa user và thử đổi username | Bị chặn `USER_USERNAME_CHANGE_BLOCKED`; username lịch sử/ownership giữ ổn định |
 | USER-02 | Owner đổi bộ lọc Người dùng giữa Tất cả trạng thái / Hoạt động / Tạm ngưng, đồng thời nhập từ khóa tìm kiếm | Danh sách áp đồng thời search + trạng thái; đổi filter/search quay về page 1; metric tổng vẫn phản ánh toàn bộ tenant |
 | USER-03 | Owner tạo/cập nhật user | Success feedback ghi rõ tên, vai trò và trạng thái tài khoản; audit USER_ACCOUNT ghi trạng thái sau thao tác |
+| USER-03A | Owner đổi trạng thái TECHNICIAN tại **Người dùng** hoặc **Đội ngũ kỹ thuật** | Trạng thái **Hoạt động/Tạm ngưng** được đồng bộ hai chiều. Tắt ở bất kỳ màn hình nào thì cả tài khoản và hồ sơ đều Tạm ngưng; bật ở bất kỳ màn hình nào thì cả hai đều Hoạt động. Tạm ngưng vẫn bị chặn khi kỹ thuật viên còn phiếu công việc đang hoạt động |
 | OWNER-01 | Owner mở Service Request OPEN và bấm Chuyển sang điều phối | Cho phép như Customer Service; tạo đúng Work Order, không bypass guard customer/asset/state |
 | OWNER-02 | Owner duyệt các workspace `/users`, Customer/Asset, Service Request/Channel, Work Order/Schedule/History, Technician, Inventory/Stocktake/Movements và Audit | Các trang quản trị của Owner truy cập được; My Schedule và Technician-only part request/actual usage vẫn không biến thành admin impersonation |
 | DASH-01 | Có WO ở SCHEDULED/ON_THE_WAY/REOPENED/CUSTOMER_ACCEPTED rồi mở dashboard | Tỷ lệ hoàn tất tính đủ các trạng thái active/completed chính, không bỏ sót các state này |
@@ -71,9 +72,9 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | INV-04A | Sau ISSUE 3, Technician ghi actual used = 2 | `USED=2`; tồn kho không đổi thêm; outstanding = 1 |
 | INV-04B | Technician cập nhật actual used khi WO `COMPLETED` | Cho phép; sau `CUSTOMER_ACCEPTED` thì bị khóa |
 | INV-04C | Technician sửa actual used từ 6 thành 8 rồi chuyển sang tab **Chi phí** | Billing draft hiển thị quantity/thành tiền theo 8 ngay sau khi lưu, không cần F5; stock không giảm lần hai |
-| INV-05 | Warehouse hoàn 1 part sau ISSUE 3 và USED 2 | Tồn tăng 1; ledger tạo `RETURN`; outstanding về 0; thử hoàn quá outstanding nhận HTTP 409 |
+| INV-05 | Warehouse mở **Yêu cầu phụ tùng → Vật tư đang do kỹ thuật viên giữ**, hoàn 1 part sau ISSUE 3 và USED 2 | Tồn tăng 1; ledger tạo `RETURN` và snapshot đúng kỹ thuật viên trả; outstanding về 0; dòng không còn xuất hiện trong hàng đợi; thử hoàn quá outstanding nhận HTTP 409 |
 | INV-05A | Warehouse hoàn outstanding sau khi WO đã `CLOSED` | RETURN thành công, stock tăng, WO vẫn `CLOSED`, không reopen |
-| INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date hoặc tên KTV nhận | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự; dòng `ISSUE` phân biệt rõ **Kỹ thuật viên nhận** với **Người thực hiện** và giữ đúng snapshot lịch sử |
+| INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date hoặc tên KTV nhận / trả | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự; ledger là read-only, không còn nút Hoàn trả; cùng một cột **Kỹ thuật viên nhận / trả** hiển thị người nhận trên `ISSUE`, người trả trên `RETURN`, tách biệt với **Người thực hiện**, và giữ đúng snapshot lịch sử |
 | INV-07 | Warehouse kiểm kê part: system 10, actual 8 | Tồn thành 8; tạo `ADJUSTMENT_OUT 2` với reason/actor và `balanceAfter=8`; Owner nhận notification chênh lệch sau commit; nếu tồn `<= reorderLevel` (ngưỡng tồn tối thiểu), Warehouse nhận cảnh báo tồn thấp |
 | INV-08 | Warehouse/Owner sửa ngưỡng tồn tối thiểu từ 3 lên 6 khi stock hiện tại = 5 | Stock vẫn = 5; `reorderLevel=6`; không tạo inventory transaction; có audit `UPDATE_REORDER_LEVEL`; vì trạng thái chuyển từ bình thường sang tồn thấp nên WAREHOUSE_STAFF khác người thao tác nhận notification sau commit; OWNER không nhận low-stock vận hành |
 | FILE-01 | Upload JPG/PNG/WEBP/PDF dưới 10 MB | File lưu và tải lại được |
@@ -127,21 +128,23 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | NOTIF-01 | Mark Read/Unread một notification khi API thành công | Dòng và badge/tab Chưa đọc cập nhật ngay sau invalidate |
 | NOTIF-02 | Làm API Mark Read/Unread lỗi | Hiện thông báo lỗi; nút không bị treo; trạng thái hiển thị không giả vờ đã đổi |
 | AI-01 | Mỗi role hỏi “Trong vai trò này tôi được làm những gì?” | AI trả overview đúng role lấy từ backend/JWT; OWNER thấy phạm vi quản trị rộng, các role khác chỉ thấy chức năng được giao |
-| AI-02 | Warehouse hỏi về yêu cầu phụ tùng, kiểm kê, lịch sử biến động và hoàn trả | AI đưa part request tới `/part-requests`, các câu kiểm kê/lịch sử tới `/inventory-stocktake` hoặc `/inventory-movements`; nêu rõ Warehouse không sửa requested quantity và không gợi ý operational dashboard |
+| AI-02 | Warehouse hỏi về yêu cầu phụ tùng, kiểm kê, lịch sử biến động và hoàn trả | AI đưa part request/hoàn trả tới `/part-requests`, kiểm kê tới `/inventory-stocktake`, lịch sử tới `/inventory-movements`; nêu rõ ledger chỉ đọc, Warehouse không sửa requested quantity và không gợi ý operational dashboard |
 | AI-03 | Dispatcher hỏi quản trị user/kho/audit hoặc Technician hỏi sửa ngưỡng/kiểm kê | AI từ chối là ngoài phạm vi thay vì hướng dẫn thao tác của role khác |
 | AI-03A | Technician hỏi phụ tùng cho job được giao | AI hướng dẫn thao tác trong Work Order/tab Phụ tùng và không điều hướng sang `/inventory` |
 | AI-03B | Mỗi role hỏi về thông báo của mình | AI chỉ mô tả attention queue của role hiện tại, không hướng dẫn action của role khác |
 | AI-04 | Dispatcher hỏi điều phối lại kỹ thuật viên trước khi bắt đầu | AI hướng dẫn reason + notification/timeline và nêu rõ không reschedule khi WO đã `ON_THE_WAY`/`IN_PROGRESS` |
 | AI-05 | Customer Service hỏi chung về hậu xử lý | AI hướng dẫn payment reconciliation → biên nhận → close; không khẳng định CS được ghi nhận khách xác nhận tại hiện trường |
 | AI-06 | Owner hỏi cấu hình tài khoản/QR nhận tiền | AI điều hướng `/payment-settings`, nêu Owner cấu hình còn Technician chỉ xem read-only tại Work Order |
-| AI-07 | Technician hỏi khách chuyển khoản/tiền mặt | AI giữ route Work Order được giao, hướng dẫn ghi nhận payment action nhưng không cho SETTLED/receipt/close |
+| AI-07 | Technician hỏi khách chuyển khoản/tiền mặt/thanh toán tại quầy | AI giữ route Work Order được giao, hướng dẫn ghi nhận payment action nhưng không cho SETTLED/receipt/close |
 | AI-08 | CSKH hỏi xem lại phiếu đã đóng và tiến trình thanh toán | AI điều hướng `/work-order-history` và mô tả timeline/history thay vì workflow cũ |
 
 | PAY-01 | Technician ghi nhận khách chuyển khoản | Payment → `TRANSFER_PENDING_VERIFICATION`; ảnh giao dịch nếu có chỉ là evidence, chưa `SETTLED` |
 | PAY-02 | Technician nhận tiền mặt | Payment → `CASH_PENDING_HANDOVER`; lưu KTV đang giữ tiền + thời gian |
-| PAY-03 | CSKH mở **Xử lý thanh toán** với khoản transfer/cash pending | Cột Xử lý có **Đối soát thanh toán**; bấm mở đúng Work Order và tự focus tab **Thanh toán**, không settle trực tiếp từ bảng |
-| PAY-04 | CSKH kiểm snapshot chi phí + payment evidence/cash handover rồi xác nhận | Payment → `SETTLED`; lưu actor/time; trong Work Order hiện **Phát hành / tải biên nhận** + **Đóng phiếu**; Owner không được settlement thay |
-| PAY-05 | CSKH rời Work Order sau `SETTLED` nhưng chưa đóng | Quay lại **Xử lý thanh toán** vẫn thấy **Phát hành / tải biên nhận** + **Đóng phiếu** để tiếp tục hồ sơ |
+| PAY-03 | Technician chọn **Hẹn thanh toán tại quầy** | Có modal xác nhận lại; sau xác nhận payment → `COUNTER_PAYMENT_PENDING`, KTV không bị ghi nhận là đã thu tiền và CSKH nhận notification cần thu tại quầy |
+| PAY-04 | CSKH mở **Xử lý thanh toán** với khoản transfer/cash/counter pending | Cột Xử lý có **Đối soát thanh toán**; bấm mở đúng Work Order và tự focus tab **Thanh toán**, không settle trực tiếp từ bảng |
+| PAY-05 | Khách đến quầy thanh toán | CSKH chọn đúng **chuyển khoản tại quầy** hoặc **tiền mặt tại quầy**, phải tick xác nhận lại; chỉ sau khi thực nhận đủ tiền mới → `SETTLED` |
+| PAY-06 | CSKH kiểm snapshot chi phí + payment evidence/cash handover rồi xác nhận | Payment → `SETTLED`; lưu actor/time; trong Work Order hiện **Phát hành / tải biên nhận** + **Đóng phiếu**; Owner không được settlement thay |
+| PAY-07 | CSKH rời Work Order sau `SETTLED` nhưng chưa đóng | Quay lại **Xử lý thanh toán** vẫn thấy **Phát hành / tải biên nhận** + **Đóng phiếu** để tiếp tục hồ sơ |
 | RECEIPT-01 | Thử phát hành biên nhận trước `SETTLED` | HTTP 409; không tạo receipt |
 | RECEIPT-02 | CSKH phát hành biên nhận sau `SETTLED` | Tạo đúng 1 receipt snapshot; tải lại không tạo bản mới; Owner/CSKH tải được |
 | RECEIPT-03 | Sau receipt, thay catalog price hoặc Warehouse RETURN vật tư dư | Biên nhận vẫn giữ quantity/unit price/total từ billing snapshot đã freeze |

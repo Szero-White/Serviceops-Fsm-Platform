@@ -151,7 +151,7 @@ Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 - `POST /spare-parts/{id}/stocktake` — nhập số lượng đếm thực tế; backend tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT` khi có chênh lệch. Notification được phát qua application event sau commit: Owner nhận chênh lệch, Warehouse nhận thêm cảnh báo nếu tồn xuống **ngưỡng tồn tối thiểu**.
-- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; search bao gồm SKU/tên part, Work Order, người thực hiện, kỹ thuật viên nhận trên `ISSUE` và ghi chú. Response `ISSUE` mới trả `recipientUserId`/`recipientDisplayName` snapshot tại thời điểm Warehouse giao hàng; ISSUE legacy chỉ backfill khi có đúng một match đủ chắc, trường hợp mơ hồ để null thay vì đoán sai; `RETURN` và movement không có người nhận để null.
+- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; search bao gồm SKU/tên part, Work Order, người thực hiện, kỹ thuật viên nhận / trả trên `ISSUE`/`RETURN` và ghi chú. `recipientUserId`/`recipientDisplayName` được dùng làm snapshot kỹ thuật viên ở đầu bên kia của giao dịch: người nhận trên `ISSUE`, người trả trên `RETURN`. ISSUE legacy chỉ backfill khi có đúng một match đủ chắc; dữ liệu lịch sử mơ hồ để null thay vì đoán sai.
 - `GET /work-orders/{workOrderId}/parts/{sparePartId}/returnable` — số lượng còn có thể hoàn; workflow mới tính `ISSUE - USED - RETURN`, đồng thời vẫn đọc dữ liệu `CONSUME - RETURN` legacy để tương thích lịch sử.
 - `POST /work-orders/{workOrderId}/parts/{sparePartId}/return` — WAREHOUSE_STAFF xác nhận nhận lại phụ tùng chưa sử dụng; lý do bắt buộc, số lượng không được vượt outstanding. RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
 
@@ -170,6 +170,19 @@ Work Order part request / issue / actual usage:
 Legacy compatibility:
 
 - Không còn write endpoint `CONSUME`. Workflow hiện hành chỉ ghi stock-out bằng Warehouse `ISSUE`, Technician ghi actual-used bằng `PUT /work-orders/{workOrderId}/part-usage`, và Warehouse `RETURN` phần chưa dùng. Các row `CONSUME` cũ vẫn được đọc trong history/timeline/legacy return compatibility; không rewrite destructive lịch sử.
+
+## Payments
+
+- `GET /work-orders/{workOrderId}/payment` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem khoản thanh toán của Work Order sau customer acceptance.
+- `GET /payments` — OWNER / CUSTOMER_SERVICE xem hàng đợi thanh toán; mặc định cập nhật mới nhất trước, hỗ trợ status/search/pagination/sort allow-list.
+- `POST /work-orders/{workOrderId}/payment/report-transfer` — assigned TECHNICIAN ghi nhận khách đã chuyển khoản; payment → `TRANSFER_PENDING_VERIFICATION`.
+- `POST /work-orders/{workOrderId}/payment/collect-cash` — assigned TECHNICIAN ghi nhận đã nhận tiền mặt; payment → `CASH_PENDING_HANDOVER` và lưu custody của kỹ thuật viên.
+- `POST /work-orders/{workOrderId}/payment/pay-at-counter` — assigned TECHNICIAN xác nhận chưa thu tiền và khách sẽ thanh toán trực tiếp với CSKH; payment → `COUNTER_PAYMENT_PENDING`.
+- `POST /payments/{paymentId}/settle-transfer` — CUSTOMER_SERVICE xác minh tiền chuyển khoản đã thực nhận vào công ty.
+- `POST /payments/{paymentId}/settle-cash` — CUSTOMER_SERVICE xác nhận đã nhận đủ tiền mặt do kỹ thuật viên bàn giao.
+- `POST /payments/{paymentId}/settle-counter` — CUSTOMER_SERVICE thu trực tiếp tại quầy, body `{ method: BANK_TRANSFER | CASH }`; chỉ sau khi thực nhận đủ tiền mới → `SETTLED`.
+
+Ba lựa chọn của Technician là các tình huống loại trừ nhau và UI luôn có bước xác nhận lại trước khi ghi nhận. `COUNTER_PAYMENT_PENDING` không được xem là đã thanh toán và `method` vẫn null cho tới khi CSKH thực thu tại quầy.
 
 ## Attachments
 

@@ -22,7 +22,12 @@
 - `spare_parts`
 - `inventory_transactions`
 
-### Hỗ trợ vận hành
+### Thanh toán và hỗ trợ vận hành
+- `work_order_billing_snapshots`
+- `work_order_billing_items`
+- `payments`
+- `payment_receipts`
+- `company_payment_profiles`
 - `attachments`
 - `notifications`
 - `audit_logs`
@@ -33,9 +38,10 @@
 - `tenant_id` trên dữ liệu tenant-scoped.
 - `version` dùng cho optimistic locking ở các entity hỗ trợ concurrency.
 - Timestamp lưu theo UTC.
-- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `ISSUE`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `ISSUE` là stock-out của workflow mới, còn `CONSUME` được giữ cho lịch sử legacy. `balance_after` giữ snapshot tồn sau mỗi movement; `recipient_user_id`/`recipient_display_name` snapshot kỹ thuật viên nhận hàng trên `ISSUE` để lịch sử không đổi nếu Work Order được điều phối lại sau đó.
+- `inventory_transactions.transaction_type` dùng các giá trị `IMPORT`, `ISSUE`, `CONSUME`, `RETURN`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`; `ISSUE` là stock-out của workflow mới, còn `CONSUME` được giữ cho lịch sử legacy. `balance_after` giữ snapshot tồn sau mỗi movement; `recipient_user_id`/`recipient_display_name` là snapshot kỹ thuật viên ở đầu bên kia của giao dịch kho: người nhận trên `ISSUE`, người trả trên `RETURN`, để lịch sử không đổi nếu Work Order được điều phối lại sau đó.
 - `work_order_part_requests` lưu lifecycle request (`REQUESTED/ISSUED/CANCELLED/UNAVAILABLE/EXPIRED`); partial unique index chỉ cho tối đa một `REQUESTED` active trên cùng Work Order + part.
 - `work_order_part_usage` lưu actual `USED` aggregate theo Work Order + part; outstanding được suy ra từ `ISSUE - USED - RETURN`. Schema này được thêm bằng Flyway V11, không sửa V1–V10.
+- `payments.status` phân biệt `UNPAID`, `TRANSFER_PENDING_VERIFICATION`, `CASH_PENDING_HANDOVER`, `COUNTER_PAYMENT_PENDING`, `SETTLED`. `COUNTER_PAYMENT_PENDING` có `method = NULL` vì khách chưa thanh toán; phương thức thực tế chỉ được CSKH chọn khi thu tại quầy.
 - Flyway là nguồn schema; Hibernate dùng `ddl-auto=validate`, không auto-create production schema.
 - FK/unique/index được đặt ở database khi quan hệ là relational trực tiếp.
 - Query/service vẫn phải giữ tenant scope; FK không thay thế authorization.
@@ -91,7 +97,8 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 14. `V14__attachment_lifecycle.sql` — phân loại attachment purpose và khóa payment evidence đã liên kết.
 15. `V15__inventory_work_order_query_index.sql` — index theo tenant + Work Order + transaction type để các truy vấn ISSUE/RETURN/outstanding chạy theo batch hiệu quả.
 16. `V16__inventory_issue_recipient_snapshot.sql` — thêm snapshot kỹ thuật viên nhận trên inventory `ISSUE`; dữ liệu legacy chỉ backfill khi có đúng một candidate đủ chắc theo tenant/WO/part/quantity/actor và cửa sổ thời gian, còn trường hợp mơ hồ giữ null thay vì đoán sai.
+17. `V17__counter_payment_workflow.sql` — thêm trạng thái khách hẹn thanh toán tại quầy, timestamp yêu cầu và cập nhật payment consistency constraints.
 
-V1–V16 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V17+) thay vì sửa file đã có.
+V1–V17 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V18+) thay vì sửa file đã có.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

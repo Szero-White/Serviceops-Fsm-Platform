@@ -52,7 +52,7 @@ For a review, use **one service case across every role** instead of demonstratin
 3. Sign in as **Dispatcher**, assign a Technician and demonstrate schedule/reschedule behavior.
 4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and create a part request if material is needed.
 5. Sign in as **Warehouse**, open **Yêu cầu phụ tùng**, verify the Technician's requested quantity and record `ISSUE` only when the physical part is handed over. Return to **Technician** to record actual `USED`, diagnosis/resolution, complete the job, enter the real service charges and record **Khách xác nhận**.
-6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence) or record cash custody. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
+6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence), record cash custody, or route the unpaid customer to Customer Service for payment at the counter. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
 7. If the Technician still holds an unused issued part, sign in as **Warehouse** after `CLOSED` and record the physical `RETURN`; verify stock/outstanding change while the Work Order remains closed.
 8. Finish as **Owner** by reviewing payment settings, history, timeline, dashboard and audit data for the same operational story, then switch roles/open protected routes directly to verify frontend and backend role ownership remain aligned.
 
@@ -86,7 +86,7 @@ Consider a customer reporting that an air conditioner is no longer cooling prope
 6. **Field execution begins.** The Technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the Technician.
 7. **Spare parts participate in the same job.** The assigned Technician creates a `REQUEST` without changing stock. Warehouse either marks the request unavailable or physically hands over the exact requested quantity and records `ISSUE`, which is the stock-out event. The Technician later records actual `USED` quantity without reducing stock again. Any unused issued quantity can be physically received back by Warehouse as `RETURN`, including after the Work Order is closed; the inventory ledger remains the stock authority. Legacy `CONSUME` rows remain readable for historical compatibility, but the active API/UI no longer creates them.
 8. **The service result and customer charge are frozen.** Diagnosis, resolution notes and evidence stay attached to the job. Through `COMPLETED`, the assigned Technician records actual used parts, labor and any explained incidental fee. Customer acceptance then freezes an immutable billing snapshot so later catalog-price changes or part returns cannot silently rewrite what the customer accepted.
-9. **Payment is reconciled before closure.** After `CUSTOMER_ACCEPTED`, the Technician can show the Owner-configured company bank/QR in read-only form and record that the customer reported a transfer, optionally with evidence, or that cash is being held for handover. Customer Service verifies the actual transfer or cash handover and moves the separate payment state to `SETTLED`. Only then can Customer Service issue the official service-payment receipt and close the Work Order.
+9. **Payment is reconciled before closure.** After `CUSTOMER_ACCEPTED`, the Technician can show the Owner-configured company bank/QR in read-only form and record that the customer reported a transfer, optionally with evidence, that cash is being held for handover, or that the customer will pay directly at the Customer Service counter. Customer Service verifies/collects the actual payment and moves the separate payment state to `SETTLED`. Only then can Customer Service issue the official service-payment receipt and close the Work Order.
 10. **The organization can trace the result.** Work Order history and the unified timeline tell the business story from request/issue/used through completion, acceptance, payment, receipt, closure and any post-closure return. Inventory Movements remains the stock ledger and distinguishes the Warehouse actor from the Technician recipient on `ISSUE`; Audit keeps detailed system traceability; notifications remain attention-only rather than duplicating those histories.
 
 This produces one continuous business chain instead of separate records for each department:
@@ -115,7 +115,7 @@ Diagnosis → Resolution → Evidence → COMPLETED
         ↓
 Billing draft → Customer Acceptance → frozen billing snapshot
         ↓
-Customer payment action → CSKH reconciliation → SETTLED
+Customer payment action / counter handoff → CSKH reconciliation or collection → SETTLED
         ↓
 Official receipt → CSKH CLOSED
         ↓
@@ -171,10 +171,10 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Personal Technician schedule derived from the authenticated account.
 - Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
 - Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
-- Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and outstanding-material visibility, with inventory movement history as the stock ledger.
+- Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and an actionable outstanding-material queue; inventory movement history remains a read-only stock ledger.
 - Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
-- Separate payment reconciliation for transfer/cash, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
+- Separate payment reconciliation for transfer/cash/counter collection, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.

@@ -52,6 +52,9 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
 | Work Order → REOPENED bởi role khác | Customer Service | **Phiếu cần theo dõi lại: WO-...** | Actor + summary + khách hàng + lý do; theo dõi khách và phối hợp xử lý |
 | Technician → COMPLETED | Customer Service | **Cần theo dõi khách sau sửa chữa: WO-...** | Technician + summary + khách hàng; theo dõi phản hồi, reopen nếu sự cố còn |
+| Technician ghi nhận khách đã chuyển khoản | Customer Service | **Cần đối soát chuyển khoản: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán để xác minh tiền thực nhận |
+| Technician nhận tiền mặt | Customer Service | **Cần nhận bàn giao tiền mặt: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán để nhận bàn giao |
+| Technician chọn khách hẹn thanh toán tại quầy | Customer Service | **Khách hẹn thanh toán tại quầy: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán khi khách đến quầy |
 
 | Work Order → CLOSED | Owner, trừ actor | **Phiếu đã hoàn tất: WO-...** | CSKH/actor + summary + khách hàng; payment đã đối soát và biên nhận đã sẵn sàng, kết quả cuối để Owner giám sát |
 | Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |

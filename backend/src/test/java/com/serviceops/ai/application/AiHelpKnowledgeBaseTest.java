@@ -194,12 +194,12 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
         assertThat(decision.topic().answer())
                 .contains("tồn sau")
-                .contains("kỹ thuật viên nhận")
-                .contains("ai cấp và ai nhận");
+                .contains("kỹ thuật viên nhận / trả")
+                .contains("nhân viên kho thực hiện giao dịch");
     }
 
     @Test
-    void warehouseReturnQuestionMapsToMovementRoute() {
+    void warehouseReturnQuestionMapsToOutstandingQueue() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/inventory-movements");
 
         var decision = AiHelpKnowledgeBase.scopeDecision(
@@ -208,8 +208,10 @@ class AiHelpKnowledgeBaseTest {
         );
 
         assertThat(decision.allowed()).isTrue();
-        assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
-        assertThat(decision.topic().answer()).contains("RETURN");
+        assertThat(decision.topic().route()).isEqualTo("/part-requests");
+        assertThat(decision.topic().answer())
+                .contains("Vật tư đang do kỹ thuật viên giữ")
+                .contains("RETURN");
     }
 
     @Test
@@ -487,7 +489,7 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().answer())
                 .contains("Đối soát thanh toán")
                 .contains("Work Order")
-                .contains("snapshot chi phí")
+                .contains("chi phí khách đã xác nhận")
                 .contains("SETTLED")
                 .contains("biên nhận")
                 .contains("đóng Work Order");
