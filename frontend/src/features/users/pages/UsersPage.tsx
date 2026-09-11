@@ -15,6 +15,7 @@ import { USER_ROLE_LABELS } from '../../../constants/userRoles'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareDate, compareNumber, compareText } from '../../../utils/tableSort'
 
 const roleDescriptions: Record<UserRole, string> = {
   OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
@@ -84,7 +85,7 @@ export function UsersPage() {
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
-    return data.filter((account) => {
+    const matches = data.filter((account) => {
       const statusMatches =
         statusFilter === 'all'
         || (statusFilter === 'active' && account.active)
@@ -101,6 +102,8 @@ export function UsersPage() {
       return [account.displayName, account.username, USER_ROLE_LABELS[account.role], account.phone, account.skills]
         .some((value) => value?.toLowerCase().includes(keyword))
     })
+
+    return matches.sort((a, b) => compareDate(b.createdAt, a.createdAt))
   }, [data, search, statusFilter])
 
   useEffect(() => {
@@ -127,15 +130,22 @@ export function UsersPage() {
       return editing ? usersApi.update(editing.id, payload) : usersApi.create(payload)
     },
     onSuccess: (savedAccount) => {
+      const technicianReactivated = Boolean(
+        editing
+        && editing.role === 'TECHNICIAN'
+        && !editing.active
+        && savedAccount.active,
+      )
       notification.success({
         message: editing ? 'Đã cập nhật tài khoản' : 'Đã tạo tài khoản',
-        description: savedAccount.role === 'TECHNICIAN' && savedAccount.active
-          ? `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · Hoạt động. Trạng thái sẵn sàng điều phối của hồ sơ kỹ thuật viên được quản lý riêng.`
+        description: technicianReactivated
+          ? `${savedAccount.displayName} · Kỹ thuật viên · Hoạt động. Trạng thái đã đồng bộ với Đội ngũ kỹ thuật.`
           : `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · ${savedAccount.active ? 'Hoạt động' : 'Tạm ngưng'}`,
       })
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
+      setTablePage(1)
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
       queryClient.invalidateQueries({ queryKey: ['work-orders'] })
@@ -253,6 +263,7 @@ export function UsersPage() {
           {
             title: 'Người dùng',
             width: 300,
+            sorter: (a, b) => compareText(a.displayName, b.displayName),
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.displayName}</Typography.Text>
@@ -262,13 +273,14 @@ export function UsersPage() {
               </div>
             ),
           },
-          { title: 'Vai trò', dataIndex: 'role', width: 160, render: (role: UserRole) => <RoleTag role={role} /> },
-          { title: 'Phạm vi trách nhiệm', dataIndex: 'role', ellipsis: true, render: (role: UserRole) => roleDescriptions[role] },
-          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (active: boolean) => <BinaryStatusTag active={active} /> },
-          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
+          { title: 'Vai trò', dataIndex: 'role', width: 160, sorter: (a, b) => compareText(a.role, b.role), render: (role: UserRole) => <RoleTag role={role} /> },
+          { title: 'Phạm vi trách nhiệm', dataIndex: 'role', ellipsis: true, sorter: (a, b) => compareText(roleDescriptions[a.role], roleDescriptions[b.role]), render: (role: UserRole) => roleDescriptions[role] },
+          { title: 'Trạng thái', dataIndex: 'active', width: 140, sorter: (a, b) => compareNumber(Number(a.active), Number(b.active)), render: (active: boolean) => <BinaryStatusTag active={active} /> },
+          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, sorter: (a, b) => compareDate(a.updatedAt, b.updatedAt), render: formatDateTime },
           {
-            title: '',
-            width: 92,
+            title: 'Thao tác',
+            width: 100,
+            fixed: 'right' as const,
             render: (_, record) => {
               const isSelf = currentUser?.id === record.id
               const isProtectedDemo = Boolean(record.protectedDemo)
@@ -281,7 +293,7 @@ export function UsersPage() {
                     type="text"
                     icon={<EditOutlined />}
                     disabled={isProtectedDemo}
-                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Sửa người dùng'}
                     onClick={() => showEdit(record)}
                   />
                   <Popconfirm
@@ -307,7 +319,7 @@ export function UsersPage() {
                       type="text"
                       danger
                       disabled={deleteBlocked}
-                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Xóa người dùng'}
                       icon={<DeleteOutlined />}
                     />
                   </Popconfirm>
