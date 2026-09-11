@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../../../api/http'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import type { UserRole, WorkOrder } from '../../../types'
 import { formatCurrency, formatQuantityWithUnit } from '../../../utils/format'
+import { compareNumber, compareText } from '../../../utils/tableSort'
 import { paymentsApi } from '../api'
 
 type BillingFormValues = {
@@ -76,13 +77,14 @@ export function WorkOrderBillingPanel({ workOrder, role }: { workOrder: WorkOrde
         rowKey="sparePartId"
         size="small"
         pagination={false}
+        className="content-table"
         dataSource={billing.items}
         locale={{ emptyText: 'Không có phụ tùng thực tế tính cho khách' }}
         columns={[
-          { title: 'Phụ tùng', render: (_, item) => <div><Typography.Text strong>{item.sparePartName}</Typography.Text><br /><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
-          { title: 'Số lượng', width: 120, render: (_, item) => formatQuantityWithUnit(item.quantity, item.unit) },
-          { title: 'Đơn giá', width: 130, align: 'right' as const, render: (_, item) => formatCurrency(item.unitPrice) },
-          { title: 'Thành tiền', width: 140, align: 'right' as const, render: (_, item) => <Typography.Text strong>{formatCurrency(item.lineTotal)}</Typography.Text> },
+          { title: 'Phụ tùng', sorter: (a, b) => compareText(a.sparePartName, b.sparePartName), render: (_, item) => <div><Typography.Text strong>{item.sparePartName}</Typography.Text><br /><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
+          { title: 'Số lượng', width: 120, sorter: (a, b) => compareNumber(a.quantity, b.quantity), render: (_, item) => formatQuantityWithUnit(item.quantity, item.unit) },
+          { title: 'Đơn giá', width: 130, align: 'right' as const, sorter: (a, b) => compareNumber(a.unitPrice, b.unitPrice), render: (_, item) => formatCurrency(item.unitPrice) },
+          { title: 'Thành tiền', width: 140, align: 'right' as const, sorter: (a, b) => compareNumber(a.lineTotal, b.lineTotal), render: (_, item) => <Typography.Text strong>{formatCurrency(item.lineTotal)}</Typography.Text> },
         ]}
       />
 
@@ -98,7 +100,7 @@ export function WorkOrderBillingPanel({ workOrder, role }: { workOrder: WorkOrde
       {billing.frozen ? (
         <Typography.Text type="secondary">Khách được ghi nhận xác nhận bởi {billing.acceptedByDisplayName ?? 'kỹ thuật viên'}.</Typography.Text>
       ) : workOrder.status === 'COMPLETED' && role === 'TECHNICIAN' ? (
-        <Typography.Text type="warning">Kiểm tra chi phí trước khi bấm “Ghi nhận khách xác nhận”. Sau bước đó số tiền sẽ được khóa.</Typography.Text>
+        <Typography.Text type="warning">Trước khi xác nhận, hãy đối chiếu kết quả sửa chữa, phụ tùng thực tế và tổng chi phí với khách hàng. Dữ liệu chỉ được khóa sau khi khách hàng đồng ý xác nhận.</Typography.Text>
       ) : null}
 
       <Modal

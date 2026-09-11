@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -47,6 +48,19 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class WorkOrderService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("code", "code"),
+            Map.entry("summary", "summary"),
+            Map.entry("customerName", "customer.name"),
+            Map.entry("assetLabel", "asset.serialNumber"),
+            Map.entry("technicianName", "technician.user.displayName"),
+            Map.entry("priority", "priority"),
+            Map.entry("status", "status"),
+            Map.entry("scheduledStart", "scheduledStart"),
+            Map.entry("scheduledEnd", "scheduledEnd"),
+            Map.entry("completedAt", "completedAt"),
+            Map.entry("createdAt", "createdAt")
+    );
     private static final Set<WorkOrderStatus> TECHNICIAN_ALLOWED_TRANSITIONS = EnumSet.of(
             WorkOrderStatus.ON_THE_WAY,
             WorkOrderStatus.IN_PROGRESS,
@@ -82,7 +96,13 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public PageResponse<WorkOrderResponse> search(String search, WorkOrderStatus status, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return search(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> search(String search, WorkOrderStatus status, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String normalizedSearch = PageRequestSupport.normalizeSearch(search);
         var result = CurrentUser.hasRole("TECHNICIAN")
                 ? repository.searchAssigned(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
@@ -112,10 +132,16 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public PageResponse<WorkOrderResponse> history(String search, WorkOrderStatus status, int page, int size) {
+        return history(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> history(String search, WorkOrderStatus status, int page, int size, String sortBy, String sortDir) {
         if (status != null && status != WorkOrderStatus.CLOSED && status != WorkOrderStatus.CANCELLED) {
             throw BusinessException.badRequest("INVALID_HISTORY_STATUS", "Lịch sử phiếu chỉ lọc trạng thái đã đóng hoặc đã hủy");
         }
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String normalizedSearch = PageRequestSupport.normalizeSearch(search);
         var result = CurrentUser.hasRole("TECHNICIAN")
                 ? repository.searchAssignedHistory(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)

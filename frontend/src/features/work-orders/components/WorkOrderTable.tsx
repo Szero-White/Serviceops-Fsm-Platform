@@ -1,8 +1,9 @@
 import { EyeOutlined } from '@ant-design/icons'
-import { Button, Empty, Table, Typography } from 'antd'
+import { Button, Empty, Table, Tooltip, Typography } from 'antd'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import type { WorkOrder } from '../../../types'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 export function WorkOrderTable({
   workOrders,
@@ -11,6 +12,8 @@ export function WorkOrderTable({
   pageSize,
   total,
   onPageChange,
+  sort,
+  onSortChange,
   onSelect,
   loadError = false,
 }: {
@@ -20,6 +23,8 @@ export function WorkOrderTable({
   pageSize: number
   total: number
   onPageChange: (page: number) => void
+  sort: TableSortState
+  onSortChange: (sort: TableSortState) => void
   onSelect: (id: string) => void
   loadError?: boolean
 }) {
@@ -37,13 +42,17 @@ export function WorkOrderTable({
         showSizeChanger: false,
         showTotal: (count, range) => `${range[0]}–${range[1]} / ${count} phiếu`,
       }}
-      onChange={(pagination) => onPageChange(Math.max((pagination.current ?? 1) - 1, 0))}
+      onChange={(pagination, _filters, sorter) => {
+        onPageChange(Math.max((pagination.current ?? 1) - 1, 0))
+        onSortChange(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
+      }}
       onRow={(record) => ({ onDoubleClick: () => onSelect(record.id) })}
       locale={{ emptyText: <Empty description={loadError ? 'Không thể tải dữ liệu phiếu công việc' : 'Chưa có phiếu công việc phù hợp'} /> }}
       columns={[
         {
           title: 'Phiếu',
           width: 280,
+          ...serverSortable(sort, 'code'),
           render: (_, record) => (
             <div className="work-order-ticket-cell">
               <div className="work-order-ticket-meta">
@@ -57,6 +66,7 @@ export function WorkOrderTable({
         {
           title: 'Bên liên quan',
           width: 220,
+          ...serverSortable(sort, 'customerName'),
           render: (_, record) => (
             <div className="table-secondary-stack">
               <span>{record.customerName}</span>
@@ -64,11 +74,21 @@ export function WorkOrderTable({
             </div>
           ),
         },
-        { title: 'Thiết bị', dataIndex: 'assetLabel', width: 180, ellipsis: true, render: (value) => value || EMPTY_VALUE },
-        { title: 'Trạng thái', dataIndex: 'status', width: 145, render: (value) => <StatusTag status={value} /> },
-        { title: 'Bắt đầu', dataIndex: 'scheduledStart', width: 145, render: formatDateTime },
-        { title: 'Kết thúc', dataIndex: 'scheduledEnd', width: 145, render: formatDateTime },
-        { title: '', width: 56, render: (_, record) => <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => onSelect(record.id)} /> },
+        { title: 'Thiết bị', dataIndex: 'assetLabel', width: 180, ellipsis: true, ...serverSortable(sort, 'assetLabel'), render: (value) => value || EMPTY_VALUE },
+        { title: 'Trạng thái', dataIndex: 'status', width: 145, ...serverSortable(sort, 'status'), render: (value) => <StatusTag status={value} /> },
+        { title: 'Bắt đầu', dataIndex: 'scheduledStart', width: 145, ...serverSortable(sort, 'scheduledStart'), render: formatDateTime },
+        { title: 'Kết thúc', dataIndex: 'scheduledEnd', width: 145, ...serverSortable(sort, 'scheduledEnd'), render: formatDateTime },
+        {
+          title: 'Thao tác',
+          width: 76,
+          fixed: 'right' as const,
+          align: 'center' as const,
+          render: (_, record) => (
+            <Tooltip title="Xem chi tiết">
+              <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => onSelect(record.id)} />
+            </Tooltip>
+          ),
+        },
       ]}
     />
   )

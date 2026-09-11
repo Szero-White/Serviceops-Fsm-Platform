@@ -21,8 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -87,6 +92,31 @@ public class WorkOrderBillingService {
                 "Cập nhật phí dịch vụ cho " + workOrder.getCode()
         );
         return toDraftResponse(workOrder);
+    }
+
+    public void assertReviewedBillingUnchanged(WorkOrder workOrder, BigDecimal reviewedTotalAmount, String reviewToken) {
+        if (reviewedTotalAmount == null) {
+            throw BusinessException.badRequest(
+                    "REVIEWED_TOTAL_REQUIRED",
+                    "Thiếu tổng chi phí khách hàng đã kiểm tra"
+            );
+        }
+        if (reviewToken == null || reviewToken.isBlank()) {
+            throw BusinessException.badRequest(
+                    "BILLING_REVIEW_TOKEN_REQUIRED",
+                    "Thiếu mã xác nhận nội dung chi phí đã được kiểm tra"
+            );
+        }
+
+        BillingResponse current = toDraftResponse(workOrder);
+        boolean sameTotal = money(reviewedTotalAmount).compareTo(money(current.totalAmount())) == 0;
+        boolean sameContent = reviewToken.trim().equals(current.reviewToken());
+        if (!sameTotal || !sameContent) {
+            throw BusinessException.conflict(
+                    "BILLING_CHANGED_REVIEW_REQUIRED",
+                    "Thông tin phụ tùng hoặc chi phí đã thay đổi. Vui lòng kiểm tra lại trước khi khách xác nhận"
+            );
+        }
     }
 
     @Transactional
@@ -164,16 +194,20 @@ public class WorkOrderBillingService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal laborFee = money(workOrder.getLaborFee());
         BigDecimal incidentalFee = money(workOrder.getIncidentalFee());
+        BigDecimal normalizedPartsTotal = money(partsTotal);
+        BigDecimal totalAmount = money(partsTotal.add(laborFee).add(incidentalFee));
+        String incidentalReason = blankToNull(workOrder.getIncidentalReason());
         return new BillingResponse(
                 workOrder.getId(),
                 workOrder.getCode(),
                 false,
                 items,
-                money(partsTotal),
+                normalizedPartsTotal,
                 laborFee,
                 incidentalFee,
-                workOrder.getIncidentalReason(),
-                money(partsTotal.add(laborFee).add(incidentalFee)),
+                incidentalReason,
+                totalAmount,
+                createReviewToken(items, normalizedPartsTotal, laborFee, incidentalFee, incidentalReason, totalAmount),
                 null,
                 null
         );
@@ -193,16 +227,22 @@ public class WorkOrderBillingService {
                         item.getLineTotal()
                 ))
                 .toList();
+        BigDecimal partsTotal = money(snapshot.getPartsTotal());
+        BigDecimal laborFee = money(snapshot.getLaborFee());
+        BigDecimal incidentalFee = money(snapshot.getIncidentalFee());
+        BigDecimal totalAmount = money(snapshot.getTotalAmount());
+        String incidentalReason = blankToNull(snapshot.getIncidentalReason());
         return new BillingResponse(
                 workOrder.getId(),
                 workOrder.getCode(),
                 true,
                 items,
-                snapshot.getPartsTotal(),
-                snapshot.getLaborFee(),
-                snapshot.getIncidentalFee(),
-                snapshot.getIncidentalReason(),
-                snapshot.getTotalAmount(),
+                partsTotal,
+                laborFee,
+                incidentalFee,
+                incidentalReason,
+                totalAmount,
+                createReviewToken(items, partsTotal, laborFee, incidentalFee, incidentalReason, totalAmount),
                 snapshot.getAcceptedByDisplayName(),
                 snapshot.getAcceptedAt()
         );
@@ -224,6 +264,46 @@ public class WorkOrderBillingService {
                     );
                 })
                 .toList();
+    }
+
+
+    private static String createReviewToken(
+            List<BillingItemResponse> items,
+            BigDecimal partsTotal,
+            BigDecimal laborFee,
+            BigDecimal incidentalFee,
+            String incidentalReason,
+            BigDecimal totalAmount
+    ) {
+        StringBuilder canonical = new StringBuilder();
+        items.stream()
+                .sorted(Comparator.comparing(item -> item.sparePartId().toString()))
+                .forEach(item -> {
+                    appendTokenPart(canonical, item.sparePartId().toString());
+                    appendTokenPart(canonical, decimal(item.quantity()));
+                    appendTokenPart(canonical, decimal(money(item.unitPrice())));
+                    appendTokenPart(canonical, decimal(money(item.lineTotal())));
+                });
+        appendTokenPart(canonical, decimal(money(partsTotal)));
+        appendTokenPart(canonical, decimal(money(laborFee)));
+        appendTokenPart(canonical, decimal(money(incidentalFee)));
+        appendTokenPart(canonical, incidentalReason == null ? "" : incidentalReason);
+        appendTokenPart(canonical, decimal(money(totalAmount)));
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(canonical.toString().getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
+    }
+
+    private static void appendTokenPart(StringBuilder target, String value) {
+        target.append(value.length()).append(':').append(value).append('|');
+    }
+
+    private static String decimal(BigDecimal value) {
+        return (value == null ? BigDecimal.ZERO : value).stripTrailingZeros().toPlainString();
     }
 
     private WorkOrder requireViewableWorkOrder(UUID workOrderId) {

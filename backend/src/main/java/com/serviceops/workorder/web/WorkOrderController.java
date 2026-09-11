@@ -31,8 +31,10 @@ public class WorkOrderController {
     public PageResponse<WorkOrderResponse> search(@RequestParam(defaultValue = "") String search,
                                                   @RequestParam(required = false) WorkOrderStatus status,
                                                   @RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "20") int size) {
-        return service.search(search, status, page, size);
+                                                  @RequestParam(defaultValue = "20") int size,
+                                                  @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                  @RequestParam(defaultValue = "desc") String sortDir) {
+        return service.search(search, status, page, size, sortBy, sortDir);
     }
 
     @GetMapping("/history")
@@ -40,8 +42,10 @@ public class WorkOrderController {
     public PageResponse<WorkOrderResponse> history(@RequestParam(defaultValue = "") String search,
                                                    @RequestParam(required = false) WorkOrderStatus status,
                                                    @RequestParam(defaultValue = "0") int page,
-                                                   @RequestParam(defaultValue = "20") int size) {
-        return service.history(search, status, page, size);
+                                                   @RequestParam(defaultValue = "20") int size,
+                                                   @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                   @RequestParam(defaultValue = "desc") String sortDir) {
+        return service.history(search, status, page, size, sortBy, sortDir);
     }
 
     @GetMapping("/{id}")

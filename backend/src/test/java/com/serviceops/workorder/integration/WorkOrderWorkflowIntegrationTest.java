@@ -140,10 +140,23 @@ class WorkOrderWorkflowIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(genericAcceptance.getBody()).isNotNull();
         assertThat(genericAcceptance.getBody().get("code")).isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
 
+        ResponseEntity<Map<String, Object>> billingBeforeAcceptance = exchangeGetMap(
+                "/api/v1/work-orders/" + workOrderId + "/billing",
+                technicianToken
+        );
+        assertThat(billingBeforeAcceptance.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(billingBeforeAcceptance.getBody()).isNotNull();
+
         ResponseEntity<Map<String, Object>> accepted = postJsonMap(
                 "/api/v1/work-orders/" + workOrderId + "/customer-acceptance",
                 technicianToken,
-                Map.of("note", "Customer accepted result")
+                Map.of(
+                        "technicianReviewed", true,
+                        "customerConfirmed", true,
+                        "reviewedTotalAmount", billingBeforeAcceptance.getBody().get("totalAmount"),
+                        "reviewToken", billingBeforeAcceptance.getBody().get("reviewToken"),
+                        "note", "Customer accepted result"
+                )
         );
         assertThat(accepted.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(accepted.getBody()).isNotNull();

@@ -13,6 +13,7 @@ import type { WorkOrder, WorkOrderStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 import { attachmentsApi } from '../../attachments/api'
 import { AttachmentList } from '../../attachments/components/AttachmentList'
 import { useAuth } from '../../auth/AuthContext'
@@ -32,6 +33,7 @@ export function WorkOrderHistoryPage() {
   const canDownloadReceipt = Boolean(user?.role && ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role))
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
   const [status, setStatus] = useState<Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>>()
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
@@ -47,8 +49,8 @@ export function WorkOrderHistoryPage() {
   }
 
   const historyQuery = useQuery({
-    queryKey: ['work-order-history', { search, status, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => workOrdersApi.history(search, status, page, LIST_PAGE_SIZE),
+    queryKey: ['work-order-history', { search, status, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => workOrdersApi.history(search, status, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = historyQuery
@@ -144,13 +146,17 @@ export function WorkOrderHistoryPage() {
           showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phiếu`,
         }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          setSort(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
+        }}
         onRow={(record) => ({ onDoubleClick: () => selectHistoryWorkOrder(record.id) })}
         locale={{ emptyText: <Empty description={historyQuery.isError ? 'Không thể tải dữ liệu lịch sử phiếu' : 'Chưa có phiếu lịch sử phù hợp'} /> }}
         columns={[
           {
             title: 'Phiếu',
             width: 320,
+            ...serverSortable(sort, 'code'),
             render: (_, record) => (
               <div className="work-order-ticket-cell">
                 <div className="work-order-ticket-meta">
@@ -164,6 +170,7 @@ export function WorkOrderHistoryPage() {
           {
             title: 'Khách hàng',
             width: 240,
+            ...serverSortable(sort, 'customerName'),
             render: (_, record) => (
               <div className="table-secondary-stack">
                 <span>{record.customerName}</span>
@@ -171,13 +178,14 @@ export function WorkOrderHistoryPage() {
               </div>
             ),
           },
-          { title: 'Kỹ thuật viên', dataIndex: 'technicianName', width: 180, render: (value) => value || EMPTY_VALUE },
-          { title: 'Trạng thái', dataIndex: 'status', width: 150, render: (value) => <StatusTag status={value} /> },
-          { title: 'Hoàn thành', dataIndex: 'completedAt', width: 170, render: formatDateTime },
-          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 170, render: formatDateTime },
+          { title: 'Kỹ thuật viên', dataIndex: 'technicianName', width: 180, ...serverSortable(sort, 'technicianName'), render: (value) => value || EMPTY_VALUE },
+          { title: 'Trạng thái', dataIndex: 'status', width: 150, ...serverSortable(sort, 'status'), render: (value) => <StatusTag status={value} /> },
+          { title: 'Hoàn thành', dataIndex: 'completedAt', width: 170, ...serverSortable(sort, 'completedAt'), render: formatDateTime },
+          { title: 'Ngày tạo', dataIndex: 'createdAt', width: 170, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
           {
             title: 'Thao tác',
             width: canDelete ? 168 : 116,
+            fixed: 'right' as const,
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => selectHistoryWorkOrder(record.id)} />

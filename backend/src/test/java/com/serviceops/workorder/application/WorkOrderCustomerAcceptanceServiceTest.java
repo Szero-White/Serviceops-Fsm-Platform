@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -69,9 +70,10 @@ class WorkOrderCustomerAcceptanceServiceTest {
                 auditService,
                 workOrderService
         );
-        service.accept(WORK_ORDER_ID, new CustomerAcceptanceRequest("Khách đã kiểm tra và đồng ý"));
+        service.accept(WORK_ORDER_ID, new CustomerAcceptanceRequest(true, true, new BigDecimal("1270000.00"), "review-token", "Khách đã kiểm tra và đồng ý"));
 
         assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.CUSTOMER_ACCEPTED);
+        verify(billingService).assertReviewedBillingUnchanged(workOrder, new BigDecimal("1270000.00"), "review-token");
         verify(paymentService).initializeUnpaid(workOrder, snapshot);
         ArgumentCaptor<WorkOrderStatusHistory> history = ArgumentCaptor.forClass(WorkOrderStatusHistory.class);
         verify(historyRepository).save(history.capture());

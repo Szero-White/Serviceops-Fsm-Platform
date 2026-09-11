@@ -5,6 +5,7 @@ import com.serviceops.payment.application.CompanyPaymentProfileService;
 import com.serviceops.payment.application.PaymentService;
 import com.serviceops.payment.domain.PaymentStatus;
 import com.serviceops.payment.web.PaymentDtos.CompanyPaymentProfileRequest;
+import com.serviceops.payment.web.PaymentDtos.CounterSettlementRequest;
 import com.serviceops.payment.web.PaymentDtos.CompanyPaymentProfileResponse;
 import com.serviceops.payment.web.PaymentDtos.PaymentResponse;
 import com.serviceops.payment.web.PaymentDtos.TransferReportRequest;
@@ -35,8 +36,10 @@ public class PaymentController {
             @RequestParam(required = false) PaymentStatus status,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return paymentService.search(status, search, page, size);
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "updatedAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return paymentService.search(status, search, page, size, sortBy, sortDir);
     }
 
     @GetMapping("/work-orders/{workOrderId}/payment")
@@ -58,6 +61,12 @@ public class PaymentController {
         return paymentService.recordCashCollection(workOrderId);
     }
 
+    @PostMapping("/work-orders/{workOrderId}/payment/pay-at-counter")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public PaymentResponse payAtCounter(@PathVariable UUID workOrderId) {
+        return paymentService.recordCounterPaymentPlan(workOrderId);
+    }
+
     @PostMapping("/payments/{paymentId}/settle-transfer")
     @PreAuthorize("hasRole('CUSTOMER_SERVICE')")
     public PaymentResponse settleTransfer(@PathVariable UUID paymentId) {
@@ -68,6 +77,13 @@ public class PaymentController {
     @PreAuthorize("hasRole('CUSTOMER_SERVICE')")
     public PaymentResponse settleCash(@PathVariable UUID paymentId) {
         return paymentService.settleCash(paymentId);
+    }
+
+    @PostMapping("/payments/{paymentId}/settle-counter")
+    @PreAuthorize("hasRole('CUSTOMER_SERVICE')")
+    public PaymentResponse settleCounter(@PathVariable UUID paymentId,
+                                         @Valid @RequestBody CounterSettlementRequest request) {
+        return paymentService.settleCounter(paymentId, request.method());
     }
 
     @GetMapping("/company-payment-profile")

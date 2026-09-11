@@ -2,10 +2,10 @@ import { http } from '../../api/http'
 import type { PageResponse, WorkOrder, WorkOrderActivity, WorkOrderStatus } from '../../types'
 
 export const workOrdersApi = {
-  list: (search = '', status?: WorkOrderStatus, page = 0, size = 20) =>
-    http.get<PageResponse<WorkOrder>>('/work-orders', { params: { search, status, page, size } }).then((response) => response.data),
-  history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 20) =>
-    http.get<PageResponse<WorkOrder>>('/work-orders/history', { params: { search, status, page, size } }).then((response) => response.data),
+  list: (search = '', status?: WorkOrderStatus, page = 0, size = 20, sortBy = 'createdAt', sortDir = 'desc') =>
+    http.get<PageResponse<WorkOrder>>('/work-orders', { params: { search, status, page, size, sortBy, sortDir } }).then((response) => response.data),
+  history: (search = '', status?: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>, page = 0, size = 20, sortBy = 'createdAt', sortDir = 'desc') =>
+    http.get<PageResponse<WorkOrder>>('/work-orders/history', { params: { search, status, page, size, sortBy, sortDir } }).then((response) => response.data),
   get: (id: string) => http.get<WorkOrder>(`/work-orders/${id}`).then((response) => response.data),
   schedule: (id: string, payload: { technicianId: string; startTime: string; endTime: string; reason?: string }) =>
     http.post<WorkOrder>(`/work-orders/${id}/schedule`, payload).then((response) => response.data),

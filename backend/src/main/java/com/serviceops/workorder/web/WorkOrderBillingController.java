@@ -42,7 +42,7 @@ public class WorkOrderBillingController {
     @PostMapping("/customer-acceptance")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public WorkOrderResponse customerAcceptance(@PathVariable UUID workOrderId,
-                                                @Valid @RequestBody(required = false) CustomerAcceptanceRequest request) {
-        return acceptanceService.accept(workOrderId, request == null ? new CustomerAcceptanceRequest(null) : request);
+                                                @Valid @RequestBody CustomerAcceptanceRequest request) {
+        return acceptanceService.accept(workOrderId, request);
     }
 }

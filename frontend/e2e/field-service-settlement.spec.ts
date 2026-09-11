@@ -39,6 +39,7 @@ type BillingResponse = {
   frozen: boolean
   partsTotal: number
   totalAmount: number
+  reviewToken: string
 }
 
 type PaymentResponse = {
@@ -228,6 +229,10 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   expect(billingDraft.body.totalAmount).toBe(400000)
 
   const accepted = await apiJson<WorkOrderResponse>(page, 'POST', `/work-orders/${workOrderId}/customer-acceptance`, {
+    technicianReviewed: true,
+    customerConfirmed: true,
+    reviewedTotalAmount: billingDraft.body.totalAmount,
+    reviewToken: billingDraft.body.reviewToken,
     note: 'Khách đã kiểm tra kết quả và xác nhận chi phí.',
   })
   expectStatus(accepted.status, 200, 'Technician ghi nhận khách xác nhận')
@@ -317,6 +322,18 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   )
   expectStatus(returned.status, 200, 'Warehouse RETURN outstanding sau CLOSED')
   expect(returned.body.returnableQuantity).toBe(0)
+
+  const returnLedger = await apiJson<PageResponse<InventoryTransactionResponse>>(
+    page,
+    'GET',
+    `/inventory-transactions?search=${encodeURIComponent(workOrderCode)}&type=RETURN&page=0&size=20`,
+  )
+  expectStatus(returnLedger.status, 200, 'Warehouse đọc RETURN ledger có snapshot kỹ thuật viên trả')
+  const returnMovement = returnLedger.body.content.find((item) => item.workOrderCode === workOrderCode && item.type === 'RETURN')
+  expect(returnMovement, 'RETURN vừa xác nhận phải xuất hiện trong inventory ledger').toBeTruthy()
+  expect(returnMovement!.recipientDisplayName).toBe(technician!.name)
+  expect(returnMovement!.actorDisplayName).toBeTruthy()
+  expect(returnMovement!.actorDisplayName).not.toBe(returnMovement!.recipientDisplayName)
 
   const stockAfterReturn = await apiJson<PageResponse<SparePartResponse>>(
     page,

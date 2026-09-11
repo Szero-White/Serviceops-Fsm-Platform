@@ -54,6 +54,9 @@ public class Payment extends TenantScopedEntity {
     @Column(name = "cash_collected_at")
     private Instant cashCollectedAt;
 
+    @Column(name = "counter_payment_requested_at")
+    private Instant counterPaymentRequestedAt;
+
     @Column(name = "collected_by_user_id")
     private UUID collectedByUserId;
 

@@ -45,7 +45,20 @@ public class WorkOrderCustomerAcceptanceService {
                     "Chỉ phiếu đã hoàn thành mới được ghi nhận khách xác nhận"
             );
         }
+        if (request == null || !request.technicianReviewed()) {
+            throw BusinessException.badRequest(
+                    "TECHNICIAN_REVIEW_REQUIRED",
+                    "Kỹ thuật viên phải kiểm tra kết quả, phụ tùng và chi phí trước khi bàn giao khách xác nhận"
+            );
+        }
+        if (!request.customerConfirmed()) {
+            throw BusinessException.badRequest(
+                    "CUSTOMER_CONFIRMATION_REQUIRED",
+                    "Khách hàng phải kiểm tra và đồng ý trước khi ghi nhận xác nhận"
+            );
+        }
 
+        billingService.assertReviewedBillingUnchanged(workOrder, request.reviewedTotalAmount(), request.reviewToken());
         WorkOrderBillingSnapshot snapshot = billingService.freezeForCustomerAcceptance(workOrder);
         paymentService.initializeUnpaid(workOrder, snapshot);
         WorkOrderStatus previous = workOrder.getStatus();

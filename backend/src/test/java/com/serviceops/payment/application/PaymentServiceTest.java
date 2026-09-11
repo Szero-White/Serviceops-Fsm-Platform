@@ -12,6 +12,7 @@ import com.serviceops.payment.domain.Payment;
 import com.serviceops.payment.domain.PaymentMethod;
 import com.serviceops.payment.domain.PaymentRepository;
 import com.serviceops.payment.domain.PaymentStatus;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.workorder.domain.WorkOrder;
 import com.serviceops.workorder.domain.WorkOrderStatus;
@@ -44,6 +45,7 @@ class PaymentServiceTest {
     @Mock private AttachmentRepository attachmentRepository;
     @Mock private CompanyPaymentProfileService companyPaymentProfileService;
     @Mock private AuditService auditService;
+    @Mock private NotificationService notificationService;
 
     @AfterEach
     void tearDown() {
@@ -149,8 +151,36 @@ class PaymentServiceTest {
         );
     }
 
+    @Test
+    void technicianCanRouteUnpaidCustomerToCounterWithoutMarkingPaymentAsReceived() {
+        authenticate("TECHNICIAN", TECHNICIAN_ID, "technician", "Trịnh Quốc Tiến");
+        Payment payment = payment(PaymentStatus.UNPAID);
+        when(repository.findForUpdateByWorkOrder(TENANT_ID, payment.getWorkOrder().getId())).thenReturn(Optional.of(payment));
+
+        var response = service().recordCounterPaymentPlan(payment.getWorkOrder().getId());
+
+        assertThat(response.status()).isEqualTo(PaymentStatus.COUNTER_PAYMENT_PENDING);
+        assertThat(response.method()).isNull();
+        assertThat(response.counterPaymentRequestedAt()).isNotNull();
+        assertThat(payment.getSettledAt()).isNull();
+    }
+
+    @Test
+    void customerServiceCanSettleCounterPaymentOnlyAfterChoosingActualMethod() {
+        authenticate("CUSTOMER_SERVICE", CS_ID, "customer-service", "Lê Thu CSKH");
+        Payment payment = payment(PaymentStatus.COUNTER_PAYMENT_PENDING);
+        payment.setCounterPaymentRequestedAt(Instant.now());
+        when(repository.findForUpdate(TENANT_ID, payment.getId())).thenReturn(Optional.of(payment));
+
+        var response = service().settleCounter(payment.getId(), PaymentMethod.CASH);
+
+        assertThat(response.status()).isEqualTo(PaymentStatus.SETTLED);
+        assertThat(response.method()).isEqualTo(PaymentMethod.CASH);
+        assertThat(payment.getSettledByUserId()).isEqualTo(CS_ID);
+    }
+
     private PaymentService service() {
-        return new PaymentService(repository, attachmentRepository, companyPaymentProfileService, auditService);
+        return new PaymentService(repository, attachmentRepository, companyPaymentProfileService, auditService, notificationService);
     }
 
     private static Payment payment(PaymentStatus status) {

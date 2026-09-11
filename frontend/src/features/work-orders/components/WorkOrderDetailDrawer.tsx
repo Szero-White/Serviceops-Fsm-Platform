@@ -36,6 +36,7 @@ export function WorkOrderDetailDrawer({
   onClose,
   onSchedule,
   onComplete,
+  onCustomerAcceptance,
   role,
   onTransition,
   onUpload,
@@ -57,6 +58,7 @@ export function WorkOrderDetailDrawer({
   onClose: () => void
   onSchedule: () => void
   onComplete: () => void
+  onCustomerAcceptance: () => void
   role?: UserRole
   onTransition: (targetStatus: WorkOrderStatus, note?: string) => void
   onUpload: (options: UploadRequestOption) => Promise<void>
@@ -145,7 +147,7 @@ export function WorkOrderDetailDrawer({
                   type="primary"
                   icon={<CheckCircleOutlined />}
                   loading={transitionPending}
-                  onClick={() => onTransition('CUSTOMER_ACCEPTED')}
+                  onClick={onCustomerAcceptance}
                 >
                   {TRANSITION_LABELS.CUSTOMER_ACCEPTED}
                 </Button>

@@ -20,12 +20,13 @@ export interface WorkOrderBilling {
   incidentalFee: number
   incidentalReason?: string
   totalAmount: number
+  reviewToken: string
   acceptedByDisplayName?: string
   acceptedAt?: string
 }
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'CASH'
-export type PaymentStatus = 'UNPAID' | 'TRANSFER_PENDING_VERIFICATION' | 'CASH_PENDING_HANDOVER' | 'SETTLED'
+export type PaymentStatus = 'UNPAID' | 'TRANSFER_PENDING_VERIFICATION' | 'CASH_PENDING_HANDOVER' | 'COUNTER_PAYMENT_PENDING' | 'SETTLED'
 
 export interface Payment {
   id: string
@@ -41,6 +42,7 @@ export interface Payment {
   transferEvidenceAttachmentId?: string
   transferReportedAt?: string
   cashCollectedAt?: string
+  counterPaymentRequestedAt?: string
   collectedByDisplayName?: string
   settledAt?: string
   settledByDisplayName?: string
