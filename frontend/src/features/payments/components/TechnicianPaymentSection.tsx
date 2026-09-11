@@ -17,7 +17,7 @@ type TechnicianPaymentAction = 'TRANSFER' | 'CASH' | 'COUNTER'
 interface TechnicianPaymentSectionProps {
   workOrder: WorkOrder
   payment: Payment
-  profile?: CompanyPaymentProfile
+  profile?: CompanyPaymentProfile | null
   attachments?: AttachmentItem[]
 }
 

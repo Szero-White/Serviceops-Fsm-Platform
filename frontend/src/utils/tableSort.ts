@@ -1,3 +1,5 @@
+import type { Key } from 'react'
+
 export type SortDirection = 'asc' | 'desc'
 export type TableSortState = {
   sortBy: string
@@ -5,8 +7,8 @@ export type TableSortState = {
 }
 
 type AntSorterLike = {
-  field?: string | number
-  columnKey?: string | number
+  field?: Key | readonly Key[]
+  columnKey?: Key
   order?: 'ascend' | 'descend' | null
 }
 

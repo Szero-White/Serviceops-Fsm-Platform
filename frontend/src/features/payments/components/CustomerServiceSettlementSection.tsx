@@ -12,7 +12,7 @@ type SettlementAction = 'TRANSFER' | 'CASH_HANDOVER' | 'COUNTER_TRANSFER' | 'COU
 
 interface CustomerServiceSettlementSectionProps {
   payment: Payment
-  profile?: CompanyPaymentProfile
+  profile?: CompanyPaymentProfile | null
   onViewBilling?: () => void
 }
 
