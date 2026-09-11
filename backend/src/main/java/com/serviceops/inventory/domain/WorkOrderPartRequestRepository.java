@@ -42,7 +42,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             left join fetch t.user
             where r.tenantId = :tenantId
               and r.workOrder.id = :workOrderId
-            order by r.createdAt asc
+            order by r.createdAt desc
             """)
     List<WorkOrderPartRequest> findDetailedByWorkOrder(@Param("tenantId") UUID tenantId,
                                                        @Param("workOrderId") UUID workOrderId);
@@ -56,7 +56,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             where r.tenantId = :tenantId
               and r.workOrder.id = :workOrderId
               and r.status = :status
-            order by r.createdAt asc
+            order by r.createdAt desc
             """)
     List<WorkOrderPartRequest> findDetailedByWorkOrderAndStatus(@Param("tenantId") UUID tenantId,
                                                                 @Param("workOrderId") UUID workOrderId,

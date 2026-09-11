@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, InboxOutlined, PlusOutlined, SearchOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, App, Button, Dropdown, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
 import { useEffect, useState } from 'react'
@@ -13,6 +13,7 @@ import type { SparePart, SparePartImportResult, SparePartImportRowResult } from 
 import { formatCompactDecimalInput, formatCurrency, formatDateTime, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareNumber, compareText, resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 function downloadBlob(blob: Blob, filename: string) {
   const objectUrl = URL.createObjectURL(blob)
@@ -30,6 +31,7 @@ export function InventoryPage() {
   const canManageStock = ['OWNER', 'WAREHOUSE_STAFF'].includes(user?.role ?? '')
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('active')
   const search = useDebouncedValue(searchInput.trim())
   const active = activeFilter === 'all' ? undefined : activeFilter === 'active'
@@ -46,8 +48,8 @@ export function InventoryPage() {
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const inventoryQuery = useQuery({
-    queryKey: ['spare-parts', { search, active, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE, active),
+    queryKey: ['spare-parts', { search, active, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE, active, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = inventoryQuery
@@ -75,6 +77,8 @@ export function InventoryPage() {
       message.success('Đã tạo phụ tùng')
       setCreateOpen(false)
       createForm.resetFields()
+      setPage(0)
+      setSort({ sortBy: 'createdAt', sortDir: 'desc' })
       refresh()
     },
     onError: (error) => message.error(apiErrorMessage(error)),
@@ -127,15 +131,6 @@ export function InventoryPage() {
     onError: (error) => message.error(apiErrorMessage(error)),
   })
 
-  const remove = useMutation({
-    mutationFn: (id: string) => inventoryApi.delete(id),
-    onSuccess: () => {
-      message.success('Đã xóa phụ tùng chưa phát sinh nghiệp vụ')
-      refresh()
-    },
-    onError: (error) => message.error(apiErrorMessage(error)),
-  })
-
   const previewImport = useMutation({
     mutationFn: (file: File) => inventoryApi.importCsv(file, false),
     onSuccess: (result, file) => {
@@ -158,6 +153,8 @@ export function InventoryPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
+        setPage(0)
+        setSort({ sortBy: 'createdAt', sortDir: 'desc' })
         refresh()
       }
     },
@@ -276,13 +273,21 @@ export function InventoryPage() {
           showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} phụ tùng`,
         }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          const nextSort = resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' })
+          if (nextSort.sortBy !== sort.sortBy || nextSort.sortDir !== sort.sortDir) {
+            setSort(nextSort)
+            setPage(0)
+          }
+        }}
         rowClassName={(record) => record.active && record.lowStock ? 'low-stock-row' : ''}
         locale={{ emptyText: <Empty description={inventoryQuery.isError ? 'Không thể tải dữ liệu phụ tùng' : 'Chưa có phụ tùng phù hợp'} /> }}
         columns={[
           {
             title: 'Phụ tùng',
             width: 320,
+            ...serverSortable(sort, 'name'),
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.name}</Typography.Text>
@@ -293,6 +298,7 @@ export function InventoryPage() {
           {
             title: 'Tồn kho',
             width: 180,
+            ...serverSortable(sort, 'stockQuantity'),
             render: (_, record) => (
               <Space size={8} wrap>
                 <strong>{formatQuantity(record.stockQuantity)}</strong>
@@ -301,21 +307,22 @@ export function InventoryPage() {
               </Space>
             ),
           },
-          { title: 'Ngưỡng tồn tối thiểu', dataIndex: 'reorderLevel', width: 190, render: (value, record) => formatQuantityWithUnit(value, record.unit) },
-          { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, render: formatCurrency },
+          { title: 'Ngưỡng tồn tối thiểu', dataIndex: 'reorderLevel', width: 190, ...serverSortable(sort, 'reorderLevel'), render: (value, record) => formatQuantityWithUnit(value, record.unit) },
+          { title: 'Đơn giá', dataIndex: 'unitPrice', width: 150, ...serverSortable(sort, 'unitPrice'), render: formatCurrency },
           {
             title: 'Trạng thái',
             width: 140,
+            ...serverSortable(sort, 'active'),
             render: (_: unknown, record: SparePart) => (
               <MetaBadge tone={record.active ? 'success' : 'neutral'}>
                 {record.active ? 'Đang sử dụng' : 'Ngừng sử dụng'}
               </MetaBadge>
             ),
           },
-          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
+          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, ...serverSortable(sort, 'updatedAt'), render: formatDateTime },
           ...(canManageStock ? [{
             title: 'Thao tác',
-            width: 480,
+            width: 390,
             fixed: 'right' as const,
             render: (_: unknown, record: SparePart) => {
               const hasStock = Number(record.stockQuantity) !== 0
@@ -363,19 +370,7 @@ export function InventoryPage() {
                     </Button>
                   )}
 
-                  <Popconfirm
-                    title="Xóa phụ tùng?"
-                    description="Chỉ xóa được khi tồn kho bằng 0 và chưa từng phát sinh lịch sử kho."
-                    okText="Xóa"
-                    cancelText="Hủy"
-                    okButtonProps={{ danger: true }}
-                    disabled={hasStock}
-                    onConfirm={() => remove.mutate(record.id)}
-                  >
-                    <Button danger icon={<DeleteOutlined />} disabled={hasStock} loading={remove.isPending}>
-                      Xóa
-                    </Button>
-                  </Popconfirm>
+
                 </Space>
               )
             },
@@ -463,16 +458,17 @@ export function InventoryPage() {
               dataSource={bulkImportResult.rows}
               pagination={{ pageSize: 8, showSizeChanger: false }}
               columns={[
-                { title: 'Dòng', dataIndex: 'rowNumber', width: 80 },
-                { title: 'SKU', dataIndex: 'sku', width: 150 },
-                { title: 'Tên phụ tùng', dataIndex: 'name', ellipsis: true },
+                { title: 'Dòng', dataIndex: 'rowNumber', width: 80, sorter: (a, b) => compareNumber(a.rowNumber, b.rowNumber) },
+                { title: 'SKU', dataIndex: 'sku', width: 150, sorter: (a, b) => compareText(a.sku, b.sku) },
+                { title: 'Tên phụ tùng', dataIndex: 'name', ellipsis: true, sorter: (a, b) => compareText(a.name, b.name) },
                 {
                   title: 'Kết quả',
                   dataIndex: 'valid',
                   width: 130,
+                  sorter: (a, b) => compareNumber(Number(a.valid), Number(b.valid)),
                   render: (valid: boolean) => <MetaBadge tone={valid ? 'success' : 'danger'}>{valid ? 'Hợp lệ' : 'Lỗi'}</MetaBadge>,
                 },
-                { title: 'Ghi chú', dataIndex: 'message', ellipsis: true },
+                { title: 'Ghi chú', dataIndex: 'message', ellipsis: true, sorter: (a, b) => compareText(a.message, b.message) },
               ]}
             />
           </Space>

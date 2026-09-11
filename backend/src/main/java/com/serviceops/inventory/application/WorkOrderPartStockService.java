@@ -202,7 +202,7 @@ public class WorkOrderPartStockService {
         transaction.setCreatedBy(CurrentUser.username());
         transaction.setActorDisplayName(CurrentUser.displayName());
         transaction.setActorRole(CurrentUser.primaryRole());
-        if (type == InventoryTransactionType.ISSUE
+        if ((type == InventoryTransactionType.ISSUE || type == InventoryTransactionType.RETURN)
                 && workOrder != null
                 && workOrder.getTechnician() != null
                 && workOrder.getTechnician().getUser() != null) {

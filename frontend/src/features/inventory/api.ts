@@ -2,17 +2,16 @@ import { http } from '../../api/http'
 import type { InventoryTransaction, InventoryTransactionType, OutstandingPart, PageResponse, ReturnablePart, SparePart, SparePartImportResult, StocktakeResult, WorkOrderPartRequest, WorkOrderPartRequestStatus, WorkOrderPartUsage } from '../../types'
 
 export const inventoryApi = {
-  list: (search = '', page = 0, size = 20, active?: boolean) =>
-    http.get<PageResponse<SparePart>>('/spare-parts', { params: { search, page, size, active } }).then((response) => response.data),
+  list: (search = '', page = 0, size = 20, active?: boolean, sortBy = 'createdAt', sortDir = 'desc') =>
+    http.get<PageResponse<SparePart>>('/spare-parts', { params: { search, page, size, active, sortBy, sortDir } }).then((response) => response.data),
   create: (payload: Record<string, unknown>) => http.post<SparePart>('/spare-parts', payload).then((response) => response.data),
   updateReorderLevel: (id: string, reorderLevel: number) => http.patch<SparePart>(`/spare-parts/${id}/reorder-level`, { reorderLevel }).then((response) => response.data),
   setActive: (id: string, active: boolean) => http.patch<SparePart>(`/spare-parts/${id}/active`, { active }).then((response) => response.data),
-  delete: (id: string) => http.delete<void>(`/spare-parts/${id}`).then((response) => response.data),
   importStock: (id: string, payload: { quantity: number; note: string }) => http.post<SparePart>(`/spare-parts/${id}/import`, payload).then((response) => response.data),
   stocktake: (id: string, payload: { actualQuantity: number; reason: string }) => http.post<StocktakeResult>(`/spare-parts/${id}/stocktake`, payload).then((response) => response.data),
-  transactions: (params: { search?: string; type?: InventoryTransactionType; fromTime?: string; toTime?: string; page?: number; size?: number }) =>
+  transactions: (params: { search?: string; type?: InventoryTransactionType; fromTime?: string; toTime?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
     http.get<PageResponse<InventoryTransaction>>('/inventory-transactions', { params }).then((response) => response.data),
-  partRequests: (params: { status?: WorkOrderPartRequestStatus; search?: string; page?: number; size?: number }) =>
+  partRequests: (params: { status?: WorkOrderPartRequestStatus; search?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
     http.get<PageResponse<WorkOrderPartRequest>>('/part-requests', { params }).then((response) => response.data),
   outstandingParts: (search = '') =>
     http.get<OutstandingPart[]>('/part-outstanding', { params: { search } }).then((response) => response.data),

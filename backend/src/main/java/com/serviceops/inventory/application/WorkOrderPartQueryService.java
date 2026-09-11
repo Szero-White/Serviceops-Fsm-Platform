@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,16 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WorkOrderPartQueryService {
+    private static final Map<String, String> REQUEST_SORT_FIELDS = Map.ofEntries(
+            Map.entry("workOrderCode", "workOrder.code"),
+            Map.entry("sparePartName", "sparePart.name"),
+            Map.entry("requestedQuantity", "requestedQuantity"),
+            Map.entry("requestedByDisplayName", "requestedByDisplayName"),
+            Map.entry("note", "requestNote"),
+            Map.entry("status", "status"),
+            Map.entry("requestedAt", "createdAt"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final WorkOrderPartRequestRepository requestRepository;
     private final WorkOrderPartUsageRepository usageRepository;
     private final WorkOrderPartStockService stockService;
@@ -43,17 +54,25 @@ public class WorkOrderPartQueryService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<PartRequestResponse> searchRequests(WorkOrderPartRequestStatus status, String search, int page, int size) {
+        return searchRequests(status, search, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<PartRequestResponse> searchRequests(
             WorkOrderPartRequestStatus status,
             String search,
             int page,
-            int size
+            int size,
+            String sortBy,
+            String sortDir
     ) {
         workflowPolicy.requireAnyRole(
                 Set.of("OWNER", "WAREHOUSE_STAFF"),
                 "Bạn không có quyền xem hàng đợi cấp phụ tùng"
         );
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").ascending());
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, REQUEST_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         return PageResponse.from(requestRepository.search(
                 CurrentUser.tenantId(),
                 status,
@@ -133,6 +152,10 @@ public class WorkOrderPartQueryService {
                                 || lower(item.sparePartSku()).contains(normalizedSearch)
                                 || lower(item.sparePartName()).contains(normalizedSearch)
                 ))
+                .sorted(Comparator.comparing(
+                        OutstandingPartResponse::since,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed())
                 .toList();
     }
 
