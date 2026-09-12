@@ -181,7 +181,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Persistent notifications, audit trail and operational dashboard.
 - Shared-schema multi-tenancy with tenant-scoped data access.
 - Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
-- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. Provider/failure details remain server-side rather than leaking into end-user UI.
+- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. The UI intentionally shows only the non-sensitive source badge **Gemini** or **Nội bộ**; credentials, upstream status and failure details remain server-side.
 
 ## Architecture
 
@@ -387,7 +387,7 @@ To exercise Gemini locally, configure the ignored `.env` without echoing the key
 .\scripts\configure-gemini-local.ps1
 ```
 
-If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning; end users do not see provider/configuration details.
+If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning. End users may see the non-sensitive **Nội bộ** source badge, but never API-key state, provider error details or infrastructure exceptions.
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 

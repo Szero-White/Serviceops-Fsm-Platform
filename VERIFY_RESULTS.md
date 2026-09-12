@@ -1,16 +1,15 @@
 # Verification Results
 
-## Recorded local release-candidate baseline
+## Recorded release-candidate baseline
 
-The current `feat/serviceops-senior-fixes` release-candidate source was locally verified on **2026-09-11** with:
+The repository baseline merged before the latest payment-queue counter delta passed the required GitHub checks, including the Docker/Testcontainers/Playwright path. The current counter delta was then locally verified on **2026-09-12** with:
 
-- Backend Maven suite: **251 total tests, 0 failures, 0 errors, 24 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
-- AI knowledge-base focused suite: **32 tests, 0 failures, 0 errors**.
-- Frontend TypeScript production build: **PASS**, with **3281 modules transformed** in the recorded run.
-- `git diff --check`: **PASS** before the branch was pushed.
-- Source contains append-only Flyway migrations through **V19** (`V17` counter-payment workflow, `V18` conservative RETURN-recipient backfill, `V19` technician/account status synchronization). A clean PostgreSQL CI/Compose run remains the authoritative migration gate before release.
+- Focused backend `PaymentServiceTest`: **8 tests, 0 failures, 0 errors**.
+- Frontend TypeScript production build: **PASS**, with **3283 modules transformed** in the recorded run.
+- `git diff --check`: **PASS** before the feature branch was pushed.
+- Source contains append-only Flyway migrations through **V19** (`V17` counter-payment workflow, `V18` conservative RETURN-recipient backfill, `V19` technician/account status synchronization).
 
-This is local evidence, not a substitute for repository CI. The feature branch push alone does not run the `push: main` workflow; open a Pull Request so the backend/frontend jobs and isolated Docker + Playwright job execute before merge/release.
+This is intentionally a snapshot of the latest local delta, not a claim that the latest branch has already passed the full repository suite. **The Pull Request CI is the authoritative release gate**: backend tests must run with Docker/Testcontainers, frontend lint/build must pass, and the isolated production-like Docker + Playwright job must be green before merge/deploy.
 
 ## Required fast local gates
 

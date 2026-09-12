@@ -28,7 +28,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 1. Đăng nhập `customer-service`.
 2. Vào **Khách hàng** và tạo hồ sơ mới.
 3. Vào **Thiết bị**, chọn khách hàng, nhập loại thiết bị, hãng, model, serial và hạn bảo hành.
-4. Vào **Yêu cầu dịch vụ**, chọn mức ưu tiên + kênh tiếp nhận và nhập tiêu đề/mô tả lỗi. Nút **AI gợi ý** chỉ chuẩn hóa **Tiêu đề** và **Mô tả**; AI không thay đổi mức ưu tiên hoặc kênh tiếp nhận mà CSKH đã chọn. Nếu dịch vụ AI bên ngoài tạm thời chậm/lỗi, hệ thống tự dùng fallback để form vẫn tiếp tục hoạt động; người dùng không cần xử lý lỗi hạ tầng.
+4. Vào **Yêu cầu dịch vụ**, chọn mức ưu tiên + kênh tiếp nhận và nhập tiêu đề/mô tả lỗi. Nút **AI gợi ý** chỉ chuẩn hóa **Tiêu đề** và **Mô tả**; AI không thay đổi mức ưu tiên hoặc kênh tiếp nhận mà CSKH đã chọn. Badge **Gemini** cho biết kết quả đến từ provider AI đã cấu hình; badge **Nội bộ** cho biết hệ thống đang dùng fallback an toàn. Người dùng không cần xử lý API key, HTTP status hay lỗi hạ tầng.
 
 ### Bước 2 — Chuyển sang điều phối và xếp lịch
 
@@ -91,7 +91,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 - Kỹ thuật viên chỉ thao tác Work Order được giao: tiến độ hiện trường, phụ tùng/actual-used, billing draft, ghi nhận khách xác nhận và payment action tại hiện trường. Customer Service phụ trách reopen/cancel theo policy trước acceptance, payment reconciliation, biên nhận và normal closure. Owner giám sát/cấu hình; Dispatcher phụ trách điều phối/schedule/reschedule và operational cancellation.
 - Username tài khoản được cố định sau khi tạo để giữ ổn định audit/ownership; Owner vẫn có thể đổi họ tên hiển thị, mật khẩu và trạng thái tài khoản theo policy. Trang **Người dùng** có bộ lọc **Tất cả trạng thái / Hoạt động / Tạm ngưng** kết hợp với tìm kiếm; các guard self-disable, last-owner và demo account vẫn bắt buộc.
 - Với Kỹ thuật viên chỉ có **một trạng thái nghiệp vụ Hoạt động/Tạm ngưng**. Hai màn hình **Người dùng** và **Đội ngũ kỹ thuật** là hai điểm quản trị của cùng trạng thái và được đồng bộ hai chiều trong cùng transaction: đổi ở một màn hình thì màn hình kia phản ánh ngay sau refresh/query invalidation. **Hoạt động** = có thể đăng nhập và nhận lịch mới; **Tạm ngưng** = không đăng nhập và không nhận lịch mới. Backend vẫn giữ trường mirror ở `technician_profiles` để tương thích dữ liệu hiện tại nhưng không cho phép hai trạng thái vận hành độc lập.
-- **Trợ lý AI** tự dùng role của tài khoản đang đăng nhập. Có thể hỏi tổng quát “Trong vai trò này tôi được làm gì?” để nhận overview; sau đó hỏi sâu từng chức năng. AI không mở rộng sang quyền role khác: ví dụ Dispatcher không được hướng dẫn quản trị user/kho, Technician không được hướng dẫn kiểm kê/sửa ngưỡng, Warehouse không được hướng dẫn Work Order hiện trường.
+- **Trợ lý AI** tự dùng role của tài khoản đang đăng nhập. Có thể hỏi tổng quát “Trong vai trò này tôi được làm gì?” để nhận overview; sau đó hỏi sâu từng chức năng. AI không mở rộng sang quyền role khác: ví dụ Dispatcher không được hướng dẫn quản trị user/kho, Technician không được hướng dẫn kiểm kê/sửa ngưỡng, Warehouse không được hướng dẫn Work Order hiện trường. Mỗi câu trả lời hiển thị badge **Gemini** hoặc **Nội bộ** nhất quán với nguồn xử lý; badge này không tiết lộ credential hay chi tiết lỗi kỹ thuật.
 - Serial thiết bị, mã khách hàng, SKU phụ tùng và mã work order được kiểm soát duy nhất trong tenant.
 - File local chỉ chấp nhận JPG, PNG, WEBP và PDF, tối đa 10 MB.
 

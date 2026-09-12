@@ -309,7 +309,7 @@ public final class NotificationCopy {
                 "Phiếu đã hủy, cần cập nhật khách hàng: " + context.code(),
                 actor(actorLabel) + " đã hủy " + workOrderContext(context) + "."
                         + optionalReason(reason, "Lý do")
-                        + " Mở Phiếu công việc để kiểm tra và liên hệ khách hàng nếu cần."
+                        + " Mở Lịch sử phiếu để kiểm tra chi tiết và liên hệ khách hàng nếu cần."
         );
     }
 

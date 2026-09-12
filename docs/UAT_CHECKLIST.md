@@ -109,7 +109,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | PART-NOTIF-01 | Assigned Technician tạo `REQUEST` phụ tùng | Warehouse nhận **Có yêu cầu phụ tùng mới: WO-...** với Technician + SKU/tên part + quantity và hướng dẫn mở **Yêu cầu phụ tùng**; Owner không nhận routine part-request bell |
 | WO-NOTIF-03 | Work Order `CLOSED` | Owner (trừ actor) nhận đúng 1 terminal summary **Phiếu đã hoàn tất: WO-...**; assigned Technician vẫn nhận khi người khác đóng phiếu thay |
 | WO-NOTIF-03A | Work Order `REOPENED` bởi role khác CSKH | Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Công việc cần xử lý lại: WO-...** nếu không phải actor; Customer Service nhận **Phiếu cần theo dõi lại: WO-...**; OWNER không nhận; body có actor + khách hàng + lý do |
-| WO-NOTIF-03B | Work Order `CANCELLED` bởi Owner/Dispatcher/Technician | Owner (trừ actor) nhận 1 terminal summary; assigned Technician nhận thông báo dừng công việc nếu không phải actor; Customer Service nhận **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** |
+| WO-NOTIF-03B | Work Order `CANCELLED` bởi Owner/Dispatcher/Technician | Owner (trừ actor) nhận 1 terminal summary; assigned Technician nhận thông báo dừng công việc nếu không phải actor; Customer Service nhận **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** và được hướng dẫn mở **Lịch sử phiếu**, không quay lại hàng đợi active |
 | WO-NOTIF-03C | Work Order `REOPENED` | Dispatcher/assigned Technician/Customer Service nhận theo routing hiện hành; OWNER không nhận operational reopen alert |
 | WO-NOTIF-03D | Work Order `CLOSED` bởi role khác OWNER | OWNER nhận **Phiếu đã hoàn tất: WO-...** đúng 1 terminal summary; không cần nhận `COMPLETED` trước đó |
 | WO-NOTIF-03E | Work Order `REOPENED`/`CANCELLED` do chính Customer Service thao tác | Không broadcast lại cho nhóm Customer Service; các role vận hành liên quan vẫn nhận theo policy |
@@ -137,11 +137,13 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | AI-06 | Owner hỏi cấu hình tài khoản/QR nhận tiền | AI điều hướng `/payment-settings`, nêu Owner cấu hình còn Technician chỉ xem read-only tại Work Order |
 | AI-07 | Technician hỏi khách chuyển khoản/tiền mặt/thanh toán tại quầy | AI giữ route Work Order được giao, hướng dẫn ghi nhận payment action nhưng không cho SETTLED/receipt/close |
 | AI-08 | CSKH hỏi xem lại phiếu đã đóng và tiến trình thanh toán | AI điều hướng `/work-order-history` và mô tả timeline/history thay vì workflow cũ |
+| AI-09 | Chạy AI gợi ý hoặc Trợ lý AI khi Gemini hoạt động/fallback | UI hiển thị badge **Gemini** khi `source=GEMINI`, **Nội bộ** khi `source=LOCAL`; không hiện API key, upstream HTTP status, stack trace hoặc nguyên nhân fallback |
 
 | PAY-01 | Technician ghi nhận khách chuyển khoản | Payment → `TRANSFER_PENDING_VERIFICATION`; ảnh giao dịch nếu có chỉ là evidence, chưa `SETTLED` |
 | PAY-02 | Technician nhận tiền mặt | Payment → `CASH_PENDING_HANDOVER`; lưu KTV đang giữ tiền + thời gian |
 | PAY-03 | Technician chọn **Hẹn thanh toán tại quầy** | Có modal xác nhận lại; sau xác nhận payment → `COUNTER_PAYMENT_PENDING`, KTV không bị ghi nhận là đã thu tiền và CSKH nhận notification cần thu tại quầy |
 | PAY-04 | CSKH mở **Xử lý thanh toán** với khoản transfer/cash/counter pending | Cột Xử lý có **Đối soát thanh toán**; bấm mở đúng Work Order và tự focus tab **Thanh toán**, không settle trực tiếp từ bảng |
+| PAY-04A | CSKH xem header **Xử lý thanh toán**, sau đó đổi filter/phân trang | **Chưa đối soát thanh toán** và **Chưa đóng phiếu** là số đếm server-side trên toàn tenant, không thay đổi theo page/filter; settle một payment làm `Chưa đối soát` giảm 1 và `Chưa đóng phiếu` tăng 1; đóng WO tương ứng làm `Chưa đóng phiếu` giảm 1 |
 | PAY-05 | Khách đến quầy thanh toán | CSKH chọn đúng **chuyển khoản tại quầy** hoặc **tiền mặt tại quầy**, phải tick xác nhận lại; chỉ sau khi thực nhận đủ tiền mới → `SETTLED` |
 | PAY-06 | CSKH kiểm snapshot chi phí + payment evidence/cash handover rồi xác nhận | Payment → `SETTLED`; lưu actor/time; trong Work Order hiện **Phát hành / tải biên nhận** + **Đóng phiếu**; Owner không được settlement thay |
 | PAY-07 | CSKH rời Work Order sau `SETTLED` nhưng chưa đóng | Quay lại **Xử lý thanh toán** vẫn thấy **Phát hành / tải biên nhận** + **Đóng phiếu** để tiếp tục hồ sơ |
