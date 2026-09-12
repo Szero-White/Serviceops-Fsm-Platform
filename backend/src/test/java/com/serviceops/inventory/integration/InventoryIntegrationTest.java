@@ -195,7 +195,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void positiveStockSparePartCannotBeDeletedButCanBeDiscontinued() {
+    void sparePartDeleteEndpointIsUnavailableAndPartCanBeDiscontinued() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
         SparePart part = sparePart(owner, "STOCK-GUARD-", new BigDecimal("2.000"));
@@ -209,7 +209,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 ownerToken,
                 null
         );
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
         ResponseEntity<String> discontinueResponse = exchangeInventory(
                 "/api/v1/spare-parts/" + part.getId() + "/active",
