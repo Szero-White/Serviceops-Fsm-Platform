@@ -102,7 +102,7 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 - `OWNER`: quản trị tài khoản/cấu hình và có quyền quản lý trên các module nghiệp vụ dành cho Owner: Customer/Asset, Service Request (kể cả chuyển sang Work Order), Channel, điều phối, kỹ thuật viên, kho/kiểm kê/lịch sử biến động, Work Order history và audit. Trong Work Order, Owner là admin override cho điều phối và hậu xử lý nhưng không giả lập field progress hoặc xác nhận vật tư/actual-used thay role nghiệp vụ.
 - Trạng thái của nhân sự `TECHNICIAN` là một invariant xuyên hai màn hình: `user_accounts.active` là trạng thái tài khoản chính và `technician_profiles.active` được giữ đồng bộ để tương thích/query. Owner đổi **Hoạt động/Tạm ngưng** tại **Người dùng** hoặc **Đội ngũ kỹ thuật** đều cập nhật cả hai trong cùng transaction; không tồn tại chế độ tài khoản Hoạt động nhưng hồ sơ Tạm ngưng độc lập.
 - `DISPATCHER`: Customer/Asset read-only để lấy ngữ cảnh điều phối; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation và lịch sử phiếu. Không tiếp nhận Service Request, không xem Audit toàn hệ thống hoặc xác nhận/đóng phiếu.
-- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
+- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
 - `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; tạo/sửa/hủy yêu cầu phụ tùng, ghi actual-used, billing draft và ghi nhận khách xác nhận tại hiện trường.
 - `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
 - `OWNER`: quản trị/giám sát, cấu hình bank/QR công ty và xem payment/receipt; không thao tác routine settlement/closure thay role phụ trách.
@@ -110,9 +110,9 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 
 ## 6. Delete / cancel / deactivate
 
-- Service Request và Work Order nghiệp vụ ưu tiên state (`CANCELLED`) thay cho hard delete khi đã có lịch sử vận hành.
+- Service Request dùng state `CANCELLED` thay cho hard delete để luôn giữ lịch sử tiếp nhận; Work Order cũng ưu tiên lifecycle/archive thay cho xóa dữ liệu nghiệp vụ.
 - Work Order `CLOSED`/`CANCELLED` chỉ Owner được ẩn khỏi lịch sử tra cứu; audit vẫn được giữ.
-- Asset/Service Request chưa có operational reference vẫn không được hard-delete nếu còn attachment; phải xử lý attachment trước để tránh orphan metadata/file.
+- Asset chưa có operational reference vẫn không được hard-delete nếu còn attachment; Service Request không có hard-delete API nên attachment/history luôn được giữ cùng record nghiệp vụ.
 - Customer `active=false` vẫn giữ trong danh mục và toàn bộ lịch sử cũ, nhưng không được dùng để tạo Service Request hoặc đăng ký Asset mới. Backend áp cùng invariant để API trực tiếp không thể bypass UI. Record đã tồn tại vẫn được phép hoàn thiện/chỉnh sửa với chính khách hàng cũ để không phá hồ sơ đang xử lý.
 - Technician có assignment operational không được deactivate.
 

@@ -1,6 +1,5 @@
 package com.serviceops.ai.web;
 
-import com.serviceops.common.domain.Priority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -10,20 +9,20 @@ public final class AiDtos {
     private AiDtos() {
     }
 
+    public enum AiResponseSource {
+        GEMINI,
+        LOCAL
+    }
+
     public record ServiceRequestDraftRequest(
-            @NotBlank @Size(max = 3000) String rawText,
-            @Size(max = 30) String preferredChannel
+            @NotBlank @Size(max = 3000) String rawText
     ) {
     }
 
     public record ServiceRequestDraftResponse(
             String title,
             String description,
-            Priority priority,
-            String channel,
-            double confidence,
-            String reason,
-            String provider
+            AiResponseSource source
     ) {
     }
 
@@ -38,7 +37,7 @@ public final class AiDtos {
             List<String> steps,
             String relatedRoute,
             String actionLabel,
-            String provider
+            AiResponseSource source
     ) {
     }
 }

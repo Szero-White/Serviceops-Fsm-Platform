@@ -8,11 +8,7 @@ import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.CustomerRepository;
-import com.serviceops.servicerequest.application.ServiceChannelService;
-import com.serviceops.servicerequest.application.ServiceRequestService;
-import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
-import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.workorder.domain.WorkOrderRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +40,6 @@ class ParentAttachmentConsistencyTest {
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private AttachmentRepository attachmentRepository;
     @Mock private AssetCsvService assetCsvService;
-    @Mock private ServiceChannelService serviceChannelService;
     @Mock private AuditService auditService;
 
     @AfterEach
@@ -80,37 +75,6 @@ class ParentAttachmentConsistencyTest {
                 .isEqualTo("ASSET_HAS_ATTACHMENTS");
 
         verify(assetRepository, never()).delete(asset);
-    }
-
-    @Test
-    void serviceRequestCannotBeHardDeletedWhileAttachmentsStillReferenceIt() {
-        authenticateCustomerService();
-        UUID requestId = UUID.randomUUID();
-        ServiceRequest request = new ServiceRequest();
-        request.setId(requestId);
-        request.setTenantId(TENANT_ID);
-        request.setStatus(ServiceRequestStatus.OPEN);
-
-        when(serviceRequestRepository.findDetailed(requestId, TENANT_ID)).thenReturn(Optional.of(request));
-        when(attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(TENANT_ID, "SERVICE_REQUEST", requestId))
-                .thenReturn(true);
-
-        ServiceRequestService service = new ServiceRequestService(
-                serviceRequestRepository,
-                customerRepository,
-                assetRepository,
-                serviceChannelService,
-                workOrderRepository,
-                attachmentRepository,
-                auditService
-        );
-
-        assertThatThrownBy(() -> service.delete(requestId))
-                .isInstanceOf(BusinessException.class)
-                .extracting("code")
-                .isEqualTo("SERVICE_REQUEST_HAS_ATTACHMENTS");
-
-        verify(serviceRequestRepository, never()).delete(request);
     }
 
     private static void authenticateCustomerService() {

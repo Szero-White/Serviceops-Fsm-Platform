@@ -8,7 +8,6 @@ import com.serviceops.servicerequest.web.ServiceRequestDtos.ServiceRequestRespon
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,10 +54,5 @@ public class ServiceRequestController {
     @PostMapping("/{id}/cancel")
     public ServiceRequestResponse cancel(@PathVariable UUID id) {
         return service.cancel(id);
-    }
-
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        service.delete(id);
     }
 }

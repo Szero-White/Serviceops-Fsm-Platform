@@ -3,7 +3,6 @@ package com.serviceops.servicerequest.application;
 import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
-import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
@@ -15,7 +14,6 @@ import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.CreateServiceRequest;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.ServiceRequestResponse;
-import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -41,8 +39,6 @@ public class ServiceRequestService {
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
     private final ServiceChannelService serviceChannelService;
-    private final WorkOrderRepository workOrderRepository;
-    private final AttachmentRepository attachmentRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -97,23 +93,6 @@ public class ServiceRequestService {
         }
         auditService.record("CANCEL", "SERVICE_REQUEST", entity.getId(), "Hủy yêu cầu dịch vụ");
         return toResponse(entity);
-    }
-
-    @Transactional
-    public void delete(UUID id) {
-        ServiceRequest entity = require(id);
-        long workOrderCount = workOrderRepository.countByTenantIdAndServiceRequestId(CurrentUser.tenantId(), id);
-        if (workOrderCount > 0 || entity.getStatus() == ServiceRequestStatus.CONVERTED) {
-            throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo phiếu công việc");
-        }
-        if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(CurrentUser.tenantId(), "SERVICE_REQUEST", id)) {
-            throw BusinessException.conflict(
-                    "SERVICE_REQUEST_HAS_ATTACHMENTS",
-                    "Không thể xóa yêu cầu dịch vụ khi còn file đính kèm; hãy xóa file đính kèm trước"
-            );
-        }
-        repository.delete(entity);
-        auditService.record("DELETE", "SERVICE_REQUEST", entity.getId(), "Xóa yêu cầu dịch vụ: " + entity.getTitle());
     }
 
     public ServiceRequest require(UUID id) {

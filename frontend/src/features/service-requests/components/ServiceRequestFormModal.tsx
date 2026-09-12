@@ -3,13 +3,13 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { App, Button, Form, Input, Modal, Select, Space, Typography } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
-import { MetaBadge } from '../../../components/PresentationBadge'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 import type { ServiceRequest, ServiceRequestDraftSuggestion } from '../../../types'
 import { aiApi } from '../../ai/api'
+import { AiSourceBadge } from '../../ai/components/AiSourceBadge'
 import { assetsApi } from '../../assets/api'
 import { customersApi } from '../../customers/api'
 import { serviceChannelsApi } from '../../service-channels/api'
@@ -123,8 +123,8 @@ export function ServiceRequestFormModal({ open, editing, onClose, onSaved }: Ser
     mutationFn: aiApi.draftServiceRequest,
     onSuccess: (draft) => {
       setLastAiDraft(draft)
-      form.setFieldsValue({ title: draft.title, description: draft.description, priority: draft.priority, channel: draft.channel })
-      message.success(draft.provider === 'local' ? 'Đã tạo gợi ý nội bộ' : 'AI đã gợi ý nội dung tiếp nhận')
+      form.setFieldsValue({ title: draft.title, description: draft.description })
+      message.success('AI đã gợi ý nội dung tiếp nhận')
     },
     onError: (error) => message.error(apiErrorMessage(error)),
   })
@@ -133,21 +133,21 @@ export function ServiceRequestFormModal({ open, editing, onClose, onSaved }: Ser
   const hasDescriptionInput = Boolean(`${watchedDescription ?? ''}`.trim())
   const hasDraftInput = hasTitleInput || hasDescriptionInput
   const aiAssistDescription = hasTitleInput && hasDescriptionInput
-    ? 'AI sẽ chuẩn hóa cả tiêu đề và mô tả, đồng thời gợi ý mức ưu tiên và kênh tiếp nhận.'
+    ? 'AI sẽ chuẩn hóa tiêu đề và mô tả. Mức độ ưu tiên và kênh tiếp nhận giữ nguyên theo lựa chọn của bạn.'
     : hasTitleInput
-      ? 'Bạn đã nhập tiêu đề. Bấm AI gợi ý để hệ thống viết mô tả chi tiết và gợi ý ưu tiên/kênh.'
+      ? 'Bạn đã nhập tiêu đề. Bấm AI gợi ý để hệ thống viết mô tả chi tiết; ưu tiên và kênh tiếp nhận không thay đổi.'
       : hasDescriptionInput
-        ? 'Bạn đã nhập mô tả. Bấm AI gợi ý để hệ thống rút gọn tiêu đề và gợi ý ưu tiên/kênh.'
+        ? 'Bạn đã nhập mô tả. Bấm AI gợi ý để hệ thống rút gọn tiêu đề; ưu tiên và kênh tiếp nhận không thay đổi.'
         : 'Nhập ít nhất một ô: Tiêu đề hoặc Mô tả chi tiết. Ô còn lại sẽ được AI tạo gợi ý.'
 
   const suggestWithAi = () => {
-    const values = form.getFieldsValue(['title', 'description', 'channel'])
+    const values = form.getFieldsValue(['title', 'description'])
     const rawText = [values.title, values.description].filter(Boolean).join('\n\n').trim()
     if (!rawText) {
       message.warning('Nhập nội dung khách báo trước khi dùng AI gợi ý')
       return
     }
-    aiDraft.mutate({ rawText, preferredChannel: values.channel })
+    aiDraft.mutate({ rawText })
   }
 
   const handleCustomerChange = (customerId: string) => {
@@ -196,16 +196,15 @@ export function ServiceRequestFormModal({ open, editing, onClose, onSaved }: Ser
           <div>
             <Space size={8} wrap>
               <Typography.Text strong>AI tiếp nhận</Typography.Text>
-              <MetaBadge tone="info">{lastAiDraft?.provider === 'gemini' ? 'Gemini' : 'Sẵn sàng'}</MetaBadge>
+              <AiSourceBadge source={lastAiDraft?.source} />
             </Space>
             <Typography.Text type="secondary">{aiAssistDescription}</Typography.Text>
-            {lastAiDraft ? <Typography.Text type="secondary" className="form-assist-note">{lastAiDraft.reason} · Độ tin cậy {Math.round(lastAiDraft.confidence * 100)}%</Typography.Text> : null}
           </div>
-          <Button icon={<BulbOutlined />} loading={aiDraft.isPending} disabled={!hasDraftInput} onClick={suggestWithAi}>AI gợi ý</Button>
+          <Button icon={<BulbOutlined />} loading={aiDraft.isPending} disabled={!hasDraftInput || aiDraft.isPending} onClick={suggestWithAi}>AI gợi ý</Button>
         </div>
 
-        <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề yêu cầu' }]}><Input placeholder="Ví dụ: Máy lạnh không đủ lạnh" /></Form.Item>
-        <Form.Item label="Mô tả chi tiết" name="description" rules={[{ required: true, message: 'Nhập mô tả chi tiết' }]}><Input.TextArea rows={5} placeholder="Triệu chứng, thời điểm xảy ra, yêu cầu của khách hàng..." /></Form.Item>
+        <Form.Item label="Tiêu đề" name="title" rules={[{ required: true, message: 'Nhập tiêu đề yêu cầu' }]}><Input disabled={aiDraft.isPending} placeholder="Ví dụ: Máy lạnh không đủ lạnh" /></Form.Item>
+        <Form.Item label="Mô tả chi tiết" name="description" rules={[{ required: true, message: 'Nhập mô tả chi tiết' }]}><Input.TextArea disabled={aiDraft.isPending} rows={5} placeholder="Triệu chứng, thời điểm xảy ra, yêu cầu của khách hàng..." /></Form.Item>
       </Form>
     </Modal>
   )

@@ -2,16 +2,15 @@
 
 ## Recorded local release-candidate baseline
 
-The latest pre-commit release-candidate working tree based on `f143a6c` was locally verified on 2026-08-28 with:
+The current `feat/serviceops-senior-fixes` release-candidate source was locally verified on **2026-09-11** with:
 
-- Backend Maven suite: **243 total tests, 0 failures, 0 errors, 25 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
-- Frontend TypeScript/UI-policy lint: **PASS**.
-- Frontend production build: **PASS** with **3269 modules transformed** in that run.
-- The earlier clean local database drill applied **V1 → V15** successfully. New **V16** is append-only and had not yet been applied to the developer database during this verification; the GitHub Actions clean PostgreSQL/Testcontainers run is the required V1 → V16 migration gate before release.
+- Backend Maven suite: **251 total tests, 0 failures, 0 errors, 24 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
+- AI knowledge-base focused suite: **32 tests, 0 failures, 0 errors**.
+- Frontend TypeScript production build: **PASS**, with **3281 modules transformed** in the recorded run.
+- `git diff --check`: **PASS** before the branch was pushed.
+- Source contains append-only Flyway migrations through **V19** (`V17` counter-payment workflow, `V18` conservative RETURN-recipient backfill, `V19` technician/account status synchronization). A clean PostgreSQL CI/Compose run remains the authoritative migration gate before release.
 
-This is local evidence, not a substitute for the repository CI. Before merge/release, the GitHub Actions backend/frontend jobs and isolated production-like Docker + Playwright job must also be green, followed by the manual UAT gate below.
-
-The Playwright suite currently expands to **17 browser tests across 4 spec files**: 7 directly declared CRUD/workflow/settlement tests plus 10 per-role route/sidebar checks generated for the five demo roles.
+This is local evidence, not a substitute for repository CI. The feature branch push alone does not run the `push: main` workflow; open a Pull Request so the backend/frontend jobs and isolated Docker + Playwright job execute before merge/release.
 
 ## Required fast local gates
 
@@ -51,7 +50,7 @@ Only do this when the endpoint is backed by disposable isolated data. Port numbe
 - Warehouse direct API checks cover Work Order list/history and dashboard.
 - Dispatcher cannot perform technician field transitions.
 - Technician account/profile cannot be deactivated while active operational assignments remain.
-- Asset and Service Request hard-delete is blocked while attachments still reference the parent.
+- Asset hard-delete is blocked while attachments still reference it; Service Requests use `CANCELLED` and expose no hard-delete API.
 - Dispatcher technician profile editing is blocked; profile updates are Owner-only.
 - Work Order history archive/delete is Owner-only.
 - E2E route policy treats Warehouse home as `/part-requests`, not the operational dashboard.

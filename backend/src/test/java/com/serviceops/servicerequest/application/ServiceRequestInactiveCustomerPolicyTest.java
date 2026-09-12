@@ -2,7 +2,6 @@ package com.serviceops.servicerequest.application;
 
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
-import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
@@ -13,7 +12,6 @@ import com.serviceops.servicerequest.domain.ServiceRequest;
 import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.CreateServiceRequest;
-import com.serviceops.workorder.domain.WorkOrderRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,8 +40,6 @@ class ServiceRequestInactiveCustomerPolicyTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private AssetRepository assetRepository;
     @Mock private ServiceChannelService serviceChannelService;
-    @Mock private WorkOrderRepository workOrderRepository;
-    @Mock private AttachmentRepository attachmentRepository;
     @Mock private AuditService auditService;
 
     private ServiceRequestService service;
@@ -55,8 +51,6 @@ class ServiceRequestInactiveCustomerPolicyTest {
                 customerRepository,
                 assetRepository,
                 serviceChannelService,
-                workOrderRepository,
-                attachmentRepository,
                 auditService
         );
         authenticate();

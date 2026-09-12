@@ -13,7 +13,7 @@ Public demo defaults:
 - `JWT_SECRET` is mandatory, Base64 encoded, and must decode to at least 32 bytes.
 - `DEMO_PASSWORD` must be at least 8 characters and cannot be `123456` or a shipped placeholder value; startup fails instead of silently exposing a known demo password.
 - `JWT_ACCESS_TOKEN_MINUTES=30` affects production/demo only; local development keeps its existing behavior.
-- `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured.
+- `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured. When enabled, `AI_CONNECT_TIMEOUT` (default `4s`), `AI_SUGGESTION_TIMEOUT` (default `12s`) and `AI_HELP_TIMEOUT` (default `18s`) use Gemini-first latency budgets while remaining bounded; the frontend budgets are intentionally longer so the backend can complete Gemini or fallback before the browser aborts the request. Provider/API failures stay in server logs; public AI responses never expose provider name, credential state or upstream HTTP error details.
 - `SWAGGER_ENABLED=false` by default. Enable it only for an intentional API-review environment; the recruiter demo does not require public Swagger.
 - `MAX_TENANT_STORAGE_BYTES=104857600` limits each tenant to 100 MiB on the local storage adapter in the public demo. Use `0` for unlimited storage in a controlled environment.
 
@@ -72,7 +72,7 @@ On a single VM, expose only what is required (normally SSH and HTTP/HTTPS), use 
 
 `DEMO_MODE=true` keeps normal application workflows usable while protecting only the seeded data required to keep the public demo recoverable:
 
-- recruiter-created customers, assets, service requests, work orders, inventory records, attachments and custom service channels keep their normal role-based create/update/delete behavior;
+- recruiter-created customers, assets, work orders, inventory records, attachments and custom service channels keep their normal role-based mutations; Service Requests remain editable/cancellable by role but are never hard-deleted;
 - seeded demo identities are protected by service-level policy from deletion, deactivation, credential changes and destructive role changes;
 - technician profile updates remain usable, while profiles backed by the protected seeded identities cannot be used to bypass that identity protection;
 - system-defined service channels are protected from update/delete, while custom channels created during the demo support normal CRUD.

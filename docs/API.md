@@ -71,8 +71,7 @@ Hard delete bị chặn khi Asset đã được Service Request/Work Order tham 
 - `GET /service-requests/{id}`
 - `POST /service-requests`
 - `PUT /service-requests/{id}` — chỉ request còn `OPEN`
-- `POST /service-requests/{id}/cancel`
-- `DELETE /service-requests/{id}` — bị chặn khi đã convert/có Work Order hoặc còn attachment
+- `POST /service-requests/{id}/cancel` — giữ nguyên record/history với trạng thái `CANCELLED`; Service Request không có hard-delete API
 - `POST /work-orders/from-service-request/{serviceRequestId}` — đường tạo Work Order chuẩn
 
 Không có public `POST /work-orders` generic direct-create.
@@ -220,8 +219,8 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 
 ## AI assistance
 
-- `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE.
-- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; AI nhận biết các workspace mới như `/part-requests`, `/payments`, `/payment-settings`, `/work-order-history`; OWNER nhận overview giám sát/quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress, xác nhận ISSUE/RETURN, customer acceptance hoặc settlement thay role phụ trách.
+- `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE. Request chỉ gửi `rawText`; public response chỉ chứa đúng `title` và `description`. **Priority và intake channel không thuộc AI contract** nên luôn giữ theo lựa chọn thủ công của người dùng. Backend ưu tiên provider AI đã cấu hình và tự dùng fallback nội bộ khi provider timeout/lỗi; provider/failure detail không thuộc public API contract.
+- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Response chỉ trả nội dung hướng dẫn/điều hướng cần cho UI, không trả tên provider hoặc lỗi hạ tầng. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; AI nhận biết các workspace mới như `/part-requests`, `/payments`, `/payment-settings`, `/work-order-history`; OWNER nhận overview giám sát/quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress, xác nhận ISSUE/RETURN, customer acceptance hoặc settlement thay role phụ trách.
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.

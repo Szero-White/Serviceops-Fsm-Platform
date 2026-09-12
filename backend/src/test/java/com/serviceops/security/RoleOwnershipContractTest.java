@@ -59,6 +59,13 @@ class RoleOwnershipContractTest {
     }
 
     @Test
+    void serviceRequestsUseCancellationInsteadOfHardDelete() {
+        assertThat(Arrays.stream(ServiceRequestController.class.getDeclaredMethods()).map(Method::getName))
+                .contains("cancel")
+                .doesNotContain("delete");
+    }
+
+    @Test
     void workOrdersCanOnlyBeCreatedFromServiceRequestsAndCustomerServiceKeepsCancellationAccess() {
         assertClassAuthorization(WorkOrderController.class, OPERATIONAL_WORK_ORDER_READ);
         assertThat(Arrays.stream(WorkOrderController.class.getDeclaredMethods()).map(Method::getName))

@@ -28,7 +28,7 @@ Mật khẩu local/demo mặc định trong portfolio hiện tại: `Demo@2026`.
 1. Đăng nhập `customer-service`.
 2. Vào **Khách hàng** và tạo hồ sơ mới.
 3. Vào **Thiết bị**, chọn khách hàng, nhập loại thiết bị, hãng, model, serial và hạn bảo hành.
-4. Vào **Yêu cầu dịch vụ**, tạo yêu cầu với mức ưu tiên và mô tả lỗi.
+4. Vào **Yêu cầu dịch vụ**, chọn mức ưu tiên + kênh tiếp nhận và nhập tiêu đề/mô tả lỗi. Nút **AI gợi ý** chỉ chuẩn hóa **Tiêu đề** và **Mô tả**; AI không thay đổi mức ưu tiên hoặc kênh tiếp nhận mà CSKH đã chọn. Nếu dịch vụ AI bên ngoài tạm thời chậm/lỗi, hệ thống tự dùng fallback để form vẫn tiếp tục hoạt động; người dùng không cần xử lý lỗi hạ tầng.
 
 ### Bước 2 — Chuyển sang điều phối và xếp lịch
 

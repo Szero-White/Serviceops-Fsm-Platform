@@ -170,7 +170,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Technician assignment, overlap-safe scheduling and weekly Dispatcher schedule board.
 - Personal Technician schedule derived from the authenticated account.
 - Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
-- Safe hard-delete behavior for pristine spare parts while preserving inventory history for used parts.
+- Spare-part catalog uses deactivate/reactivate instead of hard delete so stock movements, Work Orders and audit history remain traceable.
 - Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and an actionable outstanding-material queue; inventory movement history remains a read-only stock ledger.
 - Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
@@ -181,7 +181,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Persistent notifications, audit trail and operational dashboard.
 - Shared-schema multi-tenancy with tenant-scoped data access.
 - Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
-- AI-assisted Service Request drafting and a role-aware in-app help assistant. The hosted demo uses Gemini through the backend, with application fallback behavior when the external provider is unavailable.
+- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. Provider/failure details remain server-side rather than leaking into end-user UI.
 
 ## Architecture
 
@@ -297,7 +297,7 @@ The repository also keeps a separate **production-like Docker Compose validation
 - Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
 - Login throttling and request correlation IDs are enabled.
 - Public-demo mode protects required seeded identities and system-defined service channels while recruiter-created data remains editable according to RBAC.
-- Gemini credentials remain server-side; the frontend never receives the provider API key.
+- AI provider credentials remain server-side; the frontend never receives API keys or raw provider failure details. Unexpected infrastructure errors are logged server-side and returned to users only as sanitized messages with a correlation ID when appropriate.
 
 ## Verification and CI
 
@@ -379,7 +379,15 @@ If you use Docker Desktop and want the script to start the repository PostgreSQL
 .\scripts\dev-start.ps1 -StartPostgres
 ```
 
-`dev-start.ps1` is repository-relative: it works regardless of where the repository was cloned. It opens separate backend and frontend terminals, passes the same `DEMO_PASSWORD` to both sides, and runs `npm ci` automatically when `frontend/node_modules` does not exist.
+`dev-start.ps1` is repository-relative: it works regardless of where the repository was cloned. It opens separate backend and frontend terminals, passes runtime settings through inherited child-process environment variables rather than embedding secrets in command-line arguments, and runs `npm ci` automatically when `frontend/node_modules` does not exist.
+
+To exercise Gemini locally, configure the ignored `.env` without echoing the key to the console:
+
+```powershell
+.\scripts\configure-gemini-local.ps1
+```
+
+If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning; end users do not see provider/configuration details.
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 
@@ -450,6 +458,7 @@ frontend/                 React operations console
 
 scripts/                  Local developer helpers
   dev-start.ps1           One-command backend + frontend startup
+  configure-gemini-local.ps1  Hidden-input local Gemini key setup
   start-postgres.ps1      Optional local PostgreSQL container startup
   reset-local-db.ps1      Guarded backup + local database recreation
   check-local.ps1         Local backend/frontend verification

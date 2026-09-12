@@ -50,4 +50,21 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getProperties()).containsEntry("code", "METHOD_NOT_ALLOWED");
         assertThat(response.getBody().getProperties()).containsEntry("requestId", "req-405");
     }
+    @Test
+    void unexpectedFailureDoesNotExposeTechnicalDetails() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/customers");
+        request.setAttribute(RequestCorrelationFilter.MDC_KEY, "req-safe-500");
+
+        var detail = handler.handleUnexpected(
+                new IllegalStateException("password authentication failed for database serviceops"),
+                request
+        );
+
+        assertThat(detail.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        assertThat(detail.getDetail()).isEqualTo("Hệ thống gặp lỗi ngoài dự kiến");
+        assertThat(detail.getDetail()).doesNotContain("password", "database", "serviceops");
+        assertThat(detail.getProperties()).containsEntry("requestId", "req-safe-500");
+    }
+
 }

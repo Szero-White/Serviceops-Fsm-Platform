@@ -48,7 +48,15 @@ DEMO_PASSWORD=Demo@2026
 
 Nếu PostgreSQL native trên máy bạn dùng tài khoản khác, chỉ sửa file `.env` local. Không commit `.env`.
 
-`DEMO_PASSWORD` được `scripts/dev-start.ps1` truyền đồng thời cho backend và frontend để quick-login không lệch mật khẩu.
+`DEMO_PASSWORD` được `scripts/dev-start.ps1` truyền đồng thời cho backend và frontend để quick-login không lệch mật khẩu. Secret runtime được truyền qua environment kế thừa của process con, không được nhúng vào command line.
+
+Nếu cần kiểm thử Gemini thật ở local, cấu hình key một lần bằng:
+
+```powershell
+.\scripts\configure-gemini-local.ps1
+```
+
+Script nhập key ở chế độ ẩn và lưu vào `.env` local đã được `.gitignore` loại khỏi Git. Không paste API key vào source, command line, tài liệu hoặc chat/log. Nếu key chưa được cấu hình, hai chức năng AI vẫn dùng fallback nội bộ để local development không bị chặn.
 
 ## 3. Chuẩn bị PostgreSQL
 

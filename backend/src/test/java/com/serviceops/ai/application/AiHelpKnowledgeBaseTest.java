@@ -195,7 +195,8 @@ class AiHelpKnowledgeBaseTest {
         assertThat(decision.topic().answer())
                 .contains("tồn sau")
                 .contains("kỹ thuật viên nhận / trả")
-                .contains("nhân viên kho thực hiện giao dịch");
+                .contains("nhân viên kho thực hiện giao dịch")
+                .doesNotContain("snapshot");
     }
 
     @Test
@@ -471,7 +472,8 @@ class AiHelpKnowledgeBaseTest {
                 .contains("tài khoản/QR công ty")
                 .contains("chỉ đọc")
                 .contains("không SETTLED")
-                .contains("CSKH");
+                .contains("CSKH")
+                .doesNotContain("snapshot");
     }
 
 

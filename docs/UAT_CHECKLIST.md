@@ -80,7 +80,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | FILE-01 | Upload JPG/PNG/WEBP/PDF dưới 10 MB | File lưu và tải lại được |
 | FILE-02 | Upload loại file không cho phép | HTTP 400 INVALID_FILE_TYPE |
 | FILE-03 | Asset chưa có SR/WO nhưng còn attachment rồi thử hard-delete Asset | HTTP 409 `ASSET_HAS_ATTACHMENTS`; metadata/file không orphan |
-| FILE-04 | Service Request chưa convert nhưng còn attachment rồi thử hard-delete | HTTP 409 `SERVICE_REQUEST_HAS_ATTACHMENTS`; metadata/file không orphan |
+| FILE-04 | Service Request đang `OPEN` có attachment rồi chọn **Hủy yêu cầu** | Request chuyển `CANCELLED`; record và attachment vẫn tồn tại để truy vết, không có hard-delete action/API |
 | FILE-05 | Assigned Technician upload nhiều ảnh/PDF khi Work Order đang active | Tab **Hình ảnh & tài liệu** hiển thị đủ file; uploader có thể xem/tải/đổi tên/xóa file của mình |
 | FILE-06 | Work Order chuyển `CUSTOMER_ACCEPTED`, sau đó thử rename/delete/upload work evidence | Bị chặn; hồ sơ sửa chữa chỉ còn read-only |
 | FILE-07 | Technician tải ảnh payment evidence nhưng chưa báo chuyển khoản | Có thể chụp lại/bỏ ảnh nháp; ảnh không xuất hiện lẫn trong tab **Hình ảnh & tài liệu** |

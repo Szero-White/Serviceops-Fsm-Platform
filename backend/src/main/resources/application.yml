@@ -63,4 +63,6 @@ serviceops:
     gemini-api-key: ${GEMINI_API_KEY:}
     gemini-base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
     gemini-model: ${GEMINI_MODEL:gemini-3.6-flash}
-    timeout: ${AI_TIMEOUT:20s}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:4s}
+    suggestion-timeout: ${AI_SUGGESTION_TIMEOUT:12s}
+    help-timeout: ${AI_HELP_TIMEOUT:18s}

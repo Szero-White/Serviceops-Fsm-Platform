@@ -55,7 +55,7 @@ Vì vậy application layer phải bảo vệ integrity:
 - upload/list/download resolve parent và kiểm tra ownership;
 - `attachments.purpose` phân biệt `GENERAL`, `WORK_EVIDENCE`, `PAYMENT_EVIDENCE`; `locked_at` khóa evidence thanh toán sau khi liên kết Payment;
 - Work Order finalized (`CUSTOMER_ACCEPTED`/`CLOSED`/`CANCELLED`) làm `WORK_EVIDENCE` read-only ở application layer;
-- Asset/Service Request không được hard-delete khi còn attachment;
+- Asset không được hard-delete khi còn attachment; Service Request dùng `CANCELLED` và không có hard-delete API;
 - xóa attachment xóa metadata trong transaction và dọn physical file sau commit.
 
 ## Quan hệ chính
