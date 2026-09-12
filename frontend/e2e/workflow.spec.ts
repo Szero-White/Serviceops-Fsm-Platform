@@ -36,8 +36,10 @@ test('Customer Service can receive a service request and convert it to a work or
   await page.getByPlaceholder('Tìm tiêu đề, mô tả, khách hàng hoặc serial').fill(title)
   const requestRow = page.locator('tbody tr').filter({ hasText: title })
   await expect(requestRow).toBeVisible()
-  await requestRow.getByRole('button', { name: 'Chuyển sang điều phối' }).click()
-  await page.locator('.ant-popconfirm').getByRole('button', { name: 'Chuyển sang điều phối', exact: true }).click()
+  await requestRow.getByRole('button', { name: 'Tạo phiếu công việc và chuyển sang Điều phối' }).click()
+  const conversionModal = modalByTitle(page, 'Xác nhận tạo phiếu công việc')
+  await expect(conversionModal).toBeVisible()
+  await conversionModal.getByRole('button', { name: 'Tạo phiếu & chuyển điều phối', exact: true }).click()
   await expect(page.getByText(/Đã chuyển sang điều phối · WO-/).last()).toBeVisible()
 
   await page.goto('/work-orders')

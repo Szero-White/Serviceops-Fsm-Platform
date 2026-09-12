@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { apiJson, login, watchRuntime } from './support/serviceops'
+import { apiJson, login, modalByTitle, watchRuntime } from './support/serviceops'
 
 type WorkOrderResponse = {
   id: string
@@ -284,7 +284,12 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   await page.getByRole('tab', { name: 'Thanh toán' }).click()
 
   await page.getByRole('button', { name: 'Xác nhận đã nhận bàn giao tiền' }).click()
-  await page.getByRole('button', { name: 'Xác nhận đã đối soát' }).click()
+  const cashHandoverModal = modalByTitle(page, 'Xác nhận đã nhận bàn giao tiền')
+  await expect(cashHandoverModal).toBeVisible()
+  await cashHandoverModal.getByRole('checkbox').check()
+  const confirmSettlement = cashHandoverModal.getByRole('button', { name: 'Xác nhận đã đối soát', exact: true })
+  await expect(confirmSettlement).toBeEnabled()
+  await confirmSettlement.click()
   await expect(page.getByText('Đã đối soát', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Phát hành / tải biên nhận' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Đóng phiếu' })).toBeVisible()
