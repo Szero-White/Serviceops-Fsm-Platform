@@ -21,6 +21,12 @@ public final class PaymentDtos {
     public record CounterSettlementRequest(@NotNull PaymentMethod method) {
     }
 
+    public record PaymentQueueSummaryResponse(
+            long pendingReconciliationCount,
+            long pendingClosureCount
+    ) {
+    }
+
     public record PaymentResponse(
             UUID id,
             UUID workOrderId,

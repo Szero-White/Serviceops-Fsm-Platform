@@ -28,6 +28,11 @@ export interface WorkOrderBilling {
 export type PaymentMethod = 'BANK_TRANSFER' | 'CASH'
 export type PaymentStatus = 'UNPAID' | 'TRANSFER_PENDING_VERIFICATION' | 'CASH_PENDING_HANDOVER' | 'COUNTER_PAYMENT_PENDING' | 'SETTLED'
 
+export interface PaymentQueueSummary {
+  pendingReconciliationCount: number
+  pendingClosureCount: number
+}
+
 export interface Payment {
   id: string
   workOrderId: string

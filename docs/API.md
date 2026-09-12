@@ -224,3 +224,9 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.
+
+### Payment queue summary
+
+GET /api/v1/payments/summary
+- Quyền: `OWNER`, `CUSTOMER_SERVICE`
+- Trả về hai chỉ báo toàn hàng đợi: số khoản chưa ở trạng thái `SETTLED` và số phiếu đã `SETTLED` nhưng Work Order vẫn ở `CUSTOMER_ACCEPTED` (chưa đóng).

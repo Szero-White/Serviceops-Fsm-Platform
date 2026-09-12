@@ -47,6 +47,13 @@ export function PaymentQueuePage() {
     placeholderData: keepPreviousData,
   })
   const data = query.data
+  const summaryQuery = useQuery({
+    queryKey: ['payments', 'summary'],
+    queryFn: paymentsApi.summary,
+  })
+  const summary = summaryQuery.data
+  const pendingReconciliationCount = summaryQuery.isPending ? '…' : summaryQuery.isError ? '—' : (summary?.pendingReconciliationCount ?? 0)
+  const pendingClosureCount = summaryQuery.isPending ? '…' : summaryQuery.isError ? '—' : (summary?.pendingClosureCount ?? 0)
 
   useEffect(() => setPage(0), [search, statuses])
   useEffect(() => {
@@ -95,7 +102,16 @@ export function PaymentQueuePage() {
         eyebrow="Đối soát dịch vụ"
         title="Cần xử lý thanh toán"
         description="Theo dõi khoản chưa thanh toán, chuyển khoản chờ xác minh, tiền mặt chờ bàn giao hoặc khách hẹn thanh toán trực tiếp tại quầy."
-        meta={<><MetaBadge tone="warning">{data?.totalElements ?? 0} khoản</MetaBadge>{user?.role === 'OWNER' ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
+        meta={<>
+          <MetaBadge tone="warning">{data?.totalElements ?? 0} khoản</MetaBadge>
+          <MetaBadge tone={(summary?.pendingReconciliationCount ?? 0) > 0 ? 'warning' : 'neutral'}>
+            Chưa đối soát thanh toán: {pendingReconciliationCount}
+          </MetaBadge>
+          <MetaBadge tone={(summary?.pendingClosureCount ?? 0) > 0 ? 'warning' : 'neutral'}>
+            Chưa đóng phiếu: {pendingClosureCount}
+          </MetaBadge>
+          {user?.role === 'OWNER' ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}
+        </>}
       />
 
       <div className="table-toolbar toolbar-row">

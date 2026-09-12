@@ -1,5 +1,5 @@
 import { http } from '../../api/http'
-import type { CompanyPaymentProfile, PageResponse, Payment, PaymentStatus, WorkOrder, WorkOrderBilling } from '../../types'
+import type { CompanyPaymentProfile, PageResponse, Payment, PaymentQueueSummary, PaymentStatus, WorkOrder, WorkOrderBilling } from '../../types'
 
 export type CustomerAcceptancePayload = {
   technicianReviewed: true
@@ -21,6 +21,8 @@ export const paymentsApi = {
     http.get<Payment>(`/work-orders/${workOrderId}/payment`).then((response) => response.data),
   list: (params: { statuses?: PaymentStatus[]; search?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
     http.get<PageResponse<Payment>>('/payments', { params: { ...params, statuses: undefined, status: params.statuses?.length ? params.statuses.join(',') : undefined } }).then((response) => response.data),
+  summary: () =>
+    http.get<PaymentQueueSummary>('/payments/summary').then((response) => response.data),
   reportTransfer: (workOrderId: string, evidenceAttachmentId?: string) =>
     http.post<Payment>(`/work-orders/${workOrderId}/payment/report-transfer`, { evidenceAttachmentId }).then((response) => response.data),
   collectCash: (workOrderId: string) =>
