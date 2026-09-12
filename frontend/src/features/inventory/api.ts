@@ -9,10 +9,10 @@ export const inventoryApi = {
   setActive: (id: string, active: boolean) => http.patch<SparePart>(`/spare-parts/${id}/active`, { active }).then((response) => response.data),
   importStock: (id: string, payload: { quantity: number; note: string }) => http.post<SparePart>(`/spare-parts/${id}/import`, payload).then((response) => response.data),
   stocktake: (id: string, payload: { actualQuantity: number; reason: string }) => http.post<StocktakeResult>(`/spare-parts/${id}/stocktake`, payload).then((response) => response.data),
-  transactions: (params: { search?: string; type?: InventoryTransactionType; fromTime?: string; toTime?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
-    http.get<PageResponse<InventoryTransaction>>('/inventory-transactions', { params }).then((response) => response.data),
-  partRequests: (params: { status?: WorkOrderPartRequestStatus; search?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
-    http.get<PageResponse<WorkOrderPartRequest>>('/part-requests', { params }).then((response) => response.data),
+  transactions: (params: { search?: string; types?: InventoryTransactionType[]; fromTime?: string; toTime?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
+    http.get<PageResponse<InventoryTransaction>>('/inventory-transactions', { params: { ...params, types: undefined, type: params.types?.length ? params.types.join(',') : undefined } }).then((response) => response.data),
+  partRequests: (params: { statuses?: WorkOrderPartRequestStatus[]; search?: string; page?: number; size?: number; sortBy?: string; sortDir?: 'asc' | 'desc' }) =>
+    http.get<PageResponse<WorkOrderPartRequest>>('/part-requests', { params: { ...params, statuses: undefined, status: params.statuses?.length ? params.statuses.join(',') : undefined } }).then((response) => response.data),
   outstandingParts: (search = '') =>
     http.get<OutstandingPart[]>('/part-outstanding', { params: { search } }).then((response) => response.data),
   workOrderPartRequests: (workOrderId: string) =>

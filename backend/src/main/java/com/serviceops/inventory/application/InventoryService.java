@@ -163,13 +163,13 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<InventoryTransactionResponse> searchTransactions(String search, InventoryTransactionType type, Instant fromTime, Instant toTime, int page, int size) {
+    public PageResponse<InventoryTransactionResponse> searchTransactions(String search, List<InventoryTransactionType> type, Instant fromTime, Instant toTime, int page, int size) {
         return searchTransactions(search, type, fromTime, toTime, page, size, "createdAt", "desc");
     }
 
     @Transactional(readOnly = true)
     public PageResponse<InventoryTransactionResponse> searchTransactions(String search,
-                                                                          InventoryTransactionType type,
+                                                                          List<InventoryTransactionType> type,
                                                                           Instant fromTime,
                                                                           Instant toTime,
                                                                           int page,
@@ -181,9 +181,9 @@ public class InventoryService {
         }
         var sort = PageRequestSupport.safeSort(sortBy, sortDir, TRANSACTION_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         var pageable = PageRequestSupport.of(page, size, sort);
-        List<InventoryTransactionType> types = type == null
+        List<InventoryTransactionType> types = type == null || type.isEmpty()
                 ? List.of(InventoryTransactionType.values())
-                : List.of(type);
+                : type;
         Instant effectiveFromTime = fromTime == null ? INVENTORY_HISTORY_MIN_TIME : fromTime;
         Instant effectiveToTime = toTime == null ? INVENTORY_HISTORY_MAX_TIME : toTime;
 

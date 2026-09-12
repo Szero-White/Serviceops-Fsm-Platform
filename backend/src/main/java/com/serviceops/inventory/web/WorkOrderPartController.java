@@ -51,7 +51,7 @@ public class WorkOrderPartController {
     @GetMapping("/part-requests")
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public PageResponse<PartRequestResponse> partRequests(
-            @RequestParam(required = false) WorkOrderPartRequestStatus status,
+            @RequestParam(required = false) List<WorkOrderPartRequestStatus> status,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,7 +30,7 @@ public class WorkOrderController {
 
     @GetMapping
     public PageResponse<WorkOrderResponse> search(@RequestParam(defaultValue = "") String search,
-                                                  @RequestParam(required = false) WorkOrderStatus status,
+                                                  @RequestParam(required = false) List<WorkOrderStatus> status,
                                                   @RequestParam(defaultValue = "0") int page,
                                                   @RequestParam(defaultValue = "20") int size,
                                                   @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -40,7 +41,7 @@ public class WorkOrderController {
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
     public PageResponse<WorkOrderResponse> history(@RequestParam(defaultValue = "") String search,
-                                                   @RequestParam(required = false) WorkOrderStatus status,
+                                                   @RequestParam(required = false) List<WorkOrderStatus> status,
                                                    @RequestParam(defaultValue = "0") int page,
                                                    @RequestParam(defaultValue = "20") int size,
                                                    @RequestParam(defaultValue = "createdAt") String sortBy,

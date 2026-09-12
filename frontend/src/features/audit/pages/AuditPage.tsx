@@ -1,8 +1,9 @@
 import { ClearOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Empty, Input, Select, Table } from 'antd'
+import { Button, DatePicker, Empty, Input, Table } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
@@ -59,8 +60,8 @@ export function AuditPage() {
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [searchInput, setSearchInput] = useState('')
   const [actorInput, setActorInput] = useState('')
-  const [action, setAction] = useState<string>()
-  const [entityType, setEntityType] = useState<string>()
+  const [actions, setActions] = useState<string[]>([])
+  const [entityTypes, setEntityTypes] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null)
   const search = useDebouncedValue(searchInput.trim())
   const actor = useDebouncedValue(actorInput.trim())
@@ -74,12 +75,12 @@ export function AuditPage() {
 
   const queryKey = useMemo(() => [
     'audit',
-    { page, size: LIST_PAGE_SIZE, search, actor, action, entityType, from, to, sort },
-  ], [page, search, actor, action, entityType, from, to, sort])
+    { page, size: LIST_PAGE_SIZE, search, actor, actions, entityTypes, from, to, sort },
+  ], [page, search, actor, actions, entityTypes, from, to, sort])
 
   const auditQuery = useQuery({
     queryKey,
-    queryFn: () => auditApi.list({ page, size: LIST_PAGE_SIZE, query: search, actor, action, entityType, from, to, sortBy: sort.sortBy, sortDir: sort.sortDir }),
+    queryFn: () => auditApi.list({ page, size: LIST_PAGE_SIZE, query: search, actor, actions, entityTypes, from, to, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = auditQuery
@@ -91,8 +92,8 @@ export function AuditPage() {
   const resetFilters = () => {
     setSearchInput('')
     setActorInput('')
-    setAction(undefined)
-    setEntityType(undefined)
+    setActions([])
+    setEntityTypes([])
     setDateRange(null)
     setPage(0)
   }
@@ -141,24 +142,8 @@ export function AuditPage() {
           value={actorInput}
           onChange={(event) => setActorInput(event.target.value)}
         />
-        <Select
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="Tất cả hành động"
-          value={action}
-          onChange={(value) => { setAction(value); setPage(0) }}
-          options={auditActionOptions}
-        />
-        <Select
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="Tất cả đối tượng"
-          value={entityType}
-          onChange={(value) => { setEntityType(value); setPage(0) }}
-          options={auditEntityOptions}
-        />
+        <CheckboxFilterSelect searchable placeholder="Tất cả hành động" ariaLabel="Lọc hành động audit" value={actions} onChange={(value) => { setActions(value); setPage(0) }} options={auditActionOptions} minWidth={220} />
+        <CheckboxFilterSelect searchable placeholder="Tất cả đối tượng" ariaLabel="Lọc đối tượng audit" value={entityTypes} onChange={(value) => { setEntityTypes(value); setPage(0) }} options={auditEntityOptions} minWidth={210} />
         <Button icon={<ClearOutlined />} onClick={resetFilters}>Đặt lại</Button>
       </div>
 

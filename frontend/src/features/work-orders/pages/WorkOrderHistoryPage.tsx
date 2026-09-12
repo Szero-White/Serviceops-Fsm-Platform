@@ -1,9 +1,10 @@
-import { DeleteOutlined, DownloadOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import { App, Button, Descriptions, Drawer, Empty, Input, Popconfirm, Space, Table, Tooltip, Typography } from 'antd'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
@@ -21,13 +22,15 @@ import { paymentsApi } from '../../payments/api'
 import { workOrdersApi } from '../api'
 import { WorkOrderActivityTimeline } from '../components/WorkOrderActivityTimeline'
 
-const historyStatusOptions: Array<{ value: Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>; label: string }> = [
+const historyStatusOptions = [
+  { value: 'CUSTOMER_ACCEPTED', label: 'Chờ hoàn tất hồ sơ' },
   { value: 'CLOSED', label: 'Đã đóng' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ]
 
 export function WorkOrderHistoryPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const canDelete = user?.role === 'OWNER'
   const canDownloadReceipt = Boolean(user?.role && ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role))
@@ -35,7 +38,7 @@ export function WorkOrderHistoryPage() {
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<Extract<WorkOrderStatus, 'CLOSED' | 'CANCELLED'>>()
+  const [statuses, setStatuses] = useState<WorkOrderStatus[]>([])
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const { message } = App.useApp()
   const queryClient = useQueryClient()
@@ -49,8 +52,8 @@ export function WorkOrderHistoryPage() {
   }
 
   const historyQuery = useQuery({
-    queryKey: ['work-order-history', { search, status, page, size: LIST_PAGE_SIZE, sort }],
-    queryFn: () => workOrdersApi.history(search, status, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
+    queryKey: ['work-order-history', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => workOrdersApi.history(search, statuses, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = historyQuery
@@ -102,10 +105,10 @@ export function WorkOrderHistoryPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="Lưu trữ dịch vụ"
+        eyebrow="Theo dõi hồ sơ dịch vụ"
         title="Lịch sử phiếu công việc"
-        description="Tra cứu phiếu đã đóng hoặc đã hủy, xem lại toàn bộ tiến trình và tải biên nhận thanh toán đã phát hành."
-        meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu lưu trữ`}</MetaBadge>}
+        description="Tra cứu hồ sơ chờ hoàn tất, phiếu đã đóng hoặc đã hủy và xem lại toàn bộ tiến trình xử lý."
+        meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
       />
 
       <div className="table-toolbar toolbar-row">
@@ -116,12 +119,13 @@ export function WorkOrderHistoryPage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
-        <Select
-          allowClear
+        <CheckboxFilterSelect
           placeholder="Tất cả trạng thái"
-          value={status}
-          onChange={(value) => { setStatus(value); setPage(0) }}
+          ariaLabel="Lọc trạng thái lịch sử phiếu"
+          value={statuses}
+          onChange={(value) => { setStatuses(value as WorkOrderStatus[]); setPage(0) }}
           options={historyStatusOptions}
+          minWidth={220}
         />
       </div>
 
@@ -179,7 +183,7 @@ export function WorkOrderHistoryPage() {
             ),
           },
           { title: 'Kỹ thuật viên', dataIndex: 'technicianName', width: 180, ...serverSortable(sort, 'technicianName'), render: (value) => value || EMPTY_VALUE },
-          { title: 'Trạng thái', dataIndex: 'status', width: 150, ...serverSortable(sort, 'status'), render: (value) => <StatusTag status={value} /> },
+          { title: 'Trạng thái', dataIndex: 'status', width: 175, ...serverSortable(sort, 'status'), render: (value) => value === 'CUSTOMER_ACCEPTED' ? <MetaBadge tone="warning">Chờ hoàn tất hồ sơ</MetaBadge> : <StatusTag status={value} /> },
           { title: 'Hoàn thành', dataIndex: 'completedAt', width: 170, ...serverSortable(sort, 'completedAt'), render: formatDateTime },
           { title: 'Ngày tạo', dataIndex: 'createdAt', width: 170, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
           {
@@ -189,10 +193,20 @@ export function WorkOrderHistoryPage() {
             render: (_, record) => (
               <Space size={4}>
                 <Button aria-label="Xem chi tiết" type="text" icon={<EyeOutlined />} onClick={() => selectHistoryWorkOrder(record.id)} />
+                {record.status === 'CUSTOMER_ACCEPTED' && user?.role === 'CUSTOMER_SERVICE' && (
+                  <Tooltip title="Thanh toán đã đối soát. Vui lòng đóng phiếu để hoàn tất hồ sơ.">
+                    <Button
+                      aria-label="Hoàn tất hồ sơ"
+                      type="text"
+                      icon={<CheckCircleOutlined />}
+                      onClick={() => navigate(`/payments?workOrder=${encodeURIComponent(record.code)}`)}
+                    />
+                  </Tooltip>
+                )}
                 {record.status === 'CLOSED' && canDownloadReceipt && (
                   <Button aria-label="Tải biên nhận" type="text" icon={<DownloadOutlined />} onClick={() => downloadReceipt(record)} />
                 )}
-                {canDelete && (
+                {canDelete && record.status !== 'CUSTOMER_ACCEPTED' && (
                   <Popconfirm
                     title="Xóa phiếu khỏi lịch sử?"
                     description="Phiếu chỉ được ẩn khỏi danh sách tra cứu. Dữ liệu audit và liên kết nghiệp vụ vẫn được giữ trong hệ thống."
@@ -227,7 +241,7 @@ export function WorkOrderHistoryPage() {
             {detail.status === 'CLOSED' && canDownloadReceipt && (
               <Button icon={<DownloadOutlined />} onClick={() => downloadReceipt(detail)}>Tải biên nhận</Button>
             )}
-            {canDelete && (
+            {canDelete && detail.status !== 'CUSTOMER_ACCEPTED' && (
               <Popconfirm
                 title="Xóa phiếu khỏi lịch sử?"
                 description="Phiếu chỉ được ẩn khỏi danh sách tra cứu."
@@ -251,7 +265,11 @@ export function WorkOrderHistoryPage() {
         ) : detail ? (
           <Space direction="vertical" size={24} style={{ width: '100%' }}>
             <Descriptions className="detail-descriptions" column={2} bordered size="small">
-              <Descriptions.Item label="Trạng thái"><StatusTag status={detail.status} /></Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {detail.status === 'CUSTOMER_ACCEPTED'
+                  ? <MetaBadge tone="warning">Chờ hoàn tất hồ sơ</MetaBadge>
+                  : <StatusTag status={detail.status} />}
+              </Descriptions.Item>
               <Descriptions.Item label="Ưu tiên"><PriorityTag priority={detail.priority} /></Descriptions.Item>
               <Descriptions.Item label="Khách hàng">{detail.customerName}</Descriptions.Item>
               <Descriptions.Item label="Thiết bị">{detail.assetLabel ?? 'Chưa xác định'}</Descriptions.Item>

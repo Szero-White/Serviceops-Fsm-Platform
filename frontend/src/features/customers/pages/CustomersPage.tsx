@@ -1,9 +1,10 @@
 import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography, Upload } from 'antd'
+import { App, Button, Dropdown, Empty, Form, Input, Modal, Popconfirm, Space, Switch, Table, Typography, Upload } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { customersApi } from '../../customers/api'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { CsvImportPreviewModal } from '../../../components/CsvImportPreviewModal'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -17,10 +18,9 @@ import { useAuth } from '../../auth/AuthContext'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 import { compareText, resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
-type CustomerStatusFilter = 'all' | 'active' | 'inactive'
+type CustomerStatusFilter = 'active' | 'inactive'
 
 const CUSTOMER_STATUS_FILTER_OPTIONS = [
-  { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'active', label: 'Hoạt động' },
   { value: 'inactive', label: 'Ngừng hoạt động' },
 ] satisfies Array<{ value: CustomerStatusFilter; label: string }>
@@ -29,11 +29,11 @@ export function CustomersPage() {
   const { user } = useAuth()
   const canManage = user?.role === 'OWNER' || user?.role === 'CUSTOMER_SERVICE'
   const [searchInput, setSearchInput] = useState('')
-  const [statusFilter, setStatusFilter] = useState<CustomerStatusFilter>('all')
+  const [statusFilters, setStatusFilters] = useState<CustomerStatusFilter[]>([])
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
-  const activeFilter = statusFilter === 'all' ? undefined : statusFilter === 'active'
+  const activeFilter = statusFilters.length === 1 ? statusFilters[0] === 'active' : undefined
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Customer>()
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
@@ -44,7 +44,7 @@ export function CustomersPage() {
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const customersQuery = useQuery({
-    queryKey: ['customers', { search, statusFilter, page, size: LIST_PAGE_SIZE, sort }],
+    queryKey: ['customers', { search, statusFilters, page, size: LIST_PAGE_SIZE, sort }],
     queryFn: () => customersApi.list(search, page, LIST_PAGE_SIZE, activeFilter, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
@@ -210,9 +210,7 @@ export function CustomersPage() {
         meta={
           <>
             <MetaBadge>{customersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>
-            <MetaBadge tone={statusFilter === 'all' ? 'neutral' : 'info'}>
-              {CUSTOMER_STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilter)?.label}
-            </MetaBadge>
+            <MetaBadge tone={statusFilters.length === 1 ? 'info' : 'neutral'}>{statusFilters.length === 1 ? CUSTOMER_STATUS_FILTER_OPTIONS.find((option) => option.value === statusFilters[0])?.label : 'Tất cả trạng thái'}</MetaBadge>
           </>
         }
       />
@@ -225,14 +223,12 @@ export function CustomersPage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
-        <Select
-          aria-label="Lọc trạng thái khách hàng"
-          value={statusFilter}
+        <CheckboxFilterSelect
+          ariaLabel="Lọc trạng thái khách hàng"
+          placeholder="Tất cả trạng thái"
+          value={statusFilters}
           options={CUSTOMER_STATUS_FILTER_OPTIONS}
-          onChange={(value) => {
-            setStatusFilter(value)
-            setPage(0)
-          }}
+          onChange={(value) => { setStatusFilters(value as CustomerStatusFilter[]); setPage(0) }}
         />
       </CardlessTableToolbar>
 

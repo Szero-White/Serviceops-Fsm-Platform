@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -103,7 +104,7 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public PageResponse<InventoryTransactionResponse> transactions(
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(required = false) InventoryTransactionType type,
+            @RequestParam(required = false) List<InventoryTransactionType> type,
             @RequestParam(required = false) Instant fromTime,
             @RequestParam(required = false) Instant toTime,
             @RequestParam(defaultValue = "0") int page,

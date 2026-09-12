@@ -54,13 +54,13 @@ public class WorkOrderPartQueryService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<PartRequestResponse> searchRequests(WorkOrderPartRequestStatus status, String search, int page, int size) {
+    public PageResponse<PartRequestResponse> searchRequests(List<WorkOrderPartRequestStatus> status, String search, int page, int size) {
         return searchRequests(status, search, page, size, "createdAt", "desc");
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PartRequestResponse> searchRequests(
-            WorkOrderPartRequestStatus status,
+            List<WorkOrderPartRequestStatus> status,
             String search,
             int page,
             int size,
@@ -73,9 +73,12 @@ public class WorkOrderPartQueryService {
         );
         var sort = PageRequestSupport.safeSort(sortBy, sortDir, REQUEST_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         var pageable = PageRequestSupport.of(page, size, sort);
+        List<WorkOrderPartRequestStatus> statuses = status == null || status.isEmpty()
+                ? List.of(WorkOrderPartRequestStatus.values())
+                : status;
         return PageResponse.from(requestRepository.search(
                 CurrentUser.tenantId(),
-                status,
+                statuses,
                 PageRequestSupport.normalizeSearch(search),
                 pageable
         ).map(WorkOrderPartResponseMapper::toRequestResponse));

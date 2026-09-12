@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,7 +34,7 @@ public class PaymentController {
     @GetMapping("/payments")
     @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
     public PageResponse<PaymentResponse> payments(
-            @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(required = false) List<PaymentStatus> status,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

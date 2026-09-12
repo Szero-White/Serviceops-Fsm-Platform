@@ -27,7 +27,9 @@ Technician chọn: khách đã chuyển khoản / đã nhận tiền mặt / kh�
         ↓
 CSKH đối soát hoặc trực tiếp thu tại quầy → SETTLED → biên nhận thanh toán
         ↓
-CSKH đóng phiếu → CLOSED → Lịch sử phiếu
+Nếu chưa đóng: hồ sơ xuất hiện tại Lịch sử phiếu với trạng thái “Chờ hoàn tất hồ sơ”
+        ↓
+CSKH đóng phiếu → CLOSED → tiếp tục được lưu tại Lịch sử phiếu
         ↓
 Dashboard + timeline + audit + notification được cập nhật
 ```
@@ -104,7 +106,7 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 - `DISPATCHER`: Customer/Asset read-only để lấy ngữ cảnh điều phối; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation và lịch sử phiếu. Không tiếp nhận Service Request, không xem Audit toàn hệ thống hoặc xác nhận/đóng phiếu.
 - `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
 - `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; tạo/sửa/hủy yêu cầu phụ tùng, ghi actual-used, billing draft và ghi nhận khách xác nhận tại hiện trường.
-- `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
+- `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; nếu payment đã `SETTLED` nhưng Work Order vẫn `CUSTOMER_ACCEPTED`, hồ sơ được đưa khỏi danh sách vận hành sang **Lịch sử phiếu** với nhãn **Chờ hoàn tất hồ sơ** và action quay lại đúng khoản thanh toán để CSKH đóng phiếu. Có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
 - `OWNER`: quản trị/giám sát, cấu hình bank/QR công ty và xem payment/receipt; không thao tác routine settlement/closure thay role phụ trách.
 - `WAREHOUSE_STAFF`: `/part-requests`, `/inventory`, `/inventory-stocktake`, `/inventory-movements` và API kho; xác nhận cấp/không thể cấp/RETURN, không có Work Order operational dashboard.
 

@@ -1,9 +1,10 @@
 import { CheckCircleOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Input, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import { App, Button, Input, Popconfirm, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -33,20 +34,21 @@ export function PaymentQueuePage() {
   const { user } = useAuth()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('workOrder') ?? '')
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<PaymentStatus>()
+  const [statuses, setStatuses] = useState<PaymentStatus[]>([])
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'updatedAt', sortDir: 'desc' })
   const query = useQuery({
-    queryKey: ['payments', { search, status, page, size: LIST_PAGE_SIZE, sort }],
-    queryFn: () => paymentsApi.list({ search, status, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
+    queryKey: ['payments', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => paymentsApi.list({ search, statuses, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const data = query.data
 
-  useEffect(() => setPage(0), [search, status])
+  useEffect(() => setPage(0), [search, statuses])
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) setPage(Math.max(data.totalPages - 1, 0))
   }, [data, page])
@@ -98,7 +100,7 @@ export function PaymentQueuePage() {
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, khách hàng hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select<PaymentStatus> allowClear placeholder="Tất cả trạng thái" value={status} onChange={setStatus} options={STATUS_OPTIONS} style={{ minWidth: 230 }} />
+        <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái thanh toán" value={statuses} onChange={(value) => setStatuses(value as PaymentStatus[])} options={STATUS_OPTIONS} minWidth={250} />
       </div>
 
       {query.isError ? <QueryErrorAlert title="Chưa tải được hàng đợi thanh toán" error={query.error} onRetry={() => query.refetch()} /> : null}

@@ -1,11 +1,12 @@
 import { SearchOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Form, Input, Select } from 'antd'
+import { App, Form, Input } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorCode, apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
@@ -35,7 +36,7 @@ export function WorkOrdersPage() {
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<WorkOrderStatus>()
+  const [statuses, setStatuses] = useState<WorkOrderStatus[]>([])
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -75,8 +76,8 @@ export function WorkOrdersPage() {
   }
 
   const workOrdersQuery = useQuery({
-    queryKey: ['work-orders', { search, status, page, size: LIST_PAGE_SIZE, sort }],
-    queryFn: () => workOrdersApi.list(search, status, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
+    queryKey: ['work-orders', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => workOrdersApi.list(search, statuses, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = workOrdersQuery
@@ -302,12 +303,12 @@ export function WorkOrdersPage() {
         eyebrow="Vận hành dịch vụ"
         title="Phiếu công việc"
         description="Theo dõi công việc đã được bàn giao từ Customer Service, từ điều phối đến hoàn thành."
-        meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? 'Đang lọc' : 'Tất cả trạng thái'}</MetaBadge></>}
+        meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={statuses.length ? 'info' : 'neutral'}>{statuses.length ? `${statuses.length} trạng thái` : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} />
+        <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái phiếu công việc" value={statuses} onChange={(value) => { setStatuses(value as WorkOrderStatus[]); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} minWidth={220} />
       </div>
 
       {workOrdersQuery.isError && (

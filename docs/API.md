@@ -67,7 +67,7 @@ Hard delete bị chặn khi Asset đã được Service Request/Work Order tham 
 
 ## Service Requests — OWNER / CUSTOMER_SERVICE
 
-- `GET /service-requests?search={text}&status={status}&page={n}&size={n}`
+- `GET /service-requests?search={text}&status={status1,status2}&page={n}&size={n}` — `status` hỗ trợ nhiều giá trị phân tách bằng dấu phẩy; bỏ trống để lấy tất cả
 - `GET /service-requests/{id}`
 - `POST /service-requests`
 - `PUT /service-requests/{id}` — chỉ request còn `OPEN`
@@ -94,8 +94,8 @@ Channel đang được historical Service Request tham chiếu không được x
 
 Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 
-- `GET /work-orders?search={text}&status={status}&page={n}&size={n}`
-- `GET /work-orders/history?search={text}&status={CLOSED|CANCELLED}&page={n}&size={n}`
+- `GET /work-orders?search={text}&status={status1,status2}&page={n}&size={n}` — `status` hỗ trợ nhiều giá trị; danh sách vận hành tự loại hồ sơ `CUSTOMER_ACCEPTED` đã có payment `SETTLED`
+- `GET /work-orders/history?search={text}&status={CUSTOMER_ACCEPTED,CLOSED,CANCELLED}&page={n}&size={n}` — `CUSTOMER_ACCEPTED` chỉ xuất hiện tại history khi payment đã `SETTLED`, biểu diễn hồ sơ **Chờ hoàn tất hồ sơ**; dữ liệu vẫn giữ sort/pagination thông thường, không pin riêng
 - `GET /work-orders/{id}` — detail Work Order và status history tương thích.
 - `GET /work-orders/{id}/timeline` — read model business timeline hợp nhất status, điều phối, REQUEST/ISSUE/USED/RETURN, payment reconciliation và receipt theo thời gian; nguồn dữ liệu gốc vẫn nằm ở từng module, không tạo bảng timeline duplicate.
 - `POST /work-orders/{id}/close` — CUSTOMER_SERVICE only; chỉ thành công khi WO `CUSTOMER_ACCEPTED` và payment `SETTLED`. Closure bảo đảm biên nhận đã được phát hành theo cơ chế idempotent trước khi chuyển sang `CLOSED`.
@@ -150,13 +150,13 @@ Catalog/import/lifecycle — OWNER / WAREHOUSE_STAFF:
 Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 - `POST /spare-parts/{id}/stocktake` — nhập số lượng đếm thực tế; backend tạo `ADJUSTMENT_IN` hoặc `ADJUSTMENT_OUT` khi có chênh lệch. Notification được phát qua application event sau commit: Owner nhận chênh lệch, Warehouse nhận thêm cảnh báo nếu tồn xuống **ngưỡng tồn tối thiểu**.
-- `GET /inventory-transactions` — phân trang/filter theo keyword, loại giao dịch và khoảng thời gian; search bao gồm SKU/tên part, Work Order, người thực hiện, kỹ thuật viên nhận / trả trên `ISSUE`/`RETURN` và ghi chú. `recipientUserId`/`recipientDisplayName` được dùng làm snapshot kỹ thuật viên ở đầu bên kia của giao dịch: người nhận trên `ISSUE`, người trả trên `RETURN`. ISSUE legacy chỉ backfill khi có đúng một match đủ chắc; dữ liệu lịch sử mơ hồ để null thay vì đoán sai.
+- `GET /inventory-transactions` — phân trang/filter theo keyword, **nhiều loại giao dịch** (query `type` nhận danh sách phân tách bằng dấu phẩy) và khoảng thời gian; search bao gồm SKU/tên part, Work Order, người thực hiện, kỹ thuật viên nhận / trả trên `ISSUE`/`RETURN` và ghi chú. `recipientUserId`/`recipientDisplayName` được dùng làm snapshot kỹ thuật viên ở đầu bên kia của giao dịch: người nhận trên `ISSUE`, người trả trên `RETURN`. ISSUE legacy chỉ backfill khi có đúng một match đủ chắc; dữ liệu lịch sử mơ hồ để null thay vì đoán sai.
 - `GET /work-orders/{workOrderId}/parts/{sparePartId}/returnable` — số lượng còn có thể hoàn; workflow mới tính `ISSUE - USED - RETURN`, đồng thời vẫn đọc dữ liệu `CONSUME - RETURN` legacy để tương thích lịch sử.
 - `POST /work-orders/{workOrderId}/parts/{sparePartId}/return` — WAREHOUSE_STAFF xác nhận nhận lại phụ tùng chưa sử dụng; lý do bắt buộc, số lượng không được vượt outstanding. RETURN hợp lệ vẫn được phép sau khi Work Order đã `CLOSED` và không làm mở lại phiếu.
 
 Work Order part request / issue / actual usage:
 
-- `GET /part-requests` — OWNER / WAREHOUSE_STAFF xem hàng đợi và lịch sử yêu cầu phụ tùng; hỗ trợ status/search/pagination.
+- `GET /part-requests` — OWNER / WAREHOUSE_STAFF xem hàng đợi và lịch sử yêu cầu phụ tùng; `status` hỗ trợ nhiều giá trị phân tách bằng dấu phẩy cùng search/pagination.
 - `GET /work-orders/{workOrderId}/part-requests` — các role vận hành được xem lịch sử yêu cầu của một Work Order.
 - `POST /work-orders/{workOrderId}/part-requests` — TECHNICIAN được phân công tạo yêu cầu; **không giảm tồn kho**.
 - `PATCH /part-requests/{requestId}` — TECHNICIAN sửa quantity/note khi request vẫn `REQUESTED`.
@@ -173,7 +173,7 @@ Legacy compatibility:
 ## Payments
 
 - `GET /work-orders/{workOrderId}/payment` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem khoản thanh toán của Work Order sau customer acceptance.
-- `GET /payments` — OWNER / CUSTOMER_SERVICE xem hàng đợi thanh toán; mặc định cập nhật mới nhất trước, hỗ trợ status/search/pagination/sort allow-list.
+- `GET /payments` — OWNER / CUSTOMER_SERVICE xem hàng đợi thanh toán; mặc định cập nhật mới nhất trước, `status` hỗ trợ nhiều giá trị phân tách bằng dấu phẩy cùng search/pagination/sort allow-list.
 - `POST /work-orders/{workOrderId}/payment/report-transfer` — assigned TECHNICIAN ghi nhận khách đã chuyển khoản; payment → `TRANSFER_PENDING_VERIFICATION`.
 - `POST /work-orders/{workOrderId}/payment/collect-cash` — assigned TECHNICIAN ghi nhận đã nhận tiền mặt; payment → `CASH_PENDING_HANDOVER` và lưu custody của kỹ thuật viên.
 - `POST /work-orders/{workOrderId}/payment/pay-at-counter` — assigned TECHNICIAN xác nhận chưa thu tiền và khách sẽ thanh toán trực tiếp với CSKH; payment → `COUNTER_PAYMENT_PENDING`.

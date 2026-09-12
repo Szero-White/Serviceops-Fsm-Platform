@@ -1,8 +1,9 @@
 import { SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { DatePicker, Empty, Input, Select, Table, Typography } from 'antd'
+import { DatePicker, Empty, Input, Table, Typography } from 'antd'
 import type { Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
@@ -32,16 +33,16 @@ function isIncrease(type: InventoryTransactionType) {
 export function InventoryMovementsPage() {
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim())
-  const [type, setType] = useState<InventoryTransactionType | undefined>()
+  const [types, setTypes] = useState<InventoryTransactionType[]>([])
   const [period, setPeriod] = useState<[Dayjs, Dayjs] | null>(null)
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
 
   const transactionsQuery = useQuery({
-    queryKey: ['inventory-transactions', { search, type, period: period?.map((value) => value.toISOString()), page, size: LIST_PAGE_SIZE, sort }],
+    queryKey: ['inventory-transactions', { search, types, period: period?.map((value) => value.toISOString()), page, size: LIST_PAGE_SIZE, sort }],
     queryFn: () => inventoryApi.transactions({
       search,
-      type,
+      types,
       fromTime: period?.[0].startOf('day').toISOString(),
       toTime: period?.[1].endOf('day').toISOString(),
       page,
@@ -53,7 +54,7 @@ export function InventoryMovementsPage() {
   })
   const data = transactionsQuery.data
 
-  useEffect(() => setPage(0), [search, type, period])
+  useEffect(() => setPage(0), [search, types, period])
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) setPage(Math.max(data.totalPages - 1, 0))
   }, [data, page])
@@ -68,7 +69,7 @@ export function InventoryMovementsPage() {
 
       <div className="table-toolbar">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên, mã WO, KTV nhận / trả, người thực hiện hoặc mục đích" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select<InventoryTransactionType> allowClear placeholder="Loại giao dịch" value={type} onChange={setType} style={{ minWidth: 190 }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value: value as InventoryTransactionType, label }))} />
+        <CheckboxFilterSelect placeholder="Loại giao dịch" ariaLabel="Lọc loại giao dịch kho" value={types} onChange={(value) => setTypes(value as InventoryTransactionType[])} minWidth={220} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} />
         <RangePicker value={period} onChange={(value) => setPeriod(value as [Dayjs, Dayjs] | null)} format="DD/MM/YYYY" />
       </div>
 

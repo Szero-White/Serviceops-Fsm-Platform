@@ -1,8 +1,9 @@
 import { InboxOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -27,7 +28,7 @@ export function WorkOrderPartRequestsPage() {
   const { user } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<WorkOrderPartRequestStatus | undefined>('REQUESTED')
+  const [statuses, setStatuses] = useState<WorkOrderPartRequestStatus[]>(['REQUESTED'])
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [unavailableRequest, setUnavailableRequest] = useState<WorkOrderPartRequest>()
@@ -37,13 +38,13 @@ export function WorkOrderPartRequestsPage() {
   const canFulfill = user?.role === 'WAREHOUSE_STAFF'
 
   const requestsQuery = useQuery({
-    queryKey: ['part-requests', { status, search, page, size: LIST_PAGE_SIZE, sort }],
-    queryFn: () => inventoryApi.partRequests({ status, search, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
+    queryKey: ['part-requests', { statuses, search, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => inventoryApi.partRequests({ statuses, search, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const data = requestsQuery.data
 
-  useEffect(() => setPage(0), [search, status])
+  useEffect(() => setPage(0), [search, statuses])
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) setPage(Math.max(data.totalPages - 1, 0))
   }, [data, page])
@@ -92,7 +93,7 @@ export function WorkOrderPartRequestsPage() {
         eyebrow="Kho phụ tùng"
         title="Yêu cầu phụ tùng"
         description="Xử lý đúng các yêu cầu đang chờ cấp. Tồn kho chỉ giảm khi nhân viên kho xác nhận đã giao phụ tùng thực tế cho kỹ thuật viên."
-        meta={<><MetaBadge tone="warning">{status === 'REQUESTED' ? `${data?.totalElements ?? 0} đang chờ` : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge>{!canFulfill ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
+        meta={<><MetaBadge tone="warning">{statuses.length === 1 && statuses[0] === 'REQUESTED' ? `${data?.totalElements ?? 0} đang chờ` : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge>{!canFulfill ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
       />
 
       <div className="table-toolbar toolbar-row">
@@ -103,13 +104,13 @@ export function WorkOrderPartRequestsPage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
-        <Select<WorkOrderPartRequestStatus>
-          allowClear
+        <CheckboxFilterSelect
           placeholder="Tất cả trạng thái"
-          value={status}
-          onChange={setStatus}
-          style={{ minWidth: 190 }}
+          ariaLabel="Lọc trạng thái yêu cầu phụ tùng"
+          value={statuses}
+          onChange={(value) => setStatuses(value as WorkOrderPartRequestStatus[])}
           options={PART_REQUEST_STATUS_OPTIONS}
+          minWidth={210}
         />
       </div>
 
@@ -132,7 +133,7 @@ export function WorkOrderPartRequestsPage() {
             setPage(0)
           }
         }}
-        locale={{ emptyText: <Empty description={status === 'REQUESTED' ? 'Không có yêu cầu nào đang chờ cấp' : 'Không có yêu cầu phù hợp'} /> }}
+        locale={{ emptyText: <Empty description={statuses.length === 1 && statuses[0] === 'REQUESTED' ? 'Không có yêu cầu nào đang chờ cấp' : 'Không có yêu cầu phù hợp'} /> }}
         columns={[
           {
             title: 'Phiếu công việc', width: 210, ...serverSortable(sort, 'workOrderCode'),

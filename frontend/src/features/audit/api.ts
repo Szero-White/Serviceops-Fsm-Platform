@@ -6,8 +6,8 @@ export interface AuditListParams {
   size?: number
   query?: string
   actor?: string
-  action?: string
-  entityType?: string
+  actions?: string[]
+  entityTypes?: string[]
   from?: string
   to?: string
   sortBy?: string
@@ -26,8 +26,8 @@ export const auditApi = {
       size: params.size ?? 20,
       q: clean(params.query),
       actor: clean(params.actor),
-      action: params.action,
-      entityType: params.entityType,
+      action: params.actions?.length ? params.actions.join(',') : undefined,
+      entityType: params.entityTypes?.length ? params.entityTypes.join(',') : undefined,
       from: params.from,
       to: params.to,
       sortBy: params.sortBy ?? 'createdAt',

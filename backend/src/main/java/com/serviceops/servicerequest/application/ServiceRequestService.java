@@ -42,16 +42,17 @@ public class ServiceRequestService {
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
-    public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
+    public PageResponse<ServiceRequestResponse> search(String search, List<ServiceRequestStatus> status, int page, int size) {
         return search(search, status, page, size, "createdAt", "desc");
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size, String sortBy, String sortDir) {
+    public PageResponse<ServiceRequestResponse> search(String search, List<ServiceRequestStatus> status, int page, int size, String sortBy, String sortDir) {
         var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         var pageable = PageRequestSupport.of(page, size, sort);
         String keyword = PageRequestSupport.normalizeSearch(search);
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), status, keyword, pageable).map(ServiceRequestService::toResponse));
+        List<ServiceRequestStatus> statuses = status == null || status.isEmpty() ? List.of(ServiceRequestStatus.values()) : status;
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), statuses, keyword, pageable).map(ServiceRequestService::toResponse));
     }
 
     @Transactional(readOnly = true)

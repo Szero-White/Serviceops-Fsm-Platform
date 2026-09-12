@@ -1,9 +1,10 @@
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Input, Select, Space, Typography } from 'antd'
+import { App, Button, Input, Space, Typography } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import { MetaBadge } from '../../../components/PresentationBadge'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
@@ -32,7 +33,7 @@ export function ServiceRequestsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<TableSortState>(DEFAULT_SORT)
-  const [status, setStatus] = useState<string>('OPEN')
+  const [statuses, setStatuses] = useState<string[]>(['OPEN'])
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ServiceRequest>()
   const [pendingConversion, setPendingConversion] = useState<ServiceRequest>()
@@ -40,8 +41,8 @@ export function ServiceRequestsPage() {
   const canConvert = user ? ['OWNER', 'CUSTOMER_SERVICE'].includes(user.role) : false
 
   const serviceRequestsQuery = useQuery({
-    queryKey: ['service-requests', { search, status, page, size: LIST_PAGE_SIZE, sort }],
-    queryFn: () => serviceRequestsApi.list(search, status, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
+    queryKey: ['service-requests', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => serviceRequestsApi.list(search, statuses, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const channelsQuery = useQuery({ queryKey: ['service-channels'], queryFn: () => serviceChannelsApi.list(false) })
@@ -141,14 +142,14 @@ export function ServiceRequestsPage() {
         meta={(
           <>
             <MetaBadge>{serviceRequestsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge>
-            <MetaBadge tone={status ? 'info' : 'neutral'}>{status ? REQUEST_STATUS_OPTIONS.find((option) => option.value === status)?.label : 'Tất cả trạng thái'}</MetaBadge>
+            <MetaBadge tone={statuses.length ? 'info' : 'neutral'}>{statuses.length === 1 ? REQUEST_STATUS_OPTIONS.find((option) => option.value === statuses[0])?.label : statuses.length ? `${statuses.length} trạng thái` : 'Tất cả trạng thái'}</MetaBadge>
           </>
         )}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tiêu đề, mô tả, khách hàng hoặc serial" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={REQUEST_STATUS_OPTIONS} />
+        <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái yêu cầu dịch vụ" value={statuses} onChange={(value) => { setStatuses(value); setPage(0) }} options={REQUEST_STATUS_OPTIONS} />
       </div>
 
       {serviceRequestsQuery.isError ? (

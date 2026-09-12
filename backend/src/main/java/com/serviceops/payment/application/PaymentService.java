@@ -70,18 +70,19 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<PaymentResponse> search(PaymentStatus status, String search, int page, int size) {
+    public PageResponse<PaymentResponse> search(List<PaymentStatus> status, String search, int page, int size) {
         return search(status, search, page, size, "updatedAt", "desc");
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<PaymentResponse> search(PaymentStatus status, String search, int page, int size, String sortBy, String sortDir) {
+    public PageResponse<PaymentResponse> search(List<PaymentStatus> status, String search, int page, int size, String sortBy, String sortDir) {
         requirePaymentQueueRole();
         var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "updatedAt", Sort.Direction.DESC);
         var pageable = PageRequestSupport.of(page, size, sort);
+        List<PaymentStatus> statuses = status == null || status.isEmpty() ? List.of(PaymentStatus.values()) : status;
         return PageResponse.from(repository.search(
                 CurrentUser.tenantId(),
-                status,
+                statuses,
                 PageRequestSupport.normalizeSearch(search),
                 pageable
         ).map(PaymentService::toResponse));
