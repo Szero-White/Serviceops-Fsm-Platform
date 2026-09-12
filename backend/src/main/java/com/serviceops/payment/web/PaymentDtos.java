@@ -4,6 +4,7 @@ import com.serviceops.payment.domain.PaymentMethod;
 import com.serviceops.payment.domain.PaymentStatus;
 import com.serviceops.workorder.domain.WorkOrderStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -15,6 +16,9 @@ public final class PaymentDtos {
     }
 
     public record TransferReportRequest(UUID evidenceAttachmentId) {
+    }
+
+    public record CounterSettlementRequest(@NotNull PaymentMethod method) {
     }
 
     public record PaymentResponse(
@@ -31,6 +35,7 @@ public final class PaymentDtos {
             UUID transferEvidenceAttachmentId,
             Instant transferReportedAt,
             Instant cashCollectedAt,
+            Instant counterPaymentRequestedAt,
             String collectedByDisplayName,
             Instant settledAt,
             String settledByDisplayName,

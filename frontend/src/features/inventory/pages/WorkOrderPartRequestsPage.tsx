@@ -1,8 +1,9 @@
 import { InboxOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, Modal, Popconfirm, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -14,6 +15,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { inventoryApi } from '../api'
 import { PART_REQUEST_STATUS_LABELS, PART_REQUEST_STATUS_OPTIONS } from '../model/workOrderPartPresentation'
 import { OutstandingPartsTable } from '../components/OutstandingPartsTable'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 function requestTone(status: WorkOrderPartRequestStatus) {
   if (status === 'REQUESTED') return 'warning' as const
@@ -26,8 +28,9 @@ export function WorkOrderPartRequestsPage() {
   const { user } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<WorkOrderPartRequestStatus | undefined>('REQUESTED')
+  const [statuses, setStatuses] = useState<WorkOrderPartRequestStatus[]>(['REQUESTED'])
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [unavailableRequest, setUnavailableRequest] = useState<WorkOrderPartRequest>()
   const [form] = Form.useForm<{ reason: string }>()
   const { message, notification } = App.useApp()
@@ -35,13 +38,13 @@ export function WorkOrderPartRequestsPage() {
   const canFulfill = user?.role === 'WAREHOUSE_STAFF'
 
   const requestsQuery = useQuery({
-    queryKey: ['part-requests', { status, search, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => inventoryApi.partRequests({ status, search, page, size: LIST_PAGE_SIZE }),
+    queryKey: ['part-requests', { statuses, search, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => inventoryApi.partRequests({ statuses, search, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const data = requestsQuery.data
 
-  useEffect(() => setPage(0), [search, status])
+  useEffect(() => setPage(0), [search, statuses])
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) setPage(Math.max(data.totalPages - 1, 0))
   }, [data, page])
@@ -90,7 +93,7 @@ export function WorkOrderPartRequestsPage() {
         eyebrow="Kho phụ tùng"
         title="Yêu cầu phụ tùng"
         description="Xử lý đúng các yêu cầu đang chờ cấp. Tồn kho chỉ giảm khi nhân viên kho xác nhận đã giao phụ tùng thực tế cho kỹ thuật viên."
-        meta={<><MetaBadge tone="warning">{status === 'REQUESTED' ? `${data?.totalElements ?? 0} đang chờ` : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge>{!canFulfill ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
+        meta={<><MetaBadge tone="warning">{statuses.length === 1 && statuses[0] === 'REQUESTED' ? `${data?.totalElements ?? 0} đang chờ` : `${data?.totalElements ?? 0} yêu cầu`}</MetaBadge>{!canFulfill ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
       />
 
       <div className="table-toolbar toolbar-row">
@@ -101,13 +104,13 @@ export function WorkOrderPartRequestsPage() {
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
-        <Select<WorkOrderPartRequestStatus>
-          allowClear
+        <CheckboxFilterSelect
           placeholder="Tất cả trạng thái"
-          value={status}
-          onChange={setStatus}
-          style={{ minWidth: 190 }}
+          ariaLabel="Lọc trạng thái yêu cầu phụ tùng"
+          value={statuses}
+          onChange={(value) => setStatuses(value as WorkOrderPartRequestStatus[])}
           options={PART_REQUEST_STATUS_OPTIONS}
+          minWidth={210}
         />
       </div>
 
@@ -122,19 +125,26 @@ export function WorkOrderPartRequestsPage() {
         className="content-table"
         scroll={{ x: 1260 }}
         pagination={{ current: page + 1, pageSize: LIST_PAGE_SIZE, total: requestsQuery.isError ? 0 : (data?.totalElements ?? 0), showSizeChanger: false }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
-        locale={{ emptyText: <Empty description={status === 'REQUESTED' ? 'Không có yêu cầu nào đang chờ cấp' : 'Không có yêu cầu phù hợp'} /> }}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          const nextSort = resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' })
+          if (nextSort.sortBy !== sort.sortBy || nextSort.sortDir !== sort.sortDir) {
+            setSort(nextSort)
+            setPage(0)
+          }
+        }}
+        locale={{ emptyText: <Empty description={statuses.length === 1 && statuses[0] === 'REQUESTED' ? 'Không có yêu cầu nào đang chờ cấp' : 'Không có yêu cầu phù hợp'} /> }}
         columns={[
           {
-            title: 'Phiếu công việc', width: 210,
+            title: 'Phiếu công việc', width: 210, ...serverSortable(sort, 'workOrderCode'),
             render: (_, request) => <div className="table-primary-cell"><Typography.Text code>{request.workOrderCode}</Typography.Text><Typography.Text type="secondary" ellipsis={{ tooltip: request.workOrderSummary }}>{request.workOrderSummary}</Typography.Text></div>,
           },
-          { title: 'Phụ tùng', width: 240, render: (_, request) => <div className="table-primary-cell"><Typography.Text strong>{request.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{request.sparePartSku}</Typography.Text></div> },
-          { title: 'Số lượng', width: 125, render: (_, request) => formatQuantityWithUnit(request.requestedQuantity, request.unit) },
-          { title: 'Người yêu cầu', width: 190, dataIndex: 'requestedByDisplayName' },
-          { title: 'Mục đích', width: 260, dataIndex: 'note', ellipsis: true },
-          { title: 'Trạng thái', width: 130, render: (_, request) => <MetaBadge tone={requestTone(request.status)}>{PART_REQUEST_STATUS_LABELS[request.status]}</MetaBadge> },
-          { title: 'Thời gian', width: 170, render: (_, request) => formatDateTime(request.resolvedAt || request.issuedAt || request.requestedAt) },
+          { title: 'Phụ tùng', width: 240, ...serverSortable(sort, 'sparePartName'), render: (_, request) => <div className="table-primary-cell"><Typography.Text strong>{request.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{request.sparePartSku}</Typography.Text></div> },
+          { title: 'Số lượng', width: 125, ...serverSortable(sort, 'requestedQuantity'), render: (_, request) => formatQuantityWithUnit(request.requestedQuantity, request.unit) },
+          { title: 'Người yêu cầu', width: 190, dataIndex: 'requestedByDisplayName', ...serverSortable(sort, 'requestedByDisplayName') },
+          { title: 'Mục đích', width: 260, dataIndex: 'note', ellipsis: true, ...serverSortable(sort, 'note') },
+          { title: 'Trạng thái', width: 130, ...serverSortable(sort, 'status'), render: (_, request) => <MetaBadge tone={requestTone(request.status)}>{PART_REQUEST_STATUS_LABELS[request.status]}</MetaBadge> },
+          { title: 'Thời gian', width: 170, ...serverSortable(sort, 'requestedAt'), render: (_, request) => formatDateTime(request.resolvedAt || request.issuedAt || request.requestedAt) },
           {
             title: 'Thao tác', width: 220, fixed: 'right',
             render: (_, request) => canFulfill && request.status === 'REQUESTED' ? (
@@ -155,7 +165,7 @@ export function WorkOrderPartRequestsPage() {
         ]}
       />
 
-      <OutstandingPartsTable search={search} />
+      <OutstandingPartsTable search={search} canReturn={canFulfill} />
 
       <Modal
         title={`Không thể cấp · ${unavailableRequest?.sparePartSku ?? ''}`}

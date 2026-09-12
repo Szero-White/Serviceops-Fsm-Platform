@@ -12,6 +12,7 @@ import type { SparePart } from '../../../types'
 import { formatCompactDecimalInput, formatQuantity, formatQuantityWithUnit } from '../../../utils/format'
 import { inventoryApi } from '../api'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 type StocktakeValues = { actualQuantity: number; reason: string }
 
@@ -19,6 +20,7 @@ export function InventoryStocktakePage() {
   const [searchInput, setSearchInput] = useState('')
   const search = useDebouncedValue(searchInput.trim())
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const [selected, setSelected] = useState<SparePart>()
   const [form] = Form.useForm<StocktakeValues>()
   const handleFormValidationFailed = useFormValidationFeedback()
@@ -26,8 +28,8 @@ export function InventoryStocktakePage() {
   const queryClient = useQueryClient()
 
   const partsQuery = useQuery({
-    queryKey: ['stocktake-parts', { search, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE),
+    queryKey: ['stocktake-parts', { search, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => inventoryApi.list(search, page, LIST_PAGE_SIZE, undefined, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const data = partsQuery.data
@@ -82,18 +84,26 @@ export function InventoryStocktakePage() {
         dataSource={partsQuery.isError ? [] : (data?.content ?? [])}
         className="content-table"
         pagination={{ current: page + 1, pageSize: LIST_PAGE_SIZE, total: partsQuery.isError ? 0 : (data?.totalElements ?? 0), showSizeChanger: false }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          const nextSort = resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' })
+          if (nextSort.sortBy !== sort.sortBy || nextSort.sortDir !== sort.sortDir) {
+            setSort(nextSort)
+            setPage(0)
+          }
+        }}
         locale={{ emptyText: <Empty description="Chưa có phụ tùng phù hợp" /> }}
         columns={[
           {
             title: 'Phụ tùng',
+            ...serverSortable(sort, 'name'),
             render: (_, record) => <div className="table-primary-cell"><Typography.Text strong>{record.name}</Typography.Text><Typography.Text type="secondary" code>{record.sku}</Typography.Text></div>,
           },
-          { title: 'Tồn hệ thống', width: 180, render: (_, record) => formatQuantityWithUnit(record.stockQuantity, record.unit) },
-          { title: 'Ngưỡng tồn tối thiểu', width: 200, render: (_, record) => formatQuantityWithUnit(record.reorderLevel, record.unit) },
-          { title: 'Trạng thái', width: 150, render: (_, record) => <MetaBadge tone={record.active ? 'success' : 'neutral'}>{record.active ? 'Đang sử dụng' : 'Ngừng sử dụng'}</MetaBadge> },
+          { title: 'Tồn hệ thống', width: 180, ...serverSortable(sort, 'stockQuantity'), render: (_, record) => formatQuantityWithUnit(record.stockQuantity, record.unit) },
+          { title: 'Ngưỡng tồn tối thiểu', width: 200, ...serverSortable(sort, 'reorderLevel'), render: (_, record) => formatQuantityWithUnit(record.reorderLevel, record.unit) },
+          { title: 'Trạng thái', width: 150, ...serverSortable(sort, 'active'), render: (_, record) => <MetaBadge tone={record.active ? 'success' : 'neutral'}>{record.active ? 'Đang sử dụng' : 'Ngừng sử dụng'}</MetaBadge> },
           {
-            title: 'Thao tác', width: 150,
+            title: 'Thao tác', width: 150, fixed: 'right' as const,
             render: (_, record) => <Button icon={<AuditOutlined />} onClick={() => { setSelected(record); form.setFieldsValue({ actualQuantity: Number(record.stockQuantity), reason: '' }) }}>Kiểm kê</Button>,
           },
         ]}

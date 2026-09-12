@@ -285,6 +285,23 @@ final class WorkOrderActivityMapper {
                     payment,
                     payment.getCashCollectedAt()
             ));
+        } else if (payment.getCounterPaymentRequestedAt() != null) {
+            String username = null;
+            String displayName = null;
+            if (payment.getWorkOrder().getTechnician() != null && payment.getWorkOrder().getTechnician().getUser() != null) {
+                username = payment.getWorkOrder().getTechnician().getUser().getUsername();
+                displayName = payment.getWorkOrder().getTechnician().getUser().getDisplayName();
+            }
+            activities.add(paymentActivity(
+                    "payment:" + payment.getId() + ":reported",
+                    WorkOrderActivityType.PAYMENT_REPORTED,
+                    "Khách hẹn thanh toán trực tiếp tại quầy CSKH",
+                    username,
+                    displayName,
+                    "TECHNICIAN",
+                    payment,
+                    payment.getCounterPaymentRequestedAt()
+            ));
         }
         if (payment.getSettledAt() != null) {
             activities.add(paymentActivity(

@@ -18,6 +18,7 @@ import { formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareText, resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 const assetStatusOptions = [
   { value: 'ACTIVE', label: 'Hoạt động' },
@@ -31,6 +32,7 @@ export function AssetsPage() {
   const canManage = user?.role === 'OWNER' || user?.role === 'CUSTOMER_SERVICE'
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
   const [open, setOpen] = useState(false)
   const [customerOptionSearchInput, setCustomerOptionSearchInput] = useState('')
@@ -44,8 +46,8 @@ export function AssetsPage() {
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const assetsQuery = useQuery({
-    queryKey: ['assets', { search, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => assetsApi.list(search, page, LIST_PAGE_SIZE),
+    queryKey: ['assets', { search, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => assetsApi.list(search, page, LIST_PAGE_SIZE, undefined, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = assetsQuery
@@ -106,6 +108,10 @@ export function AssetsPage() {
     },
     onSuccess: () => {
       message.success(editing ? 'Đã cập nhật thiết bị' : 'Đã tạo thiết bị')
+      if (!editing) {
+        setPage(0)
+        setSort({ sortBy: 'createdAt', sortDir: 'desc' })
+      }
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
@@ -145,6 +151,8 @@ export function AssetsPage() {
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
         setBulkImportResult(undefined)
+        setPage(0)
+        setSort({ sortBy: 'createdAt', sortDir: 'desc' })
         refreshRelatedViews()
       }
     },
@@ -266,12 +274,16 @@ export function AssetsPage() {
           showSizeChanger: false,
           showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} thiết bị`,
         }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          setSort(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
+        }}
         locale={{ emptyText: <Empty description={assetsQuery.isError ? 'Không thể tải dữ liệu thiết bị' : 'Chưa có thiết bị phù hợp'} /> }}
         columns={[
           {
             title: 'Thiết bị',
             width: 230,
+            ...serverSortable(sort, 'equipment'),
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{[record.brand, record.model].filter(Boolean).join(' ') || record.category}</Typography.Text>
@@ -279,11 +291,12 @@ export function AssetsPage() {
               </div>
             ),
           },
-          { title: 'Khách hàng', dataIndex: 'customerName', width: 180, ellipsis: true },
-          { title: 'Loại', dataIndex: 'category', width: 120 },
+          { title: 'Khách hàng', dataIndex: 'customerName', width: 180, ellipsis: true, ...serverSortable(sort, 'customerName') },
+          { title: 'Loại', dataIndex: 'category', width: 120, ...serverSortable(sort, 'category') },
           {
             title: 'Bảo hành',
             width: 150,
+            ...serverSortable(sort, 'warrantyUntil'),
             render: (_, record) => (
               <div className="table-secondary-stack">
                 <span>{formatDate(record.warrantyUntil)}</span>
@@ -291,22 +304,24 @@ export function AssetsPage() {
               </div>
             ),
           },
-          { title: 'Trạng thái', dataIndex: 'status', width: 130, render: (value) => <StatusTag status={value} /> },
-          { title: 'Ngày lắp', dataIndex: 'installedAt', width: 110, render: formatDate },
+          { title: 'Trạng thái', dataIndex: 'status', width: 130, ...serverSortable(sort, 'status'), render: (value) => <StatusTag status={value} /> },
+          { title: 'Ngày lắp', dataIndex: 'installedAt', width: 110, ...serverSortable(sort, 'installedAt'), render: formatDate },
           {
             title: 'Ghi chú',
             dataIndex: 'notes',
             width: 180,
+            ...serverSortable(sort, 'notes'),
             ellipsis: true,
             render: (value) => value ? <Typography.Text>{value}</Typography.Text> : <Typography.Text type="secondary">Chưa có ghi chú</Typography.Text>,
           },
           {
             title: 'Thao tác',
-            width: 76,
+            width: 100,
+            fixed: 'right' as const,
             hidden: !canManage,
             render: (_, record) => (
               <Space size={4}>
-                <Button aria-label="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
+                <Button aria-label="Sửa thiết bị" title="Sửa thiết bị" type="text" icon={<EditOutlined />} onClick={() => showEdit(record)} />
                 <Popconfirm
                   title="Xóa thiết bị này?"
                   description="Chỉ xóa được khi thiết bị chưa được dùng trong yêu cầu dịch vụ hoặc phiếu công việc."
@@ -315,7 +330,7 @@ export function AssetsPage() {
                   okButtonProps={{ danger: true, loading: remove.isPending }}
                   onConfirm={() => remove.mutate(record.id)}
                 >
-                  <Button aria-label="Xóa thiết bị" type="text" danger icon={<DeleteOutlined />} />
+                  <Button aria-label="Xóa thiết bị" title="Xóa thiết bị" type="text" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </Space>
             ),
@@ -363,8 +378,8 @@ export function AssetsPage() {
         onCancel={() => setBulkImportOpen(false)}
         onCommit={() => commitImport.mutate()}
         columns={[
-          { title: 'Serial', dataIndex: 'serialNumber', width: 180 },
-          { title: 'Mã khách hàng', dataIndex: 'customerCode', width: 160 },
+          { title: 'Serial', dataIndex: 'serialNumber', width: 180, sorter: (a, b) => compareText(a.serialNumber, b.serialNumber) },
+          { title: 'Mã khách hàng', dataIndex: 'customerCode', width: 160, sorter: (a, b) => compareText(a.customerCode, b.customerCode) },
         ]}
       />
     </div>

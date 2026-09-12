@@ -7,6 +7,7 @@ import { apiErrorMessage } from '../../../api/http'
 import { usersApi } from '../api'
 import { useAuth } from '../../auth/AuthContext'
 import { MetricCard } from '../../../components/MetricCard'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { BinaryStatusTag, MetaBadge, RoleTag } from '../../../components/PresentationBadge'
@@ -15,6 +16,7 @@ import { USER_ROLE_LABELS } from '../../../constants/userRoles'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
+import { compareDate, compareNumber, compareText } from '../../../utils/tableSort'
 
 const roleDescriptions: Record<UserRole, string> = {
   OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
@@ -29,10 +31,9 @@ const roleOptions = Object.entries(USER_ROLE_LABELS).map(([value, label]) => ({
   label,
 }))
 
-type UserStatusFilter = 'all' | 'active' | 'inactive'
+type UserStatusFilter = 'active' | 'inactive'
 
 const userStatusFilterOptions: Array<{ value: UserStatusFilter; label: string }> = [
-  { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'active', label: 'Hoạt động' },
   { value: 'inactive', label: 'Tạm ngưng' },
 ]
@@ -52,7 +53,7 @@ function usernameFromName(value: string) {
 
 export function UsersPage() {
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all')
+  const [statusFilters, setStatusFilters] = useState<UserStatusFilter[]>([])
   const [tablePage, setTablePage] = useState(1)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<UserAccount>()
@@ -84,11 +85,11 @@ export function UsersPage() {
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
-    return data.filter((account) => {
+    const matches = data.filter((account) => {
       const statusMatches =
-        statusFilter === 'all'
-        || (statusFilter === 'active' && account.active)
-        || (statusFilter === 'inactive' && !account.active)
+        statusFilters.length === 0
+        || (statusFilters.includes('active') && account.active)
+        || (statusFilters.includes('inactive') && !account.active)
 
       if (!statusMatches) {
         return false
@@ -101,7 +102,9 @@ export function UsersPage() {
       return [account.displayName, account.username, USER_ROLE_LABELS[account.role], account.phone, account.skills]
         .some((value) => value?.toLowerCase().includes(keyword))
     })
-  }, [data, search, statusFilter])
+
+    return matches.sort((a, b) => compareDate(b.createdAt, a.createdAt))
+  }, [data, search, statusFilters])
 
   useEffect(() => {
     const totalPages = Math.max(Math.ceil(filtered.length / LIST_PAGE_SIZE), 1)
@@ -114,7 +117,7 @@ export function UsersPage() {
   const activeCount = data.filter((account) => account.active).length
   const technicianCount = data.filter((account) => account.role === 'TECHNICIAN').length
 
-  const resultCountLabel = search.trim() || statusFilter !== 'all'
+  const resultCountLabel = search.trim() || statusFilters.length > 0
     ? `${filtered.length}/${data.length} tài khoản`
     : `${data.length} tài khoản`
 
@@ -127,15 +130,22 @@ export function UsersPage() {
       return editing ? usersApi.update(editing.id, payload) : usersApi.create(payload)
     },
     onSuccess: (savedAccount) => {
+      const technicianReactivated = Boolean(
+        editing
+        && editing.role === 'TECHNICIAN'
+        && !editing.active
+        && savedAccount.active,
+      )
       notification.success({
         message: editing ? 'Đã cập nhật tài khoản' : 'Đã tạo tài khoản',
-        description: savedAccount.role === 'TECHNICIAN' && savedAccount.active
-          ? `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · Hoạt động. Trạng thái sẵn sàng điều phối của hồ sơ kỹ thuật viên được quản lý riêng.`
+        description: technicianReactivated
+          ? `${savedAccount.displayName} · Kỹ thuật viên · Hoạt động. Trạng thái đã đồng bộ với Đội ngũ kỹ thuật.`
           : `${savedAccount.displayName} · ${USER_ROLE_LABELS[savedAccount.role]} · ${savedAccount.active ? 'Hoạt động' : 'Tạm ngưng'}`,
       })
       setOpen(false)
       setEditing(undefined)
       form.resetFields()
+      setTablePage(1)
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
       queryClient.invalidateQueries({ queryKey: ['work-orders'] })
@@ -193,9 +203,7 @@ export function UsersPage() {
         meta={
           <>
             <MetaBadge>{isError ? 'Lỗi tải dữ liệu' : resultCountLabel}</MetaBadge>
-            <MetaBadge tone={statusFilter === 'all' ? 'neutral' : 'info'}>
-              {userStatusFilterOptions.find((option) => option.value === statusFilter)?.label}
-            </MetaBadge>
+            <MetaBadge tone={statusFilters.length === 1 ? 'info' : 'neutral'}>{statusFilters.length === 1 ? userStatusFilterOptions.find((option) => option.value === statusFilters[0])?.label : 'Tất cả trạng thái'}</MetaBadge>
           </>
         }
       />
@@ -217,14 +225,12 @@ export function UsersPage() {
             setTablePage(1)
           }}
         />
-        <Select
-          aria-label="Lọc trạng thái tài khoản"
-          value={statusFilter}
+        <CheckboxFilterSelect
+          ariaLabel="Lọc trạng thái tài khoản"
+          placeholder="Tất cả trạng thái"
+          value={statusFilters}
           options={userStatusFilterOptions}
-          onChange={(value) => {
-            setStatusFilter(value)
-            setTablePage(1)
-          }}
+          onChange={(value) => { setStatusFilters(value as UserStatusFilter[]); setTablePage(1) }}
         />
       </div>
 
@@ -253,6 +259,7 @@ export function UsersPage() {
           {
             title: 'Người dùng',
             width: 300,
+            sorter: (a, b) => compareText(a.displayName, b.displayName),
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.displayName}</Typography.Text>
@@ -262,13 +269,14 @@ export function UsersPage() {
               </div>
             ),
           },
-          { title: 'Vai trò', dataIndex: 'role', width: 160, render: (role: UserRole) => <RoleTag role={role} /> },
-          { title: 'Phạm vi trách nhiệm', dataIndex: 'role', ellipsis: true, render: (role: UserRole) => roleDescriptions[role] },
-          { title: 'Trạng thái', dataIndex: 'active', width: 140, render: (active: boolean) => <BinaryStatusTag active={active} /> },
-          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, render: formatDateTime },
+          { title: 'Vai trò', dataIndex: 'role', width: 160, sorter: (a, b) => compareText(a.role, b.role), render: (role: UserRole) => <RoleTag role={role} /> },
+          { title: 'Phạm vi trách nhiệm', dataIndex: 'role', ellipsis: true, sorter: (a, b) => compareText(roleDescriptions[a.role], roleDescriptions[b.role]), render: (role: UserRole) => roleDescriptions[role] },
+          { title: 'Trạng thái', dataIndex: 'active', width: 140, sorter: (a, b) => compareNumber(Number(a.active), Number(b.active)), render: (active: boolean) => <BinaryStatusTag active={active} /> },
+          { title: 'Cập nhật', dataIndex: 'updatedAt', width: 170, sorter: (a, b) => compareDate(a.updatedAt, b.updatedAt), render: formatDateTime },
           {
-            title: '',
-            width: 92,
+            title: 'Thao tác',
+            width: 100,
+            fixed: 'right' as const,
             render: (_, record) => {
               const isSelf = currentUser?.id === record.id
               const isProtectedDemo = Boolean(record.protectedDemo)
@@ -281,7 +289,7 @@ export function UsersPage() {
                     type="text"
                     icon={<EditOutlined />}
                     disabled={isProtectedDemo}
-                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Sửa người dùng'}
                     onClick={() => showEdit(record)}
                   />
                   <Popconfirm
@@ -307,7 +315,7 @@ export function UsersPage() {
                       type="text"
                       danger
                       disabled={deleteBlocked}
-                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
+                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Xóa người dùng'}
                       icon={<DeleteOutlined />}
                     />
                   </Popconfirm>

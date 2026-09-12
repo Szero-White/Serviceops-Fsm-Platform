@@ -4,6 +4,7 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.application.DemoAccountProtectionPolicy;
 import com.serviceops.identity.domain.UserAccount;
+import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.technician.domain.TechnicianProfile;
@@ -22,6 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TechnicianService {
     private final TechnicianRepository repository;
+    private final UserAccountRepository userAccountRepository;
     private final WorkOrderRepository workOrderRepository;
     private final AuditService auditService;
     private final DemoAccountProtectionPolicy demoAccountProtectionPolicy;
@@ -45,23 +47,27 @@ public class TechnicianService {
 
         technician.setPhone(blankToNull(request.phone()));
         technician.setSkills(blankToNull(request.skills()));
-        if (Boolean.TRUE.equals(request.active())
-                && (!user.isActive() || user.getRole() != UserRole.TECHNICIAN)) {
-            throw BusinessException.conflict(
-                    "TECHNICIAN_IDENTITY_INACTIVE",
-                    "Không thể kích hoạt hồ sơ kỹ thuật viên khi tài khoản đang tạm ngưng hoặc không còn vai trò Kỹ thuật viên"
-            );
-        }
-        if (Boolean.FALSE.equals(request.active())
-                && technician.isActive()
-                && workOrderRepository.existsActiveAssignment(CurrentUser.tenantId(), technician.getId())) {
-            throw BusinessException.conflict(
-                    "TECHNICIAN_ACTIVE_ASSIGNMENTS",
-                    "Không thể tạm ngưng kỹ thuật viên khi còn phiếu công việc đang hoạt động; hãy điều phối lại hoặc hủy công việc trước"
-            );
-        }
         if (request.active() != null) {
+            if (user.getRole() != UserRole.TECHNICIAN) {
+                throw BusinessException.conflict(
+                        "TECHNICIAN_ROLE_REQUIRED",
+                        "Chỉ tài khoản có vai trò Kỹ thuật viên mới được quản lý tại Đội ngũ kỹ thuật"
+                );
+            }
+            if (!request.active()
+                    && (technician.isActive() || user.isActive())
+                    && workOrderRepository.existsActiveAssignment(CurrentUser.tenantId(), technician.getId())) {
+                throw BusinessException.conflict(
+                        "TECHNICIAN_ACTIVE_ASSIGNMENTS",
+                        "Không thể tạm ngưng kỹ thuật viên khi còn phiếu công việc đang hoạt động; hãy điều phối lại hoặc hủy công việc trước"
+                );
+            }
+
+            // One business state, two management entry points: changing the technician
+            // status must change login status in the same transaction, and vice versa.
             technician.setActive(request.active());
+            user.setActive(request.active());
+            userAccountRepository.save(user);
         }
 
         repository.save(technician);
@@ -70,7 +76,19 @@ public class TechnicianService {
                 "TECHNICIAN_PROFILE",
                 technician.getId(),
                 "Cập nhật hồ sơ kỹ thuật viên " + user.getUsername()
+                        + (request.active() == null
+                        ? ""
+                        : " · trạng thái đồng bộ " + (request.active() ? "Hoạt động" : "Tạm ngưng"))
         );
+        if (request.active() != null) {
+            auditService.record(
+                    "UPDATE",
+                    "USER_ACCOUNT",
+                    user.getId(),
+                    "Đồng bộ trạng thái từ hồ sơ kỹ thuật viên " + user.getUsername()
+                            + " -> " + (request.active() ? "Hoạt động" : "Tạm ngưng")
+            );
+        }
 
         return toResponse(technician);
     }
@@ -100,7 +118,9 @@ public class TechnicianService {
                 technician.getSkills(),
                 technician.isActive(),
                 user.isActive(),
-                demoAccountProtectionPolicy.isProtected(user.getUsername())
+                demoAccountProtectionPolicy.isProtected(user.getUsername()),
+                technician.getCreatedAt(),
+                technician.getUpdatedAt()
         );
     }
 }

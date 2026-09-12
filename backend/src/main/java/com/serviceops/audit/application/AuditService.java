@@ -19,11 +19,20 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuditService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("createdAt", "createdAt"),
+            Map.entry("actorUsername", "actorUsername"),
+            Map.entry("action", "action"),
+            Map.entry("entityType", "entityType"),
+            Map.entry("details", "details"),
+            Map.entry("entityId", "entityId")
+    );
     private final AuditLogRepository repository;
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -80,24 +89,32 @@ public class AuditService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<AuditResponse> list(int page, int size, String query, String actor, List<String> action, List<String> entityType, Instant from, Instant to) {
+        return list(page, size, query, actor, action, entityType, from, to, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<AuditResponse> list(
             int page,
             int size,
             String query,
             String actor,
-            String action,
-            String entityType,
+            List<String> action,
+            List<String> entityType,
             Instant from,
-            Instant to
+            Instant to,
+            String sortBy,
+            String sortDir
     ) {
         validateRange(from, to);
 
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
 
         String normalizedQuery = trimToNull(query);
         String normalizedActor = trimToNull(actor);
-        String normalizedAction = upperToNull(action);
-        String normalizedEntityType = upperToNull(entityType);
+        List<String> normalizedActions = upperValues(action);
+        List<String> normalizedEntityTypes = upperValues(entityType);
         UUID entityId = tryParseUuid(normalizedQuery);
 
         Specification<AuditLog> specification = buildSpecification(
@@ -105,8 +122,8 @@ public class AuditService {
                 normalizedQuery,
                 entityId,
                 normalizedActor,
-                normalizedAction,
-                normalizedEntityType,
+                normalizedActions,
+                normalizedEntityTypes,
                 from,
                 to
         );
@@ -120,8 +137,8 @@ public class AuditService {
             String query,
             UUID entityId,
             String actor,
-            String action,
-            String entityType,
+            List<String> actions,
+            List<String> entityTypes,
             Instant from,
             Instant to
     ) {
@@ -143,11 +160,11 @@ public class AuditService {
                         builder.like(builder.lower(root.get("actorRole")), pattern)
                 ));
             }
-            if (action != null) {
-                predicates.add(builder.equal(root.get("action"), action));
+            if (!actions.isEmpty()) {
+                predicates.add(root.get("action").in(actions));
             }
-            if (entityType != null) {
-                predicates.add(builder.equal(root.get("entityType"), entityType));
+            if (!entityTypes.isEmpty()) {
+                predicates.add(root.get("entityType").in(entityTypes));
             }
             if (query != null) {
                 String pattern = likePattern(query);
@@ -184,6 +201,18 @@ public class AuditService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+
+    private static List<String> upperValues(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return values.stream()
+                .map(AuditService::upperToNull)
+                .filter(value -> value != null)
+                .distinct()
+                .toList();
     }
 
     private static String upperToNull(String value) {

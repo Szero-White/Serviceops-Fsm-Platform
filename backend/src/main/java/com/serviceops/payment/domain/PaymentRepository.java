@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,7 +52,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             left join fetch w.technician t
             left join fetch t.user u
             where p.tenantId = :tenantId
-              and (:status is null or p.status = :status)
+              and p.status in :statuses
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
@@ -64,14 +65,14 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             left join w.technician t
             left join t.user u
             where p.tenantId = :tenantId
-              and (:status is null or p.status = :status)
+              and p.status in :statuses
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
                    or lower(c.name) like lower(concat('%', :search, '%'))
                    or lower(coalesce(u.displayName, '')) like lower(concat('%', :search, '%')))
             """)
     Page<Payment> search(@Param("tenantId") UUID tenantId,
-                         @Param("status") PaymentStatus status,
+                         @Param("statuses") List<PaymentStatus> statuses,
                          @Param("search") String search,
                          Pageable pageable);
 }

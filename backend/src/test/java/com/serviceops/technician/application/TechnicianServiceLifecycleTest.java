@@ -4,6 +4,7 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.application.DemoAccountProtectionPolicy;
 import com.serviceops.identity.domain.UserAccount;
+import com.serviceops.identity.domain.UserAccountRepository;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.technician.domain.TechnicianProfile;
 import com.serviceops.technician.domain.TechnicianRepository;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +37,7 @@ class TechnicianServiceLifecycleTest {
     private static final UUID TECHNICIAN_ID = UUID.randomUUID();
 
     @Mock private TechnicianRepository repository;
+    @Mock private UserAccountRepository userAccountRepository;
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private AuditService auditService;
     @Mock private DemoAccountProtectionPolicy demoAccountProtectionPolicy;
@@ -67,6 +70,7 @@ class TechnicianServiceLifecycleTest {
 
         TechnicianService service = new TechnicianService(
                 repository,
+                userAccountRepository,
                 workOrderRepository,
                 auditService,
                 demoAccountProtectionPolicy
@@ -81,6 +85,76 @@ class TechnicianServiceLifecycleTest {
                 .isEqualTo("TECHNICIAN_ACTIVE_ASSIGNMENTS");
 
         verify(repository, never()).save(technician);
+    }
+
+    @Test
+    void pausingFromTechnicianScreenAlsoPausesLoginAccount() {
+        authenticateOwner();
+        UserAccount user = technicianUser(true);
+        TechnicianProfile technician = technicianProfile(user, true);
+
+        when(repository.findForUpdate(TECHNICIAN_ID, TENANT_ID)).thenReturn(Optional.of(technician));
+        when(workOrderRepository.existsActiveAssignment(TENANT_ID, TECHNICIAN_ID)).thenReturn(false);
+
+        TechnicianService service = new TechnicianService(
+                repository,
+                userAccountRepository,
+                workOrderRepository,
+                auditService,
+                demoAccountProtectionPolicy
+        );
+
+        service.updateProfile(TECHNICIAN_ID, new TechnicianProfileRequest(null, null, false));
+
+        assertThat(technician.isActive()).isFalse();
+        assertThat(user.isActive()).isFalse();
+        verify(userAccountRepository).save(user);
+        verify(repository).save(technician);
+    }
+
+    @Test
+    void reactivatingFromTechnicianScreenAlsoReactivatesLoginAccount() {
+        authenticateOwner();
+        UserAccount user = technicianUser(false);
+        TechnicianProfile technician = technicianProfile(user, false);
+
+        when(repository.findForUpdate(TECHNICIAN_ID, TENANT_ID)).thenReturn(Optional.of(technician));
+
+        TechnicianService service = new TechnicianService(
+                repository,
+                userAccountRepository,
+                workOrderRepository,
+                auditService,
+                demoAccountProtectionPolicy
+        );
+
+        service.updateProfile(TECHNICIAN_ID, new TechnicianProfileRequest(null, null, true));
+
+        assertThat(technician.isActive()).isTrue();
+        assertThat(user.isActive()).isTrue();
+        verify(userAccountRepository).save(user);
+        verify(repository).save(technician);
+    }
+
+    private static UserAccount technicianUser(boolean active) {
+        UserAccount user = new UserAccount();
+        user.setId(UUID.randomUUID());
+        user.setTenantId(TENANT_ID);
+        user.setUsername("field-tech");
+        user.setDisplayName("Field Technician");
+        user.setPasswordHash("hash");
+        user.setRole(UserRole.TECHNICIAN);
+        user.setActive(active);
+        return user;
+    }
+
+    private static TechnicianProfile technicianProfile(UserAccount user, boolean active) {
+        TechnicianProfile technician = new TechnicianProfile();
+        technician.setId(TECHNICIAN_ID);
+        technician.setTenantId(TENANT_ID);
+        technician.setUser(user);
+        technician.setActive(active);
+        return technician;
     }
 
     private static void authenticateOwner() {

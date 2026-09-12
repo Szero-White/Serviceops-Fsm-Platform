@@ -25,9 +25,30 @@ function Read-DotEnv([string]$Path) {
     return $values
 }
 
+function Start-InheritedEnvironmentProcess(
+    [string]$WorkingDirectory,
+    [string]$Command,
+    [hashtable]$Environment
+) {
+    $previous = @{}
+    foreach ($name in $Environment.Keys) {
+        $previous[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+        [Environment]::SetEnvironmentVariable($name, [string]$Environment[$name], "Process")
+    }
+
+    try {
+        Start-Process cmd.exe -WorkingDirectory $WorkingDirectory -ArgumentList "/k", $Command
+    }
+    finally {
+        foreach ($name in $Environment.Keys) {
+            [Environment]::SetEnvironmentVariable($name, $previous[$name], "Process")
+        }
+    }
+}
+
 if (-not (Test-Path $envFile)) {
     Copy-Item $envExample $envFile
-    Write-Host "Created .env from .env.example. Edit it once if your native PostgreSQL credentials differ." -ForegroundColor Yellow
+    Write-Host "Created .env from .env.example. This file is ignored by Git." -ForegroundColor Yellow
 }
 
 $settings = Read-DotEnv $envFile
@@ -45,35 +66,64 @@ $postgresDb = Get-Setting "POSTGRES_DB" "serviceops"
 $postgresUser = Get-Setting "POSTGRES_USER" "serviceops"
 $postgresPassword = Get-Setting "POSTGRES_PASSWORD" "serviceops"
 $demoPassword = Get-Setting "DEMO_PASSWORD" "Demo@2026"
+$aiEnabled = Get-Setting "AI_ENABLED" "true"
+$aiProvider = Get-Setting "AI_PROVIDER" "gemini"
+$geminiApiKey = Get-Setting "GEMINI_API_KEY" ""
+$geminiBaseUrl = Get-Setting "GEMINI_BASE_URL" "https://generativelanguage.googleapis.com/v1beta"
+$geminiModel = Get-Setting "GEMINI_MODEL" "gemini-3.6-flash"
+$aiConnectTimeout = Get-Setting "AI_CONNECT_TIMEOUT" "4s"
+$aiSuggestionTimeout = Get-Setting "AI_SUGGESTION_TIMEOUT" "12s"
+$aiHelpTimeout = Get-Setting "AI_HELP_TIMEOUT" "18s"
 
 if ($StartPostgres) {
     & (Join-Path $PSScriptRoot "start-postgres.ps1")
 }
 
-function CmdSet([string]$Name, [string]$Value) {
-    return ('set "{0}={1}"' -f $Name, $Value)
+$backendEnvironment = @{
+    POSTGRES_HOST = $postgresHost
+    POSTGRES_PORT = $postgresPort
+    POSTGRES_DB = $postgresDb
+    POSTGRES_USER = $postgresUser
+    POSTGRES_PASSWORD = $postgresPassword
+    DEMO_PASSWORD = $demoPassword
+    AI_ENABLED = $aiEnabled
+    AI_PROVIDER = $aiProvider
+    GEMINI_API_KEY = $geminiApiKey
+    GEMINI_BASE_URL = $geminiBaseUrl
+    GEMINI_MODEL = $geminiModel
+    AI_CONNECT_TIMEOUT = $aiConnectTimeout
+    AI_SUGGESTION_TIMEOUT = $aiSuggestionTimeout
+    AI_HELP_TIMEOUT = $aiHelpTimeout
 }
 
-$backendCommand = @(
-    (CmdSet "POSTGRES_HOST" $postgresHost),
-    (CmdSet "POSTGRES_PORT" $postgresPort),
-    (CmdSet "POSTGRES_DB" $postgresDb),
-    (CmdSet "POSTGRES_USER" $postgresUser),
-    (CmdSet "POSTGRES_PASSWORD" $postgresPassword),
-    (CmdSet "DEMO_PASSWORD" $demoPassword),
-    'mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"'
-) -join '&& '
-
-# Always start Vite. Install dependencies only when node_modules is missing.
-$frontendCommand = @(
-    (CmdSet "VITE_DEMO_PASSWORD" $demoPassword),
-    'if exist node_modules\.bin\vite.cmd (call npm run dev) else (call npm ci && call npm run dev)'
-) -join '&& '
+$frontendEnvironment = @{
+    VITE_DEMO_PASSWORD = $demoPassword
+}
 
 Write-Host "Starting ServiceOps backend and frontend..." -ForegroundColor Cyan
 Write-Host "PostgreSQL: $postgresHost`:$postgresPort / $postgresDb / $postgresUser" -ForegroundColor DarkGray
 Write-Host "Frontend:   http://localhost:3000" -ForegroundColor DarkGray
 Write-Host "Swagger:    http://localhost:8080/swagger-ui.html" -ForegroundColor DarkGray
 
-Start-Process cmd.exe -WorkingDirectory $backendDir -ArgumentList "/k", $backendCommand
-Start-Process cmd.exe -WorkingDirectory $frontendDir -ArgumentList "/k", $frontendCommand
+if ($aiEnabled -eq "true" -and $aiProvider -eq "gemini") {
+    if ($geminiApiKey) {
+        Write-Host "AI:         Gemini configured for local development" -ForegroundColor DarkGray
+    }
+    else {
+        Write-Warning "AI is enabled but GEMINI_API_KEY is missing. ServiceOps will use the built-in fallback. Run scripts/configure-gemini-local.ps1 to configure local Gemini access."
+    }
+}
+elseif ($aiEnabled -eq "false") {
+    Write-Host "AI:         disabled" -ForegroundColor DarkGray
+}
+else {
+    Write-Host "AI:         $aiProvider" -ForegroundColor DarkGray
+}
+
+# Secrets are inherited through the child process environment. They are not
+# embedded in the cmd.exe command line where process-inspection tools could expose them.
+Start-InheritedEnvironmentProcess $backendDir 'mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"' $backendEnvironment
+
+# Always start Vite. Install dependencies only when node_modules is missing.
+$frontendCommand = 'if exist node_modules\.bin\vite.cmd (call npm run dev) else (call npm ci && call npm run dev)'
+Start-InheritedEnvironmentProcess $frontendDir $frontendCommand $frontendEnvironment

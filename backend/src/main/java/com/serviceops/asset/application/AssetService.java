@@ -31,12 +31,23 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AssetService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("equipment", "brand"),
+            Map.entry("customerName", "customer.name"),
+            Map.entry("category", "category"),
+            Map.entry("warrantyUntil", "warrantyUntil"),
+            Map.entry("status", "status"),
+            Map.entry("installedAt", "installedAt"),
+            Map.entry("notes", "notes"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final AssetRepository repository;
     private final CustomerRepository customerRepository;
     private final ServiceRequestRepository serviceRequestRepository;
@@ -47,7 +58,13 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public PageResponse<AssetResponse> search(String search, UUID customerId, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return search(search, customerId, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<AssetResponse> search(String search, UUID customerId, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         return PageResponse.from(repository.search(
                 CurrentUser.tenantId(),
                 customerId,

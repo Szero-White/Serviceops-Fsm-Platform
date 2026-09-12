@@ -1,13 +1,13 @@
 import { BulbOutlined, SendOutlined } from '@ant-design/icons'
 import { useMutation } from '@tanstack/react-query'
 import { App, Button, Drawer, Empty, Input, Space, Typography } from 'antd'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
 import { useAuth } from '../../auth/AuthContext'
-import { MetaBadge } from '../../../components/PresentationBadge'
-import { aiApi } from '../api'
 import type { AiHelpResponse } from '../../../types'
+import { aiApi } from '../api'
+import { AiSourceBadge } from './AiSourceBadge'
 
 type ChatMessage =
   | { id: string; role: 'user'; content: string }
@@ -55,6 +55,7 @@ export function AiHelpAssistant() {
   const [open, setOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const requestInFlight = useRef(false)
   const { message } = App.useApp()
   const { user } = useAuth()
   const location = useLocation()
@@ -68,14 +69,18 @@ export function AiHelpAssistant() {
   const help = useMutation({
     mutationFn: aiApi.help,
     onSuccess: (response, variables) => {
+      const now = Date.now()
       setMessages((items) => [
         ...items,
-        { id: `${Date.now()}-user`, role: 'user', content: variables.question },
-        { id: `${Date.now()}-assistant`, role: 'assistant', content: response },
+        { id: `${now}-user`, role: 'user', content: variables.question },
+        { id: `${now}-assistant`, role: 'assistant', content: response },
       ])
       setQuestion('')
     },
     onError: (error) => message.error(apiErrorMessage(error)),
+    onSettled: () => {
+      requestInFlight.current = false
+    },
   })
 
   const ask = (value = question) => {
@@ -84,6 +89,11 @@ export function AiHelpAssistant() {
       message.warning('Nhập câu hỏi về cách sử dụng hệ thống')
       return
     }
+    if (requestInFlight.current) {
+      return
+    }
+
+    requestInFlight.current = true
     help.mutate({ question: normalized, currentPath: location.pathname })
   }
 
@@ -130,7 +140,7 @@ export function AiHelpAssistant() {
 
         <div className="ai-help-suggestions">
           {suggestions.map((item) => (
-            <Button key={item} size="small" onClick={() => ask(item)}>
+            <Button key={item} size="small" disabled={help.isPending} onClick={() => ask(item)}>
               {item}
             </Button>
           ))}
@@ -157,6 +167,7 @@ export function AiHelpAssistant() {
             placeholder="Ví dụ: Tôi là nhân viên mới, làm sao tiếp nhận yêu cầu dịch vụ?"
             rows={3}
             maxLength={1000}
+            disabled={help.isPending}
             onPressEnter={(event) => {
               if (!event.shiftKey) {
                 event.preventDefault()
@@ -164,7 +175,7 @@ export function AiHelpAssistant() {
               }
             }}
           />
-          <Button type="primary" icon={<SendOutlined />} loading={help.isPending} onClick={() => ask()}>
+          <Button type="primary" icon={<SendOutlined />} loading={help.isPending} disabled={help.isPending} onClick={() => ask()}>
             Hỏi trợ lý
           </Button>
         </div>
@@ -178,7 +189,7 @@ function AssistantAnswer({ response, onOpenRoute }: { response: AiHelpResponse; 
     <Space direction="vertical" size={10}>
       <Space size={8} wrap>
         <Typography.Text strong>Hướng dẫn</Typography.Text>
-        <MetaBadge tone="info">{response.provider === 'gemini' ? 'Gemini' : 'Nội bộ'}</MetaBadge>
+        <AiSourceBadge source={response.source} />
       </Space>
       <Typography.Text>{response.answer}</Typography.Text>
       <ol className="ai-help-steps">

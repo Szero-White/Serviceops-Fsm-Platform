@@ -26,12 +26,21 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("name", "name"),
+            Map.entry("code", "code"),
+            Map.entry("contact", "email"),
+            Map.entry("address", "address"),
+            Map.entry("active", "active"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final CustomerRepository repository;
     private final AssetRepository assetRepository;
     private final ServiceRequestRepository serviceRequestRepository;
@@ -41,7 +50,13 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public PageResponse<CustomerResponse> search(String search, Boolean active, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+        return search(search, active, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<CustomerResponse> search(String search, Boolean active, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         return PageResponse.from(repository.search(CurrentUser.tenantId(), active, PageRequestSupport.normalizeSearch(search), pageable).map(CustomerService::toResponse));
     }
 

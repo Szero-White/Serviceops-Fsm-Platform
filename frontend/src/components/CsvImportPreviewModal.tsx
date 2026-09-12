@@ -1,6 +1,7 @@
 import { Alert, Modal, Space, Table } from 'antd'
 import { MetaBadge } from './PresentationBadge'
 import type { ColumnsType } from 'antd/es/table'
+import { compareNumber, compareText } from '../utils/tableSort'
 
 export interface CsvImportRow {
   rowNumber: number
@@ -60,18 +61,20 @@ export function CsvImportPreviewModal<T extends CsvImportRow>({
           <Table<T>
             rowKey="rowNumber"
             size="small"
+            className="content-table"
             dataSource={result.rows}
             pagination={{ pageSize: 8, showSizeChanger: false }}
             columns={[
-              { title: 'Dòng', dataIndex: 'rowNumber', width: 80 },
+              { title: 'Dòng', dataIndex: 'rowNumber', width: 80, sorter: (a, b) => compareNumber(a.rowNumber, b.rowNumber) },
               ...columns,
               {
                 title: 'Kết quả',
                 dataIndex: 'valid',
                 width: 130,
+                sorter: (a, b) => compareNumber(Number(a.valid), Number(b.valid)),
                 render: (valid: boolean) => <MetaBadge tone={valid ? 'success' : 'danger'}>{valid ? 'Hợp lệ' : 'Lỗi'}</MetaBadge>,
               },
-              { title: 'Ghi chú', dataIndex: 'message', ellipsis: true },
+              { title: 'Ghi chú', dataIndex: 'message', ellipsis: true, sorter: (a, b) => compareText(a.message, b.message) },
             ]}
           />
         </Space>

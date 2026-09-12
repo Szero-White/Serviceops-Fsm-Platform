@@ -1,6 +1,7 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
 import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.domain.SparePart;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -89,6 +91,28 @@ class WorkOrderBillingServiceTest {
         var itemsCaptor = ArgumentCaptor.forClass(List.class);
         verify(itemRepository).saveAll(itemsCaptor.capture());
         assertThat(itemsCaptor.getValue()).hasSize(1);
+    }
+
+    @Test
+    void rejectsAcceptanceWhenReviewedTotalNoLongerMatchesCurrentBilling() {
+        authenticate("TECHNICIAN", USER_ID);
+        WorkOrder workOrder = workOrder();
+        workOrder.setLaborFee(new BigDecimal("250000"));
+        workOrder.setIncidentalFee(BigDecimal.ZERO);
+        when(usageRepository.findDetailedByWorkOrder(TENANT_ID, workOrder.getId())).thenReturn(List.of());
+
+        WorkOrderBillingService service = new WorkOrderBillingService(
+                workOrderRepository,
+                usageRepository,
+                snapshotRepository,
+                itemRepository,
+                auditService
+        );
+
+        assertThatThrownBy(() -> service.assertReviewedBillingUnchanged(workOrder, new BigDecimal("250000.00"), "stale-review-token"))
+                .isInstanceOfSatisfying(BusinessException.class, ex ->
+                        assertThat(ex.getCode()).isEqualTo("BILLING_CHANGED_REVIEW_REQUIRED")
+                );
     }
 
     private static WorkOrder workOrder() {

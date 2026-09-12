@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { apiJson, login, watchRuntime } from './support/serviceops'
+import { apiJson, login, modalByTitle, watchRuntime } from './support/serviceops'
 
 type WorkOrderResponse = {
   id: string
@@ -39,6 +39,7 @@ type BillingResponse = {
   frozen: boolean
   partsTotal: number
   totalAmount: number
+  reviewToken: string
 }
 
 type PaymentResponse = {
@@ -228,6 +229,10 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   expect(billingDraft.body.totalAmount).toBe(400000)
 
   const accepted = await apiJson<WorkOrderResponse>(page, 'POST', `/work-orders/${workOrderId}/customer-acceptance`, {
+    technicianReviewed: true,
+    customerConfirmed: true,
+    reviewedTotalAmount: billingDraft.body.totalAmount,
+    reviewToken: billingDraft.body.reviewToken,
     note: 'Khách đã kiểm tra kết quả và xác nhận chi phí.',
   })
   expectStatus(accepted.status, 200, 'Technician ghi nhận khách xác nhận')
@@ -279,7 +284,12 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   await page.getByRole('tab', { name: 'Thanh toán' }).click()
 
   await page.getByRole('button', { name: 'Xác nhận đã nhận bàn giao tiền' }).click()
-  await page.getByRole('button', { name: 'Xác nhận đã đối soát' }).click()
+  const cashHandoverModal = modalByTitle(page, 'Xác nhận đã nhận bàn giao tiền')
+  await expect(cashHandoverModal).toBeVisible()
+  await cashHandoverModal.getByRole('checkbox').check()
+  const confirmSettlement = cashHandoverModal.getByRole('button', { name: 'Xác nhận đã đối soát', exact: true })
+  await expect(confirmSettlement).toBeEnabled()
+  await confirmSettlement.click()
   await expect(page.getByText('Đã đối soát', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Phát hành / tải biên nhận' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Đóng phiếu' })).toBeVisible()
@@ -317,6 +327,18 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   )
   expectStatus(returned.status, 200, 'Warehouse RETURN outstanding sau CLOSED')
   expect(returned.body.returnableQuantity).toBe(0)
+
+  const returnLedger = await apiJson<PageResponse<InventoryTransactionResponse>>(
+    page,
+    'GET',
+    `/inventory-transactions?search=${encodeURIComponent(workOrderCode)}&type=RETURN&page=0&size=20`,
+  )
+  expectStatus(returnLedger.status, 200, 'Warehouse đọc RETURN ledger có snapshot kỹ thuật viên trả')
+  const returnMovement = returnLedger.body.content.find((item) => item.workOrderCode === workOrderCode && item.type === 'RETURN')
+  expect(returnMovement, 'RETURN vừa xác nhận phải xuất hiện trong inventory ledger').toBeTruthy()
+  expect(returnMovement!.recipientDisplayName).toBe(technician!.name)
+  expect(returnMovement!.actorDisplayName).toBeTruthy()
+  expect(returnMovement!.actorDisplayName).not.toBe(returnMovement!.recipientDisplayName)
 
   const stockAfterReturn = await apiJson<PageResponse<SparePartResponse>>(
     page,

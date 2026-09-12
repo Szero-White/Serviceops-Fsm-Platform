@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 /**
  * Central user-facing notification copy.
@@ -212,6 +214,46 @@ public final class NotificationCopy {
                 "Kỹ thuật viên " + fallback(technicianName, "được phân công")
                         + " đã hoàn thành " + workOrderContext(context) + ". "
                         + "Theo dõi phản hồi khách hàng; nếu sự cố còn, mở lại phiếu theo quy trình."
+        );
+    }
+
+    public static Copy paymentTransferPending(
+            WorkOrderContext context,
+            String technicianName,
+            BigDecimal amount
+    ) {
+        return copy(
+                "Cần đối soát chuyển khoản: " + context.code(),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " ghi nhận khách đã chuyển " + money(amount) + " cho " + workOrderContext(context) + ". "
+                        + "Mở Xử lý thanh toán để kiểm tra tiền thực tế vào tài khoản công ty."
+        );
+    }
+
+    public static Copy paymentCashHandoverPending(
+            WorkOrderContext context,
+            String technicianName,
+            BigDecimal amount
+    ) {
+        return copy(
+                "Cần nhận bàn giao tiền mặt: " + context.code(),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " đang giữ " + money(amount) + " của " + workOrderContext(context) + ". "
+                        + "Mở Xử lý thanh toán để nhận bàn giao và đối soát."
+        );
+    }
+
+    public static Copy paymentCounterCollectionPending(
+            WorkOrderContext context,
+            String technicianName,
+            BigDecimal amount
+    ) {
+        return copy(
+                "Khách hẹn thanh toán tại quầy: " + context.code(),
+                "Kỹ thuật viên " + fallback(technicianName, "được phân công")
+                        + " ghi nhận khách chưa thanh toán tại hiện trường và sẽ thanh toán " + money(amount)
+                        + " tại quầy cho " + workOrderContext(context) + ". "
+                        + "Mở Xử lý thanh toán khi khách đến để thu và đối soát."
         );
     }
 
@@ -425,6 +467,16 @@ public final class NotificationCopy {
             return value.substring(0, maxLength);
         }
         return value.substring(0, maxLength - 3).trim() + "...";
+    }
+
+    private static String money(BigDecimal value) {
+        if (value == null) {
+            return "số tiền chưa xác định";
+        }
+        NumberFormat format = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"));
+        format.setMaximumFractionDigits(0);
+        format.setMinimumFractionDigits(0);
+        return format.format(value) + " đ";
     }
 
     private static String quantity(BigDecimal value) {

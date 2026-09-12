@@ -160,8 +160,8 @@ final class AiHelpKnowledgeBase {
         return switch (role) {
             case "OWNER" -> "Phạm vi OWNER: quản trị và giám sát toàn hệ thống trong các màn hình dành cho Owner. Owner quản lý người dùng, dữ liệu nền, điều phối, kho, audit và cấu hình tài khoản/QR thanh toán công ty; có thể xem payment/biên nhận để giám sát. Owner không ghi nhận khách xác nhận, không đối soát thanh toán, không đóng phiếu thay CSKH, không giả lập tiến độ hiện trường và không xác nhận hàng ra/vào kho thay đúng vai trò.";
             case "DISPATCHER" -> "Phạm vi DISPATCHER: đọc ngữ cảnh khách hàng/thiết bị cần cho điều phối, theo dõi Work Order, phân công hoặc điều phối lại kỹ thuật viên/lịch trước khi field work bắt đầu và operational cancellation. Không quản trị tài khoản, không tiếp nhận Service Request, không xem nhật ký hệ thống và không thao tác kho.";
-            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, chuyển yêu cầu đủ thông tin sang Work Order và hậu xử lý dịch vụ. CSKH đối soát chuyển khoản/tiền mặt, phát hành biên nhận và đóng phiếu sau khi tiền đã về công ty; có thể mở lại hoặc hủy theo policy trước khi khách xác nhận. Không phân công kỹ thuật viên, không ghi nhận khách xác nhận tại hiện trường và không quản trị kho/người dùng.";
-            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: chỉ Work Order được giao, Lịch của tôi, tiến độ/chẩn đoán/giải pháp, bằng chứng, yêu cầu phụ tùng và actual-used cho chính job. Sau COMPLETED, kỹ thuật viên ghi nhận khách xác nhận, chi phí thực tế và phương thức khách đã thanh toán tại hiện trường; không đối soát tiền, không phát hành biên nhận và không đóng/mở lại phiếu. Không quản trị người dùng, khách hàng, điều phối hoặc nghiệp vụ quản trị kho.";
+            case "CUSTOMER_SERVICE" -> "Phạm vi CUSTOMER_SERVICE: khách hàng, thiết bị, yêu cầu dịch vụ, chuyển yêu cầu đủ thông tin sang Work Order và hậu xử lý dịch vụ. CSKH đối soát chuyển khoản/tiền mặt, thu các khoản khách hẹn thanh toán tại quầy, phát hành biên nhận và đóng phiếu sau khi tiền đã về công ty; có thể mở lại hoặc hủy theo policy trước khi khách xác nhận. Không phân công kỹ thuật viên, không ghi nhận khách xác nhận tại hiện trường và không quản trị kho/người dùng.";
+            case "TECHNICIAN" -> "Phạm vi TECHNICIAN: chỉ Work Order được giao, Lịch của tôi, tiến độ/chẩn đoán/giải pháp, bằng chứng, yêu cầu phụ tùng và actual-used cho chính job. Sau COMPLETED, kỹ thuật viên ghi nhận khách xác nhận, chi phí thực tế và tình huống thanh toán: khách đã chuyển khoản, kỹ thuật viên đã nhận tiền mặt hoặc khách hẹn thanh toán tại quầy; không đối soát tiền, không phát hành biên nhận và không đóng/mở lại phiếu. Không quản trị người dùng, khách hàng, điều phối hoặc nghiệp vụ quản trị kho.";
             case "WAREHOUSE_STAFF" -> "Phạm vi WAREHOUSE_STAFF: ưu tiên xử lý hàng đợi Yêu cầu phụ tùng do kỹ thuật viên gửi, xác nhận ISSUE thực tế hoặc Không thể cấp; đồng thời quản lý danh mục phụ tùng, nhập kho, ngưỡng tồn, kiểm kê/điều chỉnh, hoàn trả và lịch sử biến động. Không sửa số lượng kỹ thuật viên đã yêu cầu, không thao tác Work Order hiện trường, Customer/Asset, User Management hoặc dashboard vận hành.";
             default -> "Chỉ hướng dẫn các chức năng ServiceOps mà tài khoản hiện tại được phép sử dụng.";
         };
@@ -194,7 +194,7 @@ final class AiHelpKnowledgeBase {
                     "/service-requests",
                     List.of("CUSTOMER_SERVICE"),
                     List.of(),
-                    "Bạn quản lý khách hàng và thiết bị, tiếp nhận/cập nhật yêu cầu dịch vụ, chọn kênh tiếp nhận và chuyển yêu cầu đủ thông tin sang Work Order. Sau dịch vụ, bạn theo dõi hàng đợi thanh toán, xác minh tiền chuyển khoản hoặc nhận bàn giao tiền mặt, phát hành biên nhận và đóng phiếu; không phân công kỹ thuật viên, không ghi nhận khách xác nhận tại hiện trường và không quản trị người dùng/kho.",
+                    "Bạn quản lý khách hàng và thiết bị, tiếp nhận/cập nhật yêu cầu dịch vụ, chọn kênh tiếp nhận và chuyển yêu cầu đủ thông tin sang Work Order. Sau dịch vụ, bạn theo dõi hàng đợi thanh toán, xác minh tiền chuyển khoản, nhận bàn giao tiền mặt hoặc trực tiếp thu khoản khách hẹn thanh toán tại quầy, phát hành biên nhận và đóng phiếu; không phân công kỹ thuật viên, không ghi nhận khách xác nhận tại hiện trường và không quản trị người dùng/kho.",
                     List.of("Kiểm tra hoặc tạo Khách hàng", "Gắn đúng Thiết bị", "Tiếp nhận Yêu cầu dịch vụ", "Chuyển yêu cầu đủ thông tin sang điều phối", "Theo dõi Work Order đã hoàn thành", "Mở Xử lý thanh toán để đối soát", "Sau SETTLED, phát hành biên nhận và đóng phiếu")
             );
             case "TECHNICIAN" -> new HelpTopic(
@@ -202,8 +202,8 @@ final class AiHelpKnowledgeBase {
                     "/work-orders",
                     List.of("TECHNICIAN"),
                     List.of(),
-                    "Bạn chỉ thao tác công việc được giao cho mình: xem Lịch của tôi, cập nhật tiến độ thực tế, ghi bằng chứng/chẩn đoán/giải pháp, yêu cầu và ghi actual-used phụ tùng. Sau COMPLETED, bạn nhập chi phí thực tế, ghi nhận khách xác nhận và phương thức khách thanh toán tại hiện trường; CSKH chịu trách nhiệm đối soát, biên nhận và đóng phiếu. Bạn không quản trị người dùng và không thực hiện nghiệp vụ quản trị kho.",
-                    List.of("Mở Lịch của tôi để xem lịch hẹn", "Mở Phiếu công việc được giao", "Cập nhật tiến độ đúng thực tế", "Yêu cầu/ghi actual-used phụ tùng khi cần", "Nhập chẩn đoán và giải pháp trước khi Hoàn thành", "Cho khách xem kết quả và tổng chi phí", "Ghi nhận Khách xác nhận", "Ghi nhận khách chuyển khoản hoặc tiền mặt")
+                    "Bạn chỉ thao tác công việc được giao cho mình: xem Lịch của tôi, cập nhật tiến độ thực tế, ghi bằng chứng/chẩn đoán/giải pháp, yêu cầu và ghi actual-used phụ tùng. Sau COMPLETED, bạn nhập chi phí thực tế, ghi nhận khách xác nhận và chọn đúng tình huống thanh toán: khách đã chuyển khoản, đã giao tiền mặt cho kỹ thuật viên hoặc hẹn thanh toán tại quầy; CSKH chịu trách nhiệm đối soát, biên nhận và đóng phiếu. Bạn không quản trị người dùng và không thực hiện nghiệp vụ quản trị kho.",
+                    List.of("Mở Lịch của tôi để xem lịch hẹn", "Mở Phiếu công việc được giao", "Cập nhật tiến độ đúng thực tế", "Yêu cầu/ghi actual-used phụ tùng khi cần", "Nhập chẩn đoán và giải pháp trước khi Hoàn thành", "Cho khách xem kết quả và tổng chi phí", "Ghi nhận Khách xác nhận", "Ghi nhận khách chuyển khoản, tiền mặt hoặc hẹn thanh toán tại quầy")
             );
             case "WAREHOUSE_STAFF" -> new HelpTopic(
                     "Phạm vi Nhân viên kho",
@@ -388,7 +388,7 @@ final class AiHelpKnowledgeBase {
         return new HelpTopic("Yêu cầu dịch vụ", "/service-requests", List.of("OWNER", "CUSTOMER_SERVICE"),
                 List.of("yeu cau", "tiep nhan", "khach bao", "tao yeu cau", "service request", "ai goi y", "chuyen thanh phieu", "chuyen sang dieu phoi"),
                 "Dùng để ghi nhận sự cố khách báo trước khi đủ điều kiện chuyển thành phiếu công việc. OWNER và CUSTOMER_SERVICE đều có thể chuyển một yêu cầu hợp lệ sang Work Order; backend vẫn kiểm tra customer/asset/state để không tạo trùng hoặc sai liên kết.",
-                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả, có thể bấm AI gợi ý", "Bấm Tiếp nhận yêu cầu để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
+                List.of("Mở menu Yêu cầu dịch vụ", "Bấm Tiếp nhận yêu cầu", "Chọn khách hàng, thiết bị, mức ưu tiên và kênh tiếp nhận", "Nhập tiêu đề hoặc mô tả; AI gợi ý chỉ hỗ trợ chuẩn hóa hai ô này và không thay đổi ưu tiên/kênh", "Bấm Tiếp nhận yêu cầu để lưu", "Khi đủ thông tin, bấm Chuyển sang điều phối"));
     }
 
     private static HelpTopic topicCustomers() {
@@ -430,8 +430,8 @@ final class AiHelpKnowledgeBase {
     private static HelpTopic topicTechnicianWork() {
         return new HelpTopic("Công việc kỹ thuật viên", "/work-orders", List.of("TECHNICIAN"),
                 List.of("toi la ky thuat", "viec duoc giao", "cap nhat trang thai", "chan doan", "giai phap", "viec cua toi", "dung phu tung", "phu tung da dung", "tien trinh xu ly"),
-                "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý. Khi cần phụ tùng, kỹ thuật viên tạo Yêu cầu phụ tùng; yêu cầu không giảm tồn kho, Warehouse ISSUE thực tế mới trừ kho. Kỹ thuật viên cập nhật actual-used đến COMPLETED; khi khách đồng ý, nhập chi phí thực tế và dùng action Khách xác nhận để freeze billing snapshot. Sau đó kỹ thuật viên chỉ ghi nhận phương thức khách đã thanh toán tại hiện trường: báo chuyển khoản vào tài khoản công ty hoặc nhận tiền mặt. Kỹ thuật viên không xác minh tiền đã về công ty, không phát hành biên nhận và không đóng/mở lại phiếu; các bước đó thuộc CSKH. CLOSED/CANCELLED là trạng thái kết thúc và sự cố mới sau CLOSED phải đi qua yêu cầu/phiếu mới.",
-                List.of("Mở Phiếu công việc được giao", "Cập nhật trạng thái theo tiến độ thực tế", "Nếu cần phụ tùng, tạo/sửa/hủy Yêu cầu phụ tùng trước khi kho cấp", "Sau ISSUE, cập nhật actual-used", "Khi Hoàn thành, nhập Chẩn đoán và Giải pháp", "Nhập tiền công/phí phát sinh thực tế", "Cho khách xem kết quả và tổng tiền", "Bấm Ghi nhận khách xác nhận", "Ghi nhận khách chuyển khoản hoặc Đã nhận tiền mặt", "CSKH sẽ đối soát và đóng phiếu"));
+                "Kỹ thuật viên tập trung vào phiếu được giao, cập nhật trạng thái và ghi nhận kết quả xử lý. Khi cần phụ tùng, kỹ thuật viên tạo Yêu cầu phụ tùng; yêu cầu không giảm tồn kho, Warehouse ISSUE thực tế mới trừ kho. Kỹ thuật viên cập nhật actual-used đến COMPLETED; khi khách đồng ý, nhập chi phí thực tế và dùng action Khách xác nhận để khóa tổng chi phí khách đã đồng ý. Sau đó kỹ thuật viên chọn đúng tình huống thanh toán: khách đã chuyển khoản vào tài khoản công ty, kỹ thuật viên đã nhận tiền mặt hoặc khách chưa thanh toán và sẽ đến quầy CSKH. Kỹ thuật viên không xác minh tiền đã về công ty, không phát hành biên nhận và không đóng/mở lại phiếu; các bước đó thuộc CSKH. CLOSED/CANCELLED là trạng thái kết thúc và sự cố mới sau CLOSED phải đi qua yêu cầu/phiếu mới.",
+                List.of("Mở Phiếu công việc được giao", "Cập nhật trạng thái theo tiến độ thực tế", "Nếu cần phụ tùng, tạo/sửa/hủy Yêu cầu phụ tùng trước khi kho cấp", "Sau ISSUE, cập nhật actual-used", "Khi Hoàn thành, nhập Chẩn đoán và Giải pháp", "Nhập tiền công/phí phát sinh thực tế", "Cho khách xem kết quả và tổng tiền", "Bấm Ghi nhận khách xác nhận", "Chọn đúng tình huống thanh toán và xác nhận lại trước khi lưu", "CSKH sẽ đối soát/thu tại quầy và đóng phiếu"));
     }
 
     private static HelpTopic topicTechnicianParts() {
@@ -443,9 +443,9 @@ final class AiHelpKnowledgeBase {
 
     private static HelpTopic topicTechnicianPayment() {
         return new HelpTopic("Thanh toán tại hiện trường", "/work-orders", List.of("TECHNICIAN"),
-                List.of("khach chuyen khoan", "chuyen khoan vao dau", "tai khoan cong ty", "qr cong ty", "nhan tien mat", "ghi nhan thanh toan", "payment tai hien truong"),
-                "Sau khi khách đã xác nhận kết quả và billing snapshot được freeze, kỹ thuật viên chỉ ghi nhận hành động thanh toán tại Work Order được giao. Với chuyển khoản, kỹ thuật viên xem tài khoản/QR công ty ở chế độ chỉ đọc và ghi nhận khách báo đã chuyển, có thể đính kèm ảnh giao dịch; với tiền mặt, ghi nhận đã nhận tiền để CSKH biết ai đang giữ. Kỹ thuật viên không xác minh tiền đã về công ty, không SETTLED, không phát hành biên nhận và không đóng phiếu.",
-                List.of("Mở Work Order được giao sau Khách xác nhận", "Kiểm tra tổng tiền đã freeze", "Nếu chuyển khoản, cho khách xem tài khoản/QR công ty và ghi nhận khách báo đã chuyển", "Nếu tiền mặt, ghi nhận đã nhận tiền", "CSKH đối soát tiền thực tế, phát hành biên nhận và đóng phiếu"));
+                List.of("khach chuyen khoan", "chuyen khoan vao dau", "tai khoan cong ty", "qr cong ty", "nhan tien mat", "thanh toan tai quay", "hen thanh toan", "ghi nhan thanh toan", "payment tai hien truong"),
+                "Sau khi khách đã xác nhận kết quả và tổng chi phí đã được khóa, kỹ thuật viên chọn đúng tình huống thanh toán tại Work Order được giao. Với chuyển khoản, kỹ thuật viên xem tài khoản/QR công ty ở chế độ chỉ đọc và ghi nhận khách đã chuyển, có thể đính kèm ảnh giao dịch; với tiền mặt, ghi nhận đã nhận tiền để CSKH biết ai đang giữ; nếu chưa thu tiền và khách sẽ thanh toán trực tiếp với CSKH, chọn Hẹn thanh toán tại quầy. Mỗi lựa chọn đều có bước xác nhận lại. Kỹ thuật viên không xác minh tiền đã về công ty, không SETTLED, không phát hành biên nhận và không đóng phiếu.",
+                List.of("Mở Work Order được giao sau Khách xác nhận", "Kiểm tra tổng tiền khách đã xác nhận", "Chọn đúng một tình huống: khách đã chuyển khoản / đã nhận tiền mặt / khách hẹn thanh toán tại quầy", "Đọc lại thông tin và tick xác nhận trước khi lưu", "CSKH đối soát hoặc thu tiền tại quầy, phát hành biên nhận và đóng phiếu"));
     }
 
     private static HelpTopic topicMySchedule() {
@@ -458,15 +458,15 @@ final class AiHelpKnowledgeBase {
     private static HelpTopic topicTechnicians() {
         return new HelpTopic("Kỹ thuật viên", "/technicians", List.of("OWNER", "DISPATCHER"),
                 List.of("ky thuat vien", "nhan su hien truong", "skills", "tay nghe", "technician", "ho so ky thuat"),
-                "Dùng để theo dõi hồ sơ kỹ thuật viên, kỹ năng và trạng thái hoạt động phục vụ công tác điều phối.",
-                List.of("Mở menu Kỹ thuật viên", "Tìm kỹ thuật viên cần xem", "Kiểm tra trạng thái và kỹ năng", "Dùng thông tin phù hợp khi phân công phiếu công việc"));
+                "Dùng để theo dõi hồ sơ kỹ thuật viên, kỹ năng và trạng thái hoạt động. Với kỹ thuật viên, trạng thái tại Đội ngũ kỹ thuật và trạng thái tài khoản tại Người dùng là cùng một trạng thái nghiệp vụ và được đồng bộ hai chiều: bật/tắt ở một màn hình sẽ cập nhật màn hình còn lại trong cùng giao dịch. Tạm ngưng đồng nghĩa không đăng nhập và không nhận lịch mới; kích hoạt lại đồng nghĩa có thể đăng nhập và nhận lịch mới.",
+                List.of("Mở menu Kỹ thuật viên", "Tìm kỹ thuật viên cần xem", "Kiểm tra trạng thái và kỹ năng", "Owner có thể đổi Hoạt động/Tạm ngưng ngay tại đây hoặc tại Người dùng", "Kiểm tra trạng thái đã đồng bộ trước khi phân công phiếu công việc"));
     }
 
     private static HelpTopic topicPartRequests() {
         return new HelpTopic("Yêu cầu phụ tùng", "/part-requests", List.of("OWNER", "WAREHOUSE_STAFF"),
                 List.of("yeu cau phu tung", "hang doi phu tung", "part request", "pending request", "xac nhan cap", "khong the cap", "issue phu tung", "cap vat tu", "sua so luong", "so luong ky thuat vien"),
                 "Đây là hàng đợi Warehouse cần xử lý khi kỹ thuật viên yêu cầu phụ tùng. REQUEST chỉ là nhu cầu công việc và không làm giảm tồn kho. Nhân viên kho không sửa số lượng kỹ thuật viên đã yêu cầu: nếu đã giao đúng số lượng thực tế thì xác nhận ISSUE để trừ kho đúng một lần; nếu không thể cấp thì chọn Không thể cấp và nhập lý do. OWNER được xem để giám sát nhưng không xác nhận hàng ra/vào kho thay Warehouse.",
-                List.of("Mở Yêu cầu phụ tùng", "Ưu tiên các request REQUESTED", "Đối chiếu SKU, số lượng và Work Order", "Khi đã giao đủ đúng số lượng, bấm Xác nhận cấp", "Nếu không thể cấp, chọn Không thể cấp và nhập lý do", "Dùng Lịch sử biến động để kiểm tra ISSUE và RETURN"));
+                List.of("Mở Yêu cầu phụ tùng", "Ưu tiên các request REQUESTED", "Đối chiếu SKU, số lượng và Work Order", "Khi đã giao đủ đúng số lượng, bấm Xác nhận cấp", "Nếu không thể cấp, chọn Không thể cấp và nhập lý do", "Theo dõi mục Vật tư đang do kỹ thuật viên giữ để nhận hoàn trả; dùng Lịch sử biến động chỉ để truy vết ISSUE/RETURN"));
     }
 
     private static HelpTopic topicInventory() {
@@ -486,22 +486,22 @@ final class AiHelpKnowledgeBase {
     private static HelpTopic topicInventoryMovements() {
         return new HelpTopic("Lịch sử biến động kho", "/inventory-movements", List.of("OWNER", "WAREHOUSE_STAFF"),
                 List.of("lich su bien dong kho", "lich su bien dong", "bien dong kho", "giao dich kho", "inventory movement", "inventory transaction", "ledger", "receive", "consume", "adjustment"),
-                "Dùng để truy vết các thay đổi tồn kho như nhập kho, Warehouse cấp phụ tùng cho Work Order, hoàn trả và điều chỉnh kiểm kê; hiển thị actor, thời gian, số lượng, tồn sau và mã Work Order khi có. Riêng ISSUE còn hiển thị snapshot kỹ thuật viên nhận để phân biệt rõ ai cấp và ai nhận; CONSUME chỉ còn để đọc dữ liệu lịch sử cũ.",
-                List.of("Mở menu Lịch sử biến động", "Tìm theo SKU, tên, mã WO, kỹ thuật viên nhận, người thực hiện hoặc ghi chú", "Lọc theo loại giao dịch hoặc khoảng ngày", "Đối chiếu số lượng biến động, kỹ thuật viên nhận và tồn sau", "Với ISSUE còn outstanding, Warehouse có thể mở thao tác Hoàn trả"));
+                "Dùng để truy vết các thay đổi tồn kho như nhập kho, Warehouse cấp phụ tùng cho Work Order, hoàn trả và điều chỉnh kiểm kê; hiển thị actor, thời gian, số lượng, tồn sau và mã Work Order khi có. ISSUE và RETURN hiển thị kỹ thuật viên nhận / trả được ghi nhận tại thời điểm giao dịch để phân biệt rõ người bàn giao vật tư với nhân viên kho thực hiện giao dịch; CONSUME chỉ còn để đọc dữ liệu lịch sử cũ.",
+                List.of("Mở menu Lịch sử biến động", "Tìm theo SKU, tên, mã WO, kỹ thuật viên nhận / trả, người thực hiện hoặc ghi chú", "Lọc theo loại giao dịch hoặc khoảng ngày", "Đối chiếu số lượng biến động, kỹ thuật viên nhận / trả và tồn sau", "Đây là sổ truy vết chỉ đọc; nghiệp vụ hoàn trả được xử lý ở Yêu cầu phụ tùng → Vật tư đang do kỹ thuật viên giữ"));
     }
 
     private static HelpTopic topicInventoryReturns() {
-        return new HelpTopic("Hoàn trả phụ tùng theo Work Order", "/inventory-movements", List.of("OWNER", "WAREHOUSE_STAFF"),
+        return new HelpTopic("Hoàn trả phụ tùng theo Work Order", "/part-requests", List.of("OWNER", "WAREHOUSE_STAFF"),
                 List.of("hoan tra", "tra lai phu tung", "return part", "part return", "phu tung chua dung", "khong dung het"),
-                "Dùng để Warehouse xác nhận nhận lại phụ tùng đã ISSUE cho Work Order nhưng không được Technician dùng hết. Outstanding được tính theo ISSUE - USED - RETURN; RETURN hợp lệ vẫn được phép sau khi Work Order đã CLOSED và không làm mở lại phiếu. Dữ liệu CONSUME legacy vẫn được hỗ trợ để không phá lịch sử cũ.",
-                List.of("Mở menu Lịch sử biến động", "Tìm giao dịch ISSUE của Work Order và phụ tùng cần trả", "Bấm Hoàn trả", "Kiểm tra số lượng outstanding tối đa", "Nhập số lượng và lý do thực tế", "Xác nhận; tồn kho tăng và ledger ghi RETURN", "Đối chiếu lại outstanding"));
+                "Dùng mục Vật tư đang do kỹ thuật viên giữ để Warehouse xác nhận nhận lại phụ tùng đã ISSUE cho Work Order nhưng không được Technician dùng hết. Outstanding được tính theo ISSUE - USED - RETURN; RETURN hợp lệ vẫn được phép sau khi Work Order đã CLOSED và không làm mở lại phiếu. Dữ liệu CONSUME legacy vẫn được hỗ trợ để không phá lịch sử cũ.",
+                List.of("Mở menu Yêu cầu phụ tùng", "Xuống mục Vật tư đang do kỹ thuật viên giữ", "Tìm theo Work Order, kỹ thuật viên hoặc phụ tùng", "Bấm Hoàn trả ở đúng dòng còn số lượng đang giữ", "Kiểm tra số lượng tối đa và chỉ xác nhận sau khi kho đã nhận hàng thực tế", "Nhập số lượng và lý do rồi xác nhận; tồn kho tăng và ledger ghi RETURN", "Khi hoàn hết, dòng tự biến mất; mở Lịch sử biến động để truy vết giao dịch RETURN"));
     }
 
     private static HelpTopic topicPayments() {
         return new HelpTopic("Xử lý thanh toán", "/payments", List.of("OWNER", "CUSTOMER_SERVICE"),
-                List.of("thanh toan", "chuyen khoan", "tien mat", "doi soat", "bien nhan", "payment", "settled"),
-                "Hàng đợi thanh toán cho biết phiếu nào chưa thanh toán, khách báo chuyển khoản, tiền mặt đang do kỹ thuật viên giữ hoặc đã SETTLED. Với khoản đang chờ, CUSTOMER_SERVICE bấm Đối soát thanh toán để mở thẳng đúng Work Order ở tab Thanh toán, kiểm tra snapshot chi phí, số tiền, phương thức và bằng chứng trước khi xác nhận tiền thực tế đã về công ty. Sau SETTLED, CSKH phát hành biên nhận và đóng Work Order; nếu rời phiếu trước khi hoàn tất, hai action cuối vẫn còn tại hàng đợi để tiếp tục. OWNER chỉ xem để giám sát và cấu hình ngân hàng/QR công ty, không settle/close thay CSKH.",
-                List.of("Mở Xử lý thanh toán", "Lọc trạng thái cần xử lý", "Bấm Đối soát thanh toán để mở đúng Work Order / tab Thanh toán", "Kiểm tra chi phí khách đã xác nhận và bằng chứng", "Nếu chuyển khoản, đối chiếu tiền thật vào tài khoản công ty", "Nếu tiền mặt, nhận và đếm tiền KTV bàn giao", "Xác nhận SETTLED", "Phát hành/tải biên nhận", "Đóng phiếu"));
+                List.of("thanh toan", "chuyen khoan", "tien mat", "thanh toan tai quay", "doi soat", "bien nhan", "payment", "settled"),
+                "Hàng đợi thanh toán cho biết phiếu nào chưa thanh toán, khách đã báo chuyển khoản, tiền mặt đang do kỹ thuật viên giữ, khách hẹn thanh toán tại quầy hoặc đã SETTLED. Với khoản đang chờ, CUSTOMER_SERVICE bấm Đối soát thanh toán để mở đúng Work Order ở tab Thanh toán và kiểm tra lại chi phí khách đã xác nhận trước khi ghi nhận tiền. Nếu khách hẹn thanh toán tại quầy, CSKH chỉ ghi nhận sau khi trực tiếp nhận tiền mặt hoặc xác minh chuyển khoản vào tài khoản công ty; hệ thống yêu cầu xác nhận lại để tránh bấm nhầm. Sau SETTLED, CSKH phát hành biên nhận và đóng Work Order. OWNER chỉ xem để giám sát và cấu hình ngân hàng/QR công ty, không settle/close thay CSKH.",
+                List.of("Mở Xử lý thanh toán", "Lọc trạng thái cần xử lý", "Bấm Đối soát thanh toán để mở đúng Work Order / tab Thanh toán", "Kiểm tra chi phí khách đã xác nhận", "Nếu chuyển khoản, đối chiếu tiền thật vào tài khoản công ty", "Nếu tiền mặt, nhận và đếm tiền KTV bàn giao", "Nếu khách hẹn tại quầy, thu tiền trực tiếp rồi chọn đúng phương thức và xác nhận lại", "Xác nhận SETTLED", "Phát hành/tải biên nhận", "Đóng phiếu"));
     }
 
     private static HelpTopic topicPaymentSettings() {

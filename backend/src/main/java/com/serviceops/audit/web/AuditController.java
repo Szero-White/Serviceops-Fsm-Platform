@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -26,12 +27,14 @@ public class AuditController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String actor,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) List<String> action,
+            @RequestParam(required = false) List<String> entityType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
     ) {
-        return service.list(page, size, q, actor, action, entityType, from, to);
+        return service.list(page, size, q, actor, action, entityType, from, to, sortBy, sortDir);
     }
 
     public record AuditResponse(UUID id, String actorUsername, String action, String entityType, UUID entityId, String details, Instant createdAt) {

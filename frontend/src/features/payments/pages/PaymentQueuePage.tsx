@@ -1,9 +1,10 @@
 import { CheckCircleOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Input, Popconfirm, Select, Space, Table, Typography } from 'antd'
+import { App, Button, Input, Popconfirm, Space, Table, Typography } from 'antd'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
@@ -15,11 +16,13 @@ import { formatCurrency, formatDateTime } from '../../../utils/format'
 import { useAuth } from '../../auth/AuthContext'
 import { workOrdersApi } from '../../work-orders/api'
 import { paymentsApi } from '../api'
+import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
 const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: 'UNPAID', label: 'Chưa thanh toán' },
   { value: 'TRANSFER_PENDING_VERIFICATION', label: 'Chờ xác minh chuyển khoản' },
   { value: 'CASH_PENDING_HANDOVER', label: 'KTV đang giữ tiền mặt' },
+  { value: 'COUNTER_PAYMENT_PENDING', label: 'Chờ thanh toán tại quầy' },
   { value: 'SETTLED', label: 'Đã đối soát' },
 ]
 
@@ -31,19 +34,21 @@ export function PaymentQueuePage() {
   const { user } = useAuth()
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('workOrder') ?? '')
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<PaymentStatus>()
+  const [statuses, setStatuses] = useState<PaymentStatus[]>([])
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'updatedAt', sortDir: 'desc' })
   const query = useQuery({
-    queryKey: ['payments', { search, status, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => paymentsApi.list({ search, status, page, size: LIST_PAGE_SIZE }),
+    queryKey: ['payments', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => paymentsApi.list({ search, statuses, page, size: LIST_PAGE_SIZE, sortBy: sort.sortBy, sortDir: sort.sortDir }),
     placeholderData: keepPreviousData,
   })
   const data = query.data
 
-  useEffect(() => setPage(0), [search, status])
+  useEffect(() => setPage(0), [search, statuses])
   useEffect(() => {
     if (data && page > 0 && page >= data.totalPages) setPage(Math.max(data.totalPages - 1, 0))
   }, [data, page])
@@ -89,13 +94,13 @@ export function PaymentQueuePage() {
       <PageHeader
         eyebrow="Đối soát dịch vụ"
         title="Cần xử lý thanh toán"
-        description="Nhìn một màn để biết khoản nào chưa về công ty, khách báo chuyển khoản hay kỹ thuật viên đang giữ tiền mặt."
+        description="Theo dõi khoản chưa thanh toán, chuyển khoản chờ xác minh, tiền mặt chờ bàn giao hoặc khách hẹn thanh toán trực tiếp tại quầy."
         meta={<><MetaBadge tone="warning">{data?.totalElements ?? 0} khoản</MetaBadge>{user?.role === 'OWNER' ? <MetaBadge>Chế độ giám sát</MetaBadge> : null}</>}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, khách hàng hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select<PaymentStatus> allowClear placeholder="Tất cả trạng thái" value={status} onChange={setStatus} options={STATUS_OPTIONS} style={{ minWidth: 230 }} />
+        <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái thanh toán" value={statuses} onChange={(value) => setStatuses(value as PaymentStatus[])} options={STATUS_OPTIONS} minWidth={250} />
       </div>
 
       {query.isError ? <QueryErrorAlert title="Chưa tải được hàng đợi thanh toán" error={query.error} onRetry={() => query.refetch()} /> : null}
@@ -104,19 +109,27 @@ export function PaymentQueuePage() {
         rowKey="id"
         loading={query.isLoading || query.isFetching}
         dataSource={query.isError ? [] : (data?.content ?? [])}
+        className="content-table"
         scroll={{ x: 1180 }}
         pagination={{ current: page + 1, pageSize: LIST_PAGE_SIZE, total: query.isError ? 0 : (data?.totalElements ?? 0), showSizeChanger: false }}
-        onChange={(pagination) => setPage(Math.max((pagination.current ?? 1) - 1, 0))}
+        onChange={(pagination, _filters, sorter) => {
+          setPage(Math.max((pagination.current ?? 1) - 1, 0))
+          const nextSort = resolveTableSort(sorter, { sortBy: 'updatedAt', sortDir: 'desc' })
+          if (nextSort.sortBy !== sort.sortBy || nextSort.sortDir !== sort.sortDir) {
+            setSort(nextSort)
+            setPage(0)
+          }
+        }}
         columns={[
-          { title: 'Phiếu', width: 170, render: (_, payment) => <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`/work-orders?open=${encodeURIComponent(payment.workOrderId)}`)}>{payment.workOrderCode}</Button> },
-          { title: 'Khách hàng', width: 210, dataIndex: 'customerName' },
-          { title: 'Số tiền', width: 150, align: 'right' as const, render: (_, payment) => <Typography.Text strong>{formatCurrency(payment.amount)}</Typography.Text> },
-          { title: 'Kỹ thuật viên', width: 190, dataIndex: 'technicianName' },
-          { title: 'Trạng thái tiền', width: 220, render: (_, payment) => <MetaBadge tone={payment.status === 'SETTLED' ? 'success' : 'warning'}>{statusLabel(payment.status)}</MetaBadge> },
-          { title: 'Cập nhật', width: 170, render: (_, payment) => formatDateTime(payment.updatedAt) },
+          { title: 'Phiếu', width: 170, ...serverSortable(sort, 'workOrderCode'), render: (_, payment) => <Button type="link" style={{ padding: 0 }} onClick={() => navigate(`/work-orders?open=${encodeURIComponent(payment.workOrderId)}`)}>{payment.workOrderCode}</Button> },
+          { title: 'Khách hàng', width: 210, dataIndex: 'customerName', ...serverSortable(sort, 'customerName') },
+          { title: 'Số tiền', width: 150, align: 'right' as const, ...serverSortable(sort, 'amount'), render: (_, payment) => <Typography.Text strong>{formatCurrency(payment.amount)}</Typography.Text> },
+          { title: 'Kỹ thuật viên', width: 190, dataIndex: 'technicianName', ...serverSortable(sort, 'technicianName') },
+          { title: 'Trạng thái tiền', width: 220, ...serverSortable(sort, 'status'), render: (_, payment) => <MetaBadge tone={payment.status === 'SETTLED' ? 'success' : 'warning'}>{statusLabel(payment.status)}</MetaBadge> },
+          { title: 'Cập nhật', width: 170, ...serverSortable(sort, 'updatedAt'), render: (_, payment) => formatDateTime(payment.updatedAt) },
           {
             title: 'Xử lý', width: 220, fixed: 'right',
-            render: (_, payment) => canSettle && ['TRANSFER_PENDING_VERIFICATION', 'CASH_PENDING_HANDOVER'].includes(payment.status) ? (
+            render: (_, payment) => canSettle && ['TRANSFER_PENDING_VERIFICATION', 'CASH_PENDING_HANDOVER', 'COUNTER_PAYMENT_PENDING'].includes(payment.status) ? (
               <Button size="small" type="primary" icon={<SearchOutlined />} onClick={() => openReconciliation(payment)}>
                 Đối soát thanh toán
               </Button>
@@ -147,6 +160,8 @@ export function PaymentQueuePage() {
               ) : <Typography.Text type="secondary">Chờ CSKH hoàn tất hồ sơ</Typography.Text>
             ) : payment.status === 'UNPAID' ? (
               <Typography.Text type="secondary">Chờ khách thanh toán</Typography.Text>
+            ) : payment.status === 'COUNTER_PAYMENT_PENDING' ? (
+              <Typography.Text type="secondary">Chờ CSKH thu tại quầy</Typography.Text>
             ) : ['TRANSFER_PENDING_VERIFICATION', 'CASH_PENDING_HANDOVER'].includes(payment.status) ? (
               <Typography.Text type="secondary">Chờ CSKH đối soát</Typography.Text>
             ) : <Typography.Text type="secondary">Không cần xử lý</Typography.Text>,

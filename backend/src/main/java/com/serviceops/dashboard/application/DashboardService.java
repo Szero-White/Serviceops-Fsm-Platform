@@ -34,8 +34,8 @@ public class DashboardService {
         UUID tenantId = CurrentUser.tenantId();
         boolean technician = CurrentUser.hasRole("TECHNICIAN");
         var recentPage = technician
-                ? workOrderRepository.searchAssigned(tenantId, CurrentUser.userId(), null, "", PageRequest.of(0, 6, Sort.by("createdAt").descending()))
-                : workOrderRepository.search(tenantId, null, "", PageRequest.of(0, 6, Sort.by("createdAt").descending()));
+                ? workOrderRepository.searchAssigned(tenantId, CurrentUser.userId(), WorkOrderStatus.operationalStatuses(), "", PageRequest.of(0, 6, Sort.by("createdAt").descending()))
+                : workOrderRepository.search(tenantId, WorkOrderStatus.operationalStatuses(), "", PageRequest.of(0, 6, Sort.by("createdAt").descending()));
         var recent = recentPage.map(w -> new RecentWorkOrder(
                         w.getId(),
                         w.getCode(),

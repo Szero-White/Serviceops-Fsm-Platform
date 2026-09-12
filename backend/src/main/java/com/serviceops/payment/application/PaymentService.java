@@ -7,6 +7,9 @@ import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
+import com.serviceops.identity.domain.UserRole;
+import com.serviceops.notification.application.NotificationCopy;
+import com.serviceops.notification.application.NotificationService;
 import com.serviceops.payment.domain.Payment;
 import com.serviceops.payment.domain.PaymentMethod;
 import com.serviceops.payment.domain.PaymentRepository;
@@ -22,15 +25,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("workOrderCode", "workOrder.code"),
+            Map.entry("customerName", "workOrder.customer.name"),
+            Map.entry("amount", "amount"),
+            Map.entry("technicianName", "workOrder.technician.user.displayName"),
+            Map.entry("status", "status"),
+            Map.entry("updatedAt", "updatedAt"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final PaymentRepository repository;
     private final AttachmentRepository attachmentRepository;
     private final CompanyPaymentProfileService companyPaymentProfileService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional
     public Payment initializeUnpaid(WorkOrder workOrder, WorkOrderBillingSnapshot snapshot) {
@@ -55,12 +70,19 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<PaymentResponse> search(PaymentStatus status, String search, int page, int size) {
+    public PageResponse<PaymentResponse> search(List<PaymentStatus> status, String search, int page, int size) {
+        return search(status, search, page, size, "updatedAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PaymentResponse> search(List<PaymentStatus> status, String search, int page, int size, String sortBy, String sortDir) {
         requirePaymentQueueRole();
-        var pageable = PageRequestSupport.of(page, size, Sort.by("updatedAt").descending());
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "updatedAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
+        List<PaymentStatus> statuses = status == null || status.isEmpty() ? List.of(PaymentStatus.values()) : status;
         return PageResponse.from(repository.search(
                 CurrentUser.tenantId(),
-                status,
+                statuses,
                 PageRequestSupport.normalizeSearch(search),
                 pageable
         ).map(PaymentService::toResponse));
@@ -82,6 +104,7 @@ public class PaymentService {
         payment.setTransferEvidenceAttachmentId(evidenceAttachmentId);
         payment.setTransferReportedAt(Instant.now());
         auditService.record("REPORT_BANK_TRANSFER", "PAYMENT", payment.getId(), "Khách báo đã chuyển khoản cho " + payment.getWorkOrder().getCode());
+        notifyCustomerService(payment, NotificationCopy.paymentTransferPending(paymentContext(payment), technicianName(payment), payment.getAmount()));
         return toResponse(payment);
     }
 
@@ -99,6 +122,23 @@ public class PaymentService {
         payment.setCollectedByUsername(CurrentUser.username());
         payment.setCollectedByDisplayName(CurrentUser.displayName());
         auditService.record("COLLECT_CASH", "PAYMENT", payment.getId(), "Kỹ thuật viên nhận tiền mặt cho " + payment.getWorkOrder().getCode());
+        notifyCustomerService(payment, NotificationCopy.paymentCashHandoverPending(paymentContext(payment), technicianName(payment), payment.getAmount()));
+        return toResponse(payment);
+    }
+
+    @Transactional
+    public PaymentResponse recordCounterPaymentPlan(UUID workOrderId) {
+        requireTechnicianRole();
+        Payment payment = requireWorkOrderPaymentForUpdate(workOrderId);
+        ensureAssignedTechnician(payment);
+        ensureUnpaid(payment);
+        ensureCustomerAccepted(payment);
+        payment.setMethod(null);
+        payment.setStatus(PaymentStatus.COUNTER_PAYMENT_PENDING);
+        payment.setCounterPaymentRequestedAt(Instant.now());
+        auditService.record("REQUEST_COUNTER_PAYMENT", "PAYMENT", payment.getId(),
+                "Khách sẽ thanh toán tại quầy cho " + payment.getWorkOrder().getCode());
+        notifyCustomerService(payment, NotificationCopy.paymentCounterCollectionPending(paymentContext(payment), technicianName(payment), payment.getAmount()));
         return toResponse(payment);
     }
 
@@ -122,6 +162,24 @@ public class PaymentService {
         return settle(payment, "CONFIRM_CASH_HANDOVER", "Đã nhận tiền mặt bàn giao từ kỹ thuật viên");
     }
 
+    @Transactional
+    public PaymentResponse settleCounter(UUID paymentId, PaymentMethod method) {
+        requireCustomerServiceRole();
+        Payment payment = requireForUpdate(paymentId);
+        if (payment.getStatus() != PaymentStatus.COUNTER_PAYMENT_PENDING) {
+            throw BusinessException.conflict("PAYMENT_NOT_COUNTER_PENDING", "Khoản thanh toán không ở trạng thái chờ thu tại quầy");
+        }
+        if (method == PaymentMethod.BANK_TRANSFER) {
+            companyPaymentProfileService.requireConfigured();
+        }
+        payment.setMethod(method);
+        String action = method == PaymentMethod.BANK_TRANSFER ? "SETTLE_COUNTER_TRANSFER" : "SETTLE_COUNTER_CASH";
+        String details = method == PaymentMethod.BANK_TRANSFER
+                ? "CSKH đã xác minh chuyển khoản tại quầy"
+                : "CSKH đã nhận tiền mặt trực tiếp tại quầy";
+        return settle(payment, action, details);
+    }
+
     private PaymentResponse settle(Payment payment, String action, String details) {
         payment.setStatus(PaymentStatus.SETTLED);
         payment.setSettledAt(Instant.now());
@@ -130,6 +188,31 @@ public class PaymentService {
         payment.setSettledByDisplayName(CurrentUser.displayName());
         auditService.record(action, "PAYMENT", payment.getId(), details + " · " + payment.getWorkOrder().getCode());
         return toResponse(payment);
+    }
+
+    private void notifyCustomerService(Payment payment, NotificationCopy.Copy copy) {
+        notificationService.notifyRoles(
+                payment.getTenantId(),
+                List.of(UserRole.CUSTOMER_SERVICE),
+                copy.title(),
+                copy.message()
+        );
+    }
+
+    private static NotificationCopy.WorkOrderContext paymentContext(Payment payment) {
+        WorkOrder workOrder = payment.getWorkOrder();
+        return new NotificationCopy.WorkOrderContext(
+                workOrder.getCode(),
+                workOrder.getSummary(),
+                workOrder.getCustomer() == null ? null : workOrder.getCustomer().getName()
+        );
+    }
+
+    private static String technicianName(Payment payment) {
+        return payment.getWorkOrder().getTechnician() == null
+                || payment.getWorkOrder().getTechnician().getUser() == null
+                ? null
+                : payment.getWorkOrder().getTechnician().getUser().getDisplayName();
     }
 
     private Payment requireWorkOrderPaymentForUpdate(UUID workOrderId) {
@@ -242,6 +325,7 @@ public class PaymentService {
                 payment.getTransferEvidenceAttachmentId(),
                 payment.getTransferReportedAt(),
                 payment.getCashCollectedAt(),
+                payment.getCounterPaymentRequestedAt(),
                 payment.getCollectedByDisplayName(),
                 payment.getSettledAt(),
                 payment.getSettledByDisplayName(),

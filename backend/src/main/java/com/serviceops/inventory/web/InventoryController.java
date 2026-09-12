@@ -16,11 +16,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,12 +26,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -47,8 +45,10 @@ public class InventoryController {
     public PageResponse<SparePartResponse> search(@RequestParam(defaultValue = "") String search,
                                                   @RequestParam(required = false) Boolean active,
                                                   @RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "20") int size) {
-        return service.search(search, active, page, size);
+                                                  @RequestParam(defaultValue = "20") int size,
+                                                  @RequestParam(defaultValue = "createdAt") String sortBy,
+                                                  @RequestParam(defaultValue = "desc") String sortDir) {
+        return service.search(search, active, page, size, sortBy, sortDir);
     }
 
     @PostMapping("/spare-parts")
@@ -67,13 +67,6 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public SparePartResponse setActive(@PathVariable UUID id, @Valid @RequestBody SparePartStatusRequest request) {
         return service.setActive(id, request.active());
-    }
-
-    @DeleteMapping("/spare-parts/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
-    public void delete(@PathVariable UUID id) {
-        service.delete(id);
     }
 
     @GetMapping("/spare-parts/export")
@@ -111,12 +104,14 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public PageResponse<InventoryTransactionResponse> transactions(
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(required = false) InventoryTransactionType type,
+            @RequestParam(required = false) List<InventoryTransactionType> type,
             @RequestParam(required = false) Instant fromTime,
             @RequestParam(required = false) Instant toTime,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return service.searchTransactions(search, type, fromTime, toTime, page, size);
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return service.searchTransactions(search, type, fromTime, toTime, page, size, sortBy, sortDir);
     }
 
 

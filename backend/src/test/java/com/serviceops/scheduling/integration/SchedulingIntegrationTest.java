@@ -205,7 +205,7 @@ class SchedulingIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void inactiveTechnicianIdentityCannotBeReactivatedOrScheduledThroughWorkforceProfile() {
+    void ownerCanReactivateTechnicianThroughSynchronizedWorkforceStatusAndThenSchedule() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
         UserAccount user = new UserAccount();
@@ -239,7 +239,12 @@ class SchedulingIntegrationTest extends AbstractPostgresIntegrationTest {
                 ownerToken,
                 Map.of("phone", "0900000000", "skills", "Integration test", "active", true)
         );
-        assertThat(ownerReactivate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(ownerReactivate.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        UserAccount reactivatedUser = userAccountRepository.findById(user.getId()).orElseThrow();
+        TechnicianProfile reactivatedTechnician = technicianRepository.findById(technician.getId()).orElseThrow();
+        assertThat(reactivatedUser.isActive()).isTrue();
+        assertThat(reactivatedTechnician.isActive()).isTrue();
 
         Customer customer = anyCustomerFor(owner);
         WorkOrder workOrder = workOrder(
@@ -259,7 +264,7 @@ class SchedulingIntegrationTest extends AbstractPostgresIntegrationTest {
                         "endTime", start.plus(2, ChronoUnit.HOURS)
                 )
         );
-        assertThat(schedule.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(schedule.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

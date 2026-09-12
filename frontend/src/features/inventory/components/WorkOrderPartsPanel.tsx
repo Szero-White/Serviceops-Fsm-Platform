@@ -9,6 +9,7 @@ import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import type { UserRole, WorkOrder, WorkOrderPartRequest, WorkOrderPartRequestStatus, WorkOrderPartUsage } from '../../../types'
 import { formatDateTime, formatQuantityWithUnit } from '../../../utils/format'
+import { compareDate, compareNumber, compareText } from '../../../utils/tableSort'
 import { inventoryApi } from '../api'
 import { canConfirmPartUsage, canRequestPart, PART_REQUEST_STATUS_LABELS } from '../model/workOrderPartPresentation'
 import { WorkOrderPartRequestModal, type WorkOrderPartRequestValues } from './WorkOrderPartRequestModal'
@@ -136,14 +137,15 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
           loading={requestsQuery.isLoading || requestsQuery.isFetching}
           dataSource={requests}
           pagination={false}
+          className="content-table"
           scroll={{ x: 980 }}
           locale={{ emptyText: <Empty description="Phiếu chưa có yêu cầu phụ tùng" /> }}
           columns={[
-            { title: 'Phụ tùng', width: 230, render: (_, item) => <div className="table-primary-cell"><Typography.Text strong>{item.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
-            { title: 'Số lượng', width: 120, render: (_, item) => formatQuantityWithUnit(item.requestedQuantity, item.unit) },
-            { title: 'Trạng thái', width: 130, render: (_, item) => <MetaBadge tone={requestTone(item.status)}>{PART_REQUEST_STATUS_LABELS[item.status]}</MetaBadge> },
-            { title: 'Mục đích / lý do', width: 260, render: (_, item) => item.resolutionReason || item.note },
-            { title: 'Thời gian', width: 165, render: (_, item) => formatDateTime(item.resolvedAt || item.issuedAt || item.requestedAt) },
+            { title: 'Phụ tùng', width: 230, sorter: (a, b) => compareText(a.sparePartName, b.sparePartName), render: (_, item) => <div className="table-primary-cell"><Typography.Text strong>{item.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
+            { title: 'Số lượng', width: 120, sorter: (a, b) => compareNumber(a.requestedQuantity, b.requestedQuantity), render: (_, item) => formatQuantityWithUnit(item.requestedQuantity, item.unit) },
+            { title: 'Trạng thái', width: 130, sorter: (a, b) => compareText(a.status, b.status), render: (_, item) => <MetaBadge tone={requestTone(item.status)}>{PART_REQUEST_STATUS_LABELS[item.status]}</MetaBadge> },
+            { title: 'Mục đích / lý do', width: 260, sorter: (a, b) => compareText(a.resolutionReason || a.note, b.resolutionReason || b.note), render: (_, item) => item.resolutionReason || item.note },
+            { title: 'Thời gian', width: 165, sorter: (a, b) => compareDate(a.resolvedAt || a.issuedAt || a.requestedAt, b.resolvedAt || b.issuedAt || b.requestedAt), render: (_, item) => formatDateTime(item.resolvedAt || item.issuedAt || item.requestedAt) },
             {
               title: 'Thao tác', width: 170, fixed: 'right',
               render: (_, item) => role === 'TECHNICIAN' && item.status === 'REQUESTED' && canCreateRequest ? (
@@ -159,7 +161,7 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
 
       <div>
         <Typography.Title level={5} style={{ marginBottom: 4 }}>Phụ tùng đã cấp / thực tế sử dụng</Typography.Title>
-        <Typography.Text type="secondary">Số lượng thực tế dùng cho khách không làm thay đổi tồn kho; phần chưa dùng có thể được kho nhận hoàn trả sau.</Typography.Text>
+        <Typography.Text type="secondary">Số lượng thực tế dùng cho khách không làm thay đổi tồn kho. Phần chưa dùng được nhân viên kho nhận hoàn trả từ hàng đợi “Vật tư đang do kỹ thuật viên giữ”.</Typography.Text>
       </div>
 
       {usageQuery.isError ? (
@@ -171,14 +173,15 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
           loading={usageQuery.isLoading || usageQuery.isFetching}
           dataSource={usage.filter((item) => Number(item.issuedQuantity) > 0)}
           pagination={false}
+          className="content-table"
           scroll={{ x: 900 }}
           locale={{ emptyText: <Empty description="Kho chưa cấp phụ tùng cho phiếu này" /> }}
           columns={[
-            { title: 'Phụ tùng', width: 230, render: (_, item) => <div className="table-primary-cell"><Typography.Text strong>{item.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
-            { title: 'Đã cấp', width: 120, render: (_, item) => formatQuantityWithUnit(item.issuedQuantity, item.unit) },
-            { title: 'Đã dùng', width: 120, render: (_, item) => formatQuantityWithUnit(item.usedQuantity, item.unit) },
-            { title: 'Đã trả', width: 120, render: (_, item) => formatQuantityWithUnit(item.returnedQuantity, item.unit) },
-            { title: 'KTV đang giữ', width: 140, render: (_, item) => <Typography.Text strong={Number(item.outstandingQuantity) > 0}>{formatQuantityWithUnit(item.outstandingQuantity, item.unit)}</Typography.Text> },
+            { title: 'Phụ tùng', width: 230, sorter: (a, b) => compareText(a.sparePartName, b.sparePartName), render: (_, item) => <div className="table-primary-cell"><Typography.Text strong>{item.sparePartName}</Typography.Text><Typography.Text type="secondary" code>{item.sparePartSku}</Typography.Text></div> },
+            { title: 'Đã cấp', width: 120, sorter: (a, b) => compareNumber(a.issuedQuantity, b.issuedQuantity), render: (_, item) => formatQuantityWithUnit(item.issuedQuantity, item.unit) },
+            { title: 'Đã dùng', width: 120, sorter: (a, b) => compareNumber(a.usedQuantity, b.usedQuantity), render: (_, item) => formatQuantityWithUnit(item.usedQuantity, item.unit) },
+            { title: 'Đã trả', width: 120, sorter: (a, b) => compareNumber(a.returnedQuantity, b.returnedQuantity), render: (_, item) => formatQuantityWithUnit(item.returnedQuantity, item.unit) },
+            { title: 'KTV đang giữ', width: 140, sorter: (a, b) => compareNumber(a.outstandingQuantity, b.outstandingQuantity), render: (_, item) => <Typography.Text strong={Number(item.outstandingQuantity) > 0}>{formatQuantityWithUnit(item.outstandingQuantity, item.unit)}</Typography.Text> },
             {
               title: 'Thao tác', width: 150, fixed: 'right',
               render: (_, item) => canEditUsage ? <Button size="small" onClick={() => setEditingUsage(item)}>Ghi thực tế dùng</Button> : null,

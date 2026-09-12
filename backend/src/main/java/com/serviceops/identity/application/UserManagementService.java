@@ -82,8 +82,8 @@ public class UserManagementService {
         guardSelfUpdate(user, request);
         guardLastOwner(user, request.role(), request.active());
         guardTechnicianDeactivation(user, request.active());
-
         boolean previousActive = user.isActive();
+
         String username = normalizeUsername(request.username());
         applyUser(user, request, username);
         if (request.password() != null && !request.password().isBlank()) {
@@ -165,11 +165,9 @@ public class UserManagementService {
         if (newProfile || request.skills() != null) {
             technician.setSkills(blankToNull(request.skills()));
         }
-        if (newProfile) {
-            technician.setActive(user.isActive());
-        } else if (!user.isActive()) {
-            technician.setActive(false);
-        }
+        // UserAccount.active is the canonical personnel status. Keep the profile mirror
+        // synchronized so both management screens expose one business state.
+        technician.setActive(user.isActive());
 
         return technicianRepository.save(technician);
     }

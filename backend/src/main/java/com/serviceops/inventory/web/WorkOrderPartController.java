@@ -51,11 +51,13 @@ public class WorkOrderPartController {
     @GetMapping("/part-requests")
     @PreAuthorize("hasAnyRole('OWNER','WAREHOUSE_STAFF')")
     public PageResponse<PartRequestResponse> partRequests(
-            @RequestParam(required = false) WorkOrderPartRequestStatus status,
+            @RequestParam(required = false) List<WorkOrderPartRequestStatus> status,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return queryService.searchRequests(status, search, page, size);
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return queryService.searchRequests(status, search, page, size, sortBy, sortDir);
     }
 
     @GetMapping("/work-orders/{workOrderId}/part-requests")

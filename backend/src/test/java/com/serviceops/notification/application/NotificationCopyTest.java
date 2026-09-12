@@ -232,4 +232,18 @@ class NotificationCopyTest {
                 .contains("liên hệ khách hàng");
     }
 
+    @Test
+    void paymentCopiesTellCustomerServiceExactlyWhatNeedsReconciliation() {
+        var transfer = NotificationCopy.paymentTransferPending(WORK_ORDER, "Trịnh Quốc Tiến", new BigDecimal("1270000"));
+        var cash = NotificationCopy.paymentCashHandoverPending(WORK_ORDER, "Trịnh Quốc Tiến", new BigDecimal("1270000"));
+        var counter = NotificationCopy.paymentCounterCollectionPending(WORK_ORDER, "Trịnh Quốc Tiến", new BigDecimal("1270000"));
+
+        assertThat(transfer.title()).contains("Cần đối soát chuyển khoản", WORK_ORDER.code());
+        assertThat(transfer.message()).contains("Xử lý thanh toán", "1.270.000 đ");
+        assertThat(cash.title()).contains("Cần nhận bàn giao tiền mặt", WORK_ORDER.code());
+        assertThat(cash.message()).contains("Xử lý thanh toán", "1.270.000 đ");
+        assertThat(counter.title()).contains("Khách hẹn thanh toán tại quầy", WORK_ORDER.code());
+        assertThat(counter.message()).contains("chưa thanh toán tại hiện trường", "Xử lý thanh toán", "1.270.000 đ");
+    }
+
 }

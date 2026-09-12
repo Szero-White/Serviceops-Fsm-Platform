@@ -10,6 +10,8 @@
 - Bean Validation cho request; tài khoản mới qua API yêu cầu mật khẩu tối thiểu 8 ký tự.
 - Login failure throttling theo cặp IP + username, tổng theo account và tổng theo IP cho deployment single-node.
 - Correlation/request ID (`X-Request-ID`) được sanitize, đưa vào MDC và trả lại client; exception 500 được log server-side nhưng không trả stack trace.
+- Error-disclosure boundary: validation/business errors dùng thông báo nghiệp vụ đã kiểm soát; database/provider/network/stack-trace/class/config errors không được render trực tiếp lên UI. Lỗi hạ tầng trả thông báo an toàn, có thể kèm `requestId` để support tra log.
+- AI provider là implementation detail phía server: UI/public DTO không công bố provider đang dùng, trạng thái API key, HTTP upstream status hay nguyên nhân fallback. Audit/server log vẫn giữ đủ tín hiệu vận hành mà không ghi API key/JWT/password.
 - Public `DEMO_MODE` giữ nguyên CRUD theo RBAC cho dữ liệu do recruiter tạo; service-level policy chỉ bảo vệ seeded demo identities và các service channel `systemDefined`, còn custom channel vẫn CRUD bình thường.
 - Demo password được externalize; public demo từ chối khởi động nếu dùng `123456` hoặc placeholder đi kèm source.
 - Upload giới hạn 10 MB/request, MIME allowlist JPG/PNG/WEBP/PDF, kiểm tra magic bytes, path normalization/traversal protection và quota theo tenant có thể cấu hình.
@@ -51,7 +53,7 @@
 | Tài khoản bị tạm ngưng nhưng JWT cũ còn hạn | JWT validator kiểm tra lại UserAccount hiện tại; inactive/deleted/stale identity bị từ chối |
 | Đổi username làm lệch audit/attachment ownership | Username được cố định sau khi tạo; chỉ display name/password/active profile được cập nhật |
 | Tạm ngưng technician đang còn job | User/profile lifecycle guard dùng cùng pessimistic technician lock với scheduling, kiểm tra operational Work Order assignment và trả 409 trước khi deactivate |
-| Hard-delete parent làm orphan attachment | Asset/Service Request delete kiểm tra polymorphic attachment reference trước khi xóa |
+| Hard-delete parent làm orphan attachment | Asset delete kiểm tra polymorphic attachment reference; Service Request không có hard-delete API và dùng `CANCELLED` để giữ lịch sử |
 | Tồn kho âm | Part lock + work-order lock + validate + ledger trong một transaction + concurrency test |
 | Hai OWNER vô hiệu hóa nhau | Pessimistic tenant-row lock trước invariant “ít nhất một OWNER active” |
 | Upload giả MIME/traversal | Size limit + MIME allowlist + magic bytes + normalized path-boundary check |

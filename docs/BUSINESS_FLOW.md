@@ -23,11 +23,13 @@ Technician ghi nhận khách xác nhận + freeze billing snapshot
         ↓
 CUSTOMER_ACCEPTED
         ↓
-Technician ghi nhận khách chuyển khoản / nhận tiền mặt
+Technician chọn: khách đã chuyển khoản / đã nhận tiền mặt / khách hẹn thanh toán tại quầy
         ↓
-CSKH đối soát → SETTLED → biên nhận thanh toán
+CSKH đối soát hoặc trực tiếp thu tại quầy → SETTLED → biên nhận thanh toán
         ↓
-CSKH đóng phiếu → CLOSED → Lịch sử phiếu
+Nếu chưa đóng: hồ sơ xuất hiện tại Lịch sử phiếu với trạng thái “Chờ hoàn tất hồ sơ”
+        ↓
+CSKH đóng phiếu → CLOSED → tiếp tục được lưu tại Lịch sử phiếu
         ↓
 Dashboard + timeline + audit + notification được cập nhật
 ```
@@ -78,7 +80,7 @@ newStart < existingEnd AND newEnd > existingStart
 
 Khi hai điều phối viên gửi request đồng thời, pessimistic lock trên technician làm tuần tự hóa thao tác. Request thứ hai nhìn thấy appointment vừa commit và nhận `409 TECHNICIAN_SCHEDULE_CONFLICT`.
 
-Kỹ thuật viên đang bị tạm ngưng, account inactive hoặc không còn role `TECHNICIAN` không thể nhận lịch mới. Owner cũng không được tạm ngưng account/profile kỹ thuật viên khi còn Work Order operational đang gán cho người đó; phải điều phối lại hoặc hủy công việc trước.
+Kỹ thuật viên chỉ nhận lịch mới khi trạng thái chung đang **Hoạt động**. `user_accounts.active` là nguồn trạng thái chính và `technician_profiles.active` là mirror tương thích cho query/legacy; hệ thống không cho phép hai trạng thái này vận hành độc lập. Owner bật/tắt tại **Người dùng** hoặc **Đội ngũ kỹ thuật** đều cập nhật đồng thời quyền đăng nhập và eligibility điều phối. Owner không được chuyển kỹ thuật viên sang Tạm ngưng khi còn Work Order operational đang gán cho người đó; phải điều phối lại hoặc hủy công việc trước.
 
 Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/lịch khi phiếu vẫn ở `OPEN`, `SCHEDULED`, `ASSIGNED` hoặc `REOPENED`, tức trước khi kỹ thuật viên bắt đầu di chuyển/thực hiện. Lịch hẹn đã kết thúc nhưng phiếu vẫn ở nhóm trạng thái này được đánh dấu **Quá hạn** trên Lịch điều phối và vẫn có thể dời sang một khoảng thời gian tương lai hợp lệ. Điều phối lại bắt buộc có lý do, được ghi audit `RESCHEDULE` và xuất hiện trong tab **Tiến trình** như một activity điều phối riêng. Nếu đổi kỹ thuật viên, người cũ nhận thông báo đã được điều chuyển khỏi phiếu và người mới nhận thông báo công việc mới; nếu chỉ đổi lịch, kỹ thuật viên hiện tại nhận thông báo gồm lịch cũ, lịch mới và lý do thay đổi. Khi WO đã `ON_THE_WAY` hoặc `IN_PROGRESS`, endpoint schedule/reschedule từ chối để tránh bàn giao ngầm trong khi field work đang diễn ra. Việc đổi kỹ thuật viên, đổi thời gian hoặc đổi cả hai từ trang **Lịch điều phối** và từ chi tiết Work Order đều đi qua cùng endpoint, vì vậy cùng tạo một event `RESCHEDULE`; UI Tiến trình chỉ trình bày phần thay đổi theo giờ địa phương, còn audit vẫn giữ timestamp ISO để truy vết.
 
@@ -93,25 +95,26 @@ Dispatcher hoặc Owner có thể **điều phối lại** kỹ thuật viên/l�
 - `CONSUME` chỉ còn là dữ liệu lịch sử legacy để đọc/đối chiếu; active API/UI không còn write path tạo CONSUME. Không rewrite destructive lịch sử cũ.
 - OWNER/WAREHOUSE_STAFF có thể chỉnh **ngưỡng tồn tối thiểu** (`reorderLevel`); thao tác này không đổi stock, có audit và chỉ cảnh báo Warehouse khi stock vừa chuyển sang mức thấp.
 - Warehouse kiểm kê bằng số lượng thực tế; chênh lệch tạo `ADJUSTMENT_IN`/`ADJUSTMENT_OUT` có lý do và actor. Owner nhận thông báo chênh lệch, Warehouse nhận cảnh báo tồn thấp khi phù hợp.
-- `inventory_transactions` là stock authority; màn **Lịch sử biến động** dùng để truy vết hàng thực sự ra/vào kho. Work Order Timeline kể REQUEST/ISSUE/USED/RETURN cùng status/payment/receipt nhưng không thay thế ledger hay audit.
+- `inventory_transactions` là stock authority; màn **Lịch sử biến động** là ledger chỉ đọc để truy vết hàng thực sự ra/vào kho. Warehouse bắt đầu nghiệp vụ RETURN tại **Yêu cầu phụ tùng → Vật tư đang do kỹ thuật viên giữ**; Work Order Timeline kể REQUEST/ISSUE/USED/RETURN cùng status/payment/receipt nhưng không thay thế ledger hay audit.
 - Billing/customer charge dùng `USED`, không dùng `ISSUE - RETURN`. Khi khách xác nhận, hệ thống khóa billing snapshot; payment dùng snapshot này và biên nhận sau `SETTLED` không thay đổi bởi catalog/RETURN về sau.
 - Locking + validation + transaction ngăn stock âm, double issue và serialize thay đổi cùng một SKU.
 
 ## 5. Quyền thao tác
 
 - `OWNER`: quản trị tài khoản/cấu hình và có quyền quản lý trên các module nghiệp vụ dành cho Owner: Customer/Asset, Service Request (kể cả chuyển sang Work Order), Channel, điều phối, kỹ thuật viên, kho/kiểm kê/lịch sử biến động, Work Order history và audit. Trong Work Order, Owner là admin override cho điều phối và hậu xử lý nhưng không giả lập field progress hoặc xác nhận vật tư/actual-used thay role nghiệp vụ.
+- Trạng thái của nhân sự `TECHNICIAN` là một invariant xuyên hai màn hình: `user_accounts.active` là trạng thái tài khoản chính và `technician_profiles.active` được giữ đồng bộ để tương thích/query. Owner đổi **Hoạt động/Tạm ngưng** tại **Người dùng** hoặc **Đội ngũ kỹ thuật** đều cập nhật cả hai trong cùng transaction; không tồn tại chế độ tài khoản Hoạt động nhưng hồ sơ Tạm ngưng độc lập.
 - `DISPATCHER`: Customer/Asset read-only để lấy ngữ cảnh điều phối; xem Work Order, kỹ thuật viên; assign/schedule/reschedule; operational cancellation và lịch sử phiếu. Không tiếp nhận Service Request, không xem Audit toàn hệ thống hoặc xác nhận/đóng phiếu.
-- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel/delete; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
+- `CUSTOMER_SERVICE`: Customer/Asset create-update-delete theo guard; Service Request intake/update/cancel; chuyển Service Request sang Work Order; tiếp nhận phản hồi sau dịch vụ và có thể mở lại/hủy phiếu theo policy.
 - `TECHNICIAN`: My Schedule + Work Order được giao; field transitions; evidence; tạo/sửa/hủy yêu cầu phụ tùng, ghi actual-used, billing draft và ghi nhận khách xác nhận tại hiện trường.
-- `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
+- `CUSTOMER_SERVICE`: đối soát transfer/cash, phát hành biên nhận sau `SETTLED`, đóng phiếu; nếu payment đã `SETTLED` nhưng Work Order vẫn `CUSTOMER_ACCEPTED`, hồ sơ được đưa khỏi danh sách vận hành sang **Lịch sử phiếu** với nhãn **Chờ hoàn tất hồ sơ** và action quay lại đúng khoản thanh toán để CSKH đóng phiếu. Có thể reopen/cancel theo policy trước khi customer acceptance freeze billing.
 - `OWNER`: quản trị/giám sát, cấu hình bank/QR công ty và xem payment/receipt; không thao tác routine settlement/closure thay role phụ trách.
 - `WAREHOUSE_STAFF`: `/part-requests`, `/inventory`, `/inventory-stocktake`, `/inventory-movements` và API kho; xác nhận cấp/không thể cấp/RETURN, không có Work Order operational dashboard.
 
 ## 6. Delete / cancel / deactivate
 
-- Service Request và Work Order nghiệp vụ ưu tiên state (`CANCELLED`) thay cho hard delete khi đã có lịch sử vận hành.
+- Service Request dùng state `CANCELLED` thay cho hard delete để luôn giữ lịch sử tiếp nhận; Work Order cũng ưu tiên lifecycle/archive thay cho xóa dữ liệu nghiệp vụ.
 - Work Order `CLOSED`/`CANCELLED` chỉ Owner được ẩn khỏi lịch sử tra cứu; audit vẫn được giữ.
-- Asset/Service Request chưa có operational reference vẫn không được hard-delete nếu còn attachment; phải xử lý attachment trước để tránh orphan metadata/file.
+- Asset chưa có operational reference vẫn không được hard-delete nếu còn attachment; Service Request không có hard-delete API nên attachment/history luôn được giữ cùng record nghiệp vụ.
 - Customer `active=false` vẫn giữ trong danh mục và toàn bộ lịch sử cũ, nhưng không được dùng để tạo Service Request hoặc đăng ký Asset mới. Backend áp cùng invariant để API trực tiếp không thể bypass UI. Record đã tồn tại vẫn được phép hoàn thiện/chỉnh sửa với chính khách hàng cũ để không phá hồ sơ đang xử lý.
 - Technician có assignment operational không được deactivate.
 

@@ -1,0 +1,11 @@
+# Keep cross-platform scripts deterministic in Git/CI.
+* text=auto
+
+# POSIX entrypoints must use LF or Linux shebang execution breaks.
+backend/mvnw text eol=lf
+*.sh text eol=lf
+
+# Windows-native launchers/scripts keep CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf

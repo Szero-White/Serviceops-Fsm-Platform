@@ -11,7 +11,9 @@ public class AiProperties {
     private String geminiApiKey;
     private String geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta";
     private String geminiModel = "gemini-3.6-flash";
-    private Duration timeout = Duration.ofSeconds(20);
+    private Duration connectTimeout = Duration.ofSeconds(4);
+    private Duration suggestionTimeout = Duration.ofSeconds(12);
+    private Duration helpTimeout = Duration.ofSeconds(18);
 
     public boolean isEnabled() {
         return enabled;
@@ -53,11 +55,27 @@ public class AiProperties {
         this.geminiModel = geminiModel;
     }
 
-    public Duration getTimeout() {
-        return timeout;
+    public Duration getConnectTimeout() {
+        return connectTimeout;
     }
 
-    public void setTimeout(Duration timeout) {
-        this.timeout = timeout;
+    public void setConnectTimeout(Duration connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    public Duration getSuggestionTimeout() {
+        return suggestionTimeout;
+    }
+
+    public void setSuggestionTimeout(Duration suggestionTimeout) {
+        this.suggestionTimeout = suggestionTimeout;
+    }
+
+    public Duration getHelpTimeout() {
+        return helpTimeout;
+    }
+
+    public void setHelpTimeout(Duration helpTimeout) {
+        this.helpTimeout = helpTimeout;
     }
 }

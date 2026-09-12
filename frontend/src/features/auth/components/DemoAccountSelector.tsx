@@ -20,8 +20,8 @@ type DemoAccount = {
 
 const DEMO_ACCOUNTS: DemoAccount[] = [
   { username: 'owner', role: 'OWNER', description: 'Toàn quyền quản trị và giám sát', icon: <SafetyCertificateOutlined /> },
-  { username: 'dispatcher', role: 'DISPATCHER', description: 'Điều phối phiếu công việc và lịch kỹ thuật', icon: <TeamOutlined /> },
   { username: 'customer-service', role: 'CUSTOMER_SERVICE', description: 'Khách hàng và yêu cầu dịch vụ', icon: <CustomerServiceOutlined /> },
+  { username: 'dispatcher', role: 'DISPATCHER', description: 'Điều phối phiếu công việc và lịch kỹ thuật', icon: <TeamOutlined /> },
   { username: 'technician', role: 'TECHNICIAN', description: 'Thực hiện công việc hiện trường', icon: <ToolOutlined /> },
   { username: 'warehouse', role: 'WAREHOUSE_STAFF', description: 'Tồn kho, kiểm kê và truy vết biến động', icon: <UserOutlined /> },
 ]

@@ -1,3 +1,4 @@
+import type { AiResponseSource } from './ai'
 import type { Priority } from './common'
 
 export type ServiceRequestStatus = 'OPEN' | 'CONVERTED' | 'CANCELLED'
@@ -21,11 +22,7 @@ export interface ServiceRequest {
 export interface ServiceRequestDraftSuggestion {
   title: string
   description: string
-  priority: Priority
-  channel: RequestChannel
-  confidence: number
-  reason: string
-  provider: 'local' | 'gemini' | string
+  source: AiResponseSource
 }
 
 export interface ServiceChannel {

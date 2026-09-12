@@ -21,8 +21,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             left join fetch w.technician t
             left join fetch t.user u
             where w.tenantId = :tenantId
-              and (:status is null or w.status = :status)
-              and w.status not in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and not (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED))
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
@@ -33,7 +33,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
                    or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> search(@Param("tenantId") UUID tenantId,
-                           @Param("status") WorkOrderStatus status,
+                           @Param("statuses") List<WorkOrderStatus> statuses,
                            @Param("search") String search,
                            Pageable pageable);
 
@@ -46,8 +46,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             join fetch t.user u
             where w.tenantId = :tenantId
               and u.id = :userId
-              and (:status is null or w.status = :status)
-              and w.status not in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and not (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED))
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
@@ -65,8 +65,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             join t.user u
             where w.tenantId = :tenantId
               and u.id = :userId
-              and (:status is null or w.status = :status)
-              and w.status not in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and not (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED))
               and w.deletedAt is null
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
@@ -78,7 +78,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             """)
     Page<WorkOrder> searchAssigned(@Param("tenantId") UUID tenantId,
                                    @Param("userId") UUID userId,
-                                   @Param("status") WorkOrderStatus status,
+                                   @Param("statuses") List<WorkOrderStatus> statuses,
                                    @Param("search") String search,
                                    Pageable pageable);
 
@@ -140,8 +140,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             left join fetch t.user u
             where w.tenantId = :tenantId
               and w.deletedAt is null
-              and (:status is null or w.status = :status)
-              and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and (w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+                   or (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED)))
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
                    or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
@@ -151,7 +152,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
                    or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrder> searchHistory(@Param("tenantId") UUID tenantId,
-                                  @Param("status") WorkOrderStatus status,
+                                  @Param("statuses") List<WorkOrderStatus> statuses,
                                   @Param("search") String search,
                                   Pageable pageable);
 
@@ -164,8 +165,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             where w.tenantId = :tenantId
               and u.id = :userId
               and w.deletedAt is null
-              and (:status is null or w.status = :status)
-              and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and (w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+                   or (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED)))
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
                    or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
@@ -183,8 +185,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             where w.tenantId = :tenantId
               and u.id = :userId
               and w.deletedAt is null
-              and (:status is null or w.status = :status)
-              and w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+              and w.status in :statuses
+              and (w.status in (com.serviceops.workorder.domain.WorkOrderStatus.CLOSED, com.serviceops.workorder.domain.WorkOrderStatus.CANCELLED)
+                   or (w.status = com.serviceops.workorder.domain.WorkOrderStatus.CUSTOMER_ACCEPTED and exists (select p.id from Payment p where p.workOrder = w and p.status = com.serviceops.payment.domain.PaymentStatus.SETTLED)))
               and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
                    or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
@@ -195,7 +198,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             """)
     Page<WorkOrder> searchAssignedHistory(@Param("tenantId") UUID tenantId,
                                           @Param("userId") UUID userId,
-                                          @Param("status") WorkOrderStatus status,
+                                          @Param("statuses") List<WorkOrderStatus> statuses,
                                           @Param("search") String search,
                                           Pageable pageable);
 

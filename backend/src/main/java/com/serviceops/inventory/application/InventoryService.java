@@ -35,12 +35,34 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
+    private static final Map<String, String> SPARE_PART_SORT_FIELDS = Map.ofEntries(
+            Map.entry("name", "name"),
+            Map.entry("sku", "sku"),
+            Map.entry("stockQuantity", "stockQuantity"),
+            Map.entry("reorderLevel", "reorderLevel"),
+            Map.entry("unitPrice", "unitPrice"),
+            Map.entry("active", "active"),
+            Map.entry("updatedAt", "updatedAt"),
+            Map.entry("createdAt", "createdAt")
+    );
+    private static final Map<String, String> TRANSACTION_SORT_FIELDS = Map.ofEntries(
+            Map.entry("createdAt", "createdAt"),
+            Map.entry("type", "transactionType"),
+            Map.entry("sparePartName", "sparePart.name"),
+            Map.entry("quantity", "quantity"),
+            Map.entry("balanceAfter", "balanceAfter"),
+            Map.entry("workOrderCode", "workOrder.code"),
+            Map.entry("recipientDisplayName", "recipientDisplayName"),
+            Map.entry("actorDisplayName", "actorDisplayName"),
+            Map.entry("note", "note")
+    );
     private static final Instant INVENTORY_HISTORY_MIN_TIME = Instant.EPOCH;
     private static final Instant INVENTORY_HISTORY_MAX_TIME = Instant.parse("9999-12-31T23:59:59Z");
     private final SparePartRepository sparePartRepository;
@@ -51,7 +73,13 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public PageResponse<SparePartResponse> search(String search, Boolean active, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("name").ascending());
+        return search(search, active, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<SparePartResponse> search(String search, Boolean active, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SPARE_PART_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         return PageResponse.from(sparePartRepository.search(
                 CurrentUser.tenantId(),
                 active,
@@ -135,19 +163,27 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<InventoryTransactionResponse> searchTransactions(String search, List<InventoryTransactionType> type, Instant fromTime, Instant toTime, int page, int size) {
+        return searchTransactions(search, type, fromTime, toTime, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<InventoryTransactionResponse> searchTransactions(String search,
-                                                                          InventoryTransactionType type,
+                                                                          List<InventoryTransactionType> type,
                                                                           Instant fromTime,
                                                                           Instant toTime,
                                                                           int page,
-                                                                          int size) {
+                                                                          int size,
+                                                                          String sortBy,
+                                                                          String sortDir) {
         if (fromTime != null && toTime != null && fromTime.isAfter(toTime)) {
             throw BusinessException.badRequest("INVALID_TIME_RANGE", "Thời gian bắt đầu phải trước thời gian kết thúc");
         }
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
-        List<InventoryTransactionType> types = type == null
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, TRANSACTION_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
+        List<InventoryTransactionType> types = type == null || type.isEmpty()
                 ? List.of(InventoryTransactionType.values())
-                : List.of(type);
+                : type;
         Instant effectiveFromTime = fromTime == null ? INVENTORY_HISTORY_MIN_TIME : fromTime;
         Instant effectiveToTime = toTime == null ? INVENTORY_HISTORY_MAX_TIME : toTime;
 
@@ -260,28 +296,6 @@ public class InventoryService {
                 (active ? "Kích hoạt lại phụ tùng " : "Ngừng sử dụng phụ tùng ") + part.getSku()
         );
         return toResponse(part);
-    }
-
-    @Transactional
-    public void delete(UUID id) {
-        UUID tenantId = CurrentUser.tenantId();
-        SparePart part = requireLocked(id);
-
-        if (part.getStockQuantity().signum() != 0) {
-            throw BusinessException.conflict(
-                    "SPARE_PART_STOCK_NOT_ZERO",
-                    "Chỉ có thể xóa phụ tùng khi tồn kho bằng 0"
-            );
-        }
-        if (transactionRepository.existsByTenantIdAndSparePartId(tenantId, part.getId())) {
-            throw BusinessException.conflict(
-                    "SPARE_PART_HAS_HISTORY",
-                    "Phụ tùng đã có lịch sử kho và không thể xóa; hãy chuyển sang Ngừng sử dụng"
-            );
-        }
-
-        sparePartRepository.delete(part);
-        auditService.record("DELETE", "SPARE_PART", id, "Xóa phụ tùng chưa phát sinh nghiệp vụ " + part.getSku());
     }
 
     private SparePart requireLocked(UUID id) {

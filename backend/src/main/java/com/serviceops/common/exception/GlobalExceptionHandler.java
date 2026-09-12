@@ -14,6 +14,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
 import java.time.Instant;
@@ -87,6 +88,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .headers(ex.getHeaders())
                 .body(addRequestMetadata(detail, request));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ProblemDetail handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND,
+                "Không tìm thấy tài nguyên hoặc đường dẫn được yêu cầu"
+        );
+        detail.setTitle("RESOURCE_NOT_FOUND");
+        detail.setType(URI.create("https://serviceops.local/problems/resource_not_found"));
+        detail.setProperty("code", "RESOURCE_NOT_FOUND");
+        return addRequestMetadata(detail, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

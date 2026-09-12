@@ -1,6 +1,6 @@
 import { EditOutlined, PhoneOutlined, PlusOutlined, SearchOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Avatar, Button, Empty, Form, Input, Modal, Switch, Table, Typography } from 'antd'
+import { App, Avatar, Button, Empty, Form, Input, Modal, Switch, Table, Tooltip, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
@@ -11,6 +11,7 @@ import { BinaryStatusTag, MetaBadge } from '../../../components/PresentationBadg
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import type { Technician } from '../../../types'
 import { EMPTY_VALUE } from '../../../utils/format'
+import { compareDate, compareText, compareNumber } from '../../../utils/tableSort'
 import { useAuth } from '../../auth/AuthContext'
 import { techniciansApi } from '../api'
 import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
@@ -39,15 +40,14 @@ export function TechniciansPage() {
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase()
+    const matches = keyword
+      ? data.filter((technician) =>
+          [technician.name, technician.username, technician.phone, technician.skills]
+            .some((value) => value?.toLowerCase().includes(keyword)),
+        )
+      : data
 
-    if (!keyword) {
-      return data
-    }
-
-    return data.filter((technician) =>
-      [technician.name, technician.username, technician.phone, technician.skills]
-        .some((value) => value?.toLowerCase().includes(keyword)),
-    )
+    return [...matches].sort((a, b) => compareDate(b.createdAt, a.createdAt))
   }, [data, search])
 
   const activeCount = data.filter(
@@ -67,10 +67,11 @@ export function TechniciansPage() {
       return techniciansApi.updateProfile(editing.id, values)
     },
     onSuccess: () => {
-      message.success('Đã cập nhật hồ sơ kỹ thuật viên')
+      message.success('Đã cập nhật kỹ thuật viên và đồng bộ trạng thái tài khoản')
       setEditing(undefined)
       form.resetFields()
       queryClient.invalidateQueries({ queryKey: ['technicians'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['work-orders'] })
       queryClient.invalidateQueries({ queryKey: ['work-order'] })
       queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
@@ -86,7 +87,7 @@ export function TechniciansPage() {
     form.setFieldsValue({
       phone: record.phone,
       skills: record.skills,
-      active: record.active,
+      active: record.active && record.accountActive,
     })
   }
 
@@ -95,7 +96,7 @@ export function TechniciansPage() {
       <PageHeader
         eyebrow="Nhân sự hiện trường"
         title="Đội ngũ kỹ thuật"
-        description="Quản lý hồ sơ nghiệp vụ, kỹ năng và trạng thái sẵn sàng của đội ngũ kỹ thuật. Tài khoản, mật khẩu và phân quyền được quản lý tập trung tại Người dùng."
+        description="Quản lý hồ sơ nghiệp vụ, kỹ năng và trạng thái hoạt động của đội ngũ kỹ thuật. Trạng thái được đồng bộ hai chiều với Người dùng."
         actions={
           canManageAccounts ? (
             <Button
@@ -111,9 +112,9 @@ export function TechniciansPage() {
       />
 
       <div className="channel-summary-grid">
-        <MetricCard label="Sẵn sàng" value={activeCount} helper="Có thể nhận lịch mới" icon={<UserOutlined />} tone="success" />
+        <MetricCard label="Hoạt động" value={activeCount} helper="Có thể đăng nhập và nhận lịch mới" icon={<UserOutlined />} tone="success" />
         <MetricCard label="Có kỹ năng" value={skilledCount} helper="Đã khai báo năng lực" icon={<ToolOutlined />} tone="primary" />
-        <MetricCard label="Tạm ngưng" value={pausedCount} helper="Không hiển thị khi phân công" icon={<PhoneOutlined />} tone="warning" />
+        <MetricCard label="Tạm ngưng" value={pausedCount} helper="Không đăng nhập và không nhận lịch mới" icon={<PhoneOutlined />} tone="warning" />
       </div>
 
       <div className="table-toolbar">
@@ -146,6 +147,7 @@ export function TechniciansPage() {
           {
             title: 'Kỹ thuật viên',
             width: 320,
+            sorter: (a, b) => compareText(a.name, b.name),
             render: (_, record) => (
               <div className="technician-name-cell">
                 <Avatar size={42} icon={<UserOutlined />} />
@@ -158,28 +160,32 @@ export function TechniciansPage() {
               </div>
             ),
           },
-          { title: 'Điện thoại', dataIndex: 'phone', width: 150, render: (value) => value || EMPTY_VALUE },
-          { title: 'Kỹ năng', dataIndex: 'skills', ellipsis: true, render: (value) => value || EMPTY_VALUE },
+          { title: 'Điện thoại', dataIndex: 'phone', width: 150, sorter: (a, b) => compareText(a.phone, b.phone), render: (value) => value || EMPTY_VALUE },
+          { title: 'Kỹ năng', dataIndex: 'skills', ellipsis: true, sorter: (a, b) => compareText(a.skills, b.skills), render: (value) => value || EMPTY_VALUE },
           {
             title: 'Trạng thái',
             width: 150,
+            sorter: (a, b) => compareNumber(Number(a.active && a.accountActive), Number(b.active && b.accountActive)),
             render: (_, record) => {
               const active = record.active && record.accountActive
-              return <BinaryStatusTag active={active} activeLabel="Sẵn sàng" />
+              return <BinaryStatusTag active={active} activeLabel="Hoạt động" inactiveLabel="Tạm ngưng" />
             },
           },
           {
-            title: '',
-            width: canManageProfiles ? 64 : 24,
+            title: 'Thao tác',
+            width: canManageProfiles ? 76 : 24,
+            fixed: 'right' as const,
+            align: 'center' as const,
             render: (_, record) => canManageProfiles ? (
-              <Button
-                aria-label="Sửa hồ sơ kỹ thuật viên"
-                type="text"
-                icon={<EditOutlined />}
-                disabled={Boolean(record.protectedDemo)}
-                title={record.protectedDemo ? 'Tài khoản demo cố định được bảo vệ' : undefined}
-                onClick={() => showEdit(record)}
-              />
+              <Tooltip title={record.protectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Sửa hồ sơ kỹ thuật viên'}>
+                <Button
+                  aria-label="Sửa hồ sơ kỹ thuật viên"
+                  type="text"
+                  icon={<EditOutlined />}
+                  disabled={Boolean(record.protectedDemo)}
+                  onClick={() => showEdit(record)}
+                />
+              </Tooltip>
             ) : null,
           },
         ]}
@@ -199,7 +205,7 @@ export function TechniciansPage() {
         destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
-          Username, mật khẩu, vai trò và trạng thái tài khoản được quản lý tại trang Người dùng.
+          Username, mật khẩu và vai trò được quản lý tại Người dùng. Trạng thái Hoạt động/Tạm ngưng được đồng bộ hai chiều giữa hai màn hình.
         </Typography.Paragraph>
 
         <Form
@@ -216,8 +222,16 @@ export function TechniciansPage() {
           <Form.Item label="Kỹ năng" name="skills">
             <Input.TextArea rows={3} placeholder="Máy lạnh, tủ lạnh, điện dân dụng, bảo trì định kỳ..." />
           </Form.Item>
-          <Form.Item name="active" valuePropName="checked">
-            <Switch checkedChildren="Sẵn sàng" unCheckedChildren="Tạm ngưng" />
+          <Form.Item
+            label="Trạng thái"
+            name="active"
+            valuePropName="checked"
+            extra="Thay đổi tại đây sẽ đồng thời cập nhật trạng thái tài khoản ở Người dùng. Thay đổi tại Người dùng cũng được phản ánh ngược lại tại đây."
+          >
+            <Switch
+              checkedChildren="Hoạt động"
+              unCheckedChildren="Tạm ngưng"
+            />
           </Form.Item>
         </Form>
       </Modal>

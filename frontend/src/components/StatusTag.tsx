@@ -76,11 +76,11 @@ function channelColorClass(color?: string) {
   return `channel-color-${channelColorNames.has(normalized) ? normalized : 'default'}`
 }
 
-export function StatusTag({ status }: { status: WorkOrderStatus | ServiceRequestStatus | AssetStatus }) {
+export function StatusTag({ status, label }: { status: WorkOrderStatus | ServiceRequestStatus | AssetStatus; label?: string }) {
   return (
     <Tag className={semanticClass(statusTones[status] ?? 'neutral')}>
       <span className="semantic-tag-dot" aria-hidden="true" />
-      {statusLabels[status] ?? status}
+      {label ?? statusLabels[status] ?? status}
     </Tag>
   )
 }

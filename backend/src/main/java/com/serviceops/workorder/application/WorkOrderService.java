@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -47,6 +48,19 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class WorkOrderService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("code", "code"),
+            Map.entry("summary", "summary"),
+            Map.entry("customerName", "customer.name"),
+            Map.entry("assetLabel", "asset.serialNumber"),
+            Map.entry("technicianName", "technician.user.displayName"),
+            Map.entry("priority", "priority"),
+            Map.entry("status", "status"),
+            Map.entry("scheduledStart", "scheduledStart"),
+            Map.entry("scheduledEnd", "scheduledEnd"),
+            Map.entry("completedAt", "completedAt"),
+            Map.entry("createdAt", "createdAt")
+    );
     private static final Set<WorkOrderStatus> TECHNICIAN_ALLOWED_TRANSITIONS = EnumSet.of(
             WorkOrderStatus.ON_THE_WAY,
             WorkOrderStatus.IN_PROGRESS,
@@ -81,12 +95,19 @@ public class WorkOrderService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public PageResponse<WorkOrderResponse> search(String search, WorkOrderStatus status, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+    public PageResponse<WorkOrderResponse> search(String search, List<WorkOrderStatus> status, int page, int size) {
+        return search(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> search(String search, List<WorkOrderStatus> status, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String normalizedSearch = PageRequestSupport.normalizeSearch(search);
+        List<WorkOrderStatus> statuses = activeStatuses(status);
         var result = CurrentUser.hasRole("TECHNICIAN")
-                ? repository.searchAssigned(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
-                : repository.search(CurrentUser.tenantId(), status, normalizedSearch, pageable);
+                ? repository.searchAssigned(CurrentUser.tenantId(), CurrentUser.userId(), statuses, normalizedSearch, pageable)
+                : repository.search(CurrentUser.tenantId(), statuses, normalizedSearch, pageable);
         return PageResponse.from(result.map(w -> toResponse(w, List.of())));
     }
 
@@ -111,16 +132,44 @@ public class WorkOrderService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<WorkOrderResponse> history(String search, WorkOrderStatus status, int page, int size) {
-        if (status != null && status != WorkOrderStatus.CLOSED && status != WorkOrderStatus.CANCELLED) {
-            throw BusinessException.badRequest("INVALID_HISTORY_STATUS", "Lịch sử phiếu chỉ lọc trạng thái đã đóng hoặc đã hủy");
-        }
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+    public PageResponse<WorkOrderResponse> history(String search, List<WorkOrderStatus> status, int page, int size) {
+        return history(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<WorkOrderResponse> history(String search, List<WorkOrderStatus> status, int page, int size, String sortBy, String sortDir) {
+        List<WorkOrderStatus> historyStatuses = historyStatuses(status);
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String normalizedSearch = PageRequestSupport.normalizeSearch(search);
         var result = CurrentUser.hasRole("TECHNICIAN")
-                ? repository.searchAssignedHistory(CurrentUser.tenantId(), CurrentUser.userId(), status, normalizedSearch, pageable)
-                : repository.searchHistory(CurrentUser.tenantId(), status, normalizedSearch, pageable);
+                ? repository.searchAssignedHistory(CurrentUser.tenantId(), CurrentUser.userId(), historyStatuses, normalizedSearch, pageable)
+                : repository.searchHistory(CurrentUser.tenantId(), historyStatuses, normalizedSearch, pageable);
         return PageResponse.from(result.map(w -> toResponse(w, List.of())));
+    }
+
+    private static List<WorkOrderStatus> activeStatuses(List<WorkOrderStatus> requested) {
+        List<WorkOrderStatus> allowed = WorkOrderStatus.operationalStatuses();
+        if (requested == null || requested.isEmpty()) {
+            return allowed;
+        }
+        List<WorkOrderStatus> filtered = requested.stream().filter(allowed::contains).distinct().toList();
+        if (filtered.size() != requested.stream().distinct().count()) {
+            throw BusinessException.badRequest("INVALID_ACTIVE_WORK_ORDER_STATUS", "Bộ lọc phiếu công việc chứa trạng thái không thuộc danh sách đang vận hành");
+        }
+        return filtered;
+    }
+
+    private static List<WorkOrderStatus> historyStatuses(List<WorkOrderStatus> requested) {
+        List<WorkOrderStatus> allowed = WorkOrderStatus.historyStatuses();
+        if (requested == null || requested.isEmpty()) {
+            return allowed;
+        }
+        List<WorkOrderStatus> filtered = requested.stream().filter(allowed::contains).distinct().toList();
+        if (filtered.size() != requested.stream().distinct().count()) {
+            throw BusinessException.badRequest("INVALID_HISTORY_STATUS", "Lịch sử phiếu chỉ lọc hồ sơ chờ hoàn tất, đã đóng hoặc đã hủy");
+        }
+        return filtered;
     }
 
     @Transactional

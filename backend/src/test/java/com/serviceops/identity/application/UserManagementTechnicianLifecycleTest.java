@@ -121,6 +121,36 @@ class UserManagementTechnicianLifecycleTest {
         verify(auditService).record("UPDATE", "USER_ACCOUNT", USER_ID, "Cập nhật người dùng field-tech · trạng thái Hoạt động -> Tạm ngưng");
     }
 
+
+    @Test
+    void reactivatingTechnicianAccountRestoresDispatchAvailability() {
+        technicianUser.setActive(false);
+        technician.setActive(false);
+        when(technicianRepository.findByTenantIdAndUserId(TENANT_ID, USER_ID)).thenReturn(Optional.of(technician));
+        when(technicianRepository.save(any(TechnicianProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserAccountRequest request = new UserAccountRequest(
+                "field-tech",
+                "Field Technician",
+                UserRole.TECHNICIAN,
+                null,
+                true,
+                null,
+                null
+        );
+
+        service.update(USER_ID, request);
+
+        assertThat(technicianUser.isActive()).isTrue();
+        assertThat(technician.isActive()).isTrue();
+        verify(auditService).record(
+                "UPDATE",
+                "USER_ACCOUNT",
+                USER_ID,
+                "Cập nhật người dùng field-tech · trạng thái Tạm ngưng -> Hoạt động"
+        );
+    }
+
     @Test
     void usernameCannotChangeAfterAccountCreation() {
         UserAccountRequest request = new UserAccountRequest(

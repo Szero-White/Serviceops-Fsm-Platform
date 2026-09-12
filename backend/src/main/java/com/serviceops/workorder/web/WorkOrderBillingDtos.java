@@ -1,6 +1,8 @@
 package com.serviceops.workorder.web;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -40,12 +42,17 @@ public final class WorkOrderBillingDtos {
             BigDecimal incidentalFee,
             String incidentalReason,
             BigDecimal totalAmount,
+            String reviewToken,
             String acceptedByDisplayName,
             Instant acceptedAt
     ) {
     }
 
     public record CustomerAcceptanceRequest(
+            boolean technicianReviewed,
+            boolean customerConfirmed,
+            @NotNull @DecimalMin(value = "0.0") BigDecimal reviewedTotalAmount,
+            @NotBlank @Size(max = 128) String reviewToken,
             @Size(max = 1000) String note
     ) {
     }

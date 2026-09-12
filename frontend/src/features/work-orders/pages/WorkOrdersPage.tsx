@@ -1,11 +1,12 @@
 import { SearchOutlined } from '@ant-design/icons'
 import type { UploadRequestOption } from '@rc-component/upload/es/interface'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Form, Input, Select } from 'antd'
+import { App, Form, Input } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { apiErrorMessage } from '../../../api/http'
+import { apiErrorCode, apiErrorMessage } from '../../../api/http'
+import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { MetaBadge } from '../../../components/PresentationBadge'
@@ -16,13 +17,15 @@ import { attachmentsApi } from '../../attachments/api'
 import { useAuth } from '../../auth/AuthContext'
 import { techniciansApi } from '../../technicians/api'
 import { workOrdersApi } from '../api'
-import { paymentsApi } from '../../payments/api'
+import { paymentsApi, type CustomerAcceptancePayload } from '../../payments/api'
 import { WorkOrderDetailDrawer } from '../components/WorkOrderDetailDrawer'
+import { CustomerAcceptanceModal } from '../components/CustomerAcceptanceModal'
 import { CompleteWorkOrderModal, type CompleteWorkOrderValues } from '../components/CompleteWorkOrderModal'
 import { WorkOrderScheduleModal, type ScheduleWorkOrderValues } from '../components/WorkOrderScheduleModal'
 import { WorkOrderTable } from '../components/WorkOrderTable'
 import { ACTIVE_WORK_ORDER_STATUS_OPTIONS, availableWorkOrderTransitions, WORK_ORDER_STATUS_OPTIONS } from '../model/workOrderPresentation'
 import { workOrderPermissions } from '../model/workOrderPermissions'
+import type { TableSortState } from '../../../utils/tableSort'
 
 export function WorkOrdersPage() {
   const { user } = useAuth()
@@ -31,11 +34,13 @@ export function WorkOrdersPage() {
   const permissions = workOrderPermissions(user?.role)
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<TableSortState>({ sortBy: 'createdAt', sortDir: 'desc' })
   const search = useDebouncedValue(searchInput.trim())
-  const [status, setStatus] = useState<WorkOrderStatus>()
+  const [statuses, setStatuses] = useState<WorkOrderStatus[]>([])
   const [selectedId, setSelectedId] = useState<string | undefined>(() => searchParams.get('open') ?? undefined)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
+  const [acceptanceOpen, setAcceptanceOpen] = useState(false)
   const [scheduleForm] = Form.useForm<ScheduleWorkOrderValues>()
   const [completeForm] = Form.useForm<CompleteWorkOrderValues>()
   const { message, notification } = App.useApp()
@@ -71,8 +76,8 @@ export function WorkOrdersPage() {
   }
 
   const workOrdersQuery = useQuery({
-    queryKey: ['work-orders', { search, status, page, size: LIST_PAGE_SIZE }],
-    queryFn: () => workOrdersApi.list(search, status, page, LIST_PAGE_SIZE),
+    queryKey: ['work-orders', { search, statuses, page, size: LIST_PAGE_SIZE, sort }],
+    queryFn: () => workOrdersApi.list(search, statuses, page, LIST_PAGE_SIZE, sort.sortBy, sort.sortDir),
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = workOrdersQuery
@@ -165,17 +170,11 @@ export function WorkOrdersPage() {
   })
 
   const transition = useMutation({
-    mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) => targetStatus === 'CUSTOMER_ACCEPTED'
-      ? paymentsApi.customerAcceptance(selectedId!, note)
-      : workOrdersApi.transition(selectedId!, { targetStatus, note }),
+    mutationFn: ({ targetStatus, note }: { targetStatus: WorkOrderStatus; note?: string }) =>
+      workOrdersApi.transition(selectedId!, { targetStatus, note }),
     onSuccess: (workOrder) => {
       const statusLabel = WORK_ORDER_STATUS_OPTIONS.find((option) => option.value === workOrder.status)?.label ?? workOrder.status
-      if (workOrder.status === 'CUSTOMER_ACCEPTED') {
-        notification.success({
-          message: `Khách đã xác nhận · ${workOrder.code}`,
-          description: 'Chi phí đã được khóa theo xác nhận của khách. Tiếp theo ghi nhận phương thức thanh toán; CSKH sẽ đối soát tiền về công ty.',
-        })
-      } else if (workOrder.status === 'CLOSED') {
+      if (workOrder.status === 'CLOSED') {
         notification.success({
           message: `Đã đóng ${workOrder.code}`,
           description: 'Phiếu đã chuyển sang Lịch sử phiếu công việc.',
@@ -192,6 +191,30 @@ export function WorkOrdersPage() {
       }
     },
     onError: (error) => message.error(apiErrorMessage(error)),
+  })
+
+  const customerAcceptance = useMutation({
+    mutationFn: (payload: CustomerAcceptancePayload) => paymentsApi.customerAcceptance(selectedId!, payload),
+    onSuccess: (workOrder) => {
+      setAcceptanceOpen(false)
+      notification.success({
+        message: `Khách đã xác nhận · ${workOrder.code}`,
+        description: 'Phụ tùng và chi phí đã được khóa theo nội dung khách vừa kiểm tra. Tiếp theo ghi nhận phương thức thanh toán.',
+      })
+      refreshOperations()
+    },
+    onError: (error) => {
+      if (apiErrorCode(error) === 'BILLING_CHANGED_REVIEW_REQUIRED') {
+        setAcceptanceOpen(false)
+        notification.warning({
+          message: 'Chi phí đã thay đổi',
+          description: 'Vui lòng mở lại bước xác nhận và kiểm tra lại toàn bộ phụ tùng, chi phí trước khi giao khách xác nhận.',
+        })
+        queryClient.invalidateQueries({ queryKey: ['work-order-billing', selectedId] })
+        return
+      }
+      message.error(apiErrorMessage(error))
+    },
   })
 
   const closeComplete = () => {
@@ -280,12 +303,12 @@ export function WorkOrdersPage() {
         eyebrow="Vận hành dịch vụ"
         title="Phiếu công việc"
         description="Theo dõi công việc đã được bàn giao từ Customer Service, từ điều phối đến hoàn thành."
-        meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={status ? 'info' : 'neutral'}>{status ? 'Đang lọc' : 'Tất cả trạng thái'}</MetaBadge></>}
+        meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={statuses.length ? 'info' : 'neutral'}>{statuses.length ? `${statuses.length} trạng thái` : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        <Select allowClear placeholder="Tất cả trạng thái" value={status} onChange={(value) => { setStatus(value); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} />
+        <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái phiếu công việc" value={statuses} onChange={(value) => { setStatuses(value as WorkOrderStatus[]); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} minWidth={220} />
       </div>
 
       {workOrdersQuery.isError && (
@@ -303,6 +326,8 @@ export function WorkOrdersPage() {
         pageSize={LIST_PAGE_SIZE}
         total={workOrdersQuery.isError ? 0 : (data?.totalElements ?? 0)}
         onPageChange={setPage}
+        sort={sort}
+        onSortChange={(nextSort) => { setSort(nextSort); setPage(0) }}
         onSelect={selectWorkOrder}
         loadError={workOrdersQuery.isError}
       />
@@ -324,6 +349,7 @@ export function WorkOrdersPage() {
         onClose={closeDetail}
         onSchedule={openSchedule}
         onComplete={openComplete}
+        onCustomerAcceptance={() => setAcceptanceOpen(true)}
         role={user?.role}
         onTransition={(targetStatus, note) => transition.mutate({ targetStatus, note })}
         onUpload={uploadFile}
@@ -350,6 +376,14 @@ export function WorkOrdersPage() {
         hasPreviousResult={Boolean(detail?.diagnosis || detail?.resolution)}
         onClose={closeComplete}
         onSubmit={(values) => complete.mutate(values)}
+      />
+
+      <CustomerAcceptanceModal
+        workOrder={detail}
+        open={acceptanceOpen}
+        pending={customerAcceptance.isPending}
+        onClose={() => setAcceptanceOpen(false)}
+        onConfirm={(payload) => customerAcceptance.mutate(payload)}
       />
     </div>
   )

@@ -42,7 +42,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             left join fetch t.user
             where r.tenantId = :tenantId
               and r.workOrder.id = :workOrderId
-            order by r.createdAt asc
+            order by r.createdAt desc
             """)
     List<WorkOrderPartRequest> findDetailedByWorkOrder(@Param("tenantId") UUID tenantId,
                                                        @Param("workOrderId") UUID workOrderId);
@@ -56,7 +56,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             where r.tenantId = :tenantId
               and r.workOrder.id = :workOrderId
               and r.status = :status
-            order by r.createdAt asc
+            order by r.createdAt desc
             """)
     List<WorkOrderPartRequest> findDetailedByWorkOrderAndStatus(@Param("tenantId") UUID tenantId,
                                                                 @Param("workOrderId") UUID workOrderId,
@@ -76,7 +76,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             left join fetch w.technician t
             left join fetch t.user
             where r.tenantId = :tenantId
-              and (:status is null or r.status = :status)
+              and r.status in :statuses
               and (:search = ''
                    or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
@@ -90,7 +90,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
             join r.workOrder w
             join r.sparePart p
             where r.tenantId = :tenantId
-              and (:status is null or r.status = :status)
+              and r.status in :statuses
               and (:search = ''
                    or lower(w.code) like lower(concat('%', :search, '%'))
                    or lower(w.summary) like lower(concat('%', :search, '%'))
@@ -100,7 +100,7 @@ public interface WorkOrderPartRequestRepository extends JpaRepository<WorkOrderP
                    or lower(coalesce(r.receivedByDisplayName, '')) like lower(concat('%', :search, '%')))
             """)
     Page<WorkOrderPartRequest> search(@Param("tenantId") UUID tenantId,
-                                      @Param("status") WorkOrderPartRequestStatus status,
+                                      @Param("statuses") List<WorkOrderPartRequestStatus> statuses,
                                       @Param("search") String search,
                                       Pageable pageable);
     @Query("""

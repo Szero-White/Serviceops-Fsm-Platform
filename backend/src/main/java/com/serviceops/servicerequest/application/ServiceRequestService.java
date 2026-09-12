@@ -3,7 +3,6 @@ package com.serviceops.servicerequest.application;
 import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
-import com.serviceops.attachment.domain.AttachmentRepository;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
@@ -15,31 +14,45 @@ import com.serviceops.servicerequest.domain.ServiceRequestRepository;
 import com.serviceops.servicerequest.domain.ServiceRequestStatus;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.CreateServiceRequest;
 import com.serviceops.servicerequest.web.ServiceRequestDtos.ServiceRequestResponse;
-import com.serviceops.workorder.domain.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ServiceRequestService {
+    private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
+            Map.entry("title", "title"),
+            Map.entry("customerName", "customer.name"),
+            Map.entry("assetLabel", "asset.serialNumber"),
+            Map.entry("priority", "priority"),
+            Map.entry("channel", "channel"),
+            Map.entry("status", "status"),
+            Map.entry("createdAt", "createdAt")
+    );
     private final ServiceRequestRepository repository;
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
     private final ServiceChannelService serviceChannelService;
-    private final WorkOrderRepository workOrderRepository;
-    private final AttachmentRepository attachmentRepository;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
-    public PageResponse<ServiceRequestResponse> search(String search, ServiceRequestStatus status, int page, int size) {
-        var pageable = PageRequestSupport.of(page, size, Sort.by("createdAt").descending());
+    public PageResponse<ServiceRequestResponse> search(String search, List<ServiceRequestStatus> status, int page, int size) {
+        return search(search, status, page, size, "createdAt", "desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ServiceRequestResponse> search(String search, List<ServiceRequestStatus> status, int page, int size, String sortBy, String sortDir) {
+        var sort = PageRequestSupport.safeSort(sortBy, sortDir, SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        var pageable = PageRequestSupport.of(page, size, sort);
         String keyword = PageRequestSupport.normalizeSearch(search);
-        return PageResponse.from(repository.search(CurrentUser.tenantId(), status, keyword, pageable).map(ServiceRequestService::toResponse));
+        List<ServiceRequestStatus> statuses = status == null || status.isEmpty() ? List.of(ServiceRequestStatus.values()) : status;
+        return PageResponse.from(repository.search(CurrentUser.tenantId(), statuses, keyword, pageable).map(ServiceRequestService::toResponse));
     }
 
     @Transactional(readOnly = true)
@@ -81,23 +94,6 @@ public class ServiceRequestService {
         }
         auditService.record("CANCEL", "SERVICE_REQUEST", entity.getId(), "Hủy yêu cầu dịch vụ");
         return toResponse(entity);
-    }
-
-    @Transactional
-    public void delete(UUID id) {
-        ServiceRequest entity = require(id);
-        long workOrderCount = workOrderRepository.countByTenantIdAndServiceRequestId(CurrentUser.tenantId(), id);
-        if (workOrderCount > 0 || entity.getStatus() == ServiceRequestStatus.CONVERTED) {
-            throw BusinessException.conflict("SERVICE_REQUEST_IN_USE", "Không thể xóa yêu cầu đã tạo phiếu công việc");
-        }
-        if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(CurrentUser.tenantId(), "SERVICE_REQUEST", id)) {
-            throw BusinessException.conflict(
-                    "SERVICE_REQUEST_HAS_ATTACHMENTS",
-                    "Không thể xóa yêu cầu dịch vụ khi còn file đính kèm; hãy xóa file đính kèm trước"
-            );
-        }
-        repository.delete(entity);
-        auditService.record("DELETE", "SERVICE_REQUEST", entity.getId(), "Xóa yêu cầu dịch vụ: " + entity.getTitle());
     }
 
     public ServiceRequest require(UUID id) {

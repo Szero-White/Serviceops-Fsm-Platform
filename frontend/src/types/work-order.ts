@@ -97,4 +97,6 @@ export interface Technician {
   active: boolean
   accountActive: boolean
   protectedDemo?: boolean
+  createdAt: string
+  updatedAt: string
 }

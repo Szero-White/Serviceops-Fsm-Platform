@@ -165,28 +165,10 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void unusedZeroStockSparePartCanBeDeleted() {
+    void sparePartWithHistoryCanBeDiscontinuedWithoutDeletingHistory() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
-        SparePart part = sparePart(owner, "DELETE-UNUSED-", BigDecimal.ZERO);
-        sparePartRepository.saveAndFlush(part);
-
-        ResponseEntity<String> response = exchangeInventory(
-                "/api/v1/spare-parts/" + part.getId(),
-                HttpMethod.DELETE,
-                login("owner", "123456"),
-                null
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId())).isEmpty();
-    }
-
-    @Test
-    void sparePartWithHistoryCannotBeDeletedAndCanBeDiscontinued() {
-        UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
-
-        SparePart part = sparePart(owner, "DELETE-HISTORY-", BigDecimal.ZERO);
+        SparePart part = sparePart(owner, "DISCONTINUE-HISTORY-", BigDecimal.ZERO);
         sparePartRepository.saveAndFlush(part);
 
         InventoryTransaction transaction = new InventoryTransaction();
@@ -195,36 +177,25 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
         transaction.setTransactionType(InventoryTransactionType.IMPORT);
         transaction.setQuantity(BigDecimal.ONE);
         transaction.setBalanceAfter(BigDecimal.ZERO);
-        transaction.setNote("Historical transaction for safe-delete test");
+        transaction.setNote("Historical transaction preserved after discontinue");
         transaction.setCreatedBy("integration-test");
         inventoryTransactionRepository.saveAndFlush(transaction);
-
-        String ownerToken = login("owner", "123456");
-
-        ResponseEntity<String> deleteResponse = exchangeInventory(
-                "/api/v1/spare-parts/" + part.getId(),
-                HttpMethod.DELETE,
-                ownerToken,
-                null
-        );
-
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(deleteResponse.getBody()).contains("SPARE_PART_HAS_HISTORY");
-        assertThat(sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId())).isPresent();
 
         ResponseEntity<String> discontinueResponse = exchangeInventory(
                 "/api/v1/spare-parts/" + part.getId() + "/active",
                 HttpMethod.PATCH,
-                ownerToken,
+                login("owner", "123456"),
                 Map.of("active", false)
         );
 
         assertThat(discontinueResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId()).orElseThrow().isActive()).isFalse();
+        SparePart reloaded = sparePartRepository.findByIdAndTenantId(part.getId(), owner.getTenantId()).orElseThrow();
+        assertThat(reloaded.isActive()).isFalse();
+        assertThat(inventoryTransactionRepository.existsByTenantIdAndSparePartId(owner.getTenantId(), part.getId())).isTrue();
     }
 
     @Test
-    void positiveStockSparePartCannotBeDeletedButCanBeDiscontinued() {
+    void sparePartDeleteEndpointIsUnavailableAndPartCanBeDiscontinued() {
         UserAccount owner = userAccountRepository.findByUsernameIgnoreCase("owner").orElseThrow();
 
         SparePart part = sparePart(owner, "STOCK-GUARD-", new BigDecimal("2.000"));
@@ -238,7 +209,7 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 ownerToken,
                 null
         );
-        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
         ResponseEntity<String> discontinueResponse = exchangeInventory(
                 "/api/v1/spare-parts/" + part.getId() + "/active",
@@ -311,6 +282,17 @@ class InventoryIntegrationTest extends AbstractPostgresIntegrationTest {
                 Map.of("quantity", new BigDecimal("1.000"), "note", "Unused part returned")
         );
         assertThat(returnResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        InventoryTransaction returnedTransaction = inventoryTransactionRepository
+                .findWorkflowPartTransactionsForWorkOrderAndSparePart(
+                        owner.getTenantId(), workOrder.getId(), part.getId()
+                )
+                .stream()
+                .filter(transaction -> transaction.getTransactionType() == InventoryTransactionType.RETURN)
+                .findFirst()
+                .orElseThrow();
+        assertThat(returnedTransaction.getRecipientUserId()).isEqualTo(workOrder.getTechnician().getUser().getId());
+        assertThat(returnedTransaction.getRecipientDisplayName()).isEqualTo(workOrder.getTechnician().getUser().getDisplayName());
 
         ResponseEntity<String> stocktakeResponse = postJson(
                 "/api/v1/spare-parts/" + part.getId() + "/stocktake",
