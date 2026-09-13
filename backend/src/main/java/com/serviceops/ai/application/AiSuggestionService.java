@@ -45,7 +45,6 @@ public class AiSuggestionService {
                     systemPrompt(),
                     userPrompt(rawText),
                     draftSchema(),
-                    0.2,
                     properties.getSuggestionTimeout()
             );
             ServiceRequestDraftResponse response = toResponse(draft);

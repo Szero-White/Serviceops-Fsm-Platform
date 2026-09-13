@@ -50,6 +50,11 @@ type PaymentResponse = {
   amount: number
 }
 
+type PaymentQueueSummary = {
+  pendingReconciliationCount: number
+  pendingClosureCount: number
+}
+
 type ReturnablePartResponse = {
   returnableQuantity: number
 }
@@ -269,7 +274,13 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   expectStatus(paymentQueue.status, 200, 'CSKH thấy payment trong reconciliation queue')
   expect(paymentQueue.body.content.some((item) => item.id === cash.body.id)).toBe(true)
 
+  const summaryBeforeSettlement = await apiJson<PaymentQueueSummary>(page, 'GET', '/payments/summary')
+  expectStatus(summaryBeforeSettlement.status, 200, 'CSKH đọc operational counters của payment queue')
+  expect(summaryBeforeSettlement.body.pendingReconciliationCount).toBeGreaterThan(0)
+
   await page.goto('/payments')
+  await expect(page.getByText(`Chưa đối soát thanh toán: ${summaryBeforeSettlement.body.pendingReconciliationCount}`, { exact: true })).toBeVisible()
+  await expect(page.getByText(`Chưa đóng phiếu: ${summaryBeforeSettlement.body.pendingClosureCount}`, { exact: true })).toBeVisible()
   await page.getByPlaceholder('Tìm mã phiếu, khách hàng hoặc kỹ thuật viên').fill(workOrderCode)
   const paymentRow = page.locator('tr').filter({ hasText: workOrderCode }).last()
   await expect(paymentRow).toContainText('KTV đang giữ tiền mặt')
@@ -294,6 +305,11 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   await expect(page.getByRole('button', { name: 'Phát hành / tải biên nhận' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Đóng phiếu' })).toBeVisible()
 
+  const summaryAfterSettlement = await apiJson<PaymentQueueSummary>(page, 'GET', '/payments/summary')
+  expectStatus(summaryAfterSettlement.status, 200, 'Operational counters cập nhật sau settlement')
+  expect(summaryAfterSettlement.body.pendingReconciliationCount).toBe(summaryBeforeSettlement.body.pendingReconciliationCount - 1)
+  expect(summaryAfterSettlement.body.pendingClosureCount).toBe(summaryBeforeSettlement.body.pendingClosureCount + 1)
+
   const receiptDownload = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Phát hành / tải biên nhận' }).click()
   await receiptDownload
@@ -305,6 +321,13 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   const closedPaymentRow = page.locator('tr').filter({ hasText: workOrderCode }).last()
   await expect(closedPaymentRow).toContainText('Đã đóng phiếu')
   await expect(closedPaymentRow.getByRole('button', { name: 'Tải biên nhận' })).toBeVisible()
+
+  const summaryAfterClosure = await apiJson<PaymentQueueSummary>(page, 'GET', '/payments/summary')
+  expectStatus(summaryAfterClosure.status, 200, 'Operational counters cập nhật sau closure')
+  expect(summaryAfterClosure.body.pendingReconciliationCount).toBe(summaryAfterSettlement.body.pendingReconciliationCount)
+  expect(summaryAfterClosure.body.pendingClosureCount).toBe(summaryAfterSettlement.body.pendingClosureCount - 1)
+  await expect(page.getByText(`Chưa đối soát thanh toán: ${summaryAfterClosure.body.pendingReconciliationCount}`, { exact: true })).toBeVisible()
+  await expect(page.getByText(`Chưa đóng phiếu: ${summaryAfterClosure.body.pendingClosureCount}`, { exact: true })).toBeVisible()
 
   await login(page, 'technician')
   const technicianReceipt = await apiJson(page, 'GET', `/work-orders/${workOrderId}/receipt`)

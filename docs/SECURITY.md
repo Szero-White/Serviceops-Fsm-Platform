@@ -11,14 +11,14 @@
 - Login failure throttling theo cặp IP + username, tổng theo account và tổng theo IP cho deployment single-node.
 - Correlation/request ID (`X-Request-ID`) được sanitize, đưa vào MDC và trả lại client; exception 500 được log server-side nhưng không trả stack trace.
 - Error-disclosure boundary: validation/business errors dùng thông báo nghiệp vụ đã kiểm soát; database/provider/network/stack-trace/class/config errors không được render trực tiếp lên UI. Lỗi hạ tầng trả thông báo an toàn, có thể kèm `requestId` để support tra log.
-- AI provider là implementation detail phía server: UI/public DTO không công bố provider đang dùng, trạng thái API key, HTTP upstream status hay nguyên nhân fallback. Audit/server log vẫn giữ đủ tín hiệu vận hành mà không ghi API key/JWT/password.
+- AI credentials và lỗi upstream là implementation detail phía server. Public DTO chỉ công bố metadata nguồn không nhạy cảm `GEMINI`/`LOCAL` để UI hiển thị badge **Gemini/Nội bộ**; UI không nhận API key, trạng thái credential, upstream HTTP status hay nguyên nhân fallback. Audit/server log vẫn giữ đủ tín hiệu vận hành mà không ghi API key/JWT/password.
 - Public `DEMO_MODE` giữ nguyên CRUD theo RBAC cho dữ liệu do recruiter tạo; service-level policy chỉ bảo vệ seeded demo identities và các service channel `systemDefined`, còn custom channel vẫn CRUD bình thường.
 - Demo password được externalize; public demo từ chối khởi động nếu dùng `123456` hoặc placeholder đi kèm source.
 - Upload giới hạn 10 MB/request, MIME allowlist JPG/PNG/WEBP/PDF, kiểm tra magic bytes, path normalization/traversal protection và quota theo tenant có thể cấu hình.
 - Attachment upload được dọn nếu DB rollback; file vật lý chỉ bị xóa sau DB commit.
 - CORS theo allowlist; production yêu cầu cấu hình origin thật.
 - Nginx production thêm HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` và frame protection.
-- `.env`, dữ liệu runtime và backup thật bị loại khỏi Git.
+- `.env`, dữ liệu runtime và backup thật bị loại khỏi Git. Docker build context của cả backend/frontend cũng loại `.env*`; backend loại thêm `application-secret.yml` để file secret local bị Git ignore không thể vô tình bị `COPY` vào image build.
 - Audit log cho hành động quan trọng.
 - Pessimistic locking cho lịch, tồn kho và các invariant concurrency quan trọng; optimistic-lock conflict được map thành HTTP 409.
 - Cross-tenant/RBAC/concurrency paths quan trọng có Testcontainers integration tests trong source.

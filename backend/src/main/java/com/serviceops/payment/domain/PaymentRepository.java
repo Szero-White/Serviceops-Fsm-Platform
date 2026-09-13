@@ -1,5 +1,6 @@
 package com.serviceops.payment.domain;
 
+import com.serviceops.workorder.domain.WorkOrderStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +45,25 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             """)
     Optional<Payment> findForUpdateByWorkOrder(@Param("tenantId") UUID tenantId,
                                                @Param("workOrderId") UUID workOrderId);
+
+    @Query("""
+            select count(p) from Payment p
+            where p.tenantId = :tenantId
+              and p.status <> :settledStatus
+            """)
+    long countPendingReconciliation(@Param("tenantId") UUID tenantId,
+                                    @Param("settledStatus") PaymentStatus settledStatus);
+
+    @Query("""
+            select count(p) from Payment p
+            join p.workOrder w
+            where p.tenantId = :tenantId
+              and p.status = :settledStatus
+              and w.status = :workOrderStatus
+            """)
+    long countPendingClosure(@Param("tenantId") UUID tenantId,
+                             @Param("settledStatus") PaymentStatus settledStatus,
+                             @Param("workOrderStatus") WorkOrderStatus workOrderStatus);
 
     @Query(value = """
             select p from Payment p

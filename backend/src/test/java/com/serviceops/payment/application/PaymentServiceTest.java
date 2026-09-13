@@ -53,6 +53,18 @@ class PaymentServiceTest {
     }
 
     @Test
+    void paymentQueueSummaryReportsOperationalBacklogAcrossTheWholeQueue() {
+        authenticate("CUSTOMER_SERVICE", CS_ID, "customer-service", "Lê Thu CSKH");
+        when(repository.countPendingReconciliation(TENANT_ID, PaymentStatus.SETTLED)).thenReturn(6L);
+        when(repository.countPendingClosure(TENANT_ID, PaymentStatus.SETTLED, WorkOrderStatus.CUSTOMER_ACCEPTED)).thenReturn(3L);
+
+        var summary = service().queueSummary();
+
+        assertThat(summary.pendingReconciliationCount()).isEqualTo(6L);
+        assertThat(summary.pendingClosureCount()).isEqualTo(3L);
+    }
+
+    @Test
     void cashCollectionTracksTechnicianCustodyWithoutSettlingCompanyReceipt() {
         authenticate("TECHNICIAN", TECHNICIAN_ID, "technician", "Trịnh Quốc Tiến");
         Payment payment = payment(PaymentStatus.UNPAID);

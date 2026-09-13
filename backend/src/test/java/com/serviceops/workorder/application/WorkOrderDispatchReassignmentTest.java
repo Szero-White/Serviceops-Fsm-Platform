@@ -3,8 +3,6 @@ package com.serviceops.workorder.application;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
-import com.serviceops.identity.domain.UserAccount;
-import com.serviceops.identity.domain.UserRole;
 import com.serviceops.inventory.application.WorkOrderPartRequestService;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.notification.application.NotificationCopy;
@@ -26,12 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,7 +62,7 @@ class WorkOrderDispatchReassignmentTest {
 
     @BeforeEach
     void setUp() {
-        authenticateDispatcher();
+        WorkOrderDispatchTestFixtures.authenticateDispatcher(TENANT_ID, DISPATCHER_ID);
         service = new WorkOrderService(
                 repository,
                 historyRepository,
@@ -80,8 +75,8 @@ class WorkOrderDispatchReassignmentTest {
                 notificationService
         );
 
-        previousTechnician = technician("Kỹ thuật viên A");
-        replacementTechnician = technician("Kỹ thuật viên B");
+        previousTechnician = WorkOrderDispatchTestFixtures.technician(TENANT_ID, "Kỹ thuật viên A");
+        replacementTechnician = WorkOrderDispatchTestFixtures.technician(TENANT_ID, "Kỹ thuật viên B");
 
         Instant oldStart = Instant.parse("2026-08-25T02:00:00Z");
         Instant oldEnd = Instant.parse("2026-08-25T04:00:00Z");
@@ -370,37 +365,4 @@ class WorkOrderDispatchReassignmentTest {
         when(auditService.findEntityEvents(WORK_ORDER_ID, "WORK_ORDER", List.of("RESCHEDULE"))).thenReturn(List.of());
     }
 
-    private static TechnicianProfile technician(String displayName) {
-        UserAccount user = new UserAccount();
-        user.setId(UUID.randomUUID());
-        user.setTenantId(TENANT_ID);
-        user.setUsername(displayName.replace(" ", ".").toLowerCase());
-        user.setDisplayName(displayName);
-        user.setRole(UserRole.TECHNICIAN);
-        user.setActive(true);
-
-        TechnicianProfile technician = new TechnicianProfile();
-        technician.setId(UUID.randomUUID());
-        technician.setTenantId(TENANT_ID);
-        technician.setUser(user);
-        technician.setActive(true);
-        return technician;
-    }
-
-    private static void authenticateDispatcher() {
-        Instant now = Instant.now();
-        Jwt jwt = Jwt.withTokenValue("test-token")
-                .header("alg", "none")
-                .subject("dispatcher")
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(3600))
-                .claims(claims -> claims.putAll(Map.of(
-                        "tenantId", TENANT_ID.toString(),
-                        "userId", DISPATCHER_ID.toString(),
-                        "displayName", "Lê Thu Điều phối",
-                        "roles", List.of("DISPATCHER")
-                )))
-                .build();
-        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
-    }
 }

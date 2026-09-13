@@ -98,6 +98,9 @@ Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 - `GET /work-orders/history?search={text}&status={CUSTOMER_ACCEPTED,CLOSED,CANCELLED}&page={n}&size={n}` — `CUSTOMER_ACCEPTED` chỉ xuất hiện tại history khi payment đã `SETTLED`, biểu diễn hồ sơ **Chờ hoàn tất hồ sơ**; dữ liệu vẫn giữ sort/pagination thông thường, không pin riêng
 - `GET /work-orders/{id}` — detail Work Order và status history tương thích.
 - `GET /work-orders/{id}/timeline` — read model business timeline hợp nhất status, điều phối, REQUEST/ISSUE/USED/RETURN, payment reconciliation và receipt theo thời gian; nguồn dữ liệu gốc vẫn nằm ở từng module, không tạo bảng timeline duplicate.
+- `GET /work-orders/{id}/billing` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem billing draft/snapshot; Technician vẫn bị ownership check ở service layer.
+- `PUT /work-orders/{id}/billing` — assigned TECHNICIAN cập nhật billing draft trước customer acceptance; dữ liệu đã freeze không được sửa ngược.
+- `POST /work-orders/{id}/customer-acceptance` — assigned TECHNICIAN ghi nhận bước khách xác nhận bằng review token/tổng tiền vừa kiểm tra; backend từ chối nếu billing đã thay đổi và yêu cầu review lại.
 - `POST /work-orders/{id}/close` — CUSTOMER_SERVICE only; chỉ thành công khi WO `CUSTOMER_ACCEPTED` và payment `SETTLED`. Closure bảo đảm biên nhận đã được phát hành theo cơ chế idempotent trước khi chuyển sang `CLOSED`.
 - `POST /work-orders/{id}/receipt` — CUSTOMER_SERVICE phát hành/tải biên nhận sau `SETTLED`; lần gọi sau idempotent dùng receipt snapshot đã có.
 - `GET /work-orders/{id}/receipt` — OWNER / CUSTOMER_SERVICE tải biên nhận đã phát hành.
@@ -115,7 +118,7 @@ Transition ownership:
 
 - TECHNICIAN: `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`; customer acceptance dùng action riêng sau khi Technician kiểm tra actual-used + billing draft.
 - OWNER: supervisory/admin scope; không giả lập field progress, customer acceptance, payment reconciliation hoặc physical stock movement.
-- CUSTOMER_SERVICE: `REOPENED`, `CANCELLED` trước customer acceptance; sau payment `SETTLED` dùng action `close` riêng để đóng phiếu.
+- CUSTOMER_SERVICE: `REOPENED`, `CANCELLED` trước customer acceptance; cả hai thao tác đều bắt buộc gửi `note` làm lý do để lưu status history và tạo notification có ngữ cảnh. Sau payment `SETTLED` dùng action `close` riêng để đóng phiếu.
 - DISPATCHER: `CANCELLED` theo operational policy; không field progress / acceptance / close / reopen. Mọi transition sang `CANCELLED` đều bắt buộc có reason ở backend.
 
 ## Scheduling
@@ -156,6 +159,7 @@ Stock reconciliation and traceability — OWNER / WAREHOUSE_STAFF:
 
 Work Order part request / issue / actual usage:
 
+- `GET /part-outstanding?search={text}` — OWNER / WAREHOUSE_STAFF xem các dòng phụ tùng còn outstanding cần theo dõi/RETURN theo Work Order.
 - `GET /part-requests` — OWNER / WAREHOUSE_STAFF xem hàng đợi và lịch sử yêu cầu phụ tùng; `status` hỗ trợ nhiều giá trị phân tách bằng dấu phẩy cùng search/pagination.
 - `GET /work-orders/{workOrderId}/part-requests` — các role vận hành được xem lịch sử yêu cầu của một Work Order.
 - `POST /work-orders/{workOrderId}/part-requests` — TECHNICIAN được phân công tạo yêu cầu; **không giảm tồn kho**.
@@ -174,6 +178,7 @@ Legacy compatibility:
 
 - `GET /work-orders/{workOrderId}/payment` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem khoản thanh toán của Work Order sau customer acceptance.
 - `GET /payments` — OWNER / CUSTOMER_SERVICE xem hàng đợi thanh toán; mặc định cập nhật mới nhất trước, `status` hỗ trợ nhiều giá trị phân tách bằng dấu phẩy cùng search/pagination/sort allow-list.
+- `GET /payments/summary` — OWNER / CUSTOMER_SERVICE lấy hai operational counters toàn tenant: số khoản chưa đối soát và số Work Order `CUSTOMER_ACCEPTED + SETTLED` còn chờ đóng; không phụ thuộc page/filter hiện tại.
 - `POST /work-orders/{workOrderId}/payment/report-transfer` — assigned TECHNICIAN ghi nhận khách đã chuyển khoản; payment → `TRANSFER_PENDING_VERIFICATION`.
 - `POST /work-orders/{workOrderId}/payment/collect-cash` — assigned TECHNICIAN ghi nhận đã nhận tiền mặt; payment → `CASH_PENDING_HANDOVER` và lưu custody của kỹ thuật viên.
 - `POST /work-orders/{workOrderId}/payment/pay-at-counter` — assigned TECHNICIAN xác nhận chưa thu tiền và khách sẽ thanh toán trực tiếp với CSKH; payment → `COUNTER_PAYMENT_PENDING`.
@@ -182,6 +187,11 @@ Legacy compatibility:
 - `POST /payments/{paymentId}/settle-counter` — CUSTOMER_SERVICE thu trực tiếp tại quầy, body `{ method: BANK_TRANSFER | CASH }`; chỉ sau khi thực nhận đủ tiền mới → `SETTLED`.
 
 Ba lựa chọn của Technician là các tình huống loại trừ nhau và UI luôn có bước xác nhận lại trước khi ghi nhận. `COUNTER_PAYMENT_PENDING` không được xem là đã thanh toán và `method` vẫn null cho tới khi CSKH thực thu tại quầy.
+
+Company payment profile:
+
+- `GET /company-payment-profile` — OWNER / CUSTOMER_SERVICE / TECHNICIAN xem tài khoản/QR nhận tiền của công ty; với Technician đây là read-only để hướng dẫn khách chuyển khoản.
+- `PUT /company-payment-profile` — OWNER only cập nhật cấu hình nhận tiền; các role vận hành khác không được thay đổi.
 
 ## Attachments
 
@@ -210,7 +220,7 @@ Authorization nằm trong AttachmentService theo reference:
 
 ## Notifications
 
-Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành để follow-up; Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận **yêu cầu phụ tùng mới** cần xử lý và low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do `ISSUE` workflow hiện hành chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
+Authenticated user chỉ thao tác notification của chính identity trong tenant. Bell notification chỉ dùng cho sự kiện cần chú ý/hành động: Dispatcher nhận hàng chờ điều phối/chờ phụ tùng/mở lại; Customer Service nhận Work Order vừa hoàn thành, reopen/cancel/overdue cần customer follow-up và các payment handoff cần xử lý (`TRANSFER_PENDING_VERIFICATION`, `CASH_PENDING_HANDOVER`, `COUNTER_PAYMENT_PENDING`); chi tiết reconciliation vẫn thực hiện tại **Xử lý thanh toán**. Technician nhận phân công/thay đổi lịch/chuyển giao/mở lại/hủy/đóng khi do người khác thực hiện; Warehouse nhận **yêu cầu phụ tùng mới** cần xử lý và low-stock; Owner chỉ nhận terminal outcomes `CLOSED`/`CANCELLED` và stocktake discrepancy; không nhận `REOPENED`, overdue hoặc low-stock vận hành. CRUD/master-data/import/attachment bình thường không tạo bell notification. Low-stock do `ISSUE` workflow hiện hành chỉ phát khi tồn vừa cross `reorderLevel`, không lặp lại khi part đã ở mức thấp. User-facing copy được chuẩn hóa tập trung và không dùng enum/raw technical strings làm nội dung chính:
 
 - `GET /notifications`
 - `GET /notifications/unread-count`
@@ -219,8 +229,8 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 
 ## AI assistance
 
-- `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE. Request chỉ gửi `rawText`; public response chỉ chứa đúng `title` và `description`. **Priority và intake channel không thuộc AI contract** nên luôn giữ theo lựa chọn thủ công của người dùng. Backend ưu tiên provider AI đã cấu hình và tự dùng fallback nội bộ khi provider timeout/lỗi; provider/failure detail không thuộc public API contract.
-- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Response chỉ trả nội dung hướng dẫn/điều hướng cần cho UI, không trả tên provider hoặc lỗi hạ tầng. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; AI nhận biết các workspace mới như `/part-requests`, `/payments`, `/payment-settings`, `/work-order-history`; OWNER nhận overview giám sát/quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress, xác nhận ISSUE/RETURN, customer acceptance hoặc settlement thay role phụ trách.
+- `POST /ai/service-request-draft` — OWNER / CUSTOMER_SERVICE. Request chỉ gửi `rawText`; public response chứa `title`, `description` và `source` (`GEMINI` hoặc `LOCAL`) để UI hiển thị badge nguồn **Gemini/Nội bộ**. **Priority và intake channel không thuộc AI contract** nên luôn giữ theo lựa chọn thủ công của người dùng. `source` chỉ là metadata trình bày không nhạy cảm; API key, trạng thái credential, upstream HTTP status và nguyên nhân fallback không thuộc public API contract.
+- `POST /ai/help` — tất cả năm business roles; backend suy ra role từ JWT, cung cấp role-scoped knowledge base và chặn hướng dẫn ngoài phạm vi. Response trả nội dung hướng dẫn/điều hướng cùng `source` (`GEMINI` hoặc `LOCAL`) để UI hiển thị badge **Gemini/Nội bộ**; không trả credential state, upstream HTTP status hoặc lỗi hạ tầng. Câu hỏi tổng quát trả overview đúng chức năng của role hiện tại; AI nhận biết các workspace mới như `/part-requests`, `/payments`, `/payment-settings`, `/work-order-history`; OWNER nhận overview giám sát/quản trị rộng nhưng vẫn không được hướng dẫn giả lập field progress, xác nhận ISSUE/RETURN, customer acceptance hoặc settlement thay role phụ trách.
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.

@@ -14,7 +14,7 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 - Dùng đúng thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Lịch sử biến động**, **Lịch sử phiếu**.
 - Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`), raw timestamp ISO, tên class/API, chuỗi test hoặc technical summary khó hiểu làm nội dung chính.
 - Lý do nghiệp vụ quan trọng như **mở lại/hủy phiếu** được giữ trong body, nhưng được cắt gọn để không vượt giới hạn persistence.
-- `NotificationCopy` là nơi duy nhất tạo copy runtime cho bell. Service nghiệp vụ chỉ cung cấp context; không tự ghép title/message rải rác.
+- `NotificationCopy` là **public facade** duy nhất mà service nghiệp vụ gọi để tạo copy runtime cho bell. Các collaborator package-private theo nhóm (`WorkOrderDispatchNotificationCopy`, `PaymentNotificationCopy`, `InventoryNotificationCopy`) giữ wording chuyên biệt; service nghiệp vụ chỉ cung cấp context và không tự ghép title/message rải rác.
 - Giới hạn persistence hiện tại là title 180 ký tự và message 500 ký tự; `NotificationCopy.Copy` chịu trách nhiệm normalize/cắt an toàn.
 
 ### Ví dụ chuẩn
@@ -60,7 +60,7 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 | Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |
 | Work Order → CANCELLED | Owner, trừ actor | **Phiếu đã hủy: WO-...** | Actor + summary + khách hàng + lý do; tra Lịch sử phiếu khi cần |
 | Work Order → CANCELLED | Assigned Technician, nếu không phải actor | **Công việc đã hủy: WO-...** | Actor + summary + khách hàng + lý do; dừng job và xem Lịch của tôi |
-| Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; kiểm tra và liên hệ khách nếu cần |
+| Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; mở **Lịch sử phiếu** để kiểm tra và liên hệ khách nếu cần |
 | ISSUE làm stock cross threshold | Warehouse | **Tồn kho thấp: SKU** | Warehouse/Work Order + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
 | Đổi reorder level làm stock thành low | Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
 | Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** | Người kiểm kê + system/actual/difference + lý do; mở Lịch sử biến động |

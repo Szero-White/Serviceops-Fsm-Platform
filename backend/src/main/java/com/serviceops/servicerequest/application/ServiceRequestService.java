@@ -1,5 +1,6 @@
 package com.serviceops.servicerequest.application;
 
+import com.serviceops.asset.application.AssetDisplay;
 import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.audit.application.AuditService;
@@ -142,7 +143,7 @@ public class ServiceRequestService {
 
 
     public static ServiceRequestResponse toResponse(ServiceRequest request) {
-        String assetLabel = request.getAsset() == null ? null : assetLabel(request.getAsset());
+        String assetLabel = request.getAsset() == null ? null : AssetDisplay.label(request.getAsset());
         return new ServiceRequestResponse(
                 request.getId(),
                 request.getCustomer().getId(),
@@ -159,13 +160,4 @@ public class ServiceRequestService {
         );
     }
 
-    private static String assetLabel(Asset asset) {
-        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
-                + (asset.getModel() == null ? "" : asset.getModel())).trim();
-        if (equipmentName.isBlank()) {
-            equipmentName = asset.getCategory();
-        }
-        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
-        return equipmentName + " (" + serial + ")";
-    }
 }

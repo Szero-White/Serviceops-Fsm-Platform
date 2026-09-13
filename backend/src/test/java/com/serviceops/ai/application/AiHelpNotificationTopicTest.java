@@ -55,6 +55,23 @@ class AiHelpNotificationTopicTest {
     }
 
     @Test
+    void customerServiceNotificationGuidanceMatchesPaymentHandoffRouting() {
+        var context = new AiHelpKnowledgeBase.UserGuideContext("CUSTOMER_SERVICE", "Chăm sóc khách hàng", "/");
+
+        var decision = AiHelpKnowledgeBase.scopeDecision(
+                "CSKH sẽ nhận thông báo thanh toán nào?",
+                context
+        );
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.topic().answer())
+                .contains("chuyển khoản")
+                .contains("tiền mặt")
+                .contains("thanh toán tại quầy")
+                .contains("Xử lý thanh toán");
+    }
+
+    @Test
     void warehouseNotificationGuidanceDoesNotLeakOtherRoleTasks() {
         var context = new AiHelpKnowledgeBase.UserGuideContext("WAREHOUSE_STAFF", "Nhân viên kho", "/part-requests");
 

@@ -1,16 +1,38 @@
 # Verification Results
 
-## Recorded local release-candidate baseline
+## Recorded release-candidate baseline
 
-The current `feat/serviceops-senior-fixes` release-candidate source was locally verified on **2026-09-11** with:
+The repository baseline merged before the latest payment-queue counter delta passed the required GitHub checks, including the Docker/Testcontainers/Playwright path. The current counter delta was then locally verified on **2026-09-12** with:
 
-- Backend Maven suite: **251 total tests, 0 failures, 0 errors, 24 skipped**. The skipped tests are Docker/Testcontainers suites and are **not** counted as passes.
-- AI knowledge-base focused suite: **32 tests, 0 failures, 0 errors**.
-- Frontend TypeScript production build: **PASS**, with **3281 modules transformed** in the recorded run.
-- `git diff --check`: **PASS** before the branch was pushed.
-- Source contains append-only Flyway migrations through **V19** (`V17` counter-payment workflow, `V18` conservative RETURN-recipient backfill, `V19` technician/account status synchronization). A clean PostgreSQL CI/Compose run remains the authoritative migration gate before release.
+- Focused backend `PaymentServiceTest`: **8 tests, 0 failures, 0 errors**.
+- Frontend TypeScript production build: **PASS**, with **3283 modules transformed** in the recorded run.
+- `git diff --check`: **PASS** before the feature branch was pushed.
+- Source contains append-only Flyway migrations through **V19** (`V17` counter-payment workflow, `V18` conservative RETURN-recipient backfill, `V19` technician/account status synchronization).
 
-This is local evidence, not a substitute for repository CI. The feature branch push alone does not run the `push: main` workflow; open a Pull Request so the backend/frontend jobs and isolated Docker + Playwright job execute before merge/release.
+This is intentionally a snapshot of the latest local delta, not a claim that the latest branch has already passed the full repository suite. **The Pull Request CI is the authoritative release gate**: backend tests must run with Docker/Testcontainers, frontend lint/build must pass, and the isolated production-like Docker + Playwright job must be green before merge/deploy.
+
+### Final production-audit delta (2026-09-12)
+
+A final static release audit after the payment-counter change identified and patched a small set of release-quality gaps without changing the modular-monolith architecture:
+
+- Docker build contexts now exclude `.env*`; backend also excludes ignored `application-secret.yml` so local secrets cannot be copied into an image by Docker even when Git correctly ignores them.
+- Customer Service reopen now requires a business reason in both backend and UI; the reason remains available to status history/notification copy.
+- AI Help now matches the live pending-closure history state and Customer Service payment-handoff notification routing, and gives role-specific reopen guidance.
+- Gemini 3.x JSON generation leaves deprecated sampling controls at provider defaults.
+- Deployment/security/UAT/user documentation was synchronized with those behaviors.
+
+Static patch validation includes `git diff --check`. This environment could not execute a trustworthy fresh Maven/npm dependency install, so these audit changes **do not replace the Pull Request CI gate** described above.
+
+### Clean-code release-candidate validation (commit `7ad0c48`, 2026-09-13)
+
+After the responsibility-focused refactor, the committed branch was verified locally with:
+
+- Backend Maven suite: **266 tests run, 0 failures, 0 errors, 24 skipped**. The skipped suites were Testcontainers integration tests because Docker was unavailable on that local machine; they are **not counted as passes** and remain a Pull Request CI requirement.
+- Frontend `tsc -b && vite build`: **PASS**, with **3288 modules transformed**.
+- `git diff --check`: **PASS** before commit/push.
+- Working tree was clean and commit `7ad0c48` was pushed to `origin/feat/payment-queue-counters`.
+
+The final static audit after that commit only contains low-risk release hardening/cleanup (service-layer authorization fallback, User Management N+1 removal, removal of a disabled placeholder action/dead local variable, and documentation synchronization). These changes still require the normal local/PR gates below before merge.
 
 ## Required fast local gates
 

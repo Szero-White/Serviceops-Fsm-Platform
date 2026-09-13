@@ -1,6 +1,6 @@
 import { DeleteOutlined, EditOutlined, KeyOutlined, PlusOutlined, SearchOutlined, TeamOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Empty, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Typography } from 'antd'
+import { App, Button, Empty, Form, Input, Popconfirm, Space, Table, Typography } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { apiErrorMessage } from '../../../api/http'
@@ -15,8 +15,8 @@ import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { USER_ROLE_LABELS } from '../../../constants/userRoles'
 import type { UserAccount, UserRole } from '../../../types'
 import { formatDateTime } from '../../../utils/format'
-import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 import { compareDate, compareNumber, compareText } from '../../../utils/tableSort'
+import { UserFormModal } from '../components/UserFormModal'
 
 const roleDescriptions: Record<UserRole, string> = {
   OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
@@ -26,30 +26,12 @@ const roleDescriptions: Record<UserRole, string> = {
   WAREHOUSE_STAFF: 'Quản lý phụ tùng, nhập kho và theo dõi tồn.',
 }
 
-const roleOptions = Object.entries(USER_ROLE_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}))
-
 type UserStatusFilter = 'active' | 'inactive'
 
 const userStatusFilterOptions: Array<{ value: UserStatusFilter; label: string }> = [
   { value: 'active', label: 'Hoạt động' },
   { value: 'inactive', label: 'Tạm ngưng' },
 ]
-
-function usernameFromName(value: string) {
-  const slug = value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .replace(/[^a-zA-Z0-9]+/g, '.')
-    .replace(/^\.+|\.+$/g, '')
-    .toLowerCase()
-
-  return slug || `user.${Date.now().toString().slice(-5)}`
-}
 
 export function UsersPage() {
   const [search, setSearch] = useState('')
@@ -58,7 +40,6 @@ export function UsersPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<UserAccount>()
   const [form] = Form.useForm()
-  const handleFormValidationFailed = useFormValidationFeedback()
   const selectedRole = Form.useWatch('role', form)
   const { user: currentUser } = useAuth()
   const { message, notification } = App.useApp()
@@ -326,55 +307,16 @@ export function UsersPage() {
         ]}
       />
 
-      <Modal
-        title={
-          editing
-            ? 'Cập nhật người dùng'
-            : selectedRole === 'TECHNICIAN'
-              ? 'Thêm kỹ thuật viên'
-              : 'Thêm người dùng'
-        }
+      <UserFormModal
         open={open}
+        editing={editing}
+        currentUserId={currentUser?.id}
+        selectedRole={selectedRole}
+        form={form}
+        saving={save.isPending}
         onCancel={() => setOpen(false)}
-        onOk={() => form.submit()}
-        okText={editing ? 'Lưu thay đổi' : 'Tạo người dùng'}
-        confirmLoading={save.isPending}
-        width={760}
-        destroyOnHidden
-      >
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
-          <div className="form-grid two-cols">
-            <Form.Item label="Họ tên" name="displayName" rules={[{ required: true, message: 'Nhập họ tên người dùng' }]}>
-              <Input
-                placeholder="Ví dụ: Lê Thu Điều phối"
-                onBlur={(event) => !editing && !form.getFieldValue('username') && form.setFieldValue('username', usernameFromName(event.target.value))}
-              />
-            </Form.Item>
-            <Form.Item label={editing ? 'Tên đăng nhập (không thể thay đổi)' : 'Tên đăng nhập'} name="username" rules={[{ required: true, message: 'Nhập tên đăng nhập' }]}>
-              <Input placeholder="le.thu.dieu.phoi" disabled={Boolean(editing)} />
-            </Form.Item>
-            <Form.Item label={editing ? 'Vai trò (không thể thay đổi)' : 'Vai trò'} name="role" rules={[{ required: true, message: 'Chọn vai trò' }]}>
-              <Select options={roleOptions} disabled={Boolean(editing)} />
-            </Form.Item>
-            <Form.Item label={editing ? 'Mật khẩu mới' : 'Mật khẩu'} name="password" rules={editing ? [] : [{ required: true, message: 'Nhập mật khẩu' }, { min: 8, message: 'Mật khẩu tối thiểu 8 ký tự' }]}>
-              <Input.Password placeholder={editing ? 'Bỏ trống nếu không đổi' : 'Tối thiểu 8 ký tự'} />
-            </Form.Item>
-            {selectedRole === 'TECHNICIAN' && (
-              <>
-                <Form.Item label="Điện thoại kỹ thuật viên" name="phone">
-                  <Input placeholder="0909123456" />
-                </Form.Item>
-                <Form.Item label="Kỹ năng kỹ thuật viên" name="skills">
-                  <Input placeholder="Máy lạnh, tủ lạnh, điện dân dụng..." />
-                </Form.Item>
-              </>
-            )}
-          </div>
-          <Form.Item name="active" valuePropName="checked">
-            <Switch disabled={editing?.id === currentUser?.id} checkedChildren="Hoạt động" unCheckedChildren="Tạm ngưng" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onSubmit={(values) => save.mutate(values)}
+      />
     </div>
   )
 }

@@ -52,7 +52,6 @@ public class AiHelpService {
                     helpSystemPrompt(context, decision.topic()),
                     request.question(),
                     helpSchema(),
-                    0.1,
                     properties.getHelpTimeout()
             );
             HelpResponse helpResponse = toHelpResponse(response, context, decision.topic());

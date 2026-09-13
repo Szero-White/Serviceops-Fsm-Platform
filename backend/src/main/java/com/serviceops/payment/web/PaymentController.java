@@ -7,6 +7,7 @@ import com.serviceops.payment.domain.PaymentStatus;
 import com.serviceops.payment.web.PaymentDtos.CompanyPaymentProfileRequest;
 import com.serviceops.payment.web.PaymentDtos.CounterSettlementRequest;
 import com.serviceops.payment.web.PaymentDtos.CompanyPaymentProfileResponse;
+import com.serviceops.payment.web.PaymentDtos.PaymentQueueSummaryResponse;
 import com.serviceops.payment.web.PaymentDtos.PaymentResponse;
 import com.serviceops.payment.web.PaymentDtos.TransferReportRequest;
 import jakarta.validation.Valid;
@@ -30,6 +31,12 @@ import java.util.UUID;
 public class PaymentController {
     private final PaymentService paymentService;
     private final CompanyPaymentProfileService companyPaymentProfileService;
+
+    @GetMapping("/payments/summary")
+    @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")
+    public PaymentQueueSummaryResponse paymentSummary() {
+        return paymentService.queueSummary();
+    }
 
     @GetMapping("/payments")
     @PreAuthorize("hasAnyRole('OWNER','CUSTOMER_SERVICE')")

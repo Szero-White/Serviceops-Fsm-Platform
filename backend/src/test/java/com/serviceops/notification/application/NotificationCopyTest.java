@@ -229,7 +229,9 @@ class NotificationCopyTest {
         assertThat(cancelled.message())
                 .contains("Điều phối viên Lê Thu")
                 .contains("Khách yêu cầu hủy lịch")
-                .contains("liên hệ khách hàng");
+                .contains("Lịch sử phiếu")
+                .contains("liên hệ khách hàng")
+                .doesNotContain("Mở Phiếu công việc");
     }
 
     @Test

@@ -84,6 +84,22 @@ class WorkOrderCustomerServiceLifecycleTest {
     }
 
     @Test
+    void warehouseCannotTransitionWorkOrderThroughServiceLayer() {
+        authenticate(UserRole.WAREHOUSE_STAFF, "warehouse", "Nhân viên kho");
+
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "Không thuộc nghiệp vụ kho", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo("WORK_ORDER_TRANSITION_FORBIDDEN");
+
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
+    }
+
+    @Test
     void customerServiceCannotRecordCustomerAcceptanceThroughGenericTransition() {
         authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
 
@@ -93,6 +109,21 @@ class WorkOrderCustomerServiceLifecycleTest {
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Chăm sóc khách hàng chỉ mở lại hoặc hủy phiếu");
+
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
+    }
+
+    @Test
+    void customerServiceMustProvideReasonWhenReopening() {
+        authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
+
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "   ", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Phải nhập lý do mở lại phiếu công việc");
 
         assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
         verifyNoInteractions(historyRepository, auditService, notificationService);

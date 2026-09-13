@@ -258,11 +258,11 @@ public class InventoryService {
         UUID tenantId = CurrentUser.tenantId();
         List<SparePartCsvRow> rows = csvService.parseSpareParts(file);
         Set<String> seenSkus = new HashSet<>();
-        List<SparePartImportCandidate> candidates = new ArrayList<>();
+        List<SparePartImportSupport.Candidate> candidates = new ArrayList<>();
         List<SparePartImportRowResult> results = new ArrayList<>();
 
         for (SparePartCsvRow row : rows) {
-            SparePartImportCandidate candidate = validateImportRow(row, seenSkus, tenantId);
+            SparePartImportSupport.Candidate candidate = SparePartImportSupport.validate(row, seenSkus, tenantId, sparePartRepository);
             candidates.add(candidate);
             results.add(new SparePartImportRowResult(row.rowNumber(), row.sku(), row.name(), candidate.valid(), candidate.message()));
         }
@@ -273,7 +273,7 @@ public class InventoryService {
             return new SparePartImportResult(rows.size(), validRows, errorRows, 0, false, results);
         }
 
-        for (SparePartImportCandidate candidate : candidates) {
+        for (SparePartImportSupport.Candidate candidate : candidates) {
             createImportedPart(tenantId, candidate);
         }
 
@@ -303,39 +303,7 @@ public class InventoryService {
                 .orElseThrow(() -> BusinessException.notFound("SPARE_PART_NOT_FOUND", "Không tìm thấy phụ tùng"));
     }
 
-    private SparePartImportCandidate validateImportRow(SparePartCsvRow row, Set<String> seenSkus, UUID tenantId) {
-        String sku = row.sku().trim().toUpperCase(Locale.ROOT);
-        if (sku.isBlank()) {
-            return SparePartImportCandidate.invalid(row, "SKU không được để trống");
-        }
-        if (sku.length() > 60) {
-            return SparePartImportCandidate.invalid(row, "SKU không được vượt quá 60 ký tự");
-        }
-        if (!seenSkus.add(sku)) {
-            return SparePartImportCandidate.invalid(row, "SKU bị trùng trong file import");
-        }
-        if (sparePartRepository.existsByTenantIdAndSkuIgnoreCase(tenantId, sku)) {
-            return SparePartImportCandidate.invalid(row, "SKU đã tồn tại trong hệ thống");
-        }
-        if (row.name().isBlank() || row.name().length() > 180) {
-            return SparePartImportCandidate.invalid(row, "Tên phụ tùng bắt buộc và tối đa 180 ký tự");
-        }
-        if (row.unit().isBlank() || row.unit().length() > 30) {
-            return SparePartImportCandidate.invalid(row, "Đơn vị bắt buộc và tối đa 30 ký tự");
-        }
-
-        try {
-            BigDecimal initialStock = parseNonNegative(row.initialStock(), "Ton ban dau");
-            BigDecimal reorderLevel = parseNonNegative(row.reorderLevel(), "Ngưỡng tồn tối thiểu");
-            BigDecimal unitPrice = parseNonNegative(row.unitPrice(), "Don gia");
-            boolean active = parseBoolean(row.active());
-            return new SparePartImportCandidate(row, sku, row.name().trim(), row.unit().trim(), initialStock, reorderLevel, unitPrice, active, true, "Hop le");
-        } catch (IllegalArgumentException ex) {
-            return SparePartImportCandidate.invalid(row, ex.getMessage());
-        }
-    }
-
-    private void createImportedPart(UUID tenantId, SparePartImportCandidate candidate) {
+    private void createImportedPart(UUID tenantId, SparePartImportSupport.Candidate candidate) {
         SparePart part = new SparePart();
         part.setTenantId(tenantId);
         part.setSku(candidate.sku());
@@ -350,32 +318,6 @@ public class InventoryService {
             part.addStock(candidate.initialStock());
             saveTransaction(part, null, InventoryTransactionType.IMPORT, candidate.initialStock(), "Nhập tồn ban đầu từ CSV");
         }
-    }
-
-    private static BigDecimal parseNonNegative(String value, String label) {
-        try {
-            BigDecimal parsed = new BigDecimal(value == null || value.isBlank() ? "0" : value.trim());
-            if (parsed.signum() < 0) {
-                throw new IllegalArgumentException(label + " không được âm");
-            }
-            return parsed;
-        } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException(label + " không đúng định dạng số");
-        }
-    }
-
-    private static boolean parseBoolean(String value) {
-        if (value == null || value.isBlank()) {
-            return true;
-        }
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        if ("true".equals(normalized)) {
-            return true;
-        }
-        if ("false".equals(normalized)) {
-            return false;
-        }
-        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
     }
 
     private void saveTransaction(SparePart part, WorkOrder workOrder, InventoryTransactionType type, BigDecimal quantity, String note) {
@@ -413,20 +355,4 @@ public class InventoryService {
                 tx.getCreatedAt());
     }
 
-    private record SparePartImportCandidate(
-            SparePartCsvRow row,
-            String sku,
-            String name,
-            String unit,
-            BigDecimal initialStock,
-            BigDecimal reorderLevel,
-            BigDecimal unitPrice,
-            boolean active,
-            boolean valid,
-            String message
-    ) {
-        static SparePartImportCandidate invalid(SparePartCsvRow row, String message) {
-            return new SparePartImportCandidate(row, row.sku(), row.name(), row.unit(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, false, false, message);
-        }
-    }
 }

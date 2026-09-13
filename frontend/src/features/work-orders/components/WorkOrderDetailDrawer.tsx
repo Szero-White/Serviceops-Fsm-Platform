@@ -65,6 +65,7 @@ export function WorkOrderDetailDrawer({
   onAttachmentsChanged: () => void
 }) {
   const [cancelReason, setCancelReason] = useState('')
+  const [reopenReason, setReopenReason] = useState('')
   const canScheduleCurrent = permissions.canSchedule
     && workOrder
     && ['OPEN', 'SCHEDULED', 'ASSIGNED', 'REOPENED'].includes(workOrder.status)
@@ -109,6 +110,36 @@ export function WorkOrderDetailDrawer({
                 .filter((target) => target !== 'CUSTOMER_ACCEPTED' && target !== 'CLOSED')
                 .map((target) => target === 'COMPLETED' ? (
                   <Button key={target} type="primary" icon={<CheckCircleOutlined />} onClick={onComplete}>{TRANSITION_LABELS[target]}</Button>
+                ) : target === 'REOPENED' ? (
+                  <Popconfirm
+                    key={target}
+                    title="Mở lại phiếu công việc này?"
+                    description={(
+                      <Space direction="vertical" size={8}>
+                        <Typography.Text type="secondary">Lý do mở lại sẽ được lưu vào lịch sử và dùng trong thông báo cho các vai trò liên quan.</Typography.Text>
+                        <Input.TextArea
+                          value={reopenReason}
+                          onChange={(event) => setReopenReason(event.target.value)}
+                          placeholder="Ví dụ: Khách phản hồi lỗi vẫn còn sau khi kỹ thuật viên hoàn thành."
+                          autoSize={{ minRows: 3, maxRows: 5 }}
+                          maxLength={1000}
+                          showCount
+                        />
+                      </Space>
+                    )}
+                    okText="Xác nhận mở lại"
+                    cancelText="Giữ nguyên"
+                    okButtonProps={{ disabled: !reopenReason.trim(), loading: transitionPending }}
+                    onConfirm={() => {
+                      const reason = reopenReason.trim()
+                      if (!reason) return
+                      onTransition(target, reason)
+                      setReopenReason('')
+                    }}
+                    onCancel={() => setReopenReason('')}
+                  >
+                    <Button>{TRANSITION_LABELS[target]}</Button>
+                  </Popconfirm>
                 ) : target === 'CANCELLED' ? (
                   <Popconfirm
                     key={target}

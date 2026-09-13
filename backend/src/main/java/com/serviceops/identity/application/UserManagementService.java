@@ -21,7 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +42,10 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public List<UserAccountResponse> list() {
         UUID tenantId = CurrentUser.tenantId();
+        Map<UUID, TechnicianProfile> techniciansByUserId = technicianRepository.findAllDetailed(tenantId).stream()
+                .collect(Collectors.toMap(technician -> technician.getUser().getId(), Function.identity()));
         return repository.findByTenantIdOrderByDisplayNameAsc(tenantId).stream()
-                .map(user -> toResponse(user, technicianRepository.findByTenantIdAndUserId(tenantId, user.getId()).orElse(null)))
+                .map(user -> toResponse(user, techniciansByUserId.get(user.getId())))
                 .toList();
     }
 

@@ -153,7 +153,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 | --- | --- | --- | --- |
 | Owner | `owner` | `Demo@2026` | User administration, dashboard, audit and overall operations |
 | Dispatcher | `dispatcher` | `Demo@2026` | Work Orders, Technician assignment and weekly scheduling |
-| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, Service Requests and request-to-Work Order flow |
+| Customer Service | `customer-service` | `Demo@2026` | Customers/assets, Service Requests, payment reconciliation and Work Order closure |
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
 | Warehouse | `warehouse` | `Demo@2026` | Part-request queue, spare parts, ISSUE/RETURN, stocktake and inventory movement history |
 
@@ -174,14 +174,14 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and an actionable outstanding-material queue; inventory movement history remains a read-only stock ledger.
 - Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
-- Separate payment reconciliation for transfer/cash/counter collection, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
+- Separate payment reconciliation for transfer/cash/counter collection, server-side queue counters for pending reconciliation/closure, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.
 - Persistent notifications, audit trail and operational dashboard.
 - Shared-schema multi-tenancy with tenant-scoped data access.
 - Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
-- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. Provider/failure details remain server-side rather than leaking into end-user UI.
+- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. The UI intentionally shows only the non-sensitive source badge **Gemini** or **Nội bộ**; credentials, upstream status and failure details remain server-side.
 
 ## Architecture
 
@@ -387,7 +387,7 @@ To exercise Gemini locally, configure the ignored `.env` without echoing the key
 .\scripts\configure-gemini-local.ps1
 ```
 
-If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning; end users do not see provider/configuration details.
+If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning. End users may see the non-sensitive **Nội bộ** source badge, but never API-key state, provider error details or infrastructure exceptions.
 
 Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
 

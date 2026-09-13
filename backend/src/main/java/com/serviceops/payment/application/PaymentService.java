@@ -14,6 +14,7 @@ import com.serviceops.payment.domain.Payment;
 import com.serviceops.payment.domain.PaymentMethod;
 import com.serviceops.payment.domain.PaymentRepository;
 import com.serviceops.payment.domain.PaymentStatus;
+import com.serviceops.payment.web.PaymentDtos.PaymentQueueSummaryResponse;
 import com.serviceops.payment.web.PaymentDtos.PaymentResponse;
 import com.serviceops.security.CurrentUser;
 import com.serviceops.workorder.domain.WorkOrder;
@@ -67,6 +68,16 @@ public class PaymentService {
                 .orElseThrow(() -> BusinessException.notFound("PAYMENT_NOT_FOUND", "Phiếu chưa có thông tin thanh toán"));
         ensureCanView(payment);
         return toResponse(payment);
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentQueueSummaryResponse queueSummary() {
+        requirePaymentQueueRole();
+        UUID tenantId = CurrentUser.tenantId();
+        return new PaymentQueueSummaryResponse(
+                repository.countPendingReconciliation(tenantId, PaymentStatus.SETTLED),
+                repository.countPendingClosure(tenantId, PaymentStatus.SETTLED, WorkOrderStatus.CUSTOMER_ACCEPTED)
+        );
     }
 
     @Transactional(readOnly = true)
