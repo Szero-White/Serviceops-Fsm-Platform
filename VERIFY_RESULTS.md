@@ -23,6 +23,17 @@ A final static release audit after the payment-counter change identified and pat
 
 Static patch validation includes `git diff --check`. This environment could not execute a trustworthy fresh Maven/npm dependency install, so these audit changes **do not replace the Pull Request CI gate** described above.
 
+### Clean-code release-candidate validation (commit `7ad0c48`, 2026-09-13)
+
+After the responsibility-focused refactor, the committed branch was verified locally with:
+
+- Backend Maven suite: **266 tests run, 0 failures, 0 errors, 24 skipped**. The skipped suites were Testcontainers integration tests because Docker was unavailable on that local machine; they are **not counted as passes** and remain a Pull Request CI requirement.
+- Frontend `tsc -b && vite build`: **PASS**, with **3288 modules transformed**.
+- `git diff --check`: **PASS** before commit/push.
+- Working tree was clean and commit `7ad0c48` was pushed to `origin/feat/payment-queue-counters`.
+
+The final static audit after that commit only contains low-risk release hardening/cleanup (service-layer authorization fallback, User Management N+1 removal, removal of a disabled placeholder action/dead local variable, and documentation synchronization). These changes still require the normal local/PR gates below before merge.
+
 ## Required fast local gates
 
 ```powershell

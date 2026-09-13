@@ -158,8 +158,6 @@ export function AppLayout() {
           <Dropdown
             menu={{
               items: [
-                { key: 'profile', icon: <SettingOutlined />, label: 'Thông tin tài khoản', disabled: true },
-                { type: 'divider' },
                 { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true, onClick: handleLogout },
               ],
             }}

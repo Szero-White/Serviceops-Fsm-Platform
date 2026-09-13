@@ -249,7 +249,6 @@ public class WorkOrderService {
             String previousTechnicianName = previousTechnician == null
                     ? "Chưa phân công"
                     : previousTechnician.getUser().getDisplayName();
-            String dispatchActor = WorkOrderNotificationSupport.currentActorLabel();
             String details = "Điều chỉnh lịch " + workOrder.getCode()
                     + ": " + previousTechnicianName + " [" + previousStart + " - " + previousEnd + "]"
                     + " → " + technicianName + " [" + request.startTime() + " - " + request.endTime() + "]"

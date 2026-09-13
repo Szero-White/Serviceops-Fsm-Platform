@@ -14,7 +14,7 @@ Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**
 - Dùng đúng thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Lịch sử biến động**, **Lịch sử phiếu**.
 - Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`), raw timestamp ISO, tên class/API, chuỗi test hoặc technical summary khó hiểu làm nội dung chính.
 - Lý do nghiệp vụ quan trọng như **mở lại/hủy phiếu** được giữ trong body, nhưng được cắt gọn để không vượt giới hạn persistence.
-- `NotificationCopy` là nơi duy nhất tạo copy runtime cho bell. Service nghiệp vụ chỉ cung cấp context; không tự ghép title/message rải rác.
+- `NotificationCopy` là **public facade** duy nhất mà service nghiệp vụ gọi để tạo copy runtime cho bell. Các collaborator package-private theo nhóm (`WorkOrderDispatchNotificationCopy`, `PaymentNotificationCopy`, `InventoryNotificationCopy`) giữ wording chuyên biệt; service nghiệp vụ chỉ cung cấp context và không tự ghép title/message rải rác.
 - Giới hạn persistence hiện tại là title 180 ký tự và message 500 ký tự; `NotificationCopy.Copy` chịu trách nhiệm normalize/cắt an toàn.
 
 ### Ví dụ chuẩn

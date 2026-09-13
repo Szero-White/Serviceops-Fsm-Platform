@@ -108,8 +108,10 @@ final class WorkOrderAccessPolicy {
             return;
         }
 
-        // Preserve validation behavior for direct service calls without a supported role.
-        ensureTransitionReason(request);
+        throw BusinessException.forbidden(
+                "WORK_ORDER_TRANSITION_FORBIDDEN",
+                "Vai trò hiện tại không được phép cập nhật trạng thái phiếu công việc"
+        );
     }
 
     private static void requireAllowed(Set<WorkOrderStatus> allowed, WorkOrderStatus targetStatus, String message) {
