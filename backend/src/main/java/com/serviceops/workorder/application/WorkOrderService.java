@@ -309,7 +309,7 @@ public class WorkOrderService {
                 workOrder.getStatus(),
                 blankToNull(request.note())
         );
-        auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
+        auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous.displayName() + " → " + workOrder.getStatus().displayName());
         workOrderPartRequestService.expirePendingRequests(workOrder);
         WorkOrderNotificationSupport.notifyStatusChange(notificationService, workOrder, blankToNull(request.note()), statusHistory);
         return get(id);

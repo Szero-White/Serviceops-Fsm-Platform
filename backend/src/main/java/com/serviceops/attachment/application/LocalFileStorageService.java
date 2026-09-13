@@ -48,7 +48,7 @@ public class LocalFileStorageService implements FileStorageService {
     @Override
     public synchronized StoredFile store(MultipartFile file, String tenantFolder) {
         if (file == null || file.isEmpty()) {
-            throw BusinessException.badRequest("EMPTY_FILE", "File tải lên không được rỗng");
+            throw BusinessException.badRequest("EMPTY_FILE", "Tệp tải lên không được rỗng");
         }
 
         String contentType = file.getContentType() == null
@@ -77,7 +77,7 @@ public class LocalFileStorageService implements FileStorageService {
             String originalName = safeOriginalFilename(file.getOriginalFilename(), extension);
             return new StoredFile(storageKey, originalName, contentType, file.getSize());
         } catch (IOException ex) {
-            throw new BusinessException("FILE_STORAGE_ERROR", "Không thể lưu file", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new BusinessException("FILE_STORAGE_ERROR", "Không thể lưu tệp", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -93,7 +93,7 @@ public class LocalFileStorageService implements FileStorageService {
         if (incomingBytes > maxTenantBytes || usedBytes > maxTenantBytes - incomingBytes) {
             throw new BusinessException(
                     "STORAGE_QUOTA_EXCEEDED",
-                    "Dung lượng lưu trữ của tenant đã đạt giới hạn",
+                    "Dung lượng lưu trữ của doanh nghiệp đã đạt giới hạn",
                     HttpStatus.PAYLOAD_TOO_LARGE
             );
         }
@@ -134,11 +134,11 @@ public class LocalFileStorageService implements FileStorageService {
         try {
             Path path = resolveStorageKey(storageKey);
             if (!Files.isRegularFile(path)) {
-                throw BusinessException.notFound("FILE_NOT_FOUND", "Không tìm thấy file");
+                throw BusinessException.notFound("FILE_NOT_FOUND", "Không tìm thấy tệp");
             }
             return new UrlResource(path.toUri());
         } catch (IOException ex) {
-            throw BusinessException.notFound("FILE_NOT_FOUND", "Không tìm thấy file");
+            throw BusinessException.notFound("FILE_NOT_FOUND", "Không tìm thấy tệp");
         }
     }
 
@@ -147,17 +147,17 @@ public class LocalFileStorageService implements FileStorageService {
         try {
             Files.deleteIfExists(resolveStorageKey(storageKey));
         } catch (IOException ex) {
-            throw new BusinessException("FILE_DELETE_ERROR", "Không thể xóa file đính kèm", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new BusinessException("FILE_DELETE_ERROR", "Không thể xóa tệp đính kèm", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     private Path resolveStorageKey(String storageKey) {
         if (storageKey == null || storageKey.isBlank()) {
-            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Đường dẫn file không hợp lệ");
+            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Đường dẫn tệp không hợp lệ");
         }
         Path path = root.resolve(storageKey).normalize();
         if (!path.startsWith(root)) {
-            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Đường dẫn file không hợp lệ");
+            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Đường dẫn tệp không hợp lệ");
         }
         return path;
     }
@@ -177,11 +177,11 @@ public class LocalFileStorageService implements FileStorageService {
             if (!valid) {
                 throw BusinessException.badRequest(
                         "INVALID_FILE_SIGNATURE",
-                        "Nội dung file không khớp với định dạng đã khai báo"
+                        "Nội dung tệp không khớp với định dạng đã khai báo"
                 );
             }
         } catch (IOException ex) {
-            throw new BusinessException("FILE_READ_ERROR", "Không thể đọc file tải lên", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("FILE_READ_ERROR", "Không thể đọc tệp tải lên", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -199,16 +199,16 @@ public class LocalFileStorageService implements FileStorageService {
 
     private static String sanitizeRelativeFolder(String folder) {
         if (folder == null || folder.isBlank() || folder.startsWith("/") || folder.startsWith("\\")) {
-            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu file không hợp lệ");
+            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu tệp không hợp lệ");
         }
         if (folder.indexOf('\\') >= 0) {
-            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu file không hợp lệ");
+            throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu tệp không hợp lệ");
         }
 
         String[] segments = folder.trim().split("/", -1);
         for (String segment : segments) {
             if (segment.isBlank() || !segment.matches("[A-Za-z0-9_-]+")) {
-                throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu file không hợp lệ");
+                throw BusinessException.badRequest("INVALID_STORAGE_PATH", "Thư mục lưu tệp không hợp lệ");
             }
         }
         return String.join("/", segments);

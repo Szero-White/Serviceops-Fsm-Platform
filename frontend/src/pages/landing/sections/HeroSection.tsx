@@ -18,7 +18,7 @@ function DashboardMockup() {
         <span className="lp-dot lp-dot--red" />
         <span className="lp-dot lp-dot--yellow" />
         <span className="lp-dot lp-dot--green" />
-        <span className="lp-mockup-url">serviceops.app / dashboard</span>
+        <span className="lp-mockup-url">ServiceOps · Tổng quan</span>
       </div>
 
       <div className="lp-mockup-shell">
@@ -37,7 +37,7 @@ function DashboardMockup() {
         <main className="lp-mockup-main">
           <div className="lp-mockup-topbar">
             <span className="lp-mockup-page-title">Tổng quan hôm nay</span>
-            <div className="lp-mockup-avatar" aria-label="User avatar">M</div>
+            <div className="lp-mockup-avatar" aria-label="Ảnh đại diện người dùng">M</div>
           </div>
 
           <div className="lp-mockup-metrics">
@@ -80,7 +80,7 @@ export function HeroSection() {
           <div className="lp-hero-copy">
             <div className="lp-hero-eyebrow">
               <CheckCircleFilled />
-              Field Service Management SaaS
+              Quản lý dịch vụ hiện trường
             </div>
 
             <Title id="hero-heading" className="lp-hero-heading">
@@ -88,14 +88,14 @@ export function HeroSection() {
             </Title>
 
             <Paragraph className="lp-hero-sub">
-              ServiceOps gom khách hàng, thiết bị, phiếu công việc, lịch kỹ thuật viên, phụ tùng và audit log vào một
-              luồng vận hành thống nhất, có phân quyền và khả năng truy vết rõ ràng.
+              ServiceOps kết nối khách hàng, thiết bị, phiếu công việc, lịch kỹ thuật viên, phụ tùng và nhật ký thay đổi trong một
+              luồng vận hành thống nhất, có phân quyền rõ ràng.
             </Paragraph>
 
             <div className="lp-hero-actions">
               <Link to="/login">
                 <Button type="primary" size="large" icon={<ArrowRightOutlined />} className="lp-btn-primary-lg">
-                  Vào ứng dụng demo
+                  Vào bản dùng thử
                 </Button>
               </Link>
               <a href="#features">
@@ -106,7 +106,7 @@ export function HeroSection() {
             </div>
 
             <div className="lp-hero-social-proof">
-              <span className="lp-social-proof-label">Phạm vi demo</span>
+              <span className="lp-social-proof-label">Phạm vi dùng thử</span>
               {CAPABILITY_LABELS.slice(0, 3).map((name) => (
                 <span key={name} className="lp-social-proof-logo">{name}</span>
               ))}
@@ -126,7 +126,7 @@ export function HeroSection() {
 export function LogoBar() {
   return (
     <section className="lp-logobar" aria-label="Phạm vi nghiệp vụ">
-      <div className="lp-logobar-label">Luồng nghiệp vụ được mô hình hóa end-to-end</div>
+      <div className="lp-logobar-label">Luồng nghiệp vụ xuyên suốt từ tiếp nhận đến hoàn tất</div>
       <div className="lp-logobar-track" aria-label="Phạm vi nghiệp vụ">
         {CAPABILITY_LABELS.map((name) => (
           <span key={name} className="lp-logobar-item">{name}</span>

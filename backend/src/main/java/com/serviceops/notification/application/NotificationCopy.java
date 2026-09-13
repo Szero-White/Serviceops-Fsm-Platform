@@ -187,7 +187,7 @@ public final class NotificationCopy {
         return copy(
                 "Phiếu đã đóng: " + context.code(),
                 actor(actorLabel) + " đã đóng " + workOrderContext(context)
-                        + " sau khi CSKH đối soát thanh toán. Công việc đã kết thúc; bạn không cần thao tác thêm."
+                        + " sau khi bộ phận chăm sóc khách hàng đối soát thanh toán. Công việc đã kết thúc; bạn không cần thao tác thêm."
         );
     }
 

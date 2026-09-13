@@ -13,13 +13,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerCsvService {
     private static final List<String> CUSTOMER_HEADERS = List.of(
+            "Mã khách hàng", "Tên khách hàng", "Điện thoại", "Email", "Địa chỉ", "Ghi chú", "Hoạt động"
+    );
+    private static final List<String> LEGACY_CUSTOMER_HEADERS = List.of(
             "code", "name", "phone", "email", "address", "notes", "active"
     );
 
     private final CsvFileService csvFileService;
 
     public List<CustomerCsvRow> parseCustomers(MultipartFile file) {
-        return csvFileService.parse(file, CUSTOMER_HEADERS, "khách hàng")
+        return csvFileService.parseAny(file, List.of(CUSTOMER_HEADERS, LEGACY_CUSTOMER_HEADERS), "khách hàng")
                 .stream()
                 .map(row -> new CustomerCsvRow(
                         row.rowNumber(),
@@ -37,13 +40,13 @@ public class CustomerCsvService {
     public byte[] customerTemplate() {
         return csvFileService.write(List.of(
                 CUSTOMER_HEADERS,
-                List.of("KH-01001", "Công ty Minh Anh", "0909123456", "support@example.com", "12 Nguyễn Trãi, TP.HCM", "Khách hàng bảo trì định kỳ", "true")
+                List.of("KH-01001", "Công ty Minh Anh", "0909123456", "support@example.com", "12 Nguyễn Trãi, TP.HCM", "Khách hàng bảo trì định kỳ", "Có")
         ));
     }
 
     public byte[] exportCustomers(List<CustomerResponse> customers) {
         List<List<String>> rows = new ArrayList<>();
-        rows.add(List.of("code", "name", "phone", "email", "address", "notes", "active", "createdAt", "updatedAt"));
+        rows.add(List.of("Mã khách hàng", "Tên khách hàng", "Điện thoại", "Email", "Địa chỉ", "Ghi chú", "Hoạt động", "Ngày tạo", "Ngày cập nhật"));
         for (CustomerResponse customer : customers) {
             rows.add(List.of(
                     cell(customer.code()),
@@ -52,7 +55,7 @@ public class CustomerCsvService {
                     cell(customer.email()),
                     cell(customer.address()),
                     cell(customer.notes()),
-                    Boolean.toString(customer.active()),
+                    customer.active() ? "Có" : "Không",
                     customer.createdAt() == null ? "" : customer.createdAt().toString(),
                     customer.updatedAt() == null ? "" : customer.updatedAt().toString()
             ));

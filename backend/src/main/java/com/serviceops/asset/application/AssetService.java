@@ -83,7 +83,7 @@ public class AssetService {
         UUID tenantId = CurrentUser.tenantId();
         String serial = normalizeSerial(request.serialNumber());
         if (serial != null && repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
-            throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
+            throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số sê-ri đã tồn tại");
         }
         Customer customer = requireCustomer(request.customerId(), tenantId);
         requireActiveCustomerForNewAsset(customer);
@@ -105,7 +105,7 @@ public class AssetService {
         boolean serialChanged = currentSerial == null ? serial != null : serial == null || !currentSerial.equalsIgnoreCase(serial);
         if (serialChanged && serial != null
                 && repository.existsByTenantIdAndSerialNumberIgnoreCase(CurrentUser.tenantId(), serial)) {
-            throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số serial đã tồn tại");
+            throw BusinessException.conflict("ASSET_SERIAL_EXISTS", "Số sê-ri đã tồn tại");
         }
         UUID tenantId = CurrentUser.tenantId();
         Customer customer = requireCustomer(request.customerId(), tenantId);
@@ -145,7 +145,7 @@ public class AssetService {
         if (attachmentRepository.existsByTenantIdAndReferenceTypeAndReferenceId(tenantId, "ASSET", id)) {
             throw BusinessException.conflict(
                     "ASSET_HAS_ATTACHMENTS",
-                    "Không thể xóa thiết bị khi còn file đính kèm; hãy xóa file đính kèm trước"
+                    "Không thể xóa thiết bị khi còn tệp đính kèm; hãy xóa tệp đính kèm trước"
             );
         }
         String label = assetDisplayLabel(asset);
@@ -191,7 +191,7 @@ public class AssetService {
             createImportedAsset(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_ASSETS", "ASSET", null, "Import " + validRows + " thiết bị từ CSV");
+        auditService.record("IMPORT_ASSETS", "ASSET", null, "Nhập " + validRows + " thiết bị từ tệp dữ liệu");
         return new AssetImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -240,7 +240,7 @@ public class AssetService {
         if (equipmentName.isBlank()) {
             equipmentName = asset.getCategory();
         }
-        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định số sê-ri" : asset.getSerialNumber();
         return equipmentName + " · " + serial;
     }
 
@@ -259,22 +259,22 @@ public class AssetService {
 
         String serial = row.serialNumber().trim().toUpperCase(Locale.ROOT);
         if (serial.isBlank()) {
-            return AssetImportCandidate.invalid(row, "Serial không được để trống");
+            return AssetImportCandidate.invalid(row, "Số sê-ri không được để trống");
         }
         if (serial.length() > 120) {
-            return AssetImportCandidate.invalid(row, "Serial tối đa 120 ký tự");
+            return AssetImportCandidate.invalid(row, "Số sê-ri tối đa 120 ký tự");
         }
         if (!seenSerials.add(serial)) {
-            return AssetImportCandidate.invalid(row, "Serial bị trùng trong file import");
+            return AssetImportCandidate.invalid(row, "Số sê-ri bị trùng trong tệp dữ liệu");
         }
         if (repository.existsByTenantIdAndSerialNumberIgnoreCase(tenantId, serial)) {
-            return AssetImportCandidate.invalid(row, "Serial đã tồn tại trong hệ thống");
+            return AssetImportCandidate.invalid(row, "Số sê-ri đã tồn tại trong hệ thống");
         }
         if (row.category().isBlank() || row.category().length() > 80) {
             return AssetImportCandidate.invalid(row, "Loại thiết bị bắt buộc và tối đa 80 ký tự");
         }
         if (row.brand().length() > 100 || row.model().length() > 100) {
-            return AssetImportCandidate.invalid(row, "Hãng/model tối đa 100 ký tự");
+            return AssetImportCandidate.invalid(row, "Hãng và dòng / mẫu tối đa 100 ký tự");
         }
         if (row.notes().length() > 2000) {
             return AssetImportCandidate.invalid(row, "Ghi chú tối đa 2000 ký tự");
@@ -283,7 +283,7 @@ public class AssetService {
         try {
             LocalDate installedAt = parseDate(row.installedAt());
             LocalDate warrantyUntil = parseDate(row.warrantyUntil());
-            AssetStatus status = row.status().isBlank() ? AssetStatus.ACTIVE : AssetStatus.valueOf(row.status().trim().toUpperCase(Locale.ROOT));
+            AssetStatus status = parseAssetStatus(row.status());
             return new AssetImportCandidate(row, customer, row.category().trim(), serial, installedAt, warrantyUntil, status, true, "Hợp lệ");
         } catch (IllegalArgumentException | DateTimeParseException ex) {
             return AssetImportCandidate.invalid(row, "Ngày hoặc trạng thái không hợp lệ");
@@ -303,6 +303,20 @@ public class AssetService {
         asset.setStatus(candidate.status());
         asset.setNotes(blankToNull(candidate.row().notes()));
         repository.save(asset);
+    }
+
+    private static AssetStatus parseAssetStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return AssetStatus.ACTIVE;
+        }
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "HOẠT ĐỘNG", "HOAT DONG", "ACTIVE" -> AssetStatus.ACTIVE;
+            case "ĐANG SỬA CHỮA", "DANG SUA CHUA", "IN_SERVICE" -> AssetStatus.IN_SERVICE;
+            case "TẠM NGƯNG SỬ DỤNG", "TAM NGUNG SU DUNG", "OUT_OF_SERVICE" -> AssetStatus.OUT_OF_SERVICE;
+            case "NGỪNG SỬ DỤNG", "NGUNG SU DUNG", "RETIRED" -> AssetStatus.RETIRED;
+            default -> throw new IllegalArgumentException("Trạng thái thiết bị không hợp lệ");
+        };
     }
 
     private static LocalDate parseDate(String value) {

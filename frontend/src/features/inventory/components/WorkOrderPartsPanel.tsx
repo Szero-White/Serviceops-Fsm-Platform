@@ -181,7 +181,7 @@ export function WorkOrderPartsPanel({ workOrder, role }: { workOrder: WorkOrder;
             { title: 'Đã cấp', width: 120, sorter: (a, b) => compareNumber(a.issuedQuantity, b.issuedQuantity), render: (_, item) => formatQuantityWithUnit(item.issuedQuantity, item.unit) },
             { title: 'Đã dùng', width: 120, sorter: (a, b) => compareNumber(a.usedQuantity, b.usedQuantity), render: (_, item) => formatQuantityWithUnit(item.usedQuantity, item.unit) },
             { title: 'Đã trả', width: 120, sorter: (a, b) => compareNumber(a.returnedQuantity, b.returnedQuantity), render: (_, item) => formatQuantityWithUnit(item.returnedQuantity, item.unit) },
-            { title: 'KTV đang giữ', width: 140, sorter: (a, b) => compareNumber(a.outstandingQuantity, b.outstandingQuantity), render: (_, item) => <Typography.Text strong={Number(item.outstandingQuantity) > 0}>{formatQuantityWithUnit(item.outstandingQuantity, item.unit)}</Typography.Text> },
+            { title: 'Kỹ thuật viên đang giữ', width: 140, sorter: (a, b) => compareNumber(a.outstandingQuantity, b.outstandingQuantity), render: (_, item) => <Typography.Text strong={Number(item.outstandingQuantity) > 0}>{formatQuantityWithUnit(item.outstandingQuantity, item.unit)}</Typography.Text> },
             {
               title: 'Thao tác', width: 150, fixed: 'right',
               render: (_, item) => canEditUsage ? <Button size="small" onClick={() => setEditingUsage(item)}>Ghi thực tế dùng</Button> : null,

@@ -11,11 +11,11 @@ export function LandingNavbar() {
 
   return (
     <>
-      <nav className="lp-nav" role="navigation" aria-label="Main navigation">
+      <nav className="lp-nav" role="navigation" aria-label="Điều hướng chính">
         <div className="lp-nav-inner">
-          <Link to="/landing" className="lp-nav-brand" aria-label="ServiceOps home">
+          <Link to="/landing" className="lp-nav-brand" aria-label="Trang chủ ServiceOps">
             <BrandLockup />
-            <span className="lp-brand-tag">FSM</span>
+            <span className="lp-brand-tag">Dịch vụ</span>
           </Link>
 
           <div className="lp-nav-links" role="list">

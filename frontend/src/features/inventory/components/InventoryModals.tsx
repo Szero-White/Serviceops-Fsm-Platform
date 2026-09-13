@@ -20,7 +20,7 @@ export function CreateSparePartModal({ open, form, loading, onCancel, onSubmit }
     <Modal title="Thêm phụ tùng" open={open} onCancel={onCancel} onOk={() => form.submit()} confirmLoading={loading} okText="Thêm phụ tùng" width={680} destroyOnHidden>
       <Form form={form} layout="vertical" onFinish={onSubmit} onFinishFailed={onFinishFailed} scrollToFirstError requiredMark>
         <div className="form-grid two-cols">
-          <Form.Item label="SKU" name="sku" rules={[{ required: true, message: 'Nhập SKU' }]}><Input /></Form.Item>
+          <Form.Item label="Mã phụ tùng" name="sku" rules={[{ required: true, message: 'Nhập mã phụ tùng' }]}><Input /></Form.Item>
           <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true, message: 'Nhập tên phụ tùng' }]}><Input /></Form.Item>
           <Form.Item label="Đơn vị" name="unit" rules={[{ required: true, message: 'Nhập đơn vị' }]}><Input /></Form.Item>
           <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
@@ -101,7 +101,7 @@ type BulkImportPreviewModalProps = {
 export function BulkImportPreviewModal({ open, result, loading, onCancel, onCommit }: BulkImportPreviewModalProps) {
   return (
     <Modal
-      title="Kiểm tra file nhập phụ tùng"
+      title="Kiểm tra tệp nhập phụ tùng"
       open={open}
       onCancel={onCancel}
       onOk={onCommit}
@@ -118,7 +118,7 @@ export function BulkImportPreviewModal({ open, result, loading, onCancel, onComm
             type={result.errorRows > 0 ? 'warning' : 'success'}
             showIcon
             message={`${result.validRows}/${result.totalRows} dòng hợp lệ`}
-            description={result.errorRows > 0 ? 'File còn dòng lỗi, hệ thống chưa ghi dữ liệu vào kho.' : 'File hợp lệ, bạn có thể xác nhận để ghi dữ liệu vào kho.'}
+            description={result.errorRows > 0 ? 'Tệp còn dòng lỗi, hệ thống chưa ghi dữ liệu vào kho.' : 'Tệp hợp lệ, bạn có thể xác nhận để ghi dữ liệu vào kho.'}
           />
           <Table<SparePartImportRowResult>
             rowKey="rowNumber"
@@ -127,7 +127,7 @@ export function BulkImportPreviewModal({ open, result, loading, onCancel, onComm
             pagination={{ pageSize: 8, showSizeChanger: false }}
             columns={[
               { title: 'Dòng', dataIndex: 'rowNumber', width: 80, sorter: (a, b) => compareNumber(a.rowNumber, b.rowNumber) },
-              { title: 'SKU', dataIndex: 'sku', width: 150, sorter: (a, b) => compareText(a.sku, b.sku) },
+              { title: 'Mã phụ tùng', dataIndex: 'sku', width: 150, sorter: (a, b) => compareText(a.sku, b.sku) },
               { title: 'Tên phụ tùng', dataIndex: 'name', ellipsis: true, sorter: (a, b) => compareText(a.name, b.name) },
               {
                 title: 'Kết quả', dataIndex: 'valid', width: 130,

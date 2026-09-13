@@ -1,95 +1,84 @@
-# Notification Copy Catalog
+# Chuẩn nội dung thông báo
 
-Notification chuông trong ServiceOps là **hàng đợi chú ý theo vai trò**, không phải bản sao của Audit hay Timeline. Mỗi dòng phải giúp người nhận trả lời được ngay ba câu hỏi:
+Thông báo trong ServiceOps là **hàng đợi việc cần chú ý theo vai trò**. Thông báo không thay thế Tiến trình của phiếu công việc, Lịch sử biến động kho hoặc Nhật ký hệ thống.
 
-1. **Việc gì vừa xảy ra hoặc đang cần tôi xử lý?**
-2. **Đang nói tới phiếu/khách hàng/phụ tùng nào và ai vừa thực hiện hành động liên quan?**
-3. **Tôi cần mở đâu hoặc làm gì tiếp theo?**
+Mỗi thông báo hiển thị cho người dùng phải trả lời được ba câu hỏi:
 
-## Quy tắc viết thống nhất
+1. Việc gì vừa xảy ra hoặc đang cần xử lý?
+2. Liên quan tới phiếu, khách hàng hoặc phụ tùng nào?
+3. Người nhận cần làm gì tiếp theo?
 
-- **Title = hành động/sự kiện quan trọng + mã tra cứu.** Ví dụ: `Cần phân công kỹ thuật viên: WO-2026-001245`.
-- **Body = actor + business context + next action.** Với Work Order, ưu tiên tên khách hàng và tiêu đề công việc; với kho, ưu tiên SKU, tên phụ tùng và số lượng/ngưỡng.
-- Body chỉ 1–2 câu ngắn, không lặp lại title và không biến notification thành audit dump.
-- Dùng đúng thuật ngữ UI: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Lịch sử biến động**, **Lịch sử phiếu**.
-- Không dùng enum nội bộ (`ON_THE_WAY`, `CUSTOMER_ACCEPTED`), raw timestamp ISO, tên class/API, chuỗi test hoặc technical summary khó hiểu làm nội dung chính.
-- Lý do nghiệp vụ quan trọng như **mở lại/hủy phiếu** được giữ trong body, nhưng được cắt gọn để không vượt giới hạn persistence.
-- `NotificationCopy` là **public facade** duy nhất mà service nghiệp vụ gọi để tạo copy runtime cho bell. Các collaborator package-private theo nhóm (`WorkOrderDispatchNotificationCopy`, `PaymentNotificationCopy`, `InventoryNotificationCopy`) giữ wording chuyên biệt; service nghiệp vụ chỉ cung cấp context và không tự ghép title/message rải rác.
-- Giới hạn persistence hiện tại là title 180 ký tự và message 500 ký tự; `NotificationCopy.Copy` chịu trách nhiệm normalize/cắt an toàn.
+## 1. Quy tắc nội dung hiển thị
 
-### Ví dụ chuẩn
+- Tiêu đề ngắn, bắt đầu bằng hành động hoặc tình trạng cần chú ý và kèm mã nghiệp vụ khi có, ví dụ: **Cần phân công kỹ thuật viên: WO-2026-001245**.
+- Nội dung nêu người liên quan, khách hàng/công việc/phụ tùng và bước tiếp theo. Không lặp lại nguyên tiêu đề.
+- Dùng đúng tên trên giao diện: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Xử lý thanh toán**, **Lịch sử biến động**.
+- Không hiển thị mã trạng thái nội bộ, tên lớp, đường dẫn kỹ thuật, mã định danh dài, thời gian máy hoặc thông báo lỗi dành cho lập trình viên.
+- Mã nghiệp vụ mà người dùng thực sự tra cứu như `WO-...` hoặc mã phụ tùng được giữ lại vì có giá trị vận hành.
+- Lý do mở lại, hủy hoặc điều chỉnh lịch được giữ lại khi cần để người nhận hiểu ngữ cảnh.
+- Nội dung được cắt gọn theo giới hạn lưu trữ; không biến thông báo thành bản ghi nhật ký chi tiết.
 
-**Dispatcher**
+## 2. Nội dung chuẩn theo vai trò
 
-- Title: `Cần phân công kỹ thuật viên: WO-2026-001245`
-- Body: `Chăm sóc khách hàng Trần Mai CSKH đã chuyển phiếu "Máy rửa chén không cấp nước" (WO-2026-001245) của khách Trần Minh Anh sang bộ phận điều phối. Mở Lịch điều phối để chọn kỹ thuật viên và thời gian thực hiện.`
-
-**Technician**
-
-- Title: `Bạn có công việc mới: WO-2026-001245`
-- Body: `Điều phối viên Lê Thu Điều phối đã giao cho bạn phiếu "Máy rửa chén không cấp nước" (WO-2026-001245) của khách Trần Minh Anh. Mở Lịch của tôi để xem lịch và bắt đầu công việc.`
-
-**Reopen**
-
-- Title: `Phiếu cần xử lý lại: WO-2026-001245`
-- Body phải có người mở lại, khách hàng/công việc và **Lý do** trước khi hướng dẫn bước tiếp theo.
-
-## Ma trận notification theo vai trò
-
-| Trigger | Người nhận | Title chuẩn | Business context bắt buộc / bước tiếp theo |
+| Tình huống nghiệp vụ | Người nhận | Tiêu đề hiển thị | Bước tiếp theo |
 |---|---|---|---|
-| Service Request → Work Order | Dispatcher | **Cần phân công kỹ thuật viên: WO-...** | Actor chuyển phiếu + summary + khách hàng; mở Lịch điều phối |
-| Phân công lần đầu | Technician được giao | **Bạn có công việc mới: WO-...** | Dispatcher/Owner + summary + khách hàng; mở Lịch của tôi |
-| Đổi Technician | Technician cũ | **Bạn không còn phụ trách: WO-...** | Actor + người nhận mới + khách hàng; dừng theo dõi job cũ |
-| Đổi Technician | Technician mới | **Bạn có công việc mới: WO-...** | Actor + summary + khách hàng; mở Lịch của tôi |
-| Chỉ đổi thời gian | Technician hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Actor + summary + khách hàng + lịch cũ → lịch mới + lý do; xem Lịch của tôi |
-| Appointment đã kết thúc, WO vẫn chưa bắt đầu | Dispatcher | **Phiếu đã quá lịch thực hiện: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; mở Lịch điều phối để xử lý |
-| Appointment đã kết thúc, WO vẫn chưa bắt đầu | Assigned Technician | **Công việc đã quá lịch: WO-...** | Summary + khách hàng + lịch đã lỡ; mở Lịch của tôi và liên hệ điều phối nếu cần |
-| Appointment quá hạn quá grace period, WO vẫn chưa bắt đầu | Customer Service | **Khách hàng có thể cần được liên hệ: WO-...** | Summary + khách hàng + kỹ thuật viên + lịch đã lỡ; kiểm tra phiếu và chủ động liên hệ khách nếu cần |
-| Work Order → WAITING_FOR_PARTS | Dispatcher | **Phiếu đang chờ phụ tùng: WO-...** | Technician + summary + khách hàng + ghi chú nếu có; phối hợp xử lý |
-| Technician tạo part request | Warehouse | **Có yêu cầu phụ tùng mới: WO-...** | Technician + Work Order + SKU/tên part + quantity; mở Yêu cầu phụ tùng để xác nhận cấp hoặc Không thể cấp |
-| Work Order → REOPENED | Dispatcher, trừ actor | **Phiếu cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; điều phối bước tiếp theo |
-| Work Order → REOPENED | Assigned Technician, nếu không phải actor | **Công việc cần xử lý lại: WO-...** | Actor + summary + khách hàng + lý do; tiếp tục theo phân công |
-| Work Order → REOPENED bởi role khác | Customer Service | **Phiếu cần theo dõi lại: WO-...** | Actor + summary + khách hàng + lý do; theo dõi khách và phối hợp xử lý |
-| Technician → COMPLETED | Customer Service | **Cần theo dõi khách sau sửa chữa: WO-...** | Technician + summary + khách hàng; theo dõi phản hồi, reopen nếu sự cố còn |
-| Technician ghi nhận khách đã chuyển khoản | Customer Service | **Cần đối soát chuyển khoản: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán để xác minh tiền thực nhận |
-| Technician nhận tiền mặt | Customer Service | **Cần nhận bàn giao tiền mặt: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán để nhận bàn giao |
-| Technician chọn khách hẹn thanh toán tại quầy | Customer Service | **Khách hẹn thanh toán tại quầy: WO-...** | Technician + khách hàng + số tiền; mở Xử lý thanh toán khi khách đến quầy |
+| Yêu cầu dịch vụ đã được chuyển sang phiếu công việc | Điều phối viên | **Cần phân công kỹ thuật viên: WO-...** | Mở Lịch điều phối để chọn người và thời gian |
+| Phân công lần đầu | Kỹ thuật viên được giao | **Bạn có công việc mới: WO-...** | Mở Lịch của tôi để xem lịch và nội dung |
+| Chuyển việc sang kỹ thuật viên khác | Kỹ thuật viên cũ | **Bạn không còn phụ trách: WO-...** | Dừng theo dõi phiếu cũ và kiểm tra lại lịch cá nhân |
+| Chuyển việc sang kỹ thuật viên khác | Kỹ thuật viên mới | **Bạn có công việc mới: WO-...** | Mở Lịch của tôi để tiếp nhận công việc |
+| Thay đổi thời gian thực hiện | Kỹ thuật viên hiện tại | **Lịch của bạn đã thay đổi: WO-...** | Kiểm tra lịch mới và lý do thay đổi |
+| Phiếu đã quá lịch nhưng chưa bắt đầu | Điều phối viên | **Phiếu đã quá lịch thực hiện: WO-...** | Mở Lịch điều phối để kiểm tra và điều chỉnh |
+| Công việc đã quá lịch nhưng chưa bắt đầu | Kỹ thuật viên | **Công việc đã quá lịch: WO-...** | Mở Lịch của tôi và liên hệ điều phối khi cần |
+| Khách có thể bị ảnh hưởng vì quá lịch kéo dài | Chăm sóc khách hàng | **Khách hàng có thể cần được liên hệ: WO-...** | Kiểm tra phiếu và chủ động liên hệ khách nếu cần |
+| Phiếu đang chờ phụ tùng | Điều phối viên | **Phiếu đang chờ phụ tùng: WO-...** | Theo dõi và phối hợp xử lý |
+| Kỹ thuật viên tạo yêu cầu phụ tùng | Nhân viên kho | **Có yêu cầu phụ tùng mới: WO-...** | Mở Yêu cầu phụ tùng để kiểm tra và xác nhận cấp |
+| Phiếu được mở lại | Điều phối viên | **Phiếu cần xử lý lại: WO-...** | Xem lý do và điều phối bước tiếp theo |
+| Công việc được mở lại | Kỹ thuật viên được giao | **Công việc cần xử lý lại: WO-...** | Tiếp tục xử lý theo phân công |
+| Phiếu được mở lại bởi bộ phận khác | Chăm sóc khách hàng | **Phiếu cần theo dõi lại: WO-...** | Theo dõi khách hàng và phối hợp xử lý |
+| Kỹ thuật viên hoàn thành công việc | Chăm sóc khách hàng | **Cần theo dõi khách sau sửa chữa: WO-...** | Kiểm tra phản hồi và hậu xử lý nếu cần |
+| Khách đã chuyển khoản | Chăm sóc khách hàng | **Cần đối soát chuyển khoản: WO-...** | Kiểm tra tiền thực tế vào tài khoản công ty |
+| Kỹ thuật viên đang giữ tiền mặt của khách | Chăm sóc khách hàng | **Cần nhận bàn giao tiền mặt: WO-...** | Nhận bàn giao và đối soát |
+| Khách hẹn thanh toán tại quầy | Chăm sóc khách hàng | **Khách hẹn thanh toán tại quầy: WO-...** | Thu tiền khi khách đến rồi đối soát |
+| Phiếu đã đóng | Chủ sở hữu | **Phiếu đã hoàn tất: WO-...** | Giám sát kết quả cuối; không cần thao tác thường ngày |
+| Phiếu đã đóng | Kỹ thuật viên được giao | **Phiếu đã đóng: WO-...** | Không cần thao tác thêm |
+| Phiếu đã hủy | Chủ sở hữu | **Phiếu đã hủy: WO-...** | Tra lịch sử khi cần kiểm tra |
+| Công việc đã hủy | Kỹ thuật viên được giao | **Công việc đã hủy: WO-...** | Dừng công việc và kiểm tra lịch cá nhân |
+| Phiếu bị hủy bởi bộ phận khác | Chăm sóc khách hàng | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Kiểm tra lý do và liên hệ khách nếu cần |
+| Cấp phụ tùng làm tồn xuống dưới ngưỡng | Nhân viên kho | **Tồn kho thấp: [mã phụ tùng]** | Mở Kho phụ tùng để kiểm tra và bổ sung |
+| Thay đổi ngưỡng làm phụ tùng trở thành tồn thấp | Nhân viên kho khác người thao tác | **Tồn kho thấp theo ngưỡng mới: [mã phụ tùng]** | Kiểm tra tồn và ngưỡng mới |
+| Kiểm kê phát hiện chênh lệch | Chủ sở hữu khác người kiểm kê | **Kiểm kê có chênh lệch: [mã phụ tùng]** | Mở Lịch sử biến động để đối chiếu |
+| Kiểm kê kết thúc với tồn thấp | Nhân viên kho | **Tồn kho thấp sau kiểm kê: [mã phụ tùng]** | Kiểm tra và bổ sung nếu cần |
 
-| Work Order → CLOSED | Owner, trừ actor | **Phiếu đã hoàn tất: WO-...** | CSKH/actor + summary + khách hàng; payment đã đối soát và biên nhận đã sẵn sàng, kết quả cuối để Owner giám sát |
-| Work Order → CLOSED bởi người khác | Assigned Technician | **Phiếu đã đóng: WO-...** | Actor + summary + khách hàng; không cần thao tác thêm |
-| Work Order → CANCELLED | Owner, trừ actor | **Phiếu đã hủy: WO-...** | Actor + summary + khách hàng + lý do; tra Lịch sử phiếu khi cần |
-| Work Order → CANCELLED | Assigned Technician, nếu không phải actor | **Công việc đã hủy: WO-...** | Actor + summary + khách hàng + lý do; dừng job và xem Lịch của tôi |
-| Work Order → CANCELLED bởi role khác | Customer Service | **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** | Actor + summary + khách hàng + lý do; mở **Lịch sử phiếu** để kiểm tra và liên hệ khách nếu cần |
-| ISSUE làm stock cross threshold | Warehouse | **Tồn kho thấp: SKU** | Warehouse/Work Order + tên phụ tùng + tồn hiện tại + ngưỡng; mở Kho phụ tùng |
-| Đổi reorder level làm stock thành low | Warehouse khác actor | **Tồn kho thấp theo ngưỡng mới: SKU** | Người đổi ngưỡng + tên part + tồn/ngưỡng mới; mở Kho phụ tùng |
-| Stocktake có chênh lệch | Owner khác actor | **Kiểm kê có chênh lệch: SKU** | Người kiểm kê + system/actual/difference + lý do; mở Lịch sử biến động |
-| Stocktake kết thúc ở mức low | Warehouse | **Tồn kho thấp sau kiểm kê: SKU** | Người kiểm kê + tên part + actual + threshold; mở Kho phụ tùng |
+## 3. Những thao tác không tạo thông báo
 
-Mỗi lần `COMPLETED` là một repair cycle riêng. Notification cho Customer Service được dedupe theo chính status-history ID của lần hoàn thành đó: retry cùng một completion không tạo bản sao, nhưng `REOPENED → ... → COMPLETED` lần sau vẫn tạo một notification mới hợp lệ, kể cả khi title/body giống lần trước.
+Các thao tác dưới đây đã có phản hồi ngay trên màn hình và có nơi tra cứu phù hợp nên không tạo thêm thông báo:
 
-## Những việc cố ý không tạo bell
+- tạo, sửa hoặc nhập danh sách khách hàng và thiết bị;
+- thay đổi kênh tiếp nhận thông thường;
+- cập nhật hồ sơ kỹ thuật viên;
+- tải tệp đính kèm;
+- nhập kho thông thường;
+- từng bước tiến độ hiện trường không cần bộ phận khác hành động;
+- từng lần sử dụng hoặc hoàn trả phụ tùng thông thường;
+- các thay đổi dữ liệu nền chỉ phục vụ quản trị.
 
-Các thao tác dưới đây có success/error feedback tại màn hình và có nguồn truy vết phù hợp, nên **không broadcast notification**:
+Dùng **Tiến trình** để xem câu chuyện của một phiếu công việc, **Lịch sử biến động** để xem hàng ra/vào kho và **Nhật ký hệ thống** để truy vết các thao tác quản trị quan trọng.
 
-- Tạo/sửa/xóa/import Customer.
-- Tạo/sửa/xóa/import Asset.
-- Tạo/sửa/hủy/xóa Service Request thông thường.
-- Tạo/sửa/xóa Service Channel.
-- Cập nhật Technician profile.
-- Upload attachment.
-- Tạo/import catalog phụ tùng hoặc nhập kho bình thường.
-- Technician `ON_THE_WAY`, `IN_PROGRESS`, từng lần actual-used/ISSUE/RETURN bình thường và `CUSTOMER_ACCEPTED`. Part request mới cần Warehouse chú ý có notification riêng; ledger/timeline chịu trách nhiệm cho truy vết vật tư.
-- Completion không broadcast cho Owner; Owner chỉ nhận terminal summary khi phiếu `CLOSED` hoặc `CANCELLED`, cùng ngoại lệ quản trị stocktake discrepancy.
+## 4. Đồng bộ giữa dữ liệu mới và dữ liệu cũ
 
-Dùng **Timeline** cho câu chuyện của một Work Order, **Inventory Movements** cho ledger kho và **Audit** cho truy vết system-wide. Bell chỉ chứa việc người nhận thực sự cần biết hoặc cần hành động.
+Thông báo mới luôn được tạo bằng nội dung nghiệp vụ dễ hiểu. Một số thông báo cũ đã lưu từ phiên bản trước có thể còn dùng cách gọi cũ; lớp hiển thị của giao diện chịu trách nhiệm chuyển các nội dung này sang cách gọi hiện tại trước khi người dùng nhìn thấy.
 
-## Legacy notification
+Việc tương thích dữ liệu cũ chỉ nằm ở lớp hiển thị. Không đưa logic chuyển đổi chuỗi rải rác vào bố cục chung hoặc các trang nghiệp vụ.
 
-`V7__notification_feed_cleanup.sql` xóa các row bell cũ thuộc nhóm CRUD/import/generic-status từng được persist ở các release trước. Đây là dữ liệu notification dư thừa, không phải audit history; Audit/Timeline/Inventory Movements vẫn giữ nguồn truy vết.
+## 5. Quy ước triển khai nội bộ
 
-Các notification cũ còn giá trị hành động như assignment/reschedule/reopen/cancel vẫn được giữ. `frontend/src/features/notifications/presentation.ts` chỉ làm compatibility cho các title cũ này để tránh lộ enum hoặc chuỗi kỹ thuật. Không đặt logic legacy trong `AppLayout` và không tiếp tục mở rộng mapper bằng routine CRUD đã bị migration loại bỏ.
+Phần này dành cho lập trình viên và kiểm thử viên; các tên bên dưới là mã nội bộ, **không phải nội dung được hiển thị trực tiếp cho người dùng**.
 
-`V8__overdue_notification_dedup.sql` bổ sung `event_key` nullable và unique theo `(tenant_id, recipient_user_id, event_key)`. Backend overdue scanner dùng key gắn với appointment + start/end window và `INSERT ... ON CONFLICT DO NOTHING`, vì vậy cùng một lịch quá hạn chỉ phát một bell cho mỗi recipient ngay cả khi scheduler chạy lặp lại.
+- `NotificationCopy` là điểm vào duy nhất để các dịch vụ nghiệp vụ tạo nội dung thông báo.
+- `WorkOrderDispatchNotificationCopy`, `PaymentNotificationCopy` và `InventoryNotificationCopy` giữ nội dung theo từng nhóm nghiệp vụ; dịch vụ nghiệp vụ chỉ truyền dữ liệu ngữ cảnh.
+- Nội dung được chuẩn hóa và giới hạn độ dài tại `NotificationCopy.Copy`.
+- Các lần quét công việc quá lịch dùng khóa sự kiện để tránh phát lặp cùng một thông báo cho cùng người nhận.
+- Thông báo cho Chăm sóc khách hàng về lịch quá hạn dùng khóa riêng để không làm mất cảnh báo vận hành ban đầu của Điều phối viên hoặc Kỹ thuật viên.
+- Dữ liệu thông báo dư thừa của các phiên bản cũ được dọn bằng migration tương ứng; lịch sử nghiệp vụ vẫn nằm ở Tiến trình, Lịch sử biến động và Nhật ký hệ thống.
 
-Operational overdue cho Dispatcher/Technician dùng event key hiện hữu. Customer Service escalation dùng cùng appointment window nhưng suffix riêng `:CUSTOMER_SERVICE`, vì vậy chỉ phát sau grace period và vẫn dedupe độc lập, không làm lặp alert vận hành ban đầu.
+Khi thêm một tình huống thông báo mới, phải cập nhật đồng thời: nội dung runtime, bảng này, hướng dẫn người dùng nếu hành vi có thay đổi và kiểm thử liên quan.

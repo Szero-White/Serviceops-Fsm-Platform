@@ -144,7 +144,7 @@ public class CustomerService {
             createImportedCustomer(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khách hàng từ CSV");
+        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Nhập " + validRows + " khách hàng từ tệp dữ liệu");
         return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -176,7 +176,7 @@ public class CustomerService {
             return CustomerImportCandidate.invalid(row, "Mã khách hàng tối đa 40 ký tự");
         }
         if (!seenCodes.add(code)) {
-            return CustomerImportCandidate.invalid(row, "Mã khách hàng bị trùng trong file import");
+            return CustomerImportCandidate.invalid(row, "Mã khách hàng bị trùng trong tệp dữ liệu");
         }
         if (repository.existsByTenantIdAndCodeIgnoreCase(tenantId, code)) {
             return CustomerImportCandidate.invalid(row, "Mã khách hàng đã tồn tại trong hệ thống");
@@ -223,13 +223,13 @@ public class CustomerService {
             return true;
         }
         String normalized = value.trim().toLowerCase(Locale.ROOT);
-        if ("true".equals(normalized)) {
+        if ("true".equals(normalized) || "có".equals(normalized) || "co".equals(normalized)) {
             return true;
         }
-        if ("false".equals(normalized)) {
+        if ("false".equals(normalized) || "không".equals(normalized) || "khong".equals(normalized)) {
             return false;
         }
-        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
+        throw new IllegalArgumentException("Cột Hoạt động chỉ nhận Có hoặc Không");
     }
 
 

@@ -148,7 +148,7 @@ export function ServiceRequestsPage() {
       />
 
       <div className="table-toolbar toolbar-row">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tiêu đề, mô tả, khách hàng hoặc serial" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm tiêu đề, mô tả, khách hàng hoặc số sê-ri" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái yêu cầu dịch vụ" value={statuses} onChange={(value) => { setStatuses(value); setPage(0) }} options={REQUEST_STATUS_OPTIONS} />
       </div>
 

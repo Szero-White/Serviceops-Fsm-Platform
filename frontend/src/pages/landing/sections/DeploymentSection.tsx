@@ -12,8 +12,8 @@ export function DeploymentSection() {
       <div className="lp-container">
         <SectionHeader
           tag="Triển khai"
-          title="Từ review local đến production-like theo từng mức rõ ràng"
-          sub="Không hiển thị bảng giá hoặc cam kết thương mại chưa có dữ liệu thật. Thay vào đó, repository mô tả chính xác mức triển khai đang hỗ trợ và hướng mở rộng tiếp theo."
+          title="Từ bản dùng thử đến bản trực tuyến theo từng mức rõ ràng"
+          sub="Không đưa ra bảng giá hoặc cam kết thương mại chưa có dữ liệu thật. Phần này chỉ mô tả đúng mức sử dụng hiện tại và hướng mở rộng tiếp theo."
         />
         <h2 id="deployment-heading" className="lp-visually-hidden">Các mức triển khai</h2>
 
@@ -34,7 +34,7 @@ export function DeploymentSection() {
                   ))}
                 </ul>
 
-                {tier.name === 'Product rollout' ? (
+                {tier.name === 'Mở rộng vận hành' ? (
                   <a href="#how" className="lp-deployment-link">
                     <Button type={tier.highlight ? 'primary' : 'default'} block size="large">
                       {tier.cta}

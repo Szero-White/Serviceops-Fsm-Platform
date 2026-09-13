@@ -277,7 +277,7 @@ public class InventoryService {
             createImportedPart(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Import " + validRows + " phụ tùng từ CSV");
+        auditService.record("IMPORT_SPARE_PARTS", "SPARE_PART", null, "Nhập " + validRows + " phụ tùng từ tệp dữ liệu");
         return new SparePartImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
 
@@ -316,7 +316,7 @@ public class InventoryService {
         sparePartRepository.save(part);
         if (candidate.initialStock().signum() > 0) {
             part.addStock(candidate.initialStock());
-            saveTransaction(part, null, InventoryTransactionType.IMPORT, candidate.initialStock(), "Nhập tồn ban đầu từ CSV");
+            saveTransaction(part, null, InventoryTransactionType.IMPORT, candidate.initialStock(), "Nhập tồn ban đầu từ tệp dữ liệu");
         }
     }
 

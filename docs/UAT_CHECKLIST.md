@@ -156,3 +156,13 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | TIMELINE-01 | Mở timeline của WO hoàn chỉnh | Theo thời gian thấy REQUEST → ISSUE → USED → COMPLETED → CUSTOMER_ACCEPTED → payment reported → SETTLED → receipt → CLOSED; RETURN sau CLOSED vẫn xuất hiện và WO không reopen |
 | BUILD-01 | Chạy backend test | Build success |
 | BUILD-02 | Chạy frontend lint/build | Build success |
+
+## Kiểm tra ngôn ngữ hiển thị cho người dùng
+
+| ID | Tình huống | Kết quả mong đợi |
+|---|---|---|
+| LANG-01 | Chủ sở hữu mở Nhật ký hệ thống có dữ liệu cũ và mới | Hành động, đối tượng, trạng thái và vai trò hiển thị bằng tiếng Việt nghiệp vụ; không lộ mã enum hoặc UUID dài làm nội dung chính |
+| LANG-02 | Mở thông báo mới và thông báo lịch sử | Nội dung dùng cách gọi nhất quán như Phiếu công việc, Kỹ thuật viên, Nhân viên kho, Đã hoàn thành; không hiển thị mã trạng thái nội bộ |
+| LANG-03 | Hỏi Trợ lý AI về quy trình phiếu, kho hoặc thanh toán | Câu trả lời và các bước hướng dẫn dùng ngôn ngữ nghiệp vụ; enum, tên vai trò nội bộ và thuật ngữ kỹ thuật được chuyển đổi trước khi trả ra giao diện |
+| LANG-04 | Xuất mẫu/tệp dữ liệu rồi nhập lại | Tiêu đề tệp mới dùng tiếng Việt dễ hiểu; hệ thống vẫn nhận tiêu đề cũ để giữ tương thích dữ liệu |
+| LANG-05 | Backend trả lỗi validation hoặc lỗi hạ tầng | Người dùng nhận thông báo an toàn, dễ hiểu; không lộ stack trace, tên lớp, SQL, cấu hình, mã provider hoặc chi tiết kết nối |

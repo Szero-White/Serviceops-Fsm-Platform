@@ -37,6 +37,16 @@ public class AuditController {
         return service.list(page, size, q, actor, action, entityType, from, to, sortBy, sortDir);
     }
 
-    public record AuditResponse(UUID id, String actorUsername, String action, String entityType, UUID entityId, String details, Instant createdAt) {
+    public record AuditResponse(
+            UUID id,
+            String actorUsername,
+            String actorDisplayName,
+            String actorRole,
+            String action,
+            String entityType,
+            UUID entityId,
+            String details,
+            Instant createdAt
+    ) {
     }
 }

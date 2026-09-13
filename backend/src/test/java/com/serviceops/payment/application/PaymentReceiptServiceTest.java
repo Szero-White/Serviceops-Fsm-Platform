@@ -83,7 +83,7 @@ class PaymentReceiptServiceTest {
 
         assertThatThrownBy(() -> service().issue(workOrderId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("đối soát tiền");
+                .hasMessageContaining("đối soát thanh toán");
 
         verify(receiptRepository, never()).save(any());
     }

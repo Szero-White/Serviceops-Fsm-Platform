@@ -72,7 +72,7 @@ public class UserManagementService {
                 "USER_ACCOUNT",
                 user.getId(),
                 "Tạo người dùng " + user.getUsername()
-                        + " với vai trò " + user.getRole()
+                        + " với vai trò " + roleLabel(user.getRole())
                         + " · trạng thái " + accountStatusLabel(user.isActive())
         );
         return toResponse(user, technician);
@@ -241,6 +241,16 @@ public class UserManagementService {
         }
     }
 
+    private static String roleLabel(UserRole role) {
+        return switch (role) {
+            case OWNER -> "Chủ sở hữu";
+            case DISPATCHER -> "Điều phối viên";
+            case CUSTOMER_SERVICE -> "Chăm sóc khách hàng";
+            case TECHNICIAN -> "Kỹ thuật viên";
+            case WAREHOUSE_STAFF -> "Nhân viên kho";
+        };
+    }
+
     private static String accountStatusLabel(boolean active) {
         return active ? "Hoạt động" : "Tạm ngưng";
     }
@@ -250,7 +260,7 @@ public class UserManagementService {
             return "trạng thái " + accountStatusLabel(currentActive);
         }
         return "trạng thái " + accountStatusLabel(previousActive)
-                + " -> " + accountStatusLabel(currentActive);
+                + " → " + accountStatusLabel(currentActive);
     }
 
     private static String normalizeUsername(String username) {

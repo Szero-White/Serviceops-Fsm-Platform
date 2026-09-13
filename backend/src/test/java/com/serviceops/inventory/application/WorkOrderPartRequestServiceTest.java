@@ -135,7 +135,9 @@ class WorkOrderPartRequestServiceTest {
         service.expirePendingRequests(workOrder);
 
         assertThat(request.getStatus()).isEqualTo(WorkOrderPartRequestStatus.EXPIRED);
-        assertThat(request.getResolutionReason()).contains("COMPLETED");
+        assertThat(request.getResolutionReason())
+                .contains("Đã hoàn thành")
+                .doesNotContain("COMPLETED");
         assertThat(request.getResolvedByDisplayName()).isEqualTo("Hệ thống");
         verify(requestRepository, never()).delete(any());
     }

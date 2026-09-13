@@ -1,18 +1,24 @@
 import type { UserRole, WorkOrderStatus } from '../../../types'
+import { businessCodeLabel } from '../../../presentation/businessText'
 
-export const WORK_ORDER_STATUS_OPTIONS = [
-  { value: 'OPEN', label: 'Đang mở' },
-  { value: 'SCHEDULED', label: 'Đã lên lịch' },
-  { value: 'ASSIGNED', label: 'Đã phân công' },
-  { value: 'ON_THE_WAY', label: 'Đang di chuyển' },
-  { value: 'IN_PROGRESS', label: 'Đang thực hiện' },
-  { value: 'WAITING_FOR_PARTS', label: 'Chờ phụ tùng' },
-  { value: 'COMPLETED', label: 'Đã hoàn thành' },
-  { value: 'CUSTOMER_ACCEPTED', label: 'Khách xác nhận' },
-  { value: 'CLOSED', label: 'Đã đóng' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
-  { value: 'REOPENED', label: 'Mở lại' },
+const WORK_ORDER_FILTER_STATUSES: WorkOrderStatus[] = [
+  'OPEN',
+  'SCHEDULED',
+  'ASSIGNED',
+  'ON_THE_WAY',
+  'IN_PROGRESS',
+  'WAITING_FOR_PARTS',
+  'COMPLETED',
+  'CUSTOMER_ACCEPTED',
+  'CLOSED',
+  'CANCELLED',
+  'REOPENED',
 ]
+
+export const WORK_ORDER_STATUS_OPTIONS = WORK_ORDER_FILTER_STATUSES.map((value) => ({
+  value,
+  label: businessCodeLabel(value, 'Trạng thái khác'),
+}))
 
 export const ACTIVE_WORK_ORDER_STATUS_OPTIONS = WORK_ORDER_STATUS_OPTIONS.filter(
   (option) => option.value !== 'CLOSED' && option.value !== 'CANCELLED',

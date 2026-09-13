@@ -52,7 +52,7 @@ public class PaymentReceiptService {
         if (payment.getStatus() != PaymentStatus.SETTLED || payment.getSettledAt() == null || payment.getMethod() == null) {
             throw BusinessException.conflict(
                     "PAYMENT_NOT_SETTLED",
-                    "Chỉ được phát hành biên nhận sau khi CSKH đối soát tiền đã về công ty"
+                    "Chỉ được phát hành biên nhận sau khi Chăm sóc khách hàng đối soát thanh toán và xác nhận tiền đã về công ty"
             );
         }
         return payment;

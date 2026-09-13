@@ -17,24 +17,24 @@ const LOGIN_BENEFITS: LoginBenefit[] = [
   {
     icon: <SafetyCertificateOutlined />,
     title: 'Kiểm soát truy cập',
-    description: 'JWT, RBAC và cô lập dữ liệu theo tenant',
+    description: 'Phân quyền theo vai trò và tách biệt dữ liệu doanh nghiệp',
   },
   {
     icon: <ToolOutlined />,
     title: 'Điều phối vận hành',
-    description: 'Work order, lịch kỹ thuật viên và kho phụ tùng',
+    description: 'Phiếu công việc, lịch kỹ thuật viên và kho phụ tùng',
   },
   {
     icon: <BarChartOutlined />,
     title: 'Theo dõi minh bạch',
-    description: 'Dashboard, notification và audit trail',
+    description: 'Tổng quan, thông báo và nhật ký thay đổi rõ ràng',
   },
 ]
 
 const LOGIN_METRICS = [
   { value: '5', label: 'Vai trò nghiệp vụ' },
   { value: '1', label: 'Luồng vận hành xuyên suốt' },
-  { value: '24/7', label: 'Sẵn sàng demo' },
+  { value: '24/7', label: 'Sẵn sàng dùng thử' },
 ]
 
 function BrandMark() {
@@ -54,7 +54,7 @@ export function LoginHero() {
       <BrandMark />
 
       <div className="login-copy">
-        <span className="eyebrow">FIELD SERVICE OPERATIONS PLATFORM</span>
+        <span className="eyebrow">NỀN TẢNG ĐIỀU PHỐI DỊCH VỤ HIỆN TRƯỜNG</span>
         <h1>
           Điều phối dịch vụ
           <br />
@@ -92,7 +92,7 @@ export function LoginHero() {
           <ArrowRightOutlined /> Xem tổng quan sản phẩm
         </Link>
         <span className="login-hero-footer-sep">·</span>
-        Production-oriented demo · Dữ liệu mẫu cô lập
+        Bản dùng thử trực tuyến · Dữ liệu mẫu tách biệt
       </div>
     </section>
   )

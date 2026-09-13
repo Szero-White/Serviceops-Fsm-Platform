@@ -83,10 +83,10 @@ public class DemoDataFactory {
     }
 
     void seedServiceChannels(Tenant tenant) {
-        serviceChannel(tenant, "PHONE", "Điện thoại", "Cuộc gọi hotline hoặc số chăm sóc khách hàng", "green", 10);
+        serviceChannel(tenant, "PHONE", "Điện thoại", "Cuộc gọi đến số hỗ trợ khách hàng", "green", 10);
         serviceChannel(tenant, "EMAIL", "Email", "Yêu cầu gửi qua hộp thư hỗ trợ", "blue", 20);
-        serviceChannel(tenant, "WEBSITE", "Website", "Biểu mẫu tiếp nhận trên website hoặc portal", "geekblue", 30);
-        serviceChannel(tenant, "ZALO", "Zalo", "Tin nhắn từ Zalo OA hoặc nhân viên CSKH", "cyan", 40);
+        serviceChannel(tenant, "WEBSITE", "Trang web", "Biểu mẫu tiếp nhận trên trang web hoặc cổng trực tuyến", "geekblue", 30);
+        serviceChannel(tenant, "ZALO", "Zalo", "Tin nhắn từ Zalo hoặc nhân viên chăm sóc khách hàng", "cyan", 40);
         serviceChannel(tenant, "WALK_IN", "Trực tiếp", "Khách đến trực tiếp quầy hoặc văn phòng", "orange", 50);
         serviceChannel(tenant, "INTERNAL", "Nội bộ", "Yêu cầu được tạo bởi đội vận hành nội bộ", "purple", 60);
     }
@@ -222,7 +222,7 @@ public class DemoDataFactory {
         tx.setTransactionType(InventoryTransactionType.IMPORT);
         tx.setQuantity(stock);
         tx.setBalanceAfter(stock);
-        tx.setNote("Tồn đầu kỳ demo");
+        tx.setNote("Tồn đầu kỳ dữ liệu mẫu");
         tx.setCreatedBy("system");
         tx.setActorDisplayName("Hệ thống");
         tx.setActorRole("SYSTEM");

@@ -132,6 +132,8 @@ public class AiSuggestionService {
         auditService.recordAs(
                 CurrentUser.tenantId(),
                 CurrentUser.username(),
+                CurrentUser.displayName(),
+                CurrentUser.primaryRole(),
                 action,
                 "AI",
                 null,

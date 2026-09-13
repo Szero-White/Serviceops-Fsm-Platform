@@ -132,7 +132,7 @@ public class WorkOrderPartRequestService {
         for (WorkOrderPartRequest request : pending) {
             request.setStatus(WorkOrderPartRequestStatus.EXPIRED);
             request.setResolutionReason(
-                    "Phiếu công việc đã chuyển sang " + workOrder.getStatus() + " trước khi phụ tùng được cấp"
+                    "Phiếu công việc đã chuyển sang trạng thái " + workOrder.getStatus().displayName() + " trước khi phụ tùng được cấp"
             );
             request.setResolvedByUsername("system");
             request.setResolvedByDisplayName("Hệ thống");

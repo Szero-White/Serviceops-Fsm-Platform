@@ -20,7 +20,7 @@ final class InventoryNotificationCopy {
                 "Có yêu cầu phụ tùng mới: " + NotificationCopy.fallback(workOrderCode, "Phiếu công việc"),
                 "Kỹ thuật viên " + NotificationCopy.fallback(technicianName, "được phân công")
                         + " cần " + NotificationCopy.quantity(quantity) + " " + NotificationCopy.fallback(unit, "") + " phụ tùng \""
-                        + NotificationCopy.fallback(partName, sku) + "\" (" + NotificationCopy.fallback(sku, "Chưa có SKU") + ") cho phiếu \""
+                        + NotificationCopy.fallback(partName, sku) + "\" (" + NotificationCopy.fallback(sku, "Chưa có mã phụ tùng") + ") cho phiếu \""
                         + NotificationCopy.limit(NotificationCopy.fallback(workOrderSummary, "Nội dung chưa có tiêu đề"), NotificationCopy.CONTEXT_LIMIT) + "\" ("
                         + NotificationCopy.fallback(workOrderCode, "Phiếu công việc")
                         + "). Mở Yêu cầu phụ tùng để kiểm tra và xác nhận cấp khi đã giao hàng thực tế."

@@ -54,14 +54,14 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         Tenant tenant = new Tenant();
         tenant.setCode("DEMO");
-        tenant.setName("ServiceOps Demo Company");
+        tenant.setName("Công ty Dịch vụ Minh họa");
         tenant.setActive(true);
         tenantRepository.save(tenant);
         demoDataFactory.seedServiceChannels(tenant);
 
         demoDataFactory.user(tenant, "owner", "Nguyễn Minh Quản", UserRole.OWNER);
         UserAccount dispatcher = demoDataFactory.user(tenant, "dispatcher", "Lê Thu Điều phối", UserRole.DISPATCHER);
-        UserAccount customerService = demoDataFactory.user(tenant, "customer-service", "Trần Mai CSKH", UserRole.CUSTOMER_SERVICE);
+        UserAccount customerService = demoDataFactory.user(tenant, "customer-service", "Trần Mai - Chăm sóc khách hàng", UserRole.CUSTOMER_SERVICE);
         UserAccount technicianUser = demoDataFactory.user(tenant, "technician", "Phạm Quốc Kỹ thuật", UserRole.TECHNICIAN);
         UserAccount technician2User = demoDataFactory.user(tenant, "technician-2", "Võ Hoàng Kỹ thuật", UserRole.TECHNICIAN);
         demoDataFactory.user(tenant, "warehouse", "Đặng Nam Kho", UserRole.WAREHOUSE_STAFF);
@@ -146,7 +146,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 "SEED",
                 "SYSTEM",
                 tenant.getId(),
-                "Khởi tạo dữ liệu demo local-first"
+                "Khởi tạo dữ liệu mẫu ban đầu"
         );
     }
 

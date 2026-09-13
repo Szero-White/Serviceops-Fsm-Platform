@@ -1,4 +1,5 @@
 import type { NotificationItem } from '../../types'
+import { businessFriendlyText } from '../../presentation/businessText'
 
 type NotificationDisplayItem = Pick<NotificationItem, 'title' | 'message'>
 
@@ -47,16 +48,22 @@ const legacyStatusMessages: Record<string, string> = {
  * ever-growing list of historical CRUD strings inside AppLayout.
  */
 export function notificationDisplayText<T extends NotificationDisplayItem>(item: T): T {
-  const statusUpdate = /^Cập nhật (WO-[^:]+): .+ (?:→|->) (.+)$/.exec(item.title)
+  const displayItem = {
+    ...item,
+    title: businessFriendlyText(item.title),
+    message: businessFriendlyText(item.message),
+  }
+
+  const statusUpdate = /^Cập nhật (WO-[^:]+): .+ (?:→|->) (.+)$/.exec(displayItem.title)
   if (statusUpdate) {
     const [, code, rawTarget] = statusUpdate
     const target = rawTarget.trim()
     const title = legacyStatusLabels[target]
     if (title) {
       return {
-        ...item,
+        ...displayItem,
         title: `${title}: ${code}`,
-        message: legacyStatusMessages[target] ?? item.message,
+        message: legacyStatusMessages[target] ?? displayItem.message,
       }
     }
   }
@@ -104,10 +111,10 @@ export function notificationDisplayText<T extends NotificationDisplayItem>(item:
   ]
 
   for (const mapping of mappings) {
-    const match = mapping.pattern.exec(item.title)
+    const match = mapping.pattern.exec(displayItem.title)
     if (match) {
       return {
-        ...item,
+        ...displayItem,
         title: mapping.title(match[1]),
         message: mapping.message,
       }
@@ -125,11 +132,11 @@ export function notificationDisplayText<T extends NotificationDisplayItem>(item:
   ]
 
   for (const [pattern, title] of inventoryTitleMappings) {
-    const match = pattern.exec(item.title)
+    const match = pattern.exec(displayItem.title)
     if (match) {
-      return { ...item, title: title(match[1]) }
+      return { ...displayItem, title: title(match[1]) }
     }
   }
 
-  return item
+  return displayItem
 }

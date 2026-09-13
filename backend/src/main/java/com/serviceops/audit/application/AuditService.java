@@ -28,6 +28,8 @@ public class AuditService {
     private static final Map<String, String> SORT_FIELDS = Map.ofEntries(
             Map.entry("createdAt", "createdAt"),
             Map.entry("actorUsername", "actorUsername"),
+            Map.entry("actorDisplayName", "actorDisplayName"),
+            Map.entry("actorRole", "actorRole"),
             Map.entry("action", "action"),
             Map.entry("entityType", "entityType"),
             Map.entry("details", "details"),
@@ -191,7 +193,7 @@ public class AuditService {
 
     private static void validateRange(Instant from, Instant to) {
         if (from != null && to != null && to.isBefore(from)) {
-            throw BusinessException.badRequest("INVALID_AUDIT_RANGE", "Khoảng thời gian audit không hợp lệ");
+            throw BusinessException.badRequest("INVALID_AUDIT_RANGE", "Khoảng thời gian tra cứu nhật ký không hợp lệ");
         }
     }
 
@@ -235,6 +237,8 @@ public class AuditService {
         return new AuditResponse(
                 audit.getId(),
                 audit.getActorUsername(),
+                audit.getActorDisplayName(),
+                audit.getActorRole(),
                 audit.getAction(),
                 audit.getEntityType(),
                 audit.getEntityId(),

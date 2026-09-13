@@ -76,7 +76,7 @@ public class AttachmentService {
                 "UPLOAD_FILE",
                 normalizedType,
                 referenceId,
-                "Tải file " + attachment.getOriginalFilename() + " · " + purpose
+                "Tải tệp " + attachment.getOriginalFilename() + " · " + purpose
         );
         return toResponse(attachment, isLifecycleMutable(attachment));
     }
@@ -108,7 +108,7 @@ public class AttachmentService {
     public DownloadedAttachment download(UUID id) {
         UUID tenantId = CurrentUser.tenantId();
         Attachment attachment = repository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy file đính kèm"));
+                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy tệp đính kèm"));
         authorizeReference(attachment.getReferenceType(), attachment.getReferenceId(), tenantId);
         authorizePurposeView(attachment);
         return new DownloadedAttachment(
@@ -134,7 +134,7 @@ public class AttachmentService {
                 "RENAME_FILE",
                 attachment.getReferenceType(),
                 attachment.getReferenceId(),
-                "Đổi tên file " + oldFilename + " thành " + sanitizedFilename
+                "Đổi tên tệp " + oldFilename + " thành " + sanitizedFilename
         );
         return toResponse(attachment, true);
     }
@@ -150,7 +150,7 @@ public class AttachmentService {
                 "DELETE_FILE",
                 attachment.getReferenceType(),
                 attachment.getReferenceId(),
-                "Xóa file " + attachment.getOriginalFilename()
+                "Xóa tệp " + attachment.getOriginalFilename()
         );
     }
 
@@ -211,7 +211,7 @@ public class AttachmentService {
                             .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy đối tượng đính kèm"));
                 } else {
                     if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
-                        throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file phiếu công việc");
+                        throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập tệp của phiếu công việc");
                     }
                     workOrderRepository.findDetailed(referenceId, tenantId)
                             .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy đối tượng đính kèm"));
@@ -219,14 +219,14 @@ public class AttachmentService {
             }
             case "ASSET" -> {
                 if (!hasAnyRole("OWNER", "DISPATCHER", "CUSTOMER_SERVICE")) {
-                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file thiết bị");
+                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập tệp của thiết bị");
                 }
                 assetRepository.findDetailed(referenceId, tenantId)
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy thiết bị"));
             }
             case "SERVICE_REQUEST" -> {
                 if (!hasAnyRole("OWNER", "CUSTOMER_SERVICE")) {
-                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập file yêu cầu dịch vụ");
+                    throw BusinessException.forbidden("ATTACHMENT_ACCESS_DENIED", "Bạn không có quyền truy cập tệp của yêu cầu dịch vụ");
                 }
                 serviceRequestRepository.findDetailed(referenceId, tenantId)
                         .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy yêu cầu dịch vụ"));
@@ -254,7 +254,7 @@ public class AttachmentService {
 
     private Attachment getAuthorizedAttachment(UUID id, UUID tenantId) {
         Attachment attachment = repository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy file đính kèm"));
+                .orElseThrow(() -> BusinessException.notFound("ATTACHMENT_NOT_FOUND", "Không tìm thấy tệp đính kèm"));
         authorizeReference(attachment.getReferenceType(), attachment.getReferenceId(), tenantId);
         authorizePurposeView(attachment);
         return attachment;
@@ -285,7 +285,7 @@ public class AttachmentService {
         }
 
         if (!canUserManage(attachment)) {
-            throw BusinessException.forbidden("ATTACHMENT_MANAGE_DENIED", "Bạn không có quyền chỉnh sửa file đính kèm này");
+            throw BusinessException.forbidden("ATTACHMENT_MANAGE_DENIED", "Bạn không có quyền chỉnh sửa tệp đính kèm này");
         }
     }
 

@@ -56,7 +56,7 @@ export function CsvImportPreviewModal<T extends CsvImportRow>({
             type={result.errorRows > 0 ? 'warning' : 'success'}
             showIcon
             message={`${result.validRows}/${result.totalRows} dòng hợp lệ`}
-            description={result.errorRows > 0 ? 'File còn dòng lỗi, hệ thống chưa ghi dữ liệu.' : 'File hợp lệ, bạn có thể xác nhận để ghi dữ liệu.'}
+            description={result.errorRows > 0 ? 'Tệp còn dòng lỗi, hệ thống chưa ghi dữ liệu.' : 'Tệp hợp lệ, bạn có thể xác nhận để ghi dữ liệu.'}
           />
           <Table<T>
             rowKey="rowNumber"

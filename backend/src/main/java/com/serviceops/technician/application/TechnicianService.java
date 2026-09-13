@@ -86,7 +86,7 @@ public class TechnicianService {
                     "USER_ACCOUNT",
                     user.getId(),
                     "Đồng bộ trạng thái từ hồ sơ kỹ thuật viên " + user.getUsername()
-                            + " -> " + (request.active() ? "Hoạt động" : "Tạm ngưng")
+                            + " → " + (request.active() ? "Hoạt động" : "Tạm ngưng")
             );
         }
 

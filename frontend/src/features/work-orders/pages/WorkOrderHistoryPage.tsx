@@ -115,7 +115,7 @@ export function WorkOrderHistoryPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên"
+          placeholder="Tìm mã phiếu, nội dung, khách hàng, số sê-ri hoặc kỹ thuật viên"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
@@ -209,7 +209,7 @@ export function WorkOrderHistoryPage() {
                 {canDelete && record.status !== 'CUSTOMER_ACCEPTED' && (
                   <Popconfirm
                     title="Xóa phiếu khỏi lịch sử?"
-                    description="Phiếu chỉ được ẩn khỏi danh sách tra cứu. Dữ liệu audit và liên kết nghiệp vụ vẫn được giữ trong hệ thống."
+                    description="Phiếu chỉ được ẩn khỏi danh sách tra cứu. Nhật ký thay đổi và các liên kết nghiệp vụ vẫn được giữ trong hệ thống."
                     okText="Xóa"
                     cancelText="Giữ lại"
                     okButtonProps={{ danger: true, loading: remove.isPending }}

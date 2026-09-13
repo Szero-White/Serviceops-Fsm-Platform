@@ -52,14 +52,14 @@ public class ServiceRequest extends TenantScopedEntity {
 
     public void markConverted() {
         if (status != ServiceRequestStatus.OPEN) {
-            throw new IllegalStateException("Only open service requests can be converted");
+            throw new IllegalStateException("Chỉ yêu cầu đang mở mới có thể chuyển sang điều phối");
         }
         status = ServiceRequestStatus.CONVERTED;
     }
 
     public void cancel() {
         if (status == ServiceRequestStatus.CONVERTED) {
-            throw new IllegalStateException("Converted service request cannot be cancelled");
+            throw new IllegalStateException("Yêu cầu đã chuyển sang điều phối không thể hủy tại bước tiếp nhận");
         }
         status = ServiceRequestStatus.CANCELLED;
     }

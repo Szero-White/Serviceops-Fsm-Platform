@@ -142,3 +142,12 @@ Working tree              clean
 A refactor is incomplete if behavior changes unintentionally or verification becomes weaker.
 
 - Queue/list use case phải batch-load dữ liệu liên quan; không gọi repository/service theo từng row. `part-outstanding` tải request + ISSUE/RETURN + USED theo batch để tránh N+1.
+
+
+## Business-language boundary
+
+- Internal enums, API paths, database identifiers, security terms, and provider codes stay stable inside code and technical documentation.
+- React screens must not render those identifiers directly. Use the centralized presentation mappings in `frontend/src/presentation/businessText.ts` and role labels in `frontend/src/constants/userRoles.ts`.
+- Backend exceptions, audit descriptions, notifications, and AI responses that can reach end users must use business-readable Vietnamese and must not expose SQL, stack traces, provider internals, raw enum names, or UUIDs as primary labels.
+- Business identifiers that users actually work with (for example work-order numbers, customer codes, or spare-part codes) are preserved, but their labels must be understandable Vietnamese.
+- `npm run lint:ui` includes a business-language regression gate. Add new forbidden presentation jargon to that gate when a new leak is discovered.

@@ -10,6 +10,7 @@ import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { businessCodeLabel } from '../../../presentation/businessText'
 import type { Payment, PaymentStatus } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
 import { formatCurrency, formatDateTime } from '../../../utils/format'
@@ -18,16 +19,21 @@ import { workOrdersApi } from '../../work-orders/api'
 import { paymentsApi } from '../api'
 import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
 
-const STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = [
-  { value: 'UNPAID', label: 'Chưa thanh toán' },
-  { value: 'TRANSFER_PENDING_VERIFICATION', label: 'Chờ xác minh chuyển khoản' },
-  { value: 'CASH_PENDING_HANDOVER', label: 'KTV đang giữ tiền mặt' },
-  { value: 'COUNTER_PAYMENT_PENDING', label: 'Chờ thanh toán tại quầy' },
-  { value: 'SETTLED', label: 'Đã đối soát' },
+const PAYMENT_STATUSES: PaymentStatus[] = [
+  'UNPAID',
+  'TRANSFER_PENDING_VERIFICATION',
+  'CASH_PENDING_HANDOVER',
+  'COUNTER_PAYMENT_PENDING',
+  'SETTLED',
 ]
 
+const STATUS_OPTIONS = PAYMENT_STATUSES.map((value) => ({
+  value,
+  label: businessCodeLabel(value, 'Trạng thái khác'),
+}))
+
 function statusLabel(status: PaymentStatus) {
-  return STATUS_OPTIONS.find((item) => item.value === status)?.label ?? status
+  return businessCodeLabel(status, 'Trạng thái khác')
 }
 
 export function PaymentQueuePage() {
@@ -173,13 +179,13 @@ export function PaymentQueuePage() {
             ) : payment.status === 'SETTLED' && user?.role === 'OWNER' ? (
               payment.workOrderStatus === 'CLOSED' ? (
                 <Button size="small" icon={<DownloadOutlined />} loading={downloadReceipt.isPending} onClick={() => downloadReceipt.mutate(payment)}>Tải biên nhận</Button>
-              ) : <Typography.Text type="secondary">Chờ CSKH hoàn tất hồ sơ</Typography.Text>
+              ) : <Typography.Text type="secondary">Chờ chăm sóc khách hàng hoàn tất hồ sơ</Typography.Text>
             ) : payment.status === 'UNPAID' ? (
               <Typography.Text type="secondary">Chờ khách thanh toán</Typography.Text>
             ) : payment.status === 'COUNTER_PAYMENT_PENDING' ? (
-              <Typography.Text type="secondary">Chờ CSKH thu tại quầy</Typography.Text>
+              <Typography.Text type="secondary">Chờ chăm sóc khách hàng thu tại quầy</Typography.Text>
             ) : ['TRANSFER_PENDING_VERIFICATION', 'CASH_PENDING_HANDOVER'].includes(payment.status) ? (
-              <Typography.Text type="secondary">Chờ CSKH đối soát</Typography.Text>
+              <Typography.Text type="secondary">Chờ chăm sóc khách hàng đối soát</Typography.Text>
             ) : <Typography.Text type="secondary">Không cần xử lý</Typography.Text>,
           },
         ]}

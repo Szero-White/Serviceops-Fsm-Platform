@@ -19,7 +19,6 @@ import { MetaBadge } from '../../../components/PresentationBadge'
 import { PageHeader } from '../../../components/PageHeader'
 import { PriorityTag, StatusTag } from '../../../components/StatusTag'
 import { formatDateTime } from '../../../utils/format'
-import { API_URL } from '../../../api/http'
 import { useNavigate } from 'react-router-dom'
 import { compareDate, compareText } from '../../../utils/tableSort'
 
@@ -60,7 +59,7 @@ export function DashboardPage() {
           title={dashboardTitle}
           description={dashboardDescription}
           actions={<Button icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Tải lại</Button>}
-          meta={<><MetaBadge tone="danger">Backend chưa kết nối</MetaBadge><MetaBadge>API chưa sẵn sàng</MetaBadge></>}
+          meta={<><MetaBadge tone="danger">Hệ thống chưa kết nối</MetaBadge><MetaBadge>Dữ liệu chưa sẵn sàng</MetaBadge></>}
         />
 
         <Card className="content-card dashboard-empty-shell" bordered={false}>
@@ -70,13 +69,13 @@ export function DashboardPage() {
           <Result
             status="warning"
             title="Chưa lấy được dữ liệu vận hành"
-            subTitle="Backend chưa phản hồi hoặc API URL chưa đúng. Giao diện vẫn sẵn sàng; số liệu sẽ hiển thị khi API hoạt động trở lại."
+            subTitle="Hệ thống chưa phản hồi. Vui lòng thử lại sau ít phút; dữ liệu sẽ tự hiển thị khi kết nối được khôi phục."
             extra={<Button type="primary" icon={<ReloadOutlined />} loading={isFetching} onClick={() => refetch()}>Thử lại</Button>}
           />
           <div className="dashboard-empty-hints">
-            <div><strong>Kiểm tra backend</strong><span>Đảm bảo Spring Boot hoặc backend container đang ở trạng thái healthy.</span></div>
-            <div><strong>Kiểm tra API URL</strong><span>Frontend cần trỏ về <span className="dashboard-url-pill">{API_URL}</span>.</span></div>
-            <div><strong>Thử lại</strong><span>Tải lại sau khi backend sẵn sàng.</span></div>
+            <div><strong>Kiểm tra kết nối</strong><span>Đảm bảo thiết bị đang có kết nối Internet ổn định.</span></div>
+            <div><strong>Kiểm tra dịch vụ</strong><span>Hệ thống xử lý dữ liệu có thể đang tạm thời khởi động lại hoặc gián đoạn.</span></div>
+            <div><strong>Thử lại</strong><span>Bấm Thử lại sau ít phút để tải dữ liệu mới nhất.</span></div>
           </div>
         </Card>
       </div>

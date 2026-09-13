@@ -14,12 +14,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InventoryCsvService {
     private static final List<String> SPARE_PART_HEADERS = List.of(
+            "Mã phụ tùng", "Tên phụ tùng", "Đơn vị", "Tồn ban đầu", "Ngưỡng tồn tối thiểu", "Đơn giá", "Hoạt động"
+    );
+    private static final List<String> LEGACY_SPARE_PART_HEADERS = List.of(
             "sku", "name", "unit", "initialStock", "reorderLevel", "unitPrice", "active"
     );
     private final CsvFileService csvFileService;
 
     public List<SparePartCsvRow> parseSpareParts(MultipartFile file) {
-        return csvFileService.parse(file, SPARE_PART_HEADERS, "kho phụ tùng")
+        return csvFileService.parseAny(file, List.of(SPARE_PART_HEADERS, LEGACY_SPARE_PART_HEADERS), "kho phụ tùng")
                 .stream()
                 .map(row -> toRow(row.rowNumber(), row.values()))
                 .toList();
@@ -28,13 +31,13 @@ public class InventoryCsvService {
     public byte[] sparePartTemplate() {
         return csvFileService.write(List.of(
                 SPARE_PART_HEADERS,
-                List.of("FILTER-AC-02", "Lưới lọc máy lạnh", "cái", "10", "3", "95000", "true")
+                List.of("FILTER-AC-02", "Lưới lọc máy lạnh", "cái", "10", "3", "95000", "Có")
         ));
     }
 
     public byte[] exportSpareParts(List<SparePartResponse> parts) {
         List<List<String>> rows = new ArrayList<>();
-        rows.add(List.of("sku", "name", "unit", "stockQuantity", "reorderLevel", "unitPrice", "lowStock", "active", "updatedAt"));
+        rows.add(List.of("Mã phụ tùng", "Tên phụ tùng", "Đơn vị", "Tồn hiện tại", "Ngưỡng tồn tối thiểu", "Đơn giá", "Sắp hết hàng", "Hoạt động", "Ngày cập nhật"));
         for (SparePartResponse part : parts) {
             rows.add(List.of(
                     part.sku(),
@@ -43,8 +46,8 @@ public class InventoryCsvService {
                     format(part.stockQuantity()),
                     format(part.reorderLevel()),
                     format(part.unitPrice()),
-                    Boolean.toString(part.lowStock()),
-                    Boolean.toString(part.active()),
+                    part.lowStock() ? "Có" : "Không",
+                    part.active() ? "Có" : "Không",
                     part.updatedAt() == null ? "" : part.updatedAt().toString()
             ));
         }

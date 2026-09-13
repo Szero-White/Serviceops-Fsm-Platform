@@ -234,3 +234,7 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.
+
+## User-facing language boundary
+
+Các mã enum, role code và technical identifier trong API/domain là contract nội bộ và không được đổi chỉ để phục vụ hiển thị. Frontend dùng presentation mapping để chuyển chúng thành ngôn ngữ nghiệp vụ. Riêng AI Help còn có server-side output guard trước public response để tránh provider trả trực tiếp enum/code kỹ thuật. Notification copy mới được tạo từ các formatter tập trung; dữ liệu notification lịch sử được frontend compatibility mapping trước khi hiển thị.

@@ -18,19 +18,24 @@ public class CsvFileService {
     private static final String UTF8_BOM = "\uFEFF";
 
     public List<CsvRow> parse(MultipartFile file, List<String> expectedHeaders, String domainLabel) {
+        return parseAny(file, List.of(expectedHeaders), domainLabel);
+    }
+
+    public List<CsvRow> parseAny(MultipartFile file, List<List<String>> acceptedHeaders, String domainLabel) {
         if (file == null || file.isEmpty()) {
-            throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import không được để trống");
+            throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "Tệp dữ liệu không được để trống");
         }
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
             if (headerLine == null) {
-                throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "File import không có dữ liệu");
+                throw BusinessException.badRequest("IMPORT_FILE_EMPTY", "Tệp dữ liệu không có nội dung");
             }
 
             List<String> headers = parseLine(removeBom(headerLine));
-            if (!headers.equals(expectedHeaders)) {
-                throw BusinessException.badRequest("IMPORT_HEADER_INVALID", "File import không đúng mẫu cột của " + domainLabel);
+            boolean supported = acceptedHeaders.stream().anyMatch(headers::equals);
+            if (!supported) {
+                throw BusinessException.badRequest("IMPORT_HEADER_INVALID", "Tệp dữ liệu không đúng mẫu cột của " + domainLabel);
             }
 
             List<CsvRow> rows = new ArrayList<>();
@@ -42,13 +47,13 @@ public class CsvFileService {
                     continue;
                 }
                 if (rows.size() >= MAX_IMPORT_ROWS) {
-                    throw BusinessException.badRequest("IMPORT_TOO_MANY_ROWS", "Mỗi lần chỉ import tối đa 1000 dòng");
+                    throw BusinessException.badRequest("IMPORT_TOO_MANY_ROWS", "Mỗi lần chỉ được nhập tối đa 1000 dòng");
                 }
                 rows.add(new CsvRow(rowNumber, parseLine(line)));
             }
             return rows;
         } catch (IOException ex) {
-            throw new BusinessException("IMPORT_FILE_READ_ERROR", "Không thể đọc file import", HttpStatus.BAD_REQUEST);
+            throw new BusinessException("IMPORT_FILE_READ_ERROR", "Không thể đọc tệp dữ liệu", HttpStatus.BAD_REQUEST);
         }
     }
 

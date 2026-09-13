@@ -30,13 +30,13 @@ export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD?.trim() ?? ''
 
 export function DemoAccountSelector({ onSelect }: { onSelect: (username: string, password: string) => void }) {
   return (
-    <section className="demo-accounts" aria-label="Tài khoản demo">
+    <section className="demo-accounts" aria-label="Tài khoản dùng thử">
       <div className="demo-accounts-heading">
         <div>
           <strong>Trải nghiệm theo vai trò</strong>
           <Typography.Text type="secondary">Chọn tài khoản để điền nhanh thông tin đăng nhập.</Typography.Text>
         </div>
-        <MetaBadge>Demo</MetaBadge>
+        <MetaBadge>Dùng thử</MetaBadge>
       </div>
 
       <div className="demo-account-grid">
@@ -59,8 +59,8 @@ export function DemoAccountSelector({ onSelect }: { onSelect: (username: string,
 
       <Typography.Text className="demo-password-note" type="secondary">
         {DEMO_PASSWORD
-          ? 'Mỗi thẻ đại diện cho một vai trò demo. Khi vận hành thực tế, mỗi nhân viên sử dụng tài khoản cá nhân riêng.'
-          : 'Public deployment cần cấu hình VITE_DEMO_PASSWORD để bật đăng nhập một chạm.'}
+          ? 'Mỗi thẻ đại diện cho một vai trò dùng thử. Khi vận hành thực tế, mỗi nhân viên sử dụng tài khoản cá nhân riêng.'
+          : 'Đăng nhập một chạm hiện chưa được bật. Vui lòng nhập mật khẩu dùng thử để tiếp tục.'}
       </Typography.Text>
     </section>
   )

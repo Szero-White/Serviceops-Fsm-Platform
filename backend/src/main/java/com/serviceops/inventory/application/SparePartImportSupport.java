@@ -21,16 +21,16 @@ final class SparePartImportSupport {
     ) {
         String sku = row.sku().trim().toUpperCase(Locale.ROOT);
         if (sku.isBlank()) {
-            return Candidate.invalid(row, "SKU không được để trống");
+            return Candidate.invalid(row, "Mã phụ tùng không được để trống");
         }
         if (sku.length() > 60) {
-            return Candidate.invalid(row, "SKU không được vượt quá 60 ký tự");
+            return Candidate.invalid(row, "Mã phụ tùng không được vượt quá 60 ký tự");
         }
         if (!seenSkus.add(sku)) {
-            return Candidate.invalid(row, "SKU bị trùng trong file import");
+            return Candidate.invalid(row, "Mã phụ tùng bị trùng trong tệp dữ liệu");
         }
         if (repository.existsByTenantIdAndSkuIgnoreCase(tenantId, sku)) {
-            return Candidate.invalid(row, "SKU đã tồn tại trong hệ thống");
+            return Candidate.invalid(row, "Mã phụ tùng đã tồn tại trong hệ thống");
         }
         if (row.name().isBlank() || row.name().length() > 180) {
             return Candidate.invalid(row, "Tên phụ tùng bắt buộc và tối đa 180 ký tự");
@@ -70,13 +70,13 @@ final class SparePartImportSupport {
             return true;
         }
         String normalized = value.trim().toLowerCase(Locale.ROOT);
-        if ("true".equals(normalized)) {
+        if ("true".equals(normalized) || "có".equals(normalized) || "co".equals(normalized)) {
             return true;
         }
-        if ("false".equals(normalized)) {
+        if ("false".equals(normalized) || "không".equals(normalized) || "khong".equals(normalized)) {
             return false;
         }
-        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
+        throw new IllegalArgumentException("Cột Hoạt động chỉ nhận Có hoặc Không");
     }
 
     record Candidate(

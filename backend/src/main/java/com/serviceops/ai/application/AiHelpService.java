@@ -64,12 +64,12 @@ public class AiHelpService {
     }
 
     private HelpResponse localHelp(UserGuideContext context, HelpTopic topic) {
-        String answer = "Với vai trò " + context.roleLabel() + ", " + topic.answer();
+        String answer = "Với vai trò " + context.roleLabel() + ", " + AiUserFacingLanguage.sanitize(topic.answer());
         return new HelpResponse(
                 limit(answer, 1200),
-                topic.steps(),
+                AiUserFacingLanguage.sanitize(topic.steps()),
                 topic.route(),
-                "Mở " + topic.name(),
+                AiUserFacingLanguage.sanitize("Mở " + topic.name()),
                 AiResponseSource.LOCAL
         );
     }
@@ -77,10 +77,10 @@ public class AiHelpService {
     private HelpResponse blockedResponse(UserGuideContext context, ScopeDecision decision) {
         HelpTopic safeTopic = decision.topic();
         return new HelpResponse(
-                decision.refusalReason(),
+                AiUserFacingLanguage.sanitize(decision.refusalReason()),
                 List.of("Hãy hỏi về quy trình hoặc chức năng ServiceOps thuộc phạm vi vai trò " + context.roleLabel()),
                 safeTopic.route(),
-                "Mở " + safeTopic.name(),
+                AiUserFacingLanguage.sanitize("Mở " + safeTopic.name()),
                 AiResponseSource.LOCAL
         );
     }
@@ -146,10 +146,10 @@ public class AiHelpService {
         );
 
         return new HelpResponse(
-                limit(node.path("answer").asText("Tôi chưa có đủ thông tin để hướng dẫn chính xác."), 1200),
-                steps.isEmpty() ? topic.steps() : steps,
+                AiUserFacingLanguage.sanitize(limit(node.path("answer").asText("Tôi chưa có đủ thông tin để hướng dẫn chính xác."), 1200)),
+                AiUserFacingLanguage.sanitize(steps.isEmpty() ? topic.steps() : steps),
                 relatedRoute,
-                limit(node.path("actionLabel").asText("Mở " + topic.name()), 80),
+                AiUserFacingLanguage.sanitize(limit(node.path("actionLabel").asText("Mở " + topic.name()), 80)),
                 AiResponseSource.GEMINI
         );
     }
@@ -179,6 +179,15 @@ public class AiHelpService {
         String details = "role=" + context.role()
                 + " | topic=" + topic.name()
                 + " | provider=" + provider;
-        auditService.recordAs(CurrentUser.tenantId(), CurrentUser.username(), action, "AI", null, details);
+        auditService.recordAs(
+                CurrentUser.tenantId(),
+                CurrentUser.username(),
+                CurrentUser.displayName(),
+                CurrentUser.primaryRole(),
+                action,
+                "AI",
+                null,
+                details
+        );
     }
 }

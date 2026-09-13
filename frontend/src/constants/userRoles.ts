@@ -16,5 +16,5 @@ export const ACTOR_ROLE_LABELS: Record<ActorRole, string> = {
 }
 
 export function actorRoleLabel(role?: string) {
-  return role ? (ACTOR_ROLE_LABELS[role as ActorRole] ?? role) : 'Không xác định'
+  return role ? (ACTOR_ROLE_LABELS[role as ActorRole] ?? 'Vai trò khác') : 'Không xác định'
 }

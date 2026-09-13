@@ -1,26 +1,7 @@
 import { Tag } from 'antd'
 import type { AssetStatus, Priority, RequestChannel, ServiceRequestStatus, WorkOrderStatus } from '../types'
 import type { SemanticTone } from './PresentationBadge'
-
-const statusLabels: Record<string, string> = {
-  DRAFT: 'Nháp',
-  OPEN: 'Đang mở',
-  SCHEDULED: 'Đã lên lịch',
-  ASSIGNED: 'Đã phân công',
-  ON_THE_WAY: 'Đang di chuyển',
-  IN_PROGRESS: 'Đang thực hiện',
-  WAITING_FOR_PARTS: 'Chờ phụ tùng',
-  COMPLETED: 'Đã hoàn thành',
-  CUSTOMER_ACCEPTED: 'Khách xác nhận',
-  CLOSED: 'Đã đóng',
-  CANCELLED: 'Đã hủy',
-  REOPENED: 'Mở lại',
-  CONVERTED: 'Đã tạo phiếu',
-  ACTIVE: 'Hoạt động',
-  IN_SERVICE: 'Đang sửa chữa',
-  OUT_OF_SERVICE: 'Tạm ngưng',
-  RETIRED: 'Thanh lý',
-}
+import { businessCodeLabel } from '../presentation/businessText'
 
 const statusTones: Record<string, SemanticTone> = {
   DRAFT: 'neutral',
@@ -56,15 +37,6 @@ const priorityTones: Record<Priority, SemanticTone> = {
   URGENT: 'danger',
 }
 
-const fallbackChannelLabels: Record<string, string> = {
-  PHONE: 'Điện thoại',
-  EMAIL: 'Email',
-  WEBSITE: 'Website',
-  ZALO: 'Zalo',
-  WALK_IN: 'Trực tiếp',
-  INTERNAL: 'Nội bộ',
-}
-
 function semanticClass(tone: SemanticTone) {
   return `semantic-tag semantic-tag--${tone}`
 }
@@ -80,7 +52,7 @@ export function StatusTag({ status, label }: { status: WorkOrderStatus | Service
   return (
     <Tag className={semanticClass(statusTones[status] ?? 'neutral')}>
       <span className="semantic-tag-dot" aria-hidden="true" />
-      {label ?? statusLabels[status] ?? status}
+      {label ?? businessCodeLabel(status, 'Trạng thái khác')}
     </Tag>
   )
 }
@@ -98,7 +70,7 @@ export function ChannelTag({ channel, label, color }: { channel: RequestChannel;
   return (
     <Tag className={`${semanticClass('neutral')} channel-tag`}>
       <span className={`channel-tag-dot ${channelColorClass(color)}`} aria-hidden="true" />
-      {label ?? fallbackChannelLabels[channel] ?? channel}
+      {label ?? businessCodeLabel(channel, 'Kênh khác')}
     </Tag>
   )
 }

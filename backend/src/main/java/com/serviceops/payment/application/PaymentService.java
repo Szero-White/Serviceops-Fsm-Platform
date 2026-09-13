@@ -186,8 +186,8 @@ public class PaymentService {
         payment.setMethod(method);
         String action = method == PaymentMethod.BANK_TRANSFER ? "SETTLE_COUNTER_TRANSFER" : "SETTLE_COUNTER_CASH";
         String details = method == PaymentMethod.BANK_TRANSFER
-                ? "CSKH đã xác minh chuyển khoản tại quầy"
-                : "CSKH đã nhận tiền mặt trực tiếp tại quầy";
+                ? "Bộ phận chăm sóc khách hàng đã xác minh chuyển khoản tại quầy"
+                : "Bộ phận chăm sóc khách hàng đã nhận tiền mặt trực tiếp tại quầy";
         return settle(payment, action, details);
     }
 
