@@ -1,3 +1,23 @@
+### User-facing language hardening release candidate (commit `d862e14`, 2026-09-13)
+
+Final local release gate after the user-facing language hardening change:
+
+- Backend: 272 tests, 0 failures, 0 errors; 24 Docker/Testcontainers integration tests skipped locally because Docker was unavailable.
+- Frontend type/lint checks: PASS.
+- UI typography policy: PASS.
+- UI business-language policy: PASS.
+- Production build: PASS (`3289` modules transformed).
+- `git diff --check`: PASS.
+- `scripts/check-local.ps1`: PASS (`All executable local checks completed`).
+- Branch pushed: `fix/user-facing-language-hardening`.
+- Database schema: no Flyway migration added by this release candidate; current migration line remains through `V19`.
+
+Scope of this release candidate: centralize business-facing vocabulary, align Audit/Notification/AI/UI/error/CSV/documentation wording, preserve technical enum/API/database semantics, keep legacy CSV compatibility, and update regression tests to assert business-facing language instead of raw internal codes.
+
+**Release note:** local unit/build gates are green. The pull-request CI pipeline remains the authoritative pre-merge gate because it runs Docker/Testcontainers, production-like Compose startup, and Playwright end-to-end checks that were not executable locally without Docker.
+
+---
+
 # Verification Results
 
 ## Recorded release-candidate baseline
