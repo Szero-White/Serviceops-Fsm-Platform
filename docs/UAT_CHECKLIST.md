@@ -90,6 +90,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | AUD-02 | Owner mở Nhật ký hệ thống | Mặc định 30 ngày gần nhất, 20 dòng/trang, mới nhất trước; role khác không có quyền truy cập |
 | AUD-03 | Lọc theo ngày / người thao tác / hành động / đối tượng | Backend chỉ trả dữ liệu phù hợp và tổng số bản ghi đúng |
 | AUD-04 | Tìm theo nội dung hoặc mã nghiệp vụ có trong chi tiết audit | Kết quả phù hợp, đổi bộ lọc quay về trang đầu |
+| AUD-05 | Tạo/yêu cầu/cấp/sử dụng/hoàn trả phụ tùng rồi mở Nhật ký hệ thống; đồng thời xem log upload bằng chứng | Chi tiết phụ tùng hiển thị **Tên phụ tùng (Mã phụ tùng)** thay vì chỉ mã; mục đích tệp hiển thị bằng tiếng Việt như **Bằng chứng thanh toán/Bằng chứng công việc**; log khách hàng/người dùng ưu tiên tên dễ nhận biết kèm mã/tên đăng nhập để truy vết; mã phiếu/biên nhận đứng riêng có nhãn nghiệp vụ thay vì chỉ hiện tiền tố kỹ thuật |
 | SEARCH-01 | Tìm ở Khách hàng / Thiết bị / Yêu cầu / Phiếu / Lịch sử / Kho | Chờ debounce ngắn, backend trả đúng kết quả và tổng số bản ghi; không tải toàn bộ danh sách về browser |
 | SEARCH-02 | Từ trang > 1 rồi đổi từ khóa hoặc trạng thái | Tự quay về trang 1; không xuất hiện trang rỗng giả do page cũ vượt tổng trang mới |
 | SEARCH-03 | Duyệt danh sách có hơn 20 bản ghi | Chỉ hiển thị 20 dòng/trang, Next/Previous lấy đúng page từ backend, tổng số bản ghi giữ chính xác |
@@ -166,3 +167,15 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | LANG-03 | Hỏi Trợ lý AI về quy trình phiếu, kho hoặc thanh toán | Câu trả lời và các bước hướng dẫn dùng ngôn ngữ nghiệp vụ; enum, tên vai trò nội bộ và thuật ngữ kỹ thuật được chuyển đổi trước khi trả ra giao diện |
 | LANG-04 | Xuất mẫu/tệp dữ liệu rồi nhập lại | Tiêu đề tệp mới dùng tiếng Việt dễ hiểu; hệ thống vẫn nhận tiêu đề cũ để giữ tương thích dữ liệu |
 | LANG-05 | Backend trả lỗi validation hoặc lỗi hạ tầng | Người dùng nhận thông báo an toàn, dễ hiểu; không lộ stack trace, tên lớp, SQL, cấu hình, mã provider hoặc chi tiết kết nối |
+
+## Chuẩn hóa mã nghiệp vụ
+
+| ID | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| CODE-01 | Tạo nhiều khách hàng trong cùng ngày | Mã lần lượt `KH-YYYYMMDD-001`, `...002` theo tenant/ngày; người dùng không nhập mã |
+| CODE-02 | Tạo Work Order từ Service Request | Backend cấp `WO-YYYYMMDD-NNN`; UUID/FK và workflow conversion giữ nguyên |
+| CODE-03 | Phát hành receipt sau `SETTLED` | Receipt idempotent và có mã `BN-YYYYMMDD-NNN` |
+| CODE-04 | Warehouse tạo nhiều phụ tùng | Backend cấp `PT-YYYYMMDD-NNN`; không yêu cầu nhập SKU thủ công |
+| CODE-05 | Import CSV customer/spare part bằng template mới và file format cũ có cột mã | Cả hai đọc được; mã từ file cũ không được dùng để override generator |
+| CODE-06 | Hai request tạo cùng loại mã đồng thời | Không trùng mã; unique constraint giữ nguyên và counter tăng atomically |
+| HIST-COUNT-01 | Mở Lịch sử phiếu, nhập từ khóa tìm kiếm | Bốn badge Tổng/Chờ hoàn tất/Đã đóng/Đã hủy khớp dữ liệu theo cùng search + role scope |

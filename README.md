@@ -176,6 +176,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
 - Separate payment reconciliation for transfer/cash/counter collection, server-side queue counters for pending reconciliation/closure, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
+- Backend-generated, concurrency-safe business codes for customers, Work Orders, payment receipts and spare parts (`KH/WO/BN/PT-YYYYMMDD-NNN`); UUID remains the internal key and legacy CSV formats remain import-compatible.
 - Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.
 - Persistent notifications, audit trail and operational dashboard.

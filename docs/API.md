@@ -29,6 +29,17 @@ Swagger (`http://localhost:8080/swagger-ui.html`) là nguồn request/response r
 
 Technician account không thể bị deactivate khi còn operational Work Order assignment.
 
+### Business codes
+
+Các mã hiển thị cho người dùng được backend tự sinh và không nhận từ request create/update:
+
+- Customer: `KH-YYYYMMDD-NNN`
+- Work Order: `WO-YYYYMMDD-NNN`
+- Payment Receipt: `BN-YYYYMMDD-NNN`
+- Spare Part: `PT-YYYYMMDD-NNN`
+
+UUID vẫn là khóa kỹ thuật. CSV import mới không yêu cầu mã; file CSV cũ có cột mã vẫn được chấp nhận nhưng backend cấp mã mới để tránh trùng/race condition.
+
 ## Customers
 
 Read — OWNER / CUSTOMER_SERVICE / DISPATCHER:
@@ -96,6 +107,7 @@ Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 
 - `GET /work-orders?search={text}&status={status1,status2}&page={n}&size={n}` — `status` hỗ trợ nhiều giá trị; danh sách vận hành tự loại hồ sơ `CUSTOMER_ACCEPTED` đã có payment `SETTLED`
 - `GET /work-orders/history?search={text}&status={CUSTOMER_ACCEPTED,CLOSED,CANCELLED}&page={n}&size={n}` — `CUSTOMER_ACCEPTED` chỉ xuất hiện tại history khi payment đã `SETTLED`, biểu diễn hồ sơ **Chờ hoàn tất hồ sơ**; dữ liệu vẫn giữ sort/pagination thông thường, không pin riêng
+- `GET /work-orders/history/summary?search={text}` — trả `total`, `pendingClosure`, `closed`, `cancelled` theo cùng tenant/role/search policy với trang Lịch sử phiếu; dùng aggregate SQL thay vì tải toàn bộ danh sách để đếm.
 - `GET /work-orders/{id}` — detail Work Order và status history tương thích.
 - `GET /work-orders/{id}/timeline` — read model business timeline hợp nhất status, điều phối, REQUEST/ISSUE/USED/RETURN, payment reconciliation và receipt theo thời gian; nguồn dữ liệu gốc vẫn nằm ở từng module, không tạo bảng timeline duplicate.
 - `GET /work-orders/{id}/billing` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem billing draft/snapshot; Technician vẫn bị ownership check ở service layer.

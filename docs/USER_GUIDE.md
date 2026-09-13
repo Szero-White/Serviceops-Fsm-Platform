@@ -2,6 +2,8 @@
 
 Tài liệu này dành cho người sử dụng hệ thống. Nội dung tập trung vào công việc cần làm trên giao diện và cố ý không sử dụng mã trạng thái, tên kỹ thuật hoặc chi tiết triển khai nội bộ.
 
+> **Mã nghiệp vụ được tạo tự động:** khi thêm Khách hàng hoặc Phụ tùng, người dùng không nhập mã thủ công. Hệ thống cấp mã theo ngày và thứ tự trong ngày (`KH-YYYYMMDD-NNN`, `PT-YYYYMMDD-NNN`). Phiếu công việc và biên nhận cũng được cấp tương tự (`WO-...`, `BN-...`). UUID kỹ thuật không dùng làm mã giao tiếp với người dùng.
+
 ## 1. Tài khoản dùng thử theo vai trò
 
 - `owner` — **Chủ sở hữu**: giám sát toàn hệ thống, quản lý người dùng, dữ liệu nền, điều phối, kho, thông tin nhận thanh toán và nhật ký hệ thống.
@@ -17,6 +19,7 @@ Mật khẩu dùng thử mặc định: `Demo@2026`. Tài khoản dùng thử ch
 
 - **Chủ sở hữu**: Tổng quan, khách hàng và thiết bị, phiếu công việc, điều phối, kho, người dùng, thiết lập thanh toán và Nhật ký hệ thống. Chủ sở hữu chủ yếu giám sát và quản trị, không làm thay các bước xác nhận hiện trường, đối soát tiền hoặc giao nhận kho của nhân viên phụ trách.
 - **Chăm sóc khách hàng**: Tổng quan, Yêu cầu dịch vụ, Phiếu công việc, Xử lý thanh toán, Lịch sử phiếu, Khách hàng, Thiết bị và Kênh tiếp nhận.
+- Trang **Lịch sử phiếu** hiển thị bốn bộ đếm: tổng hồ sơ, chờ hoàn tất hồ sơ, đã đóng và đã hủy; các số đếm lấy trực tiếp từ backend theo cùng quyền truy cập và từ khóa tìm kiếm.
 - **Điều phối viên**: Tổng quan, Phiếu công việc, Lịch điều phối, Lịch sử phiếu và Kỹ thuật viên.
 - **Kỹ thuật viên**: Tổng quan, Lịch của tôi, Phiếu công việc và Lịch sử phiếu. Phụ tùng được yêu cầu trực tiếp trong phiếu đang xử lý.
 - **Nhân viên kho**: Yêu cầu phụ tùng, Kho phụ tùng, Kiểm kê tồn kho và Lịch sử biến động.
@@ -103,6 +106,8 @@ Một thông báo nên cho biết rõ việc gì xảy ra, liên quan tới phi�
 - hành động bằng tên nghiệp vụ dễ hiểu;
 - loại dữ liệu liên quan;
 - nội dung thay đổi đã được chuyển sang ngôn ngữ nghiệp vụ.
+
+Khi một thao tác liên quan tới phụ tùng, nhật ký ưu tiên hiển thị **Tên phụ tùng (Mã phụ tùng)** để người dùng vừa đọc hiểu vừa tra cứu chính xác. Các mục đích tệp đính kèm cũng được trình bày bằng tên nghiệp vụ thay vì mã kỹ thuật. Mã của sự kiện lịch sử đã phát sinh trước khi chuẩn hóa vẫn được giữ nguyên để bảo đảm khả năng truy vết.
 
 Mã kỹ thuật nội bộ và mã định danh dài không được dùng làm thông tin chính trên màn hình khi đã có tên hoặc mã nghiệp vụ dễ nhận biết hơn.
 

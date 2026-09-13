@@ -35,6 +35,8 @@
 ## Nguyên tắc
 
 - UUID làm primary key cho entity nghiệp vụ.
+- Mã nghiệp vụ người dùng nhìn thấy được sinh ở backend, tách khỏi UUID kỹ thuật. `customers.code`, `work_orders.code`, `payment_receipts.receipt_code` và `spare_parts.sku` dùng mẫu `PREFIX-YYYYMMDD-NNN` (`KH`, `WO`, `BN`, `PT`). Bộ đếm nằm ở `business_code_counters`, scope theo tenant + loại mã + ngày nghiệp vụ và tăng atomically bằng PostgreSQL `INSERT ... ON CONFLICT ... RETURNING`, nên không dùng `MAX+1`, random hoặc timestamp phía browser.
+- Ngày trong mã nghiệp vụ mặc định theo `Asia/Ho_Chi_Minh` (`BUSINESS_TIME_ZONE`); timestamp dữ liệu vẫn lưu UTC.
 - `tenant_id` trên dữ liệu tenant-scoped.
 - `version` dùng cho optimistic locking ở các entity hỗ trợ concurrency.
 - Timestamp lưu theo UTC.
@@ -100,7 +102,8 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 17. `V17__counter_payment_workflow.sql` — thêm trạng thái khách hẹn thanh toán tại quầy, timestamp yêu cầu và cập nhật payment consistency constraints.
 18. `V18__inventory_return_recipient_backfill.sql` — backfill snapshot kỹ thuật viên trả phụ tùng cho RETURN legacy chỉ khi toàn bộ ISSUE trước đó quy về đúng một recipient; trường hợp mơ hồ giữ null thay vì đoán sai lịch sử.
 19. `V19__sync_technician_account_status.sql` — đồng bộ `technician_profiles.active` theo trạng thái canonical `user_accounts.active` cho dữ liệu legacy, tránh account/profile lệch lifecycle.
+20. `V20__standardize_business_codes.sql` — chuẩn hóa các mã nghiệp vụ đã tồn tại (`KH/WO/BN/PT`) theo ngày + số thứ tự trong ngày, cập nhật structural snapshots liên quan và khởi tạo `business_code_counters` cho generator concurrency-safe. Audit/notification free text cũ được giữ nguyên để không sửa lịch sử đã ghi nhận.
 
-V1–V19 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V20+) thay vì sửa file đã có.
+V1–V20 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V21+) thay vì sửa file đã có.
 
 Source of truth: `backend/src/main/resources/db/migration/`.
