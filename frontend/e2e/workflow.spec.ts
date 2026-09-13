@@ -6,16 +6,16 @@ test('Customer Service can receive a service request and convert it to a work or
   await login(page, 'customer-service')
 
   const suffix = Date.now().toString().slice(-8)
-  const customerCode = `E2E-SR-${suffix}`
   const title = `Yêu cầu E2E ${suffix}`
 
   const customer = await apiJson<{ id: string; code: string; name: string }>(page, 'POST', '/customers', {
-    code: customerCode,
     name: `Khách SR E2E ${suffix}`,
     phone: '0909888777',
     active: true,
   })
   expect(customer.status).toBe(200)
+  const customerCode = customer.body.code
+  expect(customerCode).toMatch(/^KH-\d{8}-\d{3,}$/)
 
   await page.goto('/service-requests')
   await page.getByRole('button', { name: /Tiếp nhận yêu cầu/ }).click()
@@ -33,7 +33,7 @@ test('Customer Service can receive a service request and convert it to a work or
   await submitModal(page, 'Tiếp nhận yêu cầu dịch vụ')
   await expect(page.getByText('Đã tiếp nhận yêu cầu dịch vụ').last()).toBeVisible()
 
-  await page.getByPlaceholder('Tìm tiêu đề, mô tả, khách hàng hoặc serial').fill(title)
+  await page.getByPlaceholder('Tìm tiêu đề, mô tả, khách hàng hoặc số sê-ri').fill(title)
   const requestRow = page.locator('tbody tr').filter({ hasText: title })
   await expect(requestRow).toBeVisible()
   await requestRow.getByRole('button', { name: 'Tạo phiếu công việc và chuyển sang Điều phối' }).click()
@@ -43,7 +43,7 @@ test('Customer Service can receive a service request and convert it to a work or
   await expect(page.getByText(/Đã chuyển sang điều phối · WO-/).last()).toBeVisible()
 
   await page.goto('/work-orders')
-  await page.getByPlaceholder('Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên').fill(title)
+  await page.getByPlaceholder('Tìm mã phiếu, nội dung, khách hàng, số sê-ri hoặc kỹ thuật viên').fill(title)
   await expect(page.locator('tbody tr').filter({ hasText: title })).toBeVisible()
 
   assertRuntimeClean()
@@ -55,7 +55,6 @@ test('Technician and Dispatcher transition boundaries are enforced by UI and bac
 
   const suffix = Date.now().toString().slice(-8)
   const customer = await apiJson<{ id: string }>(page, 'POST', '/customers', {
-    code: `E2E-WO-${suffix}`,
     name: `Khách WO E2E ${suffix}`,
     active: true,
   })
@@ -136,16 +135,15 @@ test('Dispatcher can inspect customer and asset data but cannot own intake or ma
   await login(page, 'owner')
 
   const suffix = Date.now().toString().slice(-8)
-  const customerCode = `E2E-DISP-${suffix}`
   const serialNumber = `DISP-${suffix}`
 
-  const customer = await apiJson<{ id: string }>(page, 'POST', '/customers', {
-    code: customerCode,
+  const customer = await apiJson<{ id: string; code: string }>(page, 'POST', '/customers', {
     name: `Khách điều phối E2E ${suffix}`,
     phone: '0909777666',
     active: true,
   })
   expect(customer.status).toBe(200)
+  const customerCode = customer.body.code
 
   const asset = await apiJson<{ id: string }>(page, 'POST', '/assets', {
     customerId: customer.body.id,
@@ -167,7 +165,6 @@ test('Dispatcher can inspect customer and asset data but cannot own intake or ma
   await expect(customerRow.getByRole('button', { name: 'Sửa khách hàng' })).toHaveCount(0)
 
   const forbiddenCustomerUpdate = await apiJson(page, 'PUT', `/customers/${customer.body.id}`, {
-    code: customerCode,
     name: `Không được sửa ${suffix}`,
     phone: '0909777666',
     active: true,
@@ -175,7 +172,7 @@ test('Dispatcher can inspect customer and asset data but cannot own intake or ma
   expect(forbiddenCustomerUpdate.status).toBe(403)
 
   await page.goto('/assets')
-  await page.getByPlaceholder('Tìm serial, loại, hãng, model hoặc mã/tên khách hàng').fill(serialNumber)
+  await page.getByPlaceholder('Tìm số sê-ri, loại, hãng, mẫu hoặc mã/tên khách hàng').fill(serialNumber)
   const assetRow = page.locator('tbody tr').filter({ hasText: serialNumber })
   await expect(assetRow).toBeVisible()
   await expect(page.getByRole('button', { name: /Thêm thiết bị/ })).toHaveCount(0)
