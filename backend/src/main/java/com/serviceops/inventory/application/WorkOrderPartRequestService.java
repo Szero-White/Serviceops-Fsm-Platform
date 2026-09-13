@@ -1,5 +1,6 @@
 package com.serviceops.inventory.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserRole;
@@ -76,7 +77,7 @@ public class WorkOrderPartRequestService {
                 "WORK_ORDER",
                 workOrder.getId(),
                 "Yêu cầu " + WorkOrderPartStockService.formatQuantity(request.quantity()) + " " + part.getUnit()
-                        + " - " + part.getSku() + "; mục đích: " + request.note().trim()
+                        + " - " + AuditDetailText.namedCode(part.getName(), part.getSku()) + "; mục đích: " + request.note().trim()
         );
         notifyWarehouse(workOrder, part, request);
         return WorkOrderPartResponseMapper.toRequestResponse(entity);
@@ -99,7 +100,7 @@ public class WorkOrderPartRequestService {
                 "UPDATE_PART_REQUEST",
                 "WORK_ORDER",
                 entity.getWorkOrder().getId(),
-                "Điều chỉnh yêu cầu " + entity.getSparePart().getSku() + ": "
+                "Điều chỉnh yêu cầu " + AuditDetailText.namedCode(entity.getSparePart().getName(), entity.getSparePart().getSku()) + ": "
                         + WorkOrderPartStockService.formatQuantity(previousQuantity) + " -> "
                         + WorkOrderPartStockService.formatQuantity(request.quantity()) + " " + entity.getSparePart().getUnit()
                         + (previousNote.equals(nextNote) ? "" : "; cập nhật mục đích sử dụng")
@@ -116,7 +117,7 @@ public class WorkOrderPartRequestService {
                 "CANCEL_PART_REQUEST",
                 "WORK_ORDER",
                 entity.getWorkOrder().getId(),
-                "Hủy yêu cầu " + entity.getSparePart().getSku() + " x "
+                "Hủy yêu cầu " + AuditDetailText.namedCode(entity.getSparePart().getName(), entity.getSparePart().getSku()) + " x "
                         + WorkOrderPartStockService.formatQuantity(entity.getRequestedQuantity()) + "; lý do: " + reason
         );
         return WorkOrderPartResponseMapper.toRequestResponse(entity);

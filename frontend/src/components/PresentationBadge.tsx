@@ -52,5 +52,10 @@ export function WarrantyTag({ underWarranty }: { underWarranty: boolean }) {
 
 export function AuditActionTag({ action }: { action: string }) {
   const tone: SemanticTone = ['CANCEL', 'DELETE', 'DELETE_FILE', 'DELETE_HISTORY'].includes(action) ? 'danger' : 'neutral'
-  return <Tag className={`${toneClass(tone)} audit-action-tag`}>{auditActionLabel(action)}</Tag>
+  const label = auditActionLabel(action)
+  return (
+    <Tag className={`${toneClass(tone)} audit-action-tag`} title={label}>
+      <span className="audit-action-tag__label">{label}</span>
+    </Tag>
+  )
 }

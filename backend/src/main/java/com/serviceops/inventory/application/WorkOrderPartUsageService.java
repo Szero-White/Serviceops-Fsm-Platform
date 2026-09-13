@@ -1,5 +1,6 @@
 package com.serviceops.inventory.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.inventory.domain.SparePart;
@@ -63,7 +64,7 @@ public class WorkOrderPartUsageService {
                 "CONFIRM_PART_USAGE",
                 "WORK_ORDER",
                 workOrder.getId(),
-                "Xác nhận thực tế sử dụng " + part.getSku() + ": "
+                "Xác nhận thực tế sử dụng " + AuditDetailText.namedCode(part.getName(), part.getSku()) + ": "
                         + WorkOrderPartStockService.formatQuantity(previous) + " -> "
                         + WorkOrderPartStockService.formatQuantity(request.usedQuantity()) + " " + part.getUnit()
         );

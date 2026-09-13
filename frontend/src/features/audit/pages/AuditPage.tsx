@@ -8,7 +8,7 @@ import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
 import { AuditActionTag, MetaBadge } from '../../../components/PresentationBadge'
-import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS, auditEntityLabel, businessFriendlyText } from '../../../presentation/businessText'
+import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS, auditEntityLabel, auditFriendlyText } from '../../../presentation/businessText'
 import { formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { auditApi } from '../api'
@@ -83,7 +83,7 @@ export function AuditPage() {
       <PageHeader
         eyebrow="Quản trị & kiểm soát"
         title="Nhật ký hệ thống"
-        description="Tra cứu thao tác quan trọng theo thời gian, người thực hiện và nghiệp vụ. Có thể lọc nhanh theo khoảng ngày hoặc xem toàn bộ lịch sử theo phân trang."
+        description="Tra cứu thao tác quan trọng theo thời gian, người thực hiện và nghiệp vụ. Mã trong sự kiện lịch sử được giữ nguyên theo thời điểm phát sinh để bảo đảm khả năng truy vết."
         meta={<><MetaBadge>{auditQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} sự kiện phù hợp`}</MetaBadge><MetaBadge tone="info">{rangeLabel}</MetaBadge></>}
       />
 
@@ -131,8 +131,9 @@ export function AuditPage() {
         rowKey="id"
         loading={isLoading || isFetching}
         dataSource={auditQuery.isError ? [] : (data?.content ?? [])}
-        className="content-table"
-        scroll={{ x: 980 }}
+        className="content-table audit-table"
+        tableLayout="fixed"
+        scroll={{ x: 1280 }}
         pagination={{
           current: page + 1,
           pageSize: LIST_PAGE_SIZE,
@@ -146,11 +147,11 @@ export function AuditPage() {
         }}
         locale={{ emptyText: <Empty description={auditQuery.isError ? 'Không thể tải nhật ký hệ thống' : 'Không có sự kiện phù hợp bộ lọc'} /> }}
         columns={[
-          { title: 'Thời gian', dataIndex: 'createdAt', width: 180, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
+          { title: 'Thời gian', dataIndex: 'createdAt', width: 170, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
           {
             title: 'Người thực hiện',
             dataIndex: 'actorDisplayName',
-            width: 230,
+            width: 220,
             ...serverSortable(sort, 'actorDisplayName'),
             render: (_, record) => (
               <div className="table-primary-cell">
@@ -159,9 +160,12 @@ export function AuditPage() {
               </div>
             ),
           },
-          { title: 'Hành động', dataIndex: 'action', width: 170, ...serverSortable(sort, 'action'), render: (value: string) => <AuditActionTag action={value} /> },
-          { title: 'Đối tượng', dataIndex: 'entityType', width: 190, ...serverSortable(sort, 'entityType'), render: (value: string) => <span className="audit-entity-label">{auditEntityLabel(value)}</span> },
-          { title: 'Chi tiết', dataIndex: 'details', ellipsis: true, ...serverSortable(sort, 'details'), render: (value) => businessFriendlyText(value) },
+          { title: 'Hành động', dataIndex: 'action', width: 260, ...serverSortable(sort, 'action'), render: (value: string) => <AuditActionTag action={value} /> },
+          { title: 'Đối tượng', dataIndex: 'entityType', width: 180, ...serverSortable(sort, 'entityType'), render: (value: string) => {
+            const label = auditEntityLabel(value)
+            return <span className="audit-entity-label" title={label}>{label}</span>
+          } },
+          { title: 'Chi tiết nghiệp vụ', dataIndex: 'details', width: 450, ellipsis: true, ...serverSortable(sort, 'details'), render: (value) => auditFriendlyText(value) },
         ]}
       />
     </div>

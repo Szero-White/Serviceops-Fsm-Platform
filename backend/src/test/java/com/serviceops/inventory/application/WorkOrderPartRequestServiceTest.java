@@ -35,6 +35,7 @@ import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.pen
 import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.sparePart;
 import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.workOrder;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -91,6 +92,12 @@ class WorkOrderPartRequestServiceTest {
                 eq(List.of(UserRole.WAREHOUSE_STAFF)),
                 eq("Có yêu cầu phụ tùng mới: WO-2026-001234"),
                 any()
+        );
+        verify(auditService).record(
+                eq("REQUEST_PART"),
+                eq("WORK_ORDER"),
+                eq(WORK_ORDER_ID),
+                contains("Van cấp nước máy rửa chén 220V (DW-VALVE-220V-01)")
         );
     }
 

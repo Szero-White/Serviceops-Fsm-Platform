@@ -1,5 +1,6 @@
 package com.serviceops.identity.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
@@ -71,7 +72,7 @@ public class UserManagementService {
                 "CREATE",
                 "USER_ACCOUNT",
                 user.getId(),
-                "Tạo người dùng " + user.getUsername()
+                "Tạo người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
                         + " với vai trò " + roleLabel(user.getRole())
                         + " · trạng thái " + accountStatusLabel(user.isActive())
         );
@@ -100,7 +101,7 @@ public class UserManagementService {
                 "UPDATE",
                 "USER_ACCOUNT",
                 user.getId(),
-                "Cập nhật người dùng " + user.getUsername()
+                "Cập nhật người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
                         + " · " + accountStatusAudit(previousActive, user.isActive())
         );
         return toResponse(user, technician);
@@ -132,7 +133,7 @@ public class UserManagementService {
         }
 
         repository.delete(user);
-        auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + user.getUsername());
+        auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername()));
     }
 
     private UserAccount require(UUID id) {

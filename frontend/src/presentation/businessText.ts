@@ -52,6 +52,10 @@ export const BUSINESS_CODE_LABELS: Record<string, string> = {
   ZALO: 'Zalo',
   WALK_IN: 'Khách đến trực tiếp',
   INTERNAL: 'Nội bộ',
+
+  GENERAL: 'Tệp đính kèm',
+  WORK_EVIDENCE: 'Bằng chứng công việc',
+  PAYMENT_EVIDENCE: 'Bằng chứng thanh toán',
 }
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
@@ -179,4 +183,29 @@ export function businessFriendlyText(value?: string) {
     result = result.replace(pattern, replacement)
   }
   return result
+}
+
+const AUDIT_BUSINESS_IDENTIFIER_PATTERN = /\b(BN-WO-\d{4}-\d+|BN-\d{8}-\d+|WO-\d{4,8}-\d+|KH-\d+(?:-\d+)?|PT-\d{8}-\d+)\b/g
+
+function auditBusinessIdentifierText(source: string, code: string, offset: number) {
+  const previousText = source.slice(Math.max(0, offset - 24), offset)
+  if (/\(\s*$/.test(previousText)) return code
+
+  const label = code.startsWith('WO-')
+    ? 'phiếu'
+    : code.startsWith('BN-')
+      ? 'biên nhận'
+      : code.startsWith('KH-')
+        ? 'khách hàng'
+        : 'phụ tùng'
+
+  return new RegExp(`${label}\\s*$`, 'i').test(previousText) ? code : `${label} ${code}`
+}
+
+export function auditFriendlyText(value?: string) {
+  const normalized = businessFriendlyText(value)
+  return normalized.replace(
+    AUDIT_BUSINESS_IDENTIFIER_PATTERN,
+    (code, _matchedCode, offset, source) => auditBusinessIdentifierText(source, code, offset),
+  )
 }

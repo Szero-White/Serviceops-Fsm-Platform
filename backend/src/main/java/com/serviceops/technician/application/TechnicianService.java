@@ -1,5 +1,6 @@
 package com.serviceops.technician.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.application.DemoAccountProtectionPolicy;
@@ -75,7 +76,7 @@ public class TechnicianService {
                 "UPDATE",
                 "TECHNICIAN_PROFILE",
                 technician.getId(),
-                "Cập nhật hồ sơ kỹ thuật viên " + user.getUsername()
+                "Cập nhật hồ sơ kỹ thuật viên " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
                         + (request.active() == null
                         ? ""
                         : " · trạng thái đồng bộ " + (request.active() ? "Hoạt động" : "Tạm ngưng"))
@@ -85,7 +86,7 @@ public class TechnicianService {
                     "UPDATE",
                     "USER_ACCOUNT",
                     user.getId(),
-                    "Đồng bộ trạng thái từ hồ sơ kỹ thuật viên " + user.getUsername()
+                    "Đồng bộ trạng thái từ hồ sơ kỹ thuật viên " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
                             + " → " + (request.active() ? "Hoạt động" : "Tạm ngưng")
             );
         }
