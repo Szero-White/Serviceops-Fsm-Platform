@@ -1,6 +1,7 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.inventory.application.WorkOrderPartRequestService;
@@ -45,6 +46,7 @@ class WorkOrderDispatchReassignmentTest {
     private static final UUID WORK_ORDER_ID = UUID.randomUUID();
 
     @Mock private WorkOrderRepository repository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
     @Mock private WorkOrderPartRequestService workOrderPartRequestService;
@@ -65,6 +67,7 @@ class WorkOrderDispatchReassignmentTest {
         WorkOrderDispatchTestFixtures.authenticateDispatcher(TENANT_ID, DISPATCHER_ID);
         service = new WorkOrderService(
                 repository,
+                businessCodeGenerator,
                 historyRepository,
                 inventoryTransactionRepository,
                 workOrderPartRequestService,

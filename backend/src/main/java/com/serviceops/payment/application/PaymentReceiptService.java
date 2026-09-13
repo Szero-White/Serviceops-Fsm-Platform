@@ -1,6 +1,8 @@
 package com.serviceops.payment.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.payment.domain.Payment;
 import com.serviceops.payment.domain.PaymentReceipt;
@@ -21,6 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentReceiptService {
     private final PaymentRepository paymentRepository;
+    private final BusinessCodeGenerator businessCodeGenerator;
     private final PaymentReceiptRepository receiptRepository;
     private final WorkOrderBillingItemRepository billingItemRepository;
     private final PaymentReceiptHtmlRenderer renderer;
@@ -65,7 +68,7 @@ public class PaymentReceiptService {
         receipt.setWorkOrder(workOrder);
         receipt.setPayment(payment);
         receipt.setBillingSnapshot(payment.getBillingSnapshot());
-        receipt.setReceiptCode("BN-" + workOrder.getCode());
+        receipt.setReceiptCode(businessCodeGenerator.next(payment.getTenantId(), BusinessCodeType.PAYMENT_RECEIPT));
         receipt.setWorkOrderCodeSnapshot(workOrder.getCode());
         receipt.setCustomerNameSnapshot(workOrder.getCustomer().getName());
         receipt.setAmount(payment.getAmount());

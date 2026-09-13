@@ -1,6 +1,7 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
@@ -57,6 +58,7 @@ class WorkOrderCompletionNotificationTest {
     private static final UUID COMPLETION_HISTORY_ID = UUID.randomUUID();
 
     @Mock private WorkOrderRepository repository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
     @Mock private WorkOrderPartRequestService workOrderPartRequestService;
@@ -75,6 +77,7 @@ class WorkOrderCompletionNotificationTest {
         authenticateTechnician();
         service = new WorkOrderService(
                 repository,
+                businessCodeGenerator,
                 historyRepository,
                 inventoryTransactionRepository,
                 workOrderPartRequestService,

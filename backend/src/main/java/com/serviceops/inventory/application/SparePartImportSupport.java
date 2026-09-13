@@ -1,37 +1,16 @@
 package com.serviceops.inventory.application;
 
 import com.serviceops.inventory.application.InventoryCsvService.SparePartCsvRow;
-import com.serviceops.inventory.domain.SparePartRepository;
 
 import java.math.BigDecimal;
 import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
 
 /** Pure validation/parsing support for bulk spare-part import. */
 final class SparePartImportSupport {
     private SparePartImportSupport() {
     }
 
-    static Candidate validate(
-            SparePartCsvRow row,
-            Set<String> seenSkus,
-            UUID tenantId,
-            SparePartRepository repository
-    ) {
-        String sku = row.sku().trim().toUpperCase(Locale.ROOT);
-        if (sku.isBlank()) {
-            return Candidate.invalid(row, "Mã phụ tùng không được để trống");
-        }
-        if (sku.length() > 60) {
-            return Candidate.invalid(row, "Mã phụ tùng không được vượt quá 60 ký tự");
-        }
-        if (!seenSkus.add(sku)) {
-            return Candidate.invalid(row, "Mã phụ tùng bị trùng trong tệp dữ liệu");
-        }
-        if (repository.existsByTenantIdAndSkuIgnoreCase(tenantId, sku)) {
-            return Candidate.invalid(row, "Mã phụ tùng đã tồn tại trong hệ thống");
-        }
+    static Candidate validate(SparePartCsvRow row) {
         if (row.name().isBlank() || row.name().length() > 180) {
             return Candidate.invalid(row, "Tên phụ tùng bắt buộc và tối đa 180 ký tự");
         }
@@ -45,7 +24,7 @@ final class SparePartImportSupport {
             BigDecimal unitPrice = parseNonNegative(row.unitPrice(), "Đơn giá");
             boolean active = parseBoolean(row.active());
             return new Candidate(
-                    row, sku, row.name().trim(), row.unit().trim(),
+                    row, row.name().trim(), row.unit().trim(),
                     initialStock, reorderLevel, unitPrice, active, true, "Hợp lệ"
             );
         } catch (IllegalArgumentException ex) {
@@ -81,7 +60,6 @@ final class SparePartImportSupport {
 
     record Candidate(
             SparePartCsvRow row,
-            String sku,
             String name,
             String unit,
             BigDecimal initialStock,
@@ -93,7 +71,7 @@ final class SparePartImportSupport {
     ) {
         static Candidate invalid(SparePartCsvRow row, String message) {
             return new Candidate(
-                    row, row.sku(), row.name(), row.unit(),
+                    row, row.name(), row.unit(),
                     BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                     false, false, message
             );

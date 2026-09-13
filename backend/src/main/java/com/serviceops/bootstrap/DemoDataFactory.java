@@ -4,6 +4,8 @@ import com.serviceops.asset.domain.Asset;
 import com.serviceops.asset.domain.AssetRepository;
 import com.serviceops.asset.domain.AssetStatus;
 import com.serviceops.common.domain.Priority;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
 import com.serviceops.identity.domain.UserAccount;
@@ -38,13 +40,13 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class DemoDataFactory {
     private final UserAccountRepository userRepository;
+    private final BusinessCodeGenerator businessCodeGenerator;
     private final CustomerRepository customerRepository;
     private final AssetRepository assetRepository;
     private final TechnicianRepository technicianRepository;
@@ -114,10 +116,10 @@ public class DemoDataFactory {
         return technicianRepository.save(t);
     }
 
-    Customer customer(Tenant tenant, String code, String name, String phone, String email, String address) {
+    Customer customer(Tenant tenant, String name, String phone, String email, String address) {
         Customer customer = new Customer();
         customer.setTenantId(tenant.getId());
-        customer.setCode(code);
+        customer.setCode(businessCodeGenerator.next(tenant.getId(), BusinessCodeType.CUSTOMER));
         customer.setName(name);
         customer.setPhone(phone);
         customer.setEmail(email);
@@ -163,7 +165,7 @@ public class DemoDataFactory {
         wo.setCustomer(customer);
         wo.setAsset(asset);
         wo.setTechnician(technician);
-        wo.setCode("WO-%d-%06d".formatted(Instant.now().atZone(ZoneOffset.UTC).getYear(), workOrderRepository.nextNumber()));
+        wo.setCode(businessCodeGenerator.next(tenant.getId(), BusinessCodeType.WORK_ORDER));
         wo.setSummary(summary);
         wo.setDescription(sr == null ? summary : sr.getDescription());
         wo.setPriority(priority);
@@ -204,10 +206,10 @@ public class DemoDataFactory {
         historyRepository.save(h);
     }
 
-    SparePart sparePart(Tenant tenant, String sku, String name, String unit, BigDecimal stock, BigDecimal reorder, BigDecimal price) {
+    SparePart sparePart(Tenant tenant, String name, String unit, BigDecimal stock, BigDecimal reorder, BigDecimal price) {
         SparePart part = new SparePart();
         part.setTenantId(tenant.getId());
-        part.setSku(sku);
+        part.setSku(businessCodeGenerator.next(tenant.getId(), BusinessCodeType.SPARE_PART));
         part.setName(name);
         part.setUnit(unit);
         part.setStockQuantity(stock);

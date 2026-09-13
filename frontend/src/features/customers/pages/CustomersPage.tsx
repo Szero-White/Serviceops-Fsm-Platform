@@ -145,7 +145,7 @@ export function CustomersPage() {
   const showCreate = () => {
     setEditing(undefined)
     form.resetFields()
-    form.setFieldsValue({ code: `KH-${Date.now().toString().slice(-5)}`, active: true })
+    form.setFieldsValue({ active: true })
     setOpen(true)
   }
 
@@ -312,7 +312,7 @@ export function CustomersPage() {
       <Modal title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm khách hàng'} width={680} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
-            <Form.Item label="Mã khách hàng" name="code" rules={[{ required: true, message: 'Nhập mã khách hàng' }]}><Input /></Form.Item>
+            <Form.Item label="Mã khách hàng"><Input value={editing?.code} disabled placeholder="Tự động tạo khi lưu" /></Form.Item>
             <Form.Item label="Tên khách hàng" name="name" rules={[{ required: true, message: 'Nhập tên khách hàng' }]}><Input /></Form.Item>
             <Form.Item label="Số điện thoại" name="phone"><Input /></Form.Item>
             <Form.Item label="Email" name="email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}><Input /></Form.Item>

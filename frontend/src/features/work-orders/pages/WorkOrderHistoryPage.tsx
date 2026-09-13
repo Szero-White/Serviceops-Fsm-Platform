@@ -57,6 +57,11 @@ export function WorkOrderHistoryPage() {
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = historyQuery
+  const historySummaryQuery = useQuery({
+    queryKey: ['work-order-history-summary', { search }],
+    queryFn: () => workOrdersApi.historySummary(search),
+  })
+  const historySummary = historySummaryQuery.data
 
   useEffect(() => {
     setPage(0)
@@ -88,6 +93,7 @@ export function WorkOrderHistoryPage() {
       message.success('Đã xóa phiếu khỏi lịch sử tra cứu')
       selectHistoryWorkOrder(undefined)
       queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history-summary'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['audit'] })
     },
@@ -108,7 +114,14 @@ export function WorkOrderHistoryPage() {
         eyebrow="Theo dõi hồ sơ dịch vụ"
         title="Lịch sử phiếu công việc"
         description="Tra cứu hồ sơ chờ hoàn tất, phiếu đã đóng hoặc đã hủy và xem lại toàn bộ tiến trình xử lý."
-        meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
+        meta={(
+          <>
+            <MetaBadge>{historySummaryQuery.isError ? 'Lỗi tải thống kê' : `${historySummary?.total ?? 0} hồ sơ`}</MetaBadge>
+            <MetaBadge tone="warning">{historySummary?.pendingClosure ?? 0} chờ hoàn tất hồ sơ</MetaBadge>
+            <MetaBadge tone="success">{historySummary?.closed ?? 0} đã đóng</MetaBadge>
+            <MetaBadge tone="danger">{historySummary?.cancelled ?? 0} đã hủy</MetaBadge>
+          </>
+        )}
       />
 
       <div className="table-toolbar toolbar-row">

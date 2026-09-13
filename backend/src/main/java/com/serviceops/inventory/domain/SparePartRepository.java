@@ -26,7 +26,6 @@ public interface SparePartRepository extends JpaRepository<SparePart, UUID> {
                            Pageable pageable);
 
     Optional<SparePart> findByIdAndTenantId(UUID id, UUID tenantId);
-    boolean existsByTenantIdAndSkuIgnoreCase(UUID tenantId, String sku);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from SparePart p where p.id = :id and p.tenantId = :tenantId")

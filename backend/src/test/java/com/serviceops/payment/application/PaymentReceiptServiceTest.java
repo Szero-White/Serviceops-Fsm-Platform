@@ -1,6 +1,8 @@
 package com.serviceops.payment.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.payment.domain.Payment;
@@ -42,6 +44,7 @@ class PaymentReceiptServiceTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Mock private PaymentRepository paymentRepository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private PaymentReceiptRepository receiptRepository;
     @Mock private WorkOrderBillingItemRepository billingItemRepository;
     @Mock private PaymentReceiptHtmlRenderer renderer;
@@ -57,6 +60,7 @@ class PaymentReceiptServiceTest {
         authenticate("CUSTOMER_SERVICE");
         Payment payment = settledPayment();
         UUID workOrderId = payment.getWorkOrder().getId();
+        when(businessCodeGenerator.next(TENANT_ID, BusinessCodeType.PAYMENT_RECEIPT)).thenReturn("BN-20260913-001");
         when(paymentRepository.findForUpdateByWorkOrder(TENANT_ID, workOrderId)).thenReturn(Optional.of(payment));
         when(receiptRepository.findByWorkOrder(TENANT_ID, workOrderId)).thenReturn(Optional.empty());
         when(billingItemRepository.findByTenantIdAndBillingSnapshotIdOrderBySparePartNameAsc(TENANT_ID, payment.getBillingSnapshot().getId())).thenReturn(List.of());
@@ -70,7 +74,7 @@ class PaymentReceiptServiceTest {
         assertThat(receipt.getValue().getAmount()).isEqualByComparingTo("1270000");
         assertThat(receipt.getValue().getPaymentMethod()).isEqualTo(PaymentMethod.BANK_TRANSFER);
         assertThat(receipt.getValue().getCustomerNameSnapshot()).isEqualTo("Công ty An Nhiên");
-        assertThat(receipt.getValue().getReceiptCode()).isEqualTo("BN-WO-2026-001234");
+        assertThat(receipt.getValue().getReceiptCode()).isEqualTo("BN-20260913-001");
     }
 
     @Test
@@ -91,6 +95,7 @@ class PaymentReceiptServiceTest {
     private PaymentReceiptService service() {
         return new PaymentReceiptService(
                 paymentRepository,
+                businessCodeGenerator,
                 receiptRepository,
                 billingItemRepository,
                 renderer,

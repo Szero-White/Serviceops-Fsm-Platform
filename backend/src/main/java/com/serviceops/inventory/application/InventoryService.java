@@ -1,6 +1,9 @@
 package com.serviceops.inventory.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
@@ -32,11 +35,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -66,6 +66,7 @@ public class InventoryService {
     private static final Instant INVENTORY_HISTORY_MIN_TIME = Instant.EPOCH;
     private static final Instant INVENTORY_HISTORY_MAX_TIME = Instant.parse("9999-12-31T23:59:59Z");
     private final SparePartRepository sparePartRepository;
+    private final BusinessCodeGenerator businessCodeGenerator;
     private final InventoryTransactionRepository transactionRepository;
     private final InventoryCsvService csvService;
     private final AuditService auditService;
@@ -91,10 +92,7 @@ public class InventoryService {
     @Transactional
     public SparePartResponse create(SparePartRequest request) {
         UUID tenantId = CurrentUser.tenantId();
-        String sku = request.sku().trim().toUpperCase(Locale.ROOT);
-        if (sparePartRepository.existsByTenantIdAndSkuIgnoreCase(tenantId, sku)) {
-            throw BusinessException.conflict("SPARE_PART_SKU_EXISTS", "Mã phụ tùng đã tồn tại");
-        }
+        String sku = businessCodeGenerator.next(tenantId, BusinessCodeType.SPARE_PART);
         SparePart part = new SparePart();
         part.setTenantId(tenantId);
         part.setSku(sku);
@@ -109,7 +107,7 @@ public class InventoryService {
             part.addStock(request.initialStock());
             saveTransaction(part, null, InventoryTransactionType.IMPORT, request.initialStock(), "Tồn đầu kỳ");
         }
-        auditService.record("CREATE", "SPARE_PART", part.getId(), "Tạo phụ tùng " + sku);
+        auditService.record("CREATE", "SPARE_PART", part.getId(), "Tạo phụ tùng " + AuditDetailText.namedCode(part.getName(), part.getSku()));
         return toResponse(part);
     }
 
@@ -128,7 +126,7 @@ public class InventoryService {
                 "UPDATE_REORDER_LEVEL",
                 "SPARE_PART",
                 part.getId(),
-                "Cập nhật ngưỡng tồn tối thiểu " + part.getSku() + ": "
+                "Cập nhật ngưỡng tồn tối thiểu " + AuditDetailText.namedCode(part.getName(), part.getSku()) + ": "
                         + previousLevel.stripTrailingZeros().toPlainString() + " -> "
                         + newLevel.stripTrailingZeros().toPlainString() + " " + part.getUnit()
         );
@@ -158,7 +156,12 @@ public class InventoryService {
         }
         part.addStock(request.quantity());
         saveTransaction(part, null, InventoryTransactionType.IMPORT, request.quantity(), request.note());
-        auditService.record("IMPORT_STOCK", "SPARE_PART", part.getId(), "Nhập " + request.quantity() + " " + part.getUnit());
+        auditService.record(
+                "IMPORT_STOCK",
+                "SPARE_PART",
+                part.getId(),
+                "Nhập " + request.quantity() + " " + part.getUnit() + " - " + AuditDetailText.namedCode(part.getName(), part.getSku())
+        );
         return toResponse(part);
     }
 
@@ -218,7 +221,7 @@ public class InventoryService {
 
         String reason = request.reason().trim();
         auditService.record("STOCKTAKE", "SPARE_PART", part.getId(),
-                "Kiểm kê " + part.getSku() + ": " + systemQuantity + " -> " + actualQuantity
+                "Kiểm kê " + AuditDetailText.namedCode(part.getName(), part.getSku()) + ": " + systemQuantity + " -> " + actualQuantity
                         + "; lý do: " + reason);
 
         if (difference.signum() != 0) {
@@ -257,14 +260,13 @@ public class InventoryService {
     public SparePartImportResult importSpareParts(MultipartFile file, boolean commit) {
         UUID tenantId = CurrentUser.tenantId();
         List<SparePartCsvRow> rows = csvService.parseSpareParts(file);
-        Set<String> seenSkus = new HashSet<>();
         List<SparePartImportSupport.Candidate> candidates = new ArrayList<>();
         List<SparePartImportRowResult> results = new ArrayList<>();
 
         for (SparePartCsvRow row : rows) {
-            SparePartImportSupport.Candidate candidate = SparePartImportSupport.validate(row, seenSkus, tenantId, sparePartRepository);
+            SparePartImportSupport.Candidate candidate = SparePartImportSupport.validate(row);
             candidates.add(candidate);
-            results.add(new SparePartImportRowResult(row.rowNumber(), row.sku(), row.name(), candidate.valid(), candidate.message()));
+            results.add(new SparePartImportRowResult(row.rowNumber(), "Tự động", row.name(), candidate.valid(), candidate.message()));
         }
 
         int validRows = (int) results.stream().filter(SparePartImportRowResult::valid).count();
@@ -293,7 +295,7 @@ public class InventoryService {
                 active ? "REACTIVATE" : "DISCONTINUE",
                 "SPARE_PART",
                 part.getId(),
-                (active ? "Kích hoạt lại phụ tùng " : "Ngừng sử dụng phụ tùng ") + part.getSku()
+                (active ? "Kích hoạt lại phụ tùng " : "Ngừng sử dụng phụ tùng ") + AuditDetailText.namedCode(part.getName(), part.getSku())
         );
         return toResponse(part);
     }
@@ -306,7 +308,7 @@ public class InventoryService {
     private void createImportedPart(UUID tenantId, SparePartImportSupport.Candidate candidate) {
         SparePart part = new SparePart();
         part.setTenantId(tenantId);
-        part.setSku(candidate.sku());
+        part.setSku(businessCodeGenerator.next(tenantId, BusinessCodeType.SPARE_PART));
         part.setName(candidate.name());
         part.setUnit(candidate.unit());
         part.setStockQuantity(BigDecimal.ZERO);
