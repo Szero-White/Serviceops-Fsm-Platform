@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
 import type { AttachmentItem } from '../../../types'
 import { formatNumber } from '../../../utils/format'
+import { downloadBlob } from '../../../utils/download'
 import { attachmentsApi } from '../api'
 
 function isImage(contentType: string) {
@@ -20,17 +21,6 @@ function isImage(contentType: string) {
 
 function isPdf(contentType: string) {
   return contentType === 'application/pdf'
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const objectUrl = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = objectUrl
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(objectUrl)
 }
 
 function isFormValidationError(error: unknown) {

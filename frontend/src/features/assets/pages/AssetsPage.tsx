@@ -1,6 +1,6 @@
-import { DeleteOutlined, DownOutlined, DownloadOutlined, EditOutlined, FileExcelOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, DatePicker, Dropdown, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography, Upload } from 'antd'
+import { App, Button, Empty, Form, Input, Popconfirm, Space, Table, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { apiErrorMessage } from '../../../api/http'
@@ -17,15 +17,9 @@ import { downloadBlob } from '../../../utils/download'
 import { formatDate } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { useAuth } from '../../auth/AuthContext'
-import { useFormValidationFeedback } from '../../../hooks/useFormValidationFeedback'
 import { compareText, resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
-
-const assetStatusOptions = [
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'IN_SERVICE', label: 'Đang sửa chữa' },
-  { value: 'OUT_OF_SERVICE', label: 'Tạm ngưng' },
-  { value: 'RETIRED', label: 'Thanh lý' },
-]
+import { AssetFormModal } from '../components/AssetFormModal'
+import { AssetPageActions } from '../components/AssetPageActions'
 
 export function AssetsPage() {
   const { user } = useAuth()
@@ -42,7 +36,6 @@ export function AssetsPage() {
   const [bulkImportFile, setBulkImportFile] = useState<File>()
   const [bulkImportResult, setBulkImportResult] = useState<AssetImportResult>()
   const [form] = Form.useForm()
-  const handleFormValidationFailed = useFormValidationFeedback()
   const { message, notification } = App.useApp()
   const queryClient = useQueryClient()
   const assetsQuery = useQuery({
@@ -195,48 +188,13 @@ export function AssetsPage() {
   }
 
   const assetActions = (
-    <Space size={10} wrap>
-      <Dropdown
-        trigger={['click']}
-        menu={{
-          items: [
-            {
-              key: 'export',
-              icon: <DownloadOutlined />,
-              label: 'Xuất CSV',
-              onClick: exportCsv,
-            },
-            {
-              key: 'template',
-              icon: <FileExcelOutlined />,
-              label: 'Tải mẫu import',
-              onClick: downloadTemplate,
-            },
-            {
-              key: 'import',
-              icon: <UploadOutlined />,
-              label: (
-                <Upload
-                  accept=".csv,text/csv"
-                  showUploadList={false}
-                  beforeUpload={(file) => {
-                    previewImport.mutate(file)
-                    return Upload.LIST_IGNORE
-                  }}
-                >
-                  <span>Nhập CSV</span>
-                </Upload>
-              ),
-            },
-          ],
-        }}
-      >
-        <Button icon={<FileExcelOutlined />} loading={previewImport.isPending}>
-          Dữ liệu <DownOutlined />
-        </Button>
-      </Dropdown>
-      <Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm thiết bị</Button>
-    </Space>
+    <AssetPageActions
+      importing={previewImport.isPending}
+      onExport={exportCsv}
+      onDownloadTemplate={downloadTemplate}
+      onImportFile={(file) => previewImport.mutate(file)}
+      onCreate={showCreate}
+    />
   )
 
   return (
@@ -338,37 +296,19 @@ export function AssetsPage() {
         ]}
       />
 
-      <Modal title={editing ? 'Cập nhật thiết bị' : 'Thêm thiết bị'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm thiết bị'} width={720} destroyOnHidden>
-        {customersQuery.isError ? (
-          <QueryErrorAlert
-            title="Chưa tải được danh sách khách hàng"
-            error={customersQuery.error}
-            onRetry={() => customersQuery.refetch()}
-          />
-        ) : null}
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
-          <Form.Item label="Khách hàng" name="customerId" rules={[{ required: true, message: 'Chọn khách hàng' }]}>
-            <Select
-              showSearch
-              filterOption={false}
-              loading={customersQuery.isFetching}
-              placeholder="Tìm theo mã hoặc tên khách hàng"
-              onSearch={setCustomerOptionSearchInput}
-              options={customerOptions}
-            />
-          </Form.Item>
-          <div className="form-grid two-cols">
-            <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>
-            <Form.Item label="Serial number (không bắt buộc)" name="serialNumber"><Input placeholder="Có thể bổ sung sau khi xác minh tại hiện trường" /></Form.Item>
-            <Form.Item label="Hãng" name="brand"><Input placeholder="Daikin" /></Form.Item>
-            <Form.Item label="Model" name="model"><Input /></Form.Item>
-            <Form.Item label="Ngày lắp đặt" name="installedAt"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item>
-            <Form.Item label="Bảo hành đến" name="warrantyUntil"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item>
-          </div>
-          <Form.Item label="Trạng thái" name="status"><Select options={assetStatusOptions} /></Form.Item>
-          <Form.Item label="Ghi chú" name="notes"><Input.TextArea rows={3} /></Form.Item>
-        </Form>
-      </Modal>
+      <AssetFormModal
+        open={open}
+        editing={editing}
+        form={form}
+        saving={save.isPending}
+        customerOptions={customerOptions}
+        customersLoading={customersQuery.isFetching}
+        customersError={customersQuery.error}
+        onRetryCustomers={() => { void customersQuery.refetch() }}
+        onCustomerSearch={setCustomerOptionSearchInput}
+        onCancel={() => setOpen(false)}
+        onSubmit={(values) => save.mutate(values)}
+      />
 
       <CsvImportPreviewModal<AssetImportRowResult>
         title="Kiểm tra file nhập thiết bị"

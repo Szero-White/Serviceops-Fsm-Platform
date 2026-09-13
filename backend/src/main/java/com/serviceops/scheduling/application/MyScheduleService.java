@@ -1,6 +1,6 @@
 package com.serviceops.scheduling.application;
 
-import com.serviceops.asset.domain.Asset;
+import com.serviceops.asset.application.AssetDisplay;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.scheduling.domain.Appointment;
 import com.serviceops.scheduling.domain.AppointmentRepository;
@@ -64,7 +64,7 @@ public class MyScheduleService {
 
     private static MyScheduleItemResponse toResponse(Appointment appointment) {
         WorkOrder workOrder = appointment.getWorkOrder();
-        String assetLabel = workOrder.getAsset() == null ? null : assetLabel(workOrder.getAsset());
+        String assetLabel = workOrder.getAsset() == null ? null : AssetDisplay.label(workOrder.getAsset());
 
         return new MyScheduleItemResponse(
                 appointment.getId(),
@@ -81,13 +81,4 @@ public class MyScheduleService {
         );
     }
 
-    private static String assetLabel(Asset asset) {
-        String equipmentName = ((asset.getBrand() == null ? "" : asset.getBrand() + " ")
-                + (asset.getModel() == null ? "" : asset.getModel())).trim();
-        if (equipmentName.isBlank()) {
-            equipmentName = asset.getCategory();
-        }
-        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
-        return equipmentName + " (" + serial + ")";
-    }
 }

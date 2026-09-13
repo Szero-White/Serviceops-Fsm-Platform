@@ -51,6 +51,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-02 | Chuyển trạng thái hợp lệ | Timeline lưu người thao tác và thời gian |
 | WO-03 | Nhảy trạng thái không hợp lệ | HTTP 409 INVALID_STATUS_TRANSITION |
 | WO-03A | Customer Service thử `CANCELLED → REOPENED` | HTTP 409 `INVALID_STATUS_TRANSITION`; phiếu giữ `CANCELLED`; nếu khách có nhu cầu mới thì tạo yêu cầu/phiếu mới |
+| WO-03B | Customer Service mở lại `COMPLETED → REOPENED` nhưng bỏ trống lý do | UI không cho xác nhận; nếu gọi API trực tiếp backend trả 400 `WORK_ORDER_REOPEN_REASON_REQUIRED`; không đổi trạng thái/history/notification |
 | WO-04 | Technician bấm Hoàn thành nhưng bỏ trống Chẩn đoán hoặc Giải pháp | Form đánh dấu trường lỗi, cuộn tới lỗi đầu tiên và hiện cảnh báo rõ; không gọi API, không đổi trạng thái |
 | WO-05 | Technician nhập đủ Chẩn đoán + Giải pháp rồi hoàn thành | WO chuyển COMPLETED; Tổng quan hiển thị kết quả vừa lưu; Tiến trình của lần hoàn thành giữ riêng Chẩn đoán, Giải pháp và Ghi chú bàn giao nếu có; người thao tác thấy phản hồi thành công và nút **Khách xác nhận** |
 | USER-01 | Owner sửa user và thử đổi username | Bị chặn `USER_USERNAME_CHANGE_BLOCKED`; username lịch sử/ownership giữ ổn định |
@@ -131,12 +132,12 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | AI-02 | Warehouse hỏi về yêu cầu phụ tùng, kiểm kê, lịch sử biến động và hoàn trả | AI đưa part request/hoàn trả tới `/part-requests`, kiểm kê tới `/inventory-stocktake`, lịch sử tới `/inventory-movements`; nêu rõ ledger chỉ đọc, Warehouse không sửa requested quantity và không gợi ý operational dashboard |
 | AI-03 | Dispatcher hỏi quản trị user/kho/audit hoặc Technician hỏi sửa ngưỡng/kiểm kê | AI từ chối là ngoài phạm vi thay vì hướng dẫn thao tác của role khác |
 | AI-03A | Technician hỏi phụ tùng cho job được giao | AI hướng dẫn thao tác trong Work Order/tab Phụ tùng và không điều hướng sang `/inventory` |
-| AI-03B | Mỗi role hỏi về thông báo của mình | AI chỉ mô tả attention queue của role hiện tại, không hướng dẫn action của role khác |
+| AI-03B | Mỗi role hỏi về thông báo của mình | AI chỉ mô tả attention queue của role hiện tại, không hướng dẫn action của role khác; với CSKH phải nêu đúng cả payment handoff và route xử lý tại **Xử lý thanh toán** |
 | AI-04 | Dispatcher hỏi điều phối lại kỹ thuật viên trước khi bắt đầu | AI hướng dẫn reason + notification/timeline và nêu rõ không reschedule khi WO đã `ON_THE_WAY`/`IN_PROGRESS` |
 | AI-05 | Customer Service hỏi chung về hậu xử lý | AI hướng dẫn payment reconciliation → biên nhận → close; không khẳng định CS được ghi nhận khách xác nhận tại hiện trường |
 | AI-06 | Owner hỏi cấu hình tài khoản/QR nhận tiền | AI điều hướng `/payment-settings`, nêu Owner cấu hình còn Technician chỉ xem read-only tại Work Order |
 | AI-07 | Technician hỏi khách chuyển khoản/tiền mặt/thanh toán tại quầy | AI giữ route Work Order được giao, hướng dẫn ghi nhận payment action nhưng không cho SETTLED/receipt/close |
-| AI-08 | CSKH hỏi xem lại phiếu đã đóng và tiến trình thanh toán | AI điều hướng `/work-order-history` và mô tả timeline/history thay vì workflow cũ |
+| AI-08 | CSKH hỏi xem lại phiếu đã đóng, hoặc payment đã `SETTLED` nhưng chưa đóng phiếu | AI điều hướng `/work-order-history`; nêu đúng `CUSTOMER_ACCEPTED + SETTLED` = **Chờ hoàn tất hồ sơ** và mô tả timeline/history thay vì workflow cũ |
 | AI-09 | Chạy AI gợi ý hoặc Trợ lý AI khi Gemini hoạt động/fallback | UI hiển thị badge **Gemini** khi `source=GEMINI`, **Nội bộ** khi `source=LOCAL`; không hiện API key, upstream HTTP status, stack trace hoặc nguyên nhân fallback |
 
 | PAY-01 | Technician ghi nhận khách chuyển khoản | Payment → `TRANSFER_PENDING_VERIFICATION`; ảnh giao dịch nếu có chỉ là evidence, chưa `SETTLED` |

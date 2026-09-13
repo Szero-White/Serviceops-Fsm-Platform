@@ -18,7 +18,7 @@
 - Attachment upload được dọn nếu DB rollback; file vật lý chỉ bị xóa sau DB commit.
 - CORS theo allowlist; production yêu cầu cấu hình origin thật.
 - Nginx production thêm HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` và frame protection.
-- `.env`, dữ liệu runtime và backup thật bị loại khỏi Git.
+- `.env`, dữ liệu runtime và backup thật bị loại khỏi Git. Docker build context của cả backend/frontend cũng loại `.env*`; backend loại thêm `application-secret.yml` để file secret local bị Git ignore không thể vô tình bị `COPY` vào image build.
 - Audit log cho hành động quan trọng.
 - Pessimistic locking cho lịch, tồn kho và các invariant concurrency quan trọng; optimistic-lock conflict được map thành HTTP 409.
 - Cross-tenant/RBAC/concurrency paths quan trọng có Testcontainers integration tests trong source.

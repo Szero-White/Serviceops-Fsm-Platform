@@ -3,3 +3,7 @@ target
 .idea
 *.iml
 data
+.env
+.env.*
+src/main/resources/application-secret.yml
+src/main/resources/application-secret.yaml

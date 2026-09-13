@@ -199,7 +199,7 @@ public class CustomerService {
 
         try {
             boolean active = parseBoolean(row.active());
-            return new CustomerImportCandidate(row, code, row.name().trim(), active, true, "Hop le");
+            return new CustomerImportCandidate(row, code, row.name().trim(), active, true, "Hợp lệ");
         } catch (IllegalArgumentException ex) {
             return CustomerImportCandidate.invalid(row, ex.getMessage());
         }

@@ -98,7 +98,9 @@ Schema hiện không nằm chỉ trong V1. Phải đọc toàn bộ migration ch
 15. `V15__inventory_work_order_query_index.sql` — index theo tenant + Work Order + transaction type để các truy vấn ISSUE/RETURN/outstanding chạy theo batch hiệu quả.
 16. `V16__inventory_issue_recipient_snapshot.sql` — thêm snapshot kỹ thuật viên nhận trên inventory `ISSUE`; dữ liệu legacy chỉ backfill khi có đúng một candidate đủ chắc theo tenant/WO/part/quantity/actor và cửa sổ thời gian, còn trường hợp mơ hồ giữ null thay vì đoán sai.
 17. `V17__counter_payment_workflow.sql` — thêm trạng thái khách hẹn thanh toán tại quầy, timestamp yêu cầu và cập nhật payment consistency constraints.
+18. `V18__inventory_return_recipient_backfill.sql` — backfill snapshot kỹ thuật viên trả phụ tùng cho RETURN legacy chỉ khi toàn bộ ISSUE trước đó quy về đúng một recipient; trường hợp mơ hồ giữ null thay vì đoán sai lịch sử.
+19. `V19__sync_technician_account_status.sql` — đồng bộ `technician_profiles.active` theo trạng thái canonical `user_accounts.active` cho dữ liệu legacy, tránh account/profile lệch lifecycle.
 
-V1–V17 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V18+) thay vì sửa file đã có.
+V1–V19 là migration chain append-only hiện tại; thay đổi schema/data tiếp theo phải thêm migration mới (V20+) thay vì sửa file đã có.
 
 Source of truth: `backend/src/main/resources/db/migration/`.

@@ -81,6 +81,7 @@ Increment tương lai chỉ khi có nhu cầu hiện trường thật: deep-link
 
 ## Engineering depth trước khi scale kiến trúc
 
+- Nâng Spring Boot `3.5.16` lên dòng `4.x` trong một change-set riêng sau khi live; `3.5.16` là bản OSS cuối của nhánh 3.5 nên việc nâng major cần compatibility test/CI đầy đủ, không trộn vào release portfolio hiện tại chỉ để chạy theo phiên bản mới.
 - Query/index review với dữ liệu lớn hơn và `EXPLAIN ANALYZE`.
 - API/load test cho work-order list, scheduling và inventory hot paths.
 - Sonar/static-analysis quality gate nếu phù hợp workflow CI.

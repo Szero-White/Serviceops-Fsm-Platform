@@ -14,6 +14,7 @@ frontend/.vite/
 !.env.example
 !.env.production.example
 backend/src/main/resources/application-secret.yml
+backend/src/main/resources/application-secret.yaml
 
 # Runtime data
 data/

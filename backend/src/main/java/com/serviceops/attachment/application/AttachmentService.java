@@ -21,28 +21,14 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AttachmentService {
-    private static final Set<String> ALLOWED_REFERENCE_TYPES = Set.of(
-            "WORK_ORDER", "ASSET", "SERVICE_REQUEST", "COMPANY_PAYMENT_PROFILE"
-    );
-    private static final Set<String> PAYMENT_EVIDENCE_CONTENT_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp"
-    );
-    private static final Set<WorkOrderStatus> WORK_EVIDENCE_FROZEN_STATUSES = Set.of(
-            WorkOrderStatus.CUSTOMER_ACCEPTED,
-            WorkOrderStatus.CLOSED,
-            WorkOrderStatus.CANCELLED
-    );
-
     private final AttachmentRepository repository;
     private final FileStorageService storageService;
     private final AuditService auditService;
@@ -52,8 +38,8 @@ public class AttachmentService {
 
     @Transactional
     public AttachmentResponse upload(String referenceType, UUID referenceId, AttachmentPurpose requestedPurpose, MultipartFile file) {
-        String normalizedType = normalizeReferenceType(referenceType);
-        AttachmentPurpose purpose = normalizePurpose(normalizedType, requestedPurpose);
+        String normalizedType = AttachmentRules.normalizeReferenceType(referenceType);
+        AttachmentPurpose purpose = AttachmentRules.normalizePurpose(normalizedType, requestedPurpose);
         UUID tenantId = CurrentUser.tenantId();
 
         if ("COMPANY_PAYMENT_PROFILE".equals(normalizedType) && !CurrentUser.hasRole("OWNER")) {
@@ -67,7 +53,7 @@ public class AttachmentService {
         deleteStoredFileIfTransactionRollsBack(stored.storageKey());
 
         if (purpose == AttachmentPurpose.PAYMENT_EVIDENCE
-                && !PAYMENT_EVIDENCE_CONTENT_TYPES.contains(stored.contentType())) {
+                && !AttachmentRules.isPaymentEvidenceContentType(stored.contentType())) {
             storageService.delete(stored.storageKey());
             throw BusinessException.badRequest(
                     "PAYMENT_EVIDENCE_IMAGE_REQUIRED",
@@ -97,7 +83,7 @@ public class AttachmentService {
 
     @Transactional(readOnly = true)
     public List<AttachmentResponse> list(String referenceType, UUID referenceId) {
-        String normalizedType = normalizeReferenceType(referenceType);
+        String normalizedType = AttachmentRules.normalizeReferenceType(referenceType);
         UUID tenantId = CurrentUser.tenantId();
         authorizeReference(normalizedType, referenceId, tenantId);
         List<Attachment> attachments = repository
@@ -137,7 +123,7 @@ public class AttachmentService {
         UUID tenantId = CurrentUser.tenantId();
         Attachment attachment = getAuthorizedAttachment(id, tenantId);
         authorizeManage(attachment);
-        String sanitizedFilename = sanitizeFilename(originalFilename);
+        String sanitizedFilename = AttachmentRules.sanitizeFilename(originalFilename);
         if (sanitizedFilename.equals(attachment.getOriginalFilename())) {
             return toResponse(attachment, true);
         }
@@ -168,38 +154,6 @@ public class AttachmentService {
         );
     }
 
-    private static String normalizeReferenceType(String referenceType) {
-        String normalizedType = referenceType == null ? "" : referenceType.trim().toUpperCase(Locale.ROOT);
-        if (!ALLOWED_REFERENCE_TYPES.contains(normalizedType)) {
-            throw BusinessException.badRequest("INVALID_REFERENCE_TYPE", "Loại đối tượng đính kèm không hợp lệ");
-        }
-        return normalizedType;
-    }
-
-    private static AttachmentPurpose normalizePurpose(String referenceType, AttachmentPurpose requestedPurpose) {
-        AttachmentPurpose purpose = requestedPurpose == null
-                ? ("WORK_ORDER".equals(referenceType) ? AttachmentPurpose.WORK_EVIDENCE : AttachmentPurpose.GENERAL)
-                : requestedPurpose;
-
-        if ("WORK_ORDER".equals(referenceType)) {
-            if (purpose != AttachmentPurpose.WORK_EVIDENCE && purpose != AttachmentPurpose.PAYMENT_EVIDENCE) {
-                throw BusinessException.badRequest(
-                        "INVALID_ATTACHMENT_PURPOSE",
-                        "File phiếu công việc phải là hồ sơ sửa chữa hoặc bằng chứng thanh toán"
-                );
-            }
-            return purpose;
-        }
-
-        if (purpose != AttachmentPurpose.GENERAL) {
-            throw BusinessException.badRequest(
-                    "INVALID_ATTACHMENT_PURPOSE",
-                    "Mục đích file không phù hợp với đối tượng đính kèm"
-            );
-        }
-        return purpose;
-    }
-
     private void authorizeUpload(String referenceType,
                                  UUID referenceId,
                                  AttachmentPurpose purpose,
@@ -219,7 +173,7 @@ public class AttachmentService {
                         "Chỉ chủ sở hữu hoặc kỹ thuật viên được phân công mới tải hồ sơ sửa chữa"
                 );
             }
-            if (WORK_EVIDENCE_FROZEN_STATUSES.contains(workOrder.getStatus())) {
+            if (AttachmentRules.isWorkEvidenceFrozen(workOrder.getStatus())) {
                 throw BusinessException.conflict(
                         "WORK_EVIDENCE_FROZEN",
                         "Hình ảnh và tài liệu sửa chữa đã được khóa sau khi hồ sơ hoàn tất"
@@ -241,7 +195,7 @@ public class AttachmentService {
             );
         }
         String contentType = file == null ? null : file.getContentType();
-        if (contentType == null || !PAYMENT_EVIDENCE_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+        if (!AttachmentRules.isPaymentEvidenceContentType(contentType)) {
             throw BusinessException.badRequest(
                     "PAYMENT_EVIDENCE_IMAGE_REQUIRED",
                     "Bằng chứng chuyển khoản chỉ nhận ảnh JPG, PNG hoặc WEBP"
@@ -349,7 +303,7 @@ public class AttachmentService {
     private boolean isWorkEvidenceMutable(UUID workOrderId, UUID tenantId) {
         WorkOrder workOrder = workOrderRepository.findDetailed(workOrderId, tenantId)
                 .orElseThrow(() -> BusinessException.notFound("REFERENCE_NOT_FOUND", "Không tìm thấy phiếu công việc"));
-        return !WORK_EVIDENCE_FROZEN_STATUSES.contains(workOrder.getStatus());
+        return !AttachmentRules.isWorkEvidenceFrozen(workOrder.getStatus());
     }
 
     private static boolean canUserManage(Attachment attachment) {
@@ -357,26 +311,6 @@ public class AttachmentService {
             return CurrentUser.hasRole("TECHNICIAN") && CurrentUser.username().equals(attachment.getUploadedBy());
         }
         return CurrentUser.hasRole("OWNER") || CurrentUser.username().equals(attachment.getUploadedBy());
-    }
-
-    private static String sanitizeFilename(String value) {
-        String raw = value == null ? "" : value.trim();
-        if (raw.isBlank()) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Tên file không được để trống");
-        }
-        final String normalized;
-        try {
-            normalized = Path.of(raw).getFileName().toString();
-        } catch (RuntimeException ex) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không hợp lệ");
-        }
-        if (normalized.length() > 255) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Tên file không được vượt quá 255 ký tự");
-        }
-        if (normalized.chars().anyMatch(Character::isISOControl)) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không được chứa ký tự điều khiển");
-        }
-        return normalized;
     }
 
     private static AttachmentResponse toResponse(Attachment attachment, boolean lifecycleMutable) {

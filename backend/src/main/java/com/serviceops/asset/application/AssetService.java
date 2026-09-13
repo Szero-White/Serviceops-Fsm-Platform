@@ -284,7 +284,7 @@ public class AssetService {
             LocalDate installedAt = parseDate(row.installedAt());
             LocalDate warrantyUntil = parseDate(row.warrantyUntil());
             AssetStatus status = row.status().isBlank() ? AssetStatus.ACTIVE : AssetStatus.valueOf(row.status().trim().toUpperCase(Locale.ROOT));
-            return new AssetImportCandidate(row, customer, row.category().trim(), serial, installedAt, warrantyUntil, status, true, "Hop le");
+            return new AssetImportCandidate(row, customer, row.category().trim(), serial, installedAt, warrantyUntil, status, true, "Hợp lệ");
         } catch (IllegalArgumentException | DateTimeParseException ex) {
             return AssetImportCandidate.invalid(row, "Ngày hoặc trạng thái không hợp lệ");
         }

@@ -153,7 +153,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 | --- | --- | --- | --- |
 | Owner | `owner` | `Demo@2026` | User administration, dashboard, audit and overall operations |
 | Dispatcher | `dispatcher` | `Demo@2026` | Work Orders, Technician assignment and weekly scheduling |
-| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, Service Requests and request-to-Work Order flow |
+| Customer Service | `customer-service` | `Demo@2026` | Customers/assets, Service Requests, payment reconciliation and Work Order closure |
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
 | Warehouse | `warehouse` | `Demo@2026` | Part-request queue, spare parts, ISSUE/RETURN, stocktake and inventory movement history |
 
@@ -174,7 +174,7 @@ The login screen exposes **five quick-login cards**, one for each business role.
 - Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and an actionable outstanding-material queue; inventory movement history remains a read-only stock ledger.
 - Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
 - Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
-- Separate payment reconciliation for transfer/cash/counter collection, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
+- Separate payment reconciliation for transfer/cash/counter collection, server-side queue counters for pending reconciliation/closure, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
 - CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
 - Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
 - Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.

@@ -2,6 +2,8 @@
 
 This deployment keeps the existing ServiceOps/FSM modular monolith and hardens it for a single-node public demo. No business module is removed, and Kubernetes/Kafka/microservices are intentionally not introduced without a concrete requirement.
 
+> **Deployment topology note:** `README.md` documents the currently hosted portfolio VM path (Nginx + Spring Boot managed by `systemd`). This runbook is the repository-supported Docker Compose production-like/reference path and the topology exercised by CI. Do not mix commands from the two operating models in one release; choose the target host topology explicitly before redeploying.
+
 ## 1. Environment
 
 Copy `.env.production.example` to a server-only `.env.production` file and replace every `CHANGE_ME` value.
@@ -13,7 +15,7 @@ Public demo defaults:
 - `JWT_SECRET` is mandatory, Base64 encoded, and must decode to at least 32 bytes.
 - `DEMO_PASSWORD` must be at least 8 characters and cannot be `123456` or a shipped placeholder value; startup fails instead of silently exposing a known demo password.
 - `JWT_ACCESS_TOKEN_MINUTES=30` affects production/demo only; local development keeps its existing behavior.
-- `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured. When enabled, `AI_CONNECT_TIMEOUT` (default `4s`), `AI_SUGGESTION_TIMEOUT` (default `12s`) and `AI_HELP_TIMEOUT` (default `18s`) use Gemini-first latency budgets while remaining bounded; the frontend budgets are intentionally longer so the backend can complete Gemini or fallback before the browser aborts the request. Public AI responses intentionally expose only `source=GEMINI|LOCAL` for the **Gemini/Nội bộ** badge; credential state, upstream HTTP status and provider/API failure details stay in server logs.
+- `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured. When enabled, `GEMINI_MODEL` defaults to the stable `gemini-3.6-flash`; the gateway leaves Gemini 3.x sampling controls at provider defaults rather than forcing custom temperature/top-p/top-k. `AI_CONNECT_TIMEOUT` (default `4s`), `AI_SUGGESTION_TIMEOUT` (default `12s`) and `AI_HELP_TIMEOUT` (default `18s`) use Gemini-first latency budgets while remaining bounded; the frontend budgets are intentionally longer so the backend can complete Gemini or fallback before the browser aborts the request. Public AI responses intentionally expose only `source=GEMINI|LOCAL` for the **Gemini/Nội bộ** badge; credential state, upstream HTTP status and provider/API failure details stay in server logs.
 - `SWAGGER_ENABLED=false` by default. Enable it only for an intentional API-review environment; the recruiter demo does not require public Swagger.
 - `MAX_TENANT_STORAGE_BYTES=104857600` limits each tenant to 100 MiB on the local storage adapter in the public demo. Use `0` for unlimited storage in a controlled environment.
 

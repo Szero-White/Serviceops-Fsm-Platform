@@ -99,6 +99,21 @@ class WorkOrderCustomerServiceLifecycleTest {
     }
 
     @Test
+    void customerServiceMustProvideReasonWhenReopening() {
+        authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
+
+        assertThatThrownBy(() -> service.transition(
+                WORK_ORDER_ID,
+                new TransitionWorkOrder(WorkOrderStatus.REOPENED, "   ", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Phải nhập lý do mở lại phiếu công việc");
+
+        assertThat(workOrder.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        verifyNoInteractions(historyRepository, auditService, notificationService);
+    }
+
+    @Test
     void customerServiceCanReopenBeforeClosureWhenCustomerReportsTheIssuePersists() {
         authenticate(UserRole.CUSTOMER_SERVICE, "customer-service", "Lê Thu CSKH");
         when(repository.findDetailed(WORK_ORDER_ID, TENANT_ID)).thenReturn(Optional.of(workOrder));

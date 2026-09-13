@@ -40,7 +40,6 @@ public class GeminiGateway {
             String systemInstruction,
             String userText,
             Map<String, Object> responseSchema,
-            double temperature,
             Duration readTimeout
     ) {
         if (!isConfigured()) {
@@ -51,7 +50,6 @@ public class GeminiGateway {
                 "systemInstruction", Map.of("parts", List.of(Map.of("text", systemInstruction))),
                 "contents", List.of(Map.of("role", "user", "parts", List.of(Map.of("text", userText)))),
                 "generationConfig", Map.of(
-                        "temperature", temperature,
                         "responseMimeType", "application/json",
                         "responseSchema", responseSchema
                 )
