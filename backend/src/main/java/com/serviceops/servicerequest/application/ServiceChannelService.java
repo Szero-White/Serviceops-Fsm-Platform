@@ -48,7 +48,7 @@ public class ServiceChannelService {
         channel.setCode(code);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
         repository.save(channel);
-        auditService.record("CREATE", "SERVICE_CHANNEL", channel.getId(), "Tạo kênh tiếp nhận " + channel.getCode());
+        auditService.record("CREATE", "SERVICE_CHANNEL", channel.getId(), "Tạo kênh tiếp nhận " + channel.getName());
         return toResponse(channel);
     }
 
@@ -57,7 +57,7 @@ public class ServiceChannelService {
         ServiceChannel channel = require(id);
         guardProtectedDemoChannel(channel);
         apply(channel, request.name(), request.description(), request.color(), request.sortOrder(), request.active());
-        auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getCode());
+        auditService.record("UPDATE", "SERVICE_CHANNEL", channel.getId(), "Cập nhật kênh tiếp nhận " + channel.getName());
         return toResponse(channel);
     }
 
@@ -70,7 +70,7 @@ public class ServiceChannelService {
             throw BusinessException.conflict("SERVICE_CHANNEL_IN_USE", "Không thể xóa kênh đã được dùng trong yêu cầu dịch vụ");
         }
         repository.delete(channel);
-        auditService.record("DELETE", "SERVICE_CHANNEL", channel.getId(), "Xóa kênh tiếp nhận " + channel.getCode());
+        auditService.record("DELETE", "SERVICE_CHANNEL", channel.getId(), "Xóa kênh tiếp nhận " + channel.getName());
     }
 
     public ServiceChannel requireActive(UUID tenantId, String code) {
@@ -86,7 +86,7 @@ public class ServiceChannelService {
         }
         throw BusinessException.forbidden(
                 "DEMO_SEED_PROTECTED",
-                "Kênh mặc định của public demo được bảo vệ. Hãy tạo kênh mới để thử đầy đủ chức năng CRUD"
+                "Kênh mặc định của bản dùng thử công khai được bảo vệ. Hãy tạo kênh mới để thử đầy đủ các thao tác quản lý"
         );
     }
 

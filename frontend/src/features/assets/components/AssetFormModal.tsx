@@ -69,9 +69,9 @@ export function AssetFormModal({
         </Form.Item>
         <div className="form-grid two-cols">
           <Form.Item label="Loại thiết bị" name="category" rules={[{ required: true, message: 'Nhập loại thiết bị' }]}><Input placeholder="Máy lạnh" /></Form.Item>
-          <Form.Item label="Serial number (không bắt buộc)" name="serialNumber"><Input placeholder="Có thể bổ sung sau khi xác minh tại hiện trường" /></Form.Item>
+          <Form.Item label="Số sê-ri (không bắt buộc)" name="serialNumber"><Input placeholder="Có thể bổ sung sau khi xác minh tại hiện trường" /></Form.Item>
           <Form.Item label="Hãng" name="brand"><Input placeholder="Daikin" /></Form.Item>
-          <Form.Item label="Model" name="model"><Input /></Form.Item>
+          <Form.Item label="Dòng / mẫu" name="model"><Input /></Form.Item>
           <Form.Item label="Ngày lắp đặt" name="installedAt"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item>
           <Form.Item label="Bảo hành đến" name="warrantyUntil"><DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" /></Form.Item>
         </div>

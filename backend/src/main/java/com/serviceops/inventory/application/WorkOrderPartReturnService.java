@@ -1,5 +1,6 @@
 package com.serviceops.inventory.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.inventory.domain.SparePart;
@@ -56,7 +57,7 @@ public class WorkOrderPartReturnService {
                 "WORK_ORDER",
                 workOrder.getId(),
                 "Hoàn trả " + WorkOrderPartStockService.formatQuantity(request.quantity()) + " " + part.getUnit()
-                        + " - " + part.getSku() + "; lý do: " + request.note().trim()
+                        + " - " + AuditDetailText.namedCode(part.getName(), part.getSku()) + "; lý do: " + request.note().trim()
         );
         return WorkOrderPartResponseMapper.toReturnableResponse(
                 workOrder,

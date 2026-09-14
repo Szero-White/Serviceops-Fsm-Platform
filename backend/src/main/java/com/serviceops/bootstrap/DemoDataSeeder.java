@@ -54,14 +54,14 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         Tenant tenant = new Tenant();
         tenant.setCode("DEMO");
-        tenant.setName("ServiceOps Demo Company");
+        tenant.setName("Công ty Dịch vụ Minh họa");
         tenant.setActive(true);
-        tenantRepository.save(tenant);
+        tenantRepository.saveAndFlush(tenant);
         demoDataFactory.seedServiceChannels(tenant);
 
         demoDataFactory.user(tenant, "owner", "Nguyễn Minh Quản", UserRole.OWNER);
         UserAccount dispatcher = demoDataFactory.user(tenant, "dispatcher", "Lê Thu Điều phối", UserRole.DISPATCHER);
-        UserAccount customerService = demoDataFactory.user(tenant, "customer-service", "Trần Mai CSKH", UserRole.CUSTOMER_SERVICE);
+        UserAccount customerService = demoDataFactory.user(tenant, "customer-service", "Trần Mai - Chăm sóc khách hàng", UserRole.CUSTOMER_SERVICE);
         UserAccount technicianUser = demoDataFactory.user(tenant, "technician", "Phạm Quốc Kỹ thuật", UserRole.TECHNICIAN);
         UserAccount technician2User = demoDataFactory.user(tenant, "technician-2", "Võ Hoàng Kỹ thuật", UserRole.TECHNICIAN);
         demoDataFactory.user(tenant, "warehouse", "Đặng Nam Kho", UserRole.WAREHOUSE_STAFF);
@@ -70,11 +70,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         TechnicianProfile technician2 = demoDataFactory.technician(tenant, technician2User, "0909765432", "Tủ lạnh, máy giặt, điện lạnh dân dụng");
 
         List<Customer> customers = new ArrayList<>();
-        customers.add(demoDataFactory.customer(tenant, "KH-0001", "Công ty TNHH An Phát", "0903001001", "contact@anphat.vn", "12 Nguyễn Văn Trỗi, Phú Nhuận"));
-        customers.add(demoDataFactory.customer(tenant, "KH-0002", "Cửa hàng Minh Anh", "0903001002", "minhanh@example.com", "45 Cộng Hòa, Tân Bình"));
-        customers.add(demoDataFactory.customer(tenant, "KH-0003", "Nguyễn Hoàng Nam", "0903001003", "nam.nguyen@example.com", "88 Lê Văn Sỹ, Quận 3"));
-        customers.add(demoDataFactory.customer(tenant, "KH-0004", "Văn phòng Sao Việt", "0903001004", "admin@saoviet.vn", "102 Điện Biên Phủ, Bình Thạnh"));
-        customers.add(demoDataFactory.customer(tenant, "KH-0005", "Nhà hàng Bếp Xanh", "0903001005", "bepxanh@example.com", "21 Nguyễn Thị Minh Khai, Quận 1"));
+        customers.add(demoDataFactory.customer(tenant, "Công ty TNHH An Phát", "0903001001", "contact@anphat.vn", "12 Nguyễn Văn Trỗi, Phú Nhuận"));
+        customers.add(demoDataFactory.customer(tenant, "Cửa hàng Minh Anh", "0903001002", "minhanh@example.com", "45 Cộng Hòa, Tân Bình"));
+        customers.add(demoDataFactory.customer(tenant, "Nguyễn Hoàng Nam", "0903001003", "nam.nguyen@example.com", "88 Lê Văn Sỹ, Quận 3"));
+        customers.add(demoDataFactory.customer(tenant, "Văn phòng Sao Việt", "0903001004", "admin@saoviet.vn", "102 Điện Biên Phủ, Bình Thạnh"));
+        customers.add(demoDataFactory.customer(tenant, "Nhà hàng Bếp Xanh", "0903001005", "bepxanh@example.com", "21 Nguyễn Thị Minh Khai, Quận 1"));
 
         Asset asset1 = demoDataFactory.asset(tenant, customers.get(0), "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", LocalDate.now().plusYears(1));
         Asset asset2 = demoDataFactory.asset(tenant, customers.get(1), "Máy lạnh", "Panasonic", "CU-PU12", "PN-CUPU12-0002", LocalDate.now().plusMonths(8));
@@ -117,11 +117,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         demoDataFactory.history(tenant, wo4, WorkOrderStatus.ON_THE_WAY, WorkOrderStatus.IN_PROGRESS, "Bắt đầu công việc", technicianUser);
         demoDataFactory.history(tenant, wo4, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.COMPLETED, "Hoàn tất công việc", technicianUser);
 
-        demoDataFactory.sparePart(tenant, "GAS-R32-1KG", "Gas lạnh R32", "kg", new BigDecimal("12.500"), new BigDecimal("3.000"), new BigDecimal("285000"));
-        demoDataFactory.sparePart(tenant, "CAP-35UF", "Tụ điện 35µF", "cái", new BigDecimal("8"), new BigDecimal("3"), new BigDecimal("145000"));
-        demoDataFactory.sparePart(tenant, "FILTER-AC-01", "Lưới lọc máy lạnh tiêu chuẩn", "cái", new BigDecimal("2"), new BigDecimal("3"), new BigDecimal("95000"));
-        demoDataFactory.sparePart(tenant, "SENSOR-TEMP-10K", "Cảm biến nhiệt độ 10K", "cái", new BigDecimal("15"), new BigDecimal("5"), new BigDecimal("120000"));
-        demoDataFactory.sparePart(tenant, "COPPER-6-10", "Ống đồng 6/10", "m", new BigDecimal("40"), new BigDecimal("10"), new BigDecimal("85000"));
+        demoDataFactory.sparePart(tenant, "Gas lạnh R32", "kg", new BigDecimal("12.500"), new BigDecimal("3.000"), new BigDecimal("285000"));
+        demoDataFactory.sparePart(tenant, "Tụ điện 35µF", "cái", new BigDecimal("8"), new BigDecimal("3"), new BigDecimal("145000"));
+        demoDataFactory.sparePart(tenant, "Lưới lọc máy lạnh tiêu chuẩn", "cái", new BigDecimal("2"), new BigDecimal("3"), new BigDecimal("95000"));
+        demoDataFactory.sparePart(tenant, "Cảm biến nhiệt độ 10K", "cái", new BigDecimal("15"), new BigDecimal("5"), new BigDecimal("120000"));
+        demoDataFactory.sparePart(tenant, "Ống đồng 6/10", "m", new BigDecimal("40"), new BigDecimal("10"), new BigDecimal("85000"));
 
         Notification notification = new Notification();
         notification.setTenantId(tenant.getId());
@@ -146,7 +146,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 "SEED",
                 "SYSTEM",
                 tenant.getId(),
-                "Khởi tạo dữ liệu demo local-first"
+                "Khởi tạo dữ liệu mẫu ban đầu"
         );
     }
 

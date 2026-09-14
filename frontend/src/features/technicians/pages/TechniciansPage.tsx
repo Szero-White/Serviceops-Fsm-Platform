@@ -121,7 +121,7 @@ export function TechniciansPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm tên, username, số điện thoại hoặc kỹ năng"
+          placeholder="Tìm tên, tên đăng nhập, số điện thoại hoặc kỹ năng"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -154,7 +154,7 @@ export function TechniciansPage() {
                 <div>
                   <Typography.Text strong>{record.name}</Typography.Text>
                   <Typography.Text type="secondary">
-                    @{record.username}{record.protectedDemo ? ' · Demo cố định' : ''}
+                    @{record.username}{record.protectedDemo ? ' · Tài khoản mẫu cố định' : ''}
                   </Typography.Text>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export function TechniciansPage() {
             fixed: 'right' as const,
             align: 'center' as const,
             render: (_, record) => canManageProfiles ? (
-              <Tooltip title={record.protectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Sửa hồ sơ kỹ thuật viên'}>
+              <Tooltip title={record.protectedDemo ? 'Tài khoản mẫu cố định được bảo vệ' : 'Sửa hồ sơ kỹ thuật viên'}>
                 <Button
                   aria-label="Sửa hồ sơ kỹ thuật viên"
                   type="text"
@@ -205,7 +205,7 @@ export function TechniciansPage() {
         destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
-          Username, mật khẩu và vai trò được quản lý tại Người dùng. Trạng thái Hoạt động/Tạm ngưng được đồng bộ hai chiều giữa hai màn hình.
+          Tên đăng nhập, mật khẩu và vai trò được quản lý tại màn Người dùng. Thay đổi trạng thái ở một trong hai màn hình sẽ tự cập nhật ở màn còn lại.
         </Typography.Paragraph>
 
         <Form

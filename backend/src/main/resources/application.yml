@@ -39,6 +39,8 @@ springdoc:
     persist-authorization: true
 
 serviceops:
+  business-code:
+    time-zone: ${BUSINESS_TIME_ZONE:Asia/Ho_Chi_Minh}
   jwt:
     issuer: serviceops-local
     access-token-minutes: 480

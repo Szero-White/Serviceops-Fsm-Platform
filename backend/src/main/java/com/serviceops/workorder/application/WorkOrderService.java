@@ -1,6 +1,8 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
@@ -27,6 +29,7 @@ import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderActivityResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistoryResponse;
+import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistorySummaryResponse;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -34,7 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +68,7 @@ public class WorkOrderService {
     );
 
     private final WorkOrderRepository repository;
+    private final BusinessCodeGenerator businessCodeGenerator;
     private final WorkOrderStatusHistoryRepository historyRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
     private final WorkOrderPartRequestService workOrderPartRequestService;
@@ -129,6 +132,23 @@ public class WorkOrderService {
         return PageResponse.from(result.map(w -> WorkOrderResponseMapper.toResponse(w, List.of())));
     }
 
+    @Transactional(readOnly = true)
+    public WorkOrderHistorySummaryResponse historySummary(String search) {
+        boolean technicianScoped = CurrentUser.hasRole("TECHNICIAN");
+        var summary = repository.summarizeHistory(
+                CurrentUser.tenantId(),
+                CurrentUser.userId(),
+                technicianScoped,
+                PageRequestSupport.normalizeSearch(search)
+        );
+        return new WorkOrderHistorySummaryResponse(
+                summary.getTotal(),
+                summary.getPendingClosure(),
+                summary.getClosed(),
+                summary.getCancelled()
+        );
+    }
+
     @Transactional
     public WorkOrderResponse convertServiceRequest(UUID serviceRequestId) {
         UUID tenantId = CurrentUser.tenantId();
@@ -145,7 +165,7 @@ public class WorkOrderService {
         entity.setServiceRequest(serviceRequest);
         entity.setCustomer(serviceRequest.getCustomer());
         entity.setAsset(serviceRequest.getAsset());
-        entity.setCode(nextCode());
+        entity.setCode(businessCodeGenerator.next(tenantId, BusinessCodeType.WORK_ORDER));
         entity.setSummary(serviceRequest.getTitle().trim());
         entity.setDescription(blankToNull(serviceRequest.getDescription()));
         entity.setPriority(serviceRequest.getPriority());
@@ -309,7 +329,7 @@ public class WorkOrderService {
                 workOrder.getStatus(),
                 blankToNull(request.note())
         );
-        auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous + " → " + workOrder.getStatus());
+        auditService.record("CHANGE_STATUS", "WORK_ORDER", workOrder.getId(), previous.displayName() + " → " + workOrder.getStatus().displayName());
         workOrderPartRequestService.expirePendingRequests(workOrder);
         WorkOrderNotificationSupport.notifyStatusChange(notificationService, workOrder, blankToNull(request.note()), statusHistory);
         return get(id);
@@ -336,12 +356,6 @@ public class WorkOrderService {
                 ? repository.findDetailedAssigned(id, CurrentUser.tenantId(), CurrentUser.userId())
                 : repository.findDetailed(id, CurrentUser.tenantId());
         return workOrder.orElseThrow(() -> BusinessException.notFound("WORK_ORDER_NOT_FOUND", "Không tìm thấy phiếu công việc"));
-    }
-
-    private String nextCode() {
-        long number = repository.nextNumber();
-        int year = Instant.now().atZone(ZoneOffset.UTC).getYear();
-        return "WO-%d-%06d".formatted(year, number);
     }
 
     private WorkOrderStatusHistory addHistory(WorkOrder workOrder, WorkOrderStatus from, WorkOrderStatus to, String note) {

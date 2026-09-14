@@ -54,7 +54,9 @@ class AiHelpKnowledgeBaseScopeTest {
         );
 
         assertThat(decision.allowed()).isFalse();
-        assertThat(decision.refusalReason()).contains("secret");
+        assertThat(decision.refusalReason())
+                .contains("thông tin bảo mật")
+                .doesNotContain("secret", "API key", "system prompt");
     }
 
     @Test
@@ -146,8 +148,10 @@ class AiHelpKnowledgeBaseScopeTest {
         assertThat(decision.topic().route()).isEqualTo("/inventory");
         assertThat(decision.topic().answer())
                 .contains("Ngưỡng tồn tối thiểu")
-                .contains("OWNER/WAREHOUSE_STAFF")
-                .contains("tồn thấp");
+                .contains("Chủ sở hữu")
+                .contains("Nhân viên kho")
+                .contains("tồn thấp")
+                .doesNotContain("OWNER", "WAREHOUSE_STAFF");
     }
 
     @Test
@@ -161,7 +165,9 @@ class AiHelpKnowledgeBaseScopeTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/inventory-stocktake");
-        assertThat(decision.topic().answer()).contains("ADJUSTMENT");
+        assertThat(decision.topic().answer())
+                .contains("điều chỉnh tăng hoặc giảm")
+                .doesNotContain("ADJUSTMENT");
     }
 
     @Test
@@ -176,10 +182,10 @@ class AiHelpKnowledgeBaseScopeTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/inventory-stocktake");
         assertThat(decision.topic().answer())
-                .contains("OWNER")
-                .contains("Warehouse")
-                .contains("Technician")
-                .contains("Yêu cầu phụ tùng");
+                .contains("Chủ sở hữu")
+                .contains("Nhân viên kho")
+                .contains("Yêu cầu phụ tùng")
+                .doesNotContain("OWNER", "Warehouse", "Technician", "TECHNICIAN");
     }
 
     @Test
@@ -195,8 +201,8 @@ class AiHelpKnowledgeBaseScopeTest {
         assertThat(decision.topic().route()).isEqualTo("/inventory-movements");
         assertThat(decision.topic().answer())
                 .contains("tồn sau")
-                .contains("kỹ thuật viên nhận / trả")
-                .contains("nhân viên kho thực hiện giao dịch")
+                .contains("kỹ thuật viên nhận hoặc trả")
+                .contains("người thực hiện")
                 .doesNotContain("snapshot");
     }
 
@@ -213,7 +219,8 @@ class AiHelpKnowledgeBaseScopeTest {
         assertThat(decision.topic().route()).isEqualTo("/part-requests");
         assertThat(decision.topic().answer())
                 .contains("Vật tư đang do kỹ thuật viên giữ")
-                .contains("RETURN");
+                .contains("Hoàn trả")
+                .doesNotContain("RETURN");
     }
 
     @Test
@@ -245,8 +252,9 @@ class AiHelpKnowledgeBaseScopeTest {
                 .contains("yêu cầu dịch vụ")
                 .contains("điều phối")
                 .contains("kiểm kê")
-                .contains("audit")
-                .contains("không giả lập field progress");
+                .contains("nhật ký hệ thống")
+                .contains("chủ yếu giám sát")
+                .doesNotContain("audit", "field progress");
     }
 
 }

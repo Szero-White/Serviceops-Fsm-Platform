@@ -62,3 +62,7 @@
 | Client gửi request ID độc hại | Header được whitelist ký tự/độ dài, nếu không hợp lệ sẽ tạo UUID mới |
 | DB rollback sau khi ghi file | Rollback cleanup; delete physical file sau DB commit |
 | Public demo bị phá dữ liệu | Service policy bảo vệ seeded demo identities và system-defined service channels; dữ liệu do recruiter tạo vẫn CRUD theo RBAC để demo đầy đủ chức năng |
+
+## Presentation disclosure boundary
+
+Ngôn ngữ hiển thị là một phần của information-disclosure boundary. UI, notification và AI response không được render trực tiếp enum/code nội bộ, tên lớp, stack trace, SQL, credential state hoặc provider diagnostics. Các identifier kỹ thuật vẫn được giữ ổn định trong domain/API để bảo toàn contract và khả năng bảo trì; presentation layer chịu trách nhiệm chuyển sang nhãn nghiệp vụ trước khi đến người dùng.

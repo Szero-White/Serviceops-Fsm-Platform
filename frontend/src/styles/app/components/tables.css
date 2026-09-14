@@ -183,9 +183,19 @@
 }
 
 .audit-entity-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--app-text-secondary);
   font-size: var(--app-type-body);
   font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Audit labels can be verbose. Fixed column geometry keeps one cell from painting over the next. */
+.audit-table .ant-table-cell {
+  overflow: hidden;
 }
 
 .table-muted-text {

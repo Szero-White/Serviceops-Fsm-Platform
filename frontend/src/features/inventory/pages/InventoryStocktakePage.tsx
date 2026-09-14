@@ -69,11 +69,11 @@ export function InventoryStocktakePage() {
       <PageHeader
         title="Kiểm kê tồn kho"
         description="Đối chiếu số lượng trên hệ thống với số lượng thực tế và ghi nhận chênh lệch có lý do."
-        meta={<><MetaBadge>{data?.totalElements ?? 0} SKU</MetaBadge><MetaBadge tone="info">Có audit trail</MetaBadge></>}
+        meta={<><MetaBadge>{data?.totalElements ?? 0} phụ tùng</MetaBadge><MetaBadge tone="info">Có nhật ký thay đổi</MetaBadge></>}
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên hoặc đơn vị phụ tùng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phụ tùng, tên hoặc đơn vị" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       </div>
 
       {partsQuery.isError && <QueryErrorAlert title="Chưa tải được dữ liệu kiểm kê" error={partsQuery.error} onRetry={() => partsQuery.refetch()} />}

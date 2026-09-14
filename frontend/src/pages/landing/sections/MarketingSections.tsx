@@ -19,8 +19,8 @@ export function StatsSection() {
       <div className="lp-container">
         <SectionHeader
           tag="Năng lực nền tảng"
-          title="Đủ chiều sâu kỹ thuật để review như một sản phẩm thật"
-          sub="Các con số dưới đây phản ánh chính repository và acceptance gate hiện tại, không phải số liệu marketing giả lập."
+          title="Đủ rõ ràng để đánh giá như một sản phẩm vận hành thật"
+          sub="Các thông tin dưới đây phản ánh đúng phạm vi hệ thống đang vận hành, không dùng số liệu quảng bá chưa được kiểm chứng."
         />
         <h2 id="stats-heading" className="lp-visually-hidden">Năng lực nền tảng</h2>
         <dl className="lp-stats-grid">
@@ -43,8 +43,8 @@ export function FeaturesSection() {
       <div className="lp-container">
         <SectionHeader
           tag="Tính năng"
-          title="Một luồng vận hành thống nhất thay vì các màn CRUD rời rạc"
-          sub="ServiceOps liên kết tiếp nhận, tài sản, phiếu công việc, lịch kỹ thuật viên, phụ tùng, audit và phân quyền trong cùng một domain flow."
+          title="Một luồng vận hành thống nhất thay vì nhiều màn hình rời rạc"
+          sub="ServiceOps liên kết tiếp nhận, thiết bị, phiếu công việc, lịch kỹ thuật viên, phụ tùng, nhật ký hệ thống và phân quyền trong cùng một quy trình."
         />
 
         <Row gutter={[20, 20]}>
@@ -101,7 +101,7 @@ export function OperationalScenariosSection() {
         <SectionHeader
           tag="Kịch bản sử dụng"
           title="Mỗi vai trò nhìn thấy đúng phần việc của mình"
-          sub="Thay vì dùng testimonial hoặc số liệu khách hàng chưa được kiểm chứng, landing page mô tả trực tiếp các kịch bản có thể chạy trong demo."
+          sub="Phần này mô tả trực tiếp các kịch bản có thể trải nghiệm trong bản dùng thử, không dùng lời chứng thực hoặc số liệu chưa được kiểm chứng."
         />
         <h2 id="scenarios-heading" className="lp-visually-hidden">Kịch bản sử dụng</h2>
 
@@ -129,14 +129,14 @@ export function IntegrationsSection() {
         <div className="lp-integrations-grid">
           <div className="lp-integrations-copy">
             <SectionHeader
-              tag="Nền tảng kỹ thuật"
-              title="Tích hợp những gì repository thực sự đang có"
-              sub="REST API, PostgreSQL, Docker/Nginx và observability được trình bày đúng phạm vi hiện tại; connector bên thứ ba chỉ nên thêm khi có use case thật."
+              tag="Khả năng vận hành"
+              title="Những năng lực đang được hỗ trợ trong hệ thống"
+              sub="Hệ thống ưu tiên kết nối dữ liệu nhất quán, lưu trữ có kiểm soát, triển khai ổn định và theo dõi tình trạng hoạt động; chỉ mở rộng khi có nhu cầu thật."
               align="left"
             />
             <Link to="/login">
               <Button type="primary" size="large" icon={<ArrowRightOutlined />}>
-                Vào ứng dụng demo
+                Vào bản dùng thử
               </Button>
             </Link>
           </div>

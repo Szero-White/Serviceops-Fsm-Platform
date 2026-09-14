@@ -121,12 +121,12 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       const values = await renameForm.validateFields()
       setRenaming(true)
       await attachmentsApi.rename(renameFile.id, values.originalFilename)
-      message.success('Đã đổi tên file đính kèm')
+      message.success('Đã đổi tên tệp đính kèm')
       closeRename()
       onChanged?.()
     } catch (error) {
       if (isFormValidationError(error)) {
-        message.warning('Vui lòng nhập tên file trước khi lưu')
+        message.warning('Vui lòng nhập tên tệp trước khi lưu')
         return
       }
       message.error(apiErrorMessage(error))
@@ -142,7 +142,7 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       if (previewFile?.id === file.id) {
         closePreview()
       }
-      message.success('Đã xóa file đính kèm')
+      message.success('Đã xóa tệp đính kèm')
       onChanged?.()
     } catch (error) {
       message.error(apiErrorMessage(error))
@@ -184,8 +184,8 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                       </Button>,
                       <Popconfirm
                         key="delete"
-                        title="Xóa file đính kèm này?"
-                        description="File sẽ bị xóa khỏi phiếu công việc và không còn tải xuống được."
+                        title="Xóa tệp đính kèm này?"
+                        description="Tệp sẽ bị xóa khỏi phiếu công việc và không còn tải xuống được."
                         okText="Xóa"
                         cancelText="Giữ lại"
                         okButtonProps={{ danger: true, loading: deletingId === item.id }}
@@ -249,14 +249,14 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
                 title={previewFile.originalFilename}
               />
             ) : (
-              <Empty description="Không thể xem loại file này" />
+              <Empty description="Không thể xem loại tệp này" />
             )}
           </div>
         )}
       </Modal>
 
       <Modal
-        title="Đổi tên file đính kèm"
+        title="Đổi tên tệp đính kèm"
         open={Boolean(renameFile)}
         onCancel={closeRename}
         onOk={handleRename}
@@ -267,11 +267,11 @@ export function AttachmentList({ attachments, onChanged }: AttachmentListProps) 
       >
         <Form form={renameForm} layout="vertical" requiredMark>
           <Form.Item
-            label="Tên file hiển thị"
+            label="Tên tệp hiển thị"
             name="originalFilename"
             rules={[
-              { required: true, message: 'Nhập tên file' },
-              { max: 255, message: 'Tên file không được vượt quá 255 ký tự' },
+              { required: true, message: 'Nhập tên tệp' },
+              { max: 255, message: 'Tên tệp không được vượt quá 255 ký tự' },
             ]}
           >
             <Input placeholder="Ví dụ: Bien-ban-nghiem-thu.pdf" />

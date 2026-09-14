@@ -20,7 +20,7 @@ const { RangePicker } = DatePicker
 const TYPE_LABELS: Record<InventoryTransactionType, string> = {
   IMPORT: 'Nhập kho',
   ISSUE: 'Cấp cho kỹ thuật viên',
-  CONSUME: 'Sử dụng (legacy)',
+  CONSUME: 'Sử dụng phụ tùng',
   RETURN: 'Hoàn trả',
   ADJUSTMENT_IN: 'Điều chỉnh tăng',
   ADJUSTMENT_OUT: 'Điều chỉnh giảm',
@@ -68,7 +68,7 @@ export function InventoryMovementsPage() {
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên, mã WO, KTV nhận / trả, người thực hiện hoặc mục đích" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phụ tùng, tên, mã phiếu, kỹ thuật viên, người thực hiện hoặc ghi chú" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         <CheckboxFilterSelect placeholder="Loại giao dịch" ariaLabel="Lọc loại giao dịch kho" value={types} onChange={(value) => setTypes(value as InventoryTransactionType[])} minWidth={220} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} />
         <RangePicker value={period} onChange={(value) => setPeriod(value as [Dayjs, Dayjs] | null)} format="DD/MM/YYYY" />
       </div>

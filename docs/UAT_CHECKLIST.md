@@ -75,7 +75,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | INV-04C | Technician sửa actual used từ 6 thành 8 rồi chuyển sang tab **Chi phí** | Billing draft hiển thị quantity/thành tiền theo 8 ngay sau khi lưu, không cần F5; stock không giảm lần hai |
 | INV-05 | Warehouse mở **Yêu cầu phụ tùng → Vật tư đang do kỹ thuật viên giữ**, hoàn 1 part sau ISSUE 3 và USED 2 | Tồn tăng 1; ledger tạo `RETURN` và snapshot đúng kỹ thuật viên trả; outstanding về 0; dòng không còn xuất hiện trong hàng đợi; thử hoàn quá outstanding nhận HTTP 409 |
 | INV-05A | Warehouse hoàn outstanding sau khi WO đã `CLOSED` | RETURN thành công, stock tăng, WO vẫn `CLOSED`, không reopen |
-| INV-06 | Warehouse mở Lịch sử biến động và filter SKU/WO/type/date hoặc tên KTV nhận / trả | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự; ledger là read-only, không còn nút Hoàn trả; cùng một cột **Kỹ thuật viên nhận / trả** hiển thị người nhận trên `ISSUE`, người trả trên `RETURN`, tách biệt với **Người thực hiện**, và giữ đúng snapshot lịch sử |
+| INV-06 | Warehouse mở Lịch sử biến động và lọc mã phụ tùng/WO/loại/ngày hoặc tên KTV nhận / trả | Thấy IMPORT/ISSUE/RETURN/CONSUME legacy/ADJUSTMENT đúng thứ tự; ledger là read-only, không còn nút Hoàn trả; cùng một cột **Kỹ thuật viên nhận / trả** hiển thị người nhận trên `ISSUE`, người trả trên `RETURN`, tách biệt với **Người thực hiện**, và giữ đúng snapshot lịch sử |
 | INV-07 | Warehouse kiểm kê part: system 10, actual 8 | Tồn thành 8; tạo `ADJUSTMENT_OUT 2` với reason/actor và `balanceAfter=8`; Owner nhận notification chênh lệch sau commit; nếu tồn `<= reorderLevel` (ngưỡng tồn tối thiểu), Warehouse nhận cảnh báo tồn thấp |
 | INV-08 | Warehouse/Owner sửa ngưỡng tồn tối thiểu từ 3 lên 6 khi stock hiện tại = 5 | Stock vẫn = 5; `reorderLevel=6`; không tạo inventory transaction; có audit `UPDATE_REORDER_LEVEL`; vì trạng thái chuyển từ bình thường sang tồn thấp nên WAREHOUSE_STAFF khác người thao tác nhận notification sau commit; OWNER không nhận low-stock vận hành |
 | FILE-01 | Upload JPG/PNG/WEBP/PDF dưới 10 MB | File lưu và tải lại được |
@@ -90,6 +90,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | AUD-02 | Owner mở Nhật ký hệ thống | Mặc định 30 ngày gần nhất, 20 dòng/trang, mới nhất trước; role khác không có quyền truy cập |
 | AUD-03 | Lọc theo ngày / người thao tác / hành động / đối tượng | Backend chỉ trả dữ liệu phù hợp và tổng số bản ghi đúng |
 | AUD-04 | Tìm theo nội dung hoặc mã nghiệp vụ có trong chi tiết audit | Kết quả phù hợp, đổi bộ lọc quay về trang đầu |
+| AUD-05 | Tạo/yêu cầu/cấp/sử dụng/hoàn trả phụ tùng rồi mở Nhật ký hệ thống; đồng thời xem log upload bằng chứng | Chi tiết phụ tùng hiển thị **Tên phụ tùng (Mã phụ tùng)** thay vì chỉ mã; mục đích tệp hiển thị bằng tiếng Việt như **Bằng chứng thanh toán/Bằng chứng công việc**; log khách hàng/người dùng ưu tiên tên dễ nhận biết kèm mã/tên đăng nhập để truy vết; mã phiếu/biên nhận đứng riêng có nhãn nghiệp vụ thay vì chỉ hiện tiền tố kỹ thuật |
 | SEARCH-01 | Tìm ở Khách hàng / Thiết bị / Yêu cầu / Phiếu / Lịch sử / Kho | Chờ debounce ngắn, backend trả đúng kết quả và tổng số bản ghi; không tải toàn bộ danh sách về browser |
 | SEARCH-02 | Từ trang > 1 rồi đổi từ khóa hoặc trạng thái | Tự quay về trang 1; không xuất hiện trang rỗng giả do page cũ vượt tổng trang mới |
 | SEARCH-03 | Duyệt danh sách có hơn 20 bản ghi | Chỉ hiển thị 20 dòng/trang, Next/Previous lấy đúng page từ backend, tổng số bản ghi giữ chính xác |
@@ -99,7 +100,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | SEARCH-06A | Làm lỗi API dữ liệu phụ trợ (chi tiết WO, kỹ thuật viên, phụ tùng, khách hàng/kênh/thiết bị hoặc schedule board) | UI hiển thị lỗi có hướng dẫn/Thử lại thay vì render select hoặc drawer rỗng gây hiểu nhầm |
 | SEARCH-07 | Tìm ở Người dùng / Kỹ thuật viên / Kênh tiếp nhận | Lọc tức thời trên tập dữ liệu nhỏ đã tải, page size 20 và lỗi API có trạng thái Thử lại nhất quán |
 | SEARCH-08 | Tenant có nhiều hơn một page khách hàng; mở Thêm thiết bị hoặc Tiếp nhận yêu cầu rồi gõ mã/tên của khách không nằm ở page đầu | Selector debounce và gọi server search; khách phù hợp xuất hiện mà không phụ thuộc first-100/first-page |
-| SEARCH-09 | Khách có nhiều thiết bị hoặc catalog có nhiều phụ tùng; tìm serial/model trong form Service Request và SKU/tên trong Yêu cầu phụ tùng của Work Order | Selector remote-search trả đúng item ngoài page đầu; item đang được edit vẫn hiển thị dù không thuộc page search hiện tại |
+| SEARCH-09 | Khách có nhiều thiết bị hoặc catalog có nhiều phụ tùng; tìm số sê-ri/dòng thiết bị trong biểu mẫu yêu cầu dịch vụ và mã/tên phụ tùng trong Yêu cầu phụ tùng của phiếu công việc | Selector remote-search trả đúng item ngoài page đầu; item đang được edit vẫn hiển thị dù không thuộc page search hiện tại |
 | DEV-DB-01 | Chạy `scripts/reset-local-db.ps1` với host local và database có dữ liệu | Script kiểm target role có `LOGIN`, admin có `SUPERUSER/CREATEDB` + quyền sở hữu phù hợp trước khi drop, backup + verify archive, yêu cầu confirm đúng tên DB, force-close connection local rồi recreate DB; sau `dev-start.ps1` Flyway chạy V1→latest và demo seed trở lại |
 | WO-ROLE-01 | Owner mở Work Order `COMPLETED` | Chỉ giám sát dữ liệu; không có action Khách xác nhận/actual-used/payment settlement/đóng phiếu thay role phụ trách |
 | WO-ROLE-02 | Assigned Technician mở Work Order `COMPLETED` bằng icon mắt | Có nút **Khách xác nhận** cạnh **Tải ảnh / PDF**; bấm thành công → `CUSTOMER_ACCEPTED` |
@@ -107,7 +108,7 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | WO-ROLE-04 | Mở bộ lọc trạng thái ở trang Phiếu công việc | Không có `Đã đóng/Đã hủy`; hai trạng thái terminal chỉ tra cứu ở **Lịch sử phiếu** |
 | WO-NOTIF-01 | Technician hoàn thành Work Order | Customer Service nhận **Cần theo dõi khách sau sửa chữa: WO-...**; body có tên Technician + summary + khách hàng + bước follow-up; Owner không nhận completion bình thường |
 | WO-NOTIF-02 | Work Order sang `WAITING_FOR_PARTS` | Dispatcher nhận **Phiếu đang chờ phụ tùng: WO-...** và hướng dẫn phối hợp với kho |
-| PART-NOTIF-01 | Assigned Technician tạo `REQUEST` phụ tùng | Warehouse nhận **Có yêu cầu phụ tùng mới: WO-...** với Technician + SKU/tên part + quantity và hướng dẫn mở **Yêu cầu phụ tùng**; Owner không nhận routine part-request bell |
+| PART-NOTIF-01 | Assigned Technician tạo `REQUEST` phụ tùng | Warehouse nhận **Có yêu cầu phụ tùng mới: WO-...** với Kỹ thuật viên + mã/tên phụ tùng + số lượng và hướng dẫn mở **Yêu cầu phụ tùng**; Owner không nhận routine part-request bell |
 | WO-NOTIF-03 | Work Order `CLOSED` | Owner (trừ actor) nhận đúng 1 terminal summary **Phiếu đã hoàn tất: WO-...**; assigned Technician vẫn nhận khi người khác đóng phiếu thay |
 | WO-NOTIF-03A | Work Order `REOPENED` bởi role khác CSKH | Dispatcher (trừ actor) nhận **Phiếu cần xử lý lại: WO-...**; assigned Technician nhận **Công việc cần xử lý lại: WO-...** nếu không phải actor; Customer Service nhận **Phiếu cần theo dõi lại: WO-...**; OWNER không nhận; body có actor + khách hàng + lý do |
 | WO-NOTIF-03B | Work Order `CANCELLED` bởi Owner/Dispatcher/Technician | Owner (trừ actor) nhận 1 terminal summary; assigned Technician nhận thông báo dừng công việc nếu không phải actor; Customer Service nhận **Phiếu đã hủy, cần cập nhật khách hàng: WO-...** và được hướng dẫn mở **Lịch sử phiếu**, không quay lại hàng đợi active |
@@ -156,3 +157,25 @@ Dùng checklist này trước mỗi bản demo hoặc bàn giao thử nghiệm.
 | TIMELINE-01 | Mở timeline của WO hoàn chỉnh | Theo thời gian thấy REQUEST → ISSUE → USED → COMPLETED → CUSTOMER_ACCEPTED → payment reported → SETTLED → receipt → CLOSED; RETURN sau CLOSED vẫn xuất hiện và WO không reopen |
 | BUILD-01 | Chạy backend test | Build success |
 | BUILD-02 | Chạy frontend lint/build | Build success |
+
+## Kiểm tra ngôn ngữ hiển thị cho người dùng
+
+| ID | Tình huống | Kết quả mong đợi |
+|---|---|---|
+| LANG-01 | Chủ sở hữu mở Nhật ký hệ thống có dữ liệu cũ và mới | Hành động, đối tượng, trạng thái và vai trò hiển thị bằng tiếng Việt nghiệp vụ; không lộ mã enum hoặc UUID dài làm nội dung chính |
+| LANG-02 | Mở thông báo mới và thông báo lịch sử | Nội dung dùng cách gọi nhất quán như Phiếu công việc, Kỹ thuật viên, Nhân viên kho, Đã hoàn thành; không hiển thị mã trạng thái nội bộ |
+| LANG-03 | Hỏi Trợ lý AI về quy trình phiếu, kho hoặc thanh toán | Câu trả lời và các bước hướng dẫn dùng ngôn ngữ nghiệp vụ; enum, tên vai trò nội bộ và thuật ngữ kỹ thuật được chuyển đổi trước khi trả ra giao diện |
+| LANG-04 | Xuất mẫu/tệp dữ liệu rồi nhập lại | Tiêu đề tệp mới dùng tiếng Việt dễ hiểu; hệ thống vẫn nhận tiêu đề cũ để giữ tương thích dữ liệu |
+| LANG-05 | Backend trả lỗi validation hoặc lỗi hạ tầng | Người dùng nhận thông báo an toàn, dễ hiểu; không lộ stack trace, tên lớp, SQL, cấu hình, mã provider hoặc chi tiết kết nối |
+
+## Chuẩn hóa mã nghiệp vụ
+
+| ID | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| CODE-01 | Tạo nhiều khách hàng trong cùng ngày | Mã lần lượt `KH-YYYYMMDD-001`, `...002` theo tenant/ngày; người dùng không nhập mã |
+| CODE-02 | Tạo Work Order từ Service Request | Backend cấp `WO-YYYYMMDD-NNN`; UUID/FK và workflow conversion giữ nguyên |
+| CODE-03 | Phát hành receipt sau `SETTLED` | Receipt idempotent và có mã `BN-YYYYMMDD-NNN` |
+| CODE-04 | Warehouse tạo nhiều phụ tùng | Backend cấp `PT-YYYYMMDD-NNN`; không yêu cầu nhập mã phụ tùng thủ công |
+| CODE-05 | Import CSV customer/spare part bằng template mới và file format cũ có cột mã | Cả hai đọc được; mã từ file cũ không được dùng để override generator |
+| CODE-06 | Hai request tạo cùng loại mã đồng thời | Không trùng mã; unique constraint giữ nguyên và counter tăng atomically |
+| HIST-COUNT-01 | Mở Lịch sử phiếu, nhập từ khóa tìm kiếm | Bốn badge Tổng/Chờ hoàn tất/Đã đóng/Đã hủy khớp dữ liệu theo cùng search + role scope |

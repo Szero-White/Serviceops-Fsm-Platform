@@ -77,7 +77,7 @@ export function ServiceRequestFormModal({ open, editing, onClose, onSaved }: Ser
   const assetOptions = useMemo(() => {
     const options = (assetsQuery.data?.content ?? []).map((asset) => ({
       value: asset.id,
-      label: `${asset.serialNumber ?? 'Chưa xác định serial'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
+      label: `${asset.serialNumber ?? 'Chưa xác định số sê-ri'} · ${[asset.brand, asset.model].filter(Boolean).join(' ') || asset.category}`,
     }))
     if (editing?.assetId && editing.customerId === watchedCustomerId && !options.some((option) => option.value === editing.assetId)) {
       return [{ value: editing.assetId, label: `${editing.assetLabel ?? 'Thiết bị hiện tại'} · Thiết bị hiện tại` }, ...options]
@@ -182,7 +182,7 @@ export function ServiceRequestFormModal({ open, editing, onClose, onSaved }: Ser
               filterOption={false}
               disabled={!watchedCustomerId}
               loading={assetsQuery.isFetching}
-              placeholder={watchedCustomerId ? 'Tìm serial, hãng hoặc model' : 'Chọn khách hàng trước'}
+              placeholder={watchedCustomerId ? 'Tìm số sê-ri, hãng hoặc mẫu' : 'Chọn khách hàng trước'}
               notFoundContent={watchedCustomerId && !assetsQuery.isFetching ? 'Không tìm thấy thiết bị phù hợp' : undefined}
               onSearch={setAssetSearchInput}
               options={assetOptions}

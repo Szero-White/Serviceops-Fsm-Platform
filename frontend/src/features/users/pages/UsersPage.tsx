@@ -19,7 +19,7 @@ import { compareDate, compareNumber, compareText } from '../../../utils/tableSor
 import { UserFormModal } from '../components/UserFormModal'
 
 const roleDescriptions: Record<UserRole, string> = {
-  OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và audit.',
+  OWNER: 'Quản trị hệ thống, người dùng, dữ liệu nghiệp vụ, điều phối, kho và nhật ký hệ thống.',
   DISPATCHER: 'Điều phối phiếu công việc, phân công và theo dõi lịch kỹ thuật viên.',
   CUSTOMER_SERVICE: 'Tiếp nhận yêu cầu, quản lý khách hàng và thiết bị.',
   TECHNICIAN: 'Xem việc được giao, cập nhật tiến độ, ghi nhận vật tư và bằng chứng.',
@@ -179,7 +179,7 @@ export function UsersPage() {
       <PageHeader
         eyebrow="Quản trị truy cập"
         title="Người dùng & phân quyền"
-        description="OWNER tạo tài khoản cho nhân sự, phân vai trò theo trách nhiệm và kiểm soát trạng thái truy cập."
+        description="Chủ sở hữu tạo tài khoản cho nhân sự, phân vai trò theo trách nhiệm và kiểm soát trạng thái truy cập."
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={showCreate}>Thêm người dùng</Button>}
         meta={
           <>
@@ -199,7 +199,7 @@ export function UsersPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm tên, username, vai trò, điện thoại hoặc kỹ năng"
+          placeholder="Tìm tên, tên đăng nhập, vai trò, điện thoại hoặc kỹ năng"
           value={search}
           onChange={(event) => {
             setSearch(event.target.value)
@@ -245,7 +245,7 @@ export function UsersPage() {
               <div className="table-primary-cell">
                 <Typography.Text strong>{record.displayName}</Typography.Text>
                 <Typography.Text type="secondary">
-                  @{record.username}{record.protectedDemo ? ' · Demo cố định' : ''}
+                  @{record.username}{record.protectedDemo ? ' · Tài khoản mẫu cố định' : ''}
                 </Typography.Text>
               </div>
             ),
@@ -270,14 +270,14 @@ export function UsersPage() {
                     type="text"
                     icon={<EditOutlined />}
                     disabled={isProtectedDemo}
-                    title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Sửa người dùng'}
+                    title={isProtectedDemo ? 'Tài khoản mẫu cố định được bảo vệ' : 'Sửa người dùng'}
                     onClick={() => showEdit(record)}
                   />
                   <Popconfirm
-                    title={isProtectedDemo ? 'Tài khoản demo cố định' : 'Xóa người dùng này?'}
+                    title={isProtectedDemo ? 'Tài khoản mẫu cố định' : 'Xóa người dùng này?'}
                     description={
                       isProtectedDemo
-                        ? 'Tài khoản này cần được giữ nguyên để bảo đảm luồng public demo luôn hoạt động.'
+                        ? 'Tài khoản này cần được giữ nguyên để bảo đảm bản dùng thử công khai luôn hoạt động.'
                         : isSelf
                           ? 'Không thể xóa tài khoản đang đăng nhập.'
                           : 'Chỉ xóa được khi người dùng chưa bị ràng buộc dữ liệu vận hành.'
@@ -296,7 +296,7 @@ export function UsersPage() {
                       type="text"
                       danger
                       disabled={deleteBlocked}
-                      title={isProtectedDemo ? 'Tài khoản demo cố định được bảo vệ' : 'Xóa người dùng'}
+                      title={isProtectedDemo ? 'Tài khoản mẫu cố định được bảo vệ' : 'Xóa người dùng'}
                       icon={<DeleteOutlined />}
                     />
                   </Popconfirm>

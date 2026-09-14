@@ -16,7 +16,6 @@ public final class InventoryDtos {
     }
 
     public record SparePartRequest(
-            @NotBlank @Size(max = 60) String sku,
             @NotBlank @Size(max = 180) String name,
             @NotBlank @Size(max = 30) String unit,
             @NotNull @DecimalMin("0.0") BigDecimal initialStock,

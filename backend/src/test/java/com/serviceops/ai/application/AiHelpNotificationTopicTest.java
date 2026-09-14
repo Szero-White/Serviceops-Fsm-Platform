@@ -30,10 +30,11 @@ class AiHelpNotificationTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("CLOSED/CANCELLED")
-                .contains("chênh lệch kiểm kê")
-                .contains("không nhận routine")
-                .contains("Audit");
+                .contains("đã đóng")
+                .contains("đã hủy")
+                .contains("kiểm kê có chênh lệch")
+                .contains("việc vận hành thường ngày")
+                .doesNotContain("CLOSED", "CANCELLED", "routine", "Audit");
     }
 
     @Test
@@ -85,7 +86,7 @@ class AiHelpNotificationTopicTest {
         assertThat(decision.topic().answer())
                 .contains("yêu cầu phụ tùng mới")
                 .contains("tồn thấp")
-                .contains("không nhận notification về")
+                .contains("không nhận thông báo về")
                 .doesNotContain("SETTLED")
                 .doesNotContain("phát hành biên nhận");
     }

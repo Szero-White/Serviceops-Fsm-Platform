@@ -6,6 +6,7 @@ import com.serviceops.workorder.domain.WorkOrderStatus;
 import com.serviceops.workorder.web.WorkOrderDtos.ScheduleWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.TransitionWorkOrder;
 import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderResponse;
+import com.serviceops.workorder.web.WorkOrderDtos.WorkOrderHistorySummaryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -47,6 +48,12 @@ public class WorkOrderController {
                                                    @RequestParam(defaultValue = "createdAt") String sortBy,
                                                    @RequestParam(defaultValue = "desc") String sortDir) {
         return service.history(search, status, page, size, sortBy, sortDir);
+    }
+
+    @GetMapping("/history/summary")
+    @PreAuthorize("hasAnyRole('OWNER','DISPATCHER','CUSTOMER_SERVICE','TECHNICIAN')")
+    public WorkOrderHistorySummaryResponse historySummary(@RequestParam(defaultValue = "") String search) {
+        return service.historySummary(search);
     }
 
     @GetMapping("/{id}")

@@ -1,6 +1,7 @@
 package com.serviceops.workorder.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
 import com.serviceops.common.domain.Priority;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.inventory.domain.InventoryTransaction;
@@ -43,6 +44,7 @@ class WorkOrderActivityDetailTest {
     private static final UUID WORK_ORDER_ID = UUID.randomUUID();
 
     @Mock private WorkOrderRepository repository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private WorkOrderStatusHistoryRepository historyRepository;
     @Mock private InventoryTransactionRepository inventoryTransactionRepository;
     @Mock private WorkOrderPartRequestService workOrderPartRequestService;
@@ -59,6 +61,7 @@ class WorkOrderActivityDetailTest {
         authenticateOwner();
         service = new WorkOrderService(
                 repository,
+                businessCodeGenerator,
                 historyRepository,
                 inventoryTransactionRepository,
                 workOrderPartRequestService,

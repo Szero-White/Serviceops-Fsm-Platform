@@ -12,21 +12,21 @@ export function CtaBanner() {
           Xem ServiceOps như một luồng vận hành hoàn chỉnh
         </Title>
         <Paragraph className="lp-cta-sub">
-          Chọn một vai trò demo, chạy qua quy trình nghiệp vụ và đối chiếu trực tiếp với kiến trúc, test và tài liệu trong repository.
+          Chọn một vai trò dùng thử, trải nghiệm quy trình nghiệp vụ và đối chiếu trực tiếp với tài liệu dự án.
         </Paragraph>
         <div className="lp-cta-actions">
           <Link to="/login">
             <Button size="large" className="lp-btn-cta-white" icon={<ArrowRightOutlined />}>
-              Mở ứng dụng demo
+              Mở bản dùng thử
             </Button>
           </Link>
           <a href="https://github.com/Szero-White/Serviceops-Fsm-Platform" target="_blank" rel="noreferrer">
             <Button size="large" className="lp-btn-cta-outline" icon={<GithubOutlined />}>
-              Xem repository
+              Xem mã nguồn
             </Button>
           </a>
         </div>
-        <Text className="lp-cta-note">Java 21 · Spring Boot · PostgreSQL · React · Docker · CI · Testcontainers</Text>
+        <Text className="lp-cta-note">Phân quyền rõ ràng · Dữ liệu tách biệt · Nhật ký thay đổi · Kiểm tra tự động</Text>
       </div>
     </section>
   )

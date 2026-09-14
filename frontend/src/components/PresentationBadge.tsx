@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Tag } from 'antd'
 import type { UserRole } from '../types'
 import { USER_ROLE_LABELS } from '../constants/userRoles'
+import { auditActionLabel } from '../presentation/businessText'
 
 export type SemanticTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
@@ -49,40 +50,12 @@ export function WarrantyTag({ underWarranty }: { underWarranty: boolean }) {
   )
 }
 
-export const AUDIT_ACTION_LABELS: Record<string, string> = {
-  CREATE: 'Tạo mới',
-  UPDATE: 'Cập nhật',
-  DELETE: 'Xóa',
-  ASSIGN: 'Phân công',
-  RESCHEDULE: 'Điều chỉnh lịch',
-  CHANGE_STATUS: 'Đổi trạng thái',
-  CANCEL: 'Hủy',
-  CONSUME_PART: 'Xuất phụ tùng (legacy)',
-  REQUEST_PART: 'Yêu cầu phụ tùng',
-  UPDATE_PART_REQUEST: 'Sửa yêu cầu phụ tùng',
-  CANCEL_PART_REQUEST: 'Hủy yêu cầu phụ tùng',
-  PART_REQUEST_UNAVAILABLE: 'Không thể cấp phụ tùng',
-  ISSUE_PART: 'Cấp phụ tùng',
-  CONFIRM_PART_USAGE: 'Xác nhận phụ tùng thực tế dùng',
-  RETURN_PART: 'Hoàn trả phụ tùng',
-  IMPORT_STOCK: 'Nhập kho',
-  IMPORT_CUSTOMERS: 'Import khách hàng',
-  IMPORT_ASSETS: 'Import thiết bị',
-  IMPORT_SPARE_PARTS: 'Import phụ tùng',
-  UPLOAD_FILE: 'Tải file',
-  RENAME_FILE: 'Đổi tên file',
-  DELETE_FILE: 'Xóa file',
-  DELETE_HISTORY: 'Xóa khỏi lịch sử',
-  AI_HELP_LOCAL: 'Trợ lý nội bộ',
-  AI_HELP_GEMINI: 'Trợ lý AI',
-  AI_HELP_FALLBACK: 'Trợ lý dự phòng',
-  AI_DRAFT_LOCAL: 'Gợi ý nội bộ',
-  AI_DRAFT_GEMINI: 'Gợi ý AI',
-  AI_DRAFT_FALLBACK: 'Gợi ý dự phòng',
-  SEED: 'Khởi tạo dữ liệu',
-}
-
 export function AuditActionTag({ action }: { action: string }) {
   const tone: SemanticTone = ['CANCEL', 'DELETE', 'DELETE_FILE', 'DELETE_HISTORY'].includes(action) ? 'danger' : 'neutral'
-  return <Tag className={`${toneClass(tone)} audit-action-tag`}>{AUDIT_ACTION_LABELS[action] ?? action}</Tag>
+  const label = auditActionLabel(action)
+  return (
+    <Tag className={`${toneClass(tone)} audit-action-tag`} title={label}>
+      <span className="audit-action-tag__label">{label}</span>
+    </Tag>
+  )
 }

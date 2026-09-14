@@ -138,8 +138,8 @@ export function InventoryPage() {
       setBulkImportResult(result)
       if (result.committed) {
         notification.success({
-          message: 'Import danh mục phụ tùng hoàn tất',
-          description: `Đã thêm ${result.importedRows} SKU vào kho phụ tùng.`,
+          message: 'Nhập danh sách phụ tùng hoàn tất',
+          description: `Đã thêm ${result.importedRows} phụ tùng vào kho.`,
         })
         setBulkImportOpen(false)
         setBulkImportFile(undefined)
@@ -189,11 +189,11 @@ export function InventoryPage() {
             onCreate={openCreate}
           />
         )}
-        meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} SKU`}</MetaBadge><MetaBadge tone={search || activeFilters.length === 1 ? 'info' : 'neutral'}>{activeFilters.length === 1 ? (activeFilters[0] === 'active' ? 'Đang sử dụng' : 'Ngừng sử dụng') : 'Tất cả phụ tùng'}</MetaBadge></>}
+        meta={<><MetaBadge>{inventoryQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phụ tùng`}</MetaBadge><MetaBadge tone={search || activeFilters.length === 1 ? 'info' : 'neutral'}>{activeFilters.length === 1 ? (activeFilters[0] === 'active' ? 'Đang sử dụng' : 'Ngừng sử dụng') : 'Tất cả phụ tùng'}</MetaBadge></>}
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm SKU, tên hoặc đơn vị phụ tùng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phụ tùng, tên hoặc đơn vị" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         <CheckboxFilterSelect
           ariaLabel="Lọc trạng thái phụ tùng"
           placeholder="Tất cả phụ tùng"

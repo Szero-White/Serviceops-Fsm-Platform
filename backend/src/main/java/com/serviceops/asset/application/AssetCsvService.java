@@ -13,13 +13,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AssetCsvService {
     private static final List<String> ASSET_HEADERS = List.of(
+            "Mã khách hàng", "Loại thiết bị", "Hãng", "Dòng / mẫu", "Số sê-ri", "Ngày lắp đặt", "Bảo hành đến", "Trạng thái", "Ghi chú"
+    );
+    private static final List<String> LEGACY_ASSET_HEADERS = List.of(
             "customerCode", "category", "brand", "model", "serialNumber", "installedAt", "warrantyUntil", "status", "notes"
     );
 
     private final CsvFileService csvFileService;
 
     public List<AssetCsvRow> parseAssets(MultipartFile file) {
-        return csvFileService.parse(file, ASSET_HEADERS, "thiết bị")
+        return csvFileService.parseAny(file, List.of(ASSET_HEADERS, LEGACY_ASSET_HEADERS), "thiết bị")
                 .stream()
                 .map(row -> new AssetCsvRow(
                         row.rowNumber(),
@@ -39,13 +42,13 @@ public class AssetCsvService {
     public byte[] assetTemplate() {
         return csvFileService.write(List.of(
                 ASSET_HEADERS,
-                List.of("KH-0001", "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "ACTIVE", "Lắp đặt tại phòng họp")
+                List.of("KH-20260115-001", "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "Hoạt động", "Lắp đặt tại phòng họp")
         ));
     }
 
     public byte[] exportAssets(List<AssetResponse> assets) {
         List<List<String>> rows = new ArrayList<>();
-        rows.add(List.of("customerName", "category", "brand", "model", "serialNumber", "installedAt", "warrantyUntil", "underWarranty", "status", "notes", "createdAt"));
+        rows.add(List.of("Khách hàng", "Loại thiết bị", "Hãng", "Dòng / mẫu", "Số sê-ri", "Ngày lắp đặt", "Bảo hành đến", "Tình trạng bảo hành", "Trạng thái", "Ghi chú", "Ngày tạo"));
         for (AssetResponse asset : assets) {
             rows.add(List.of(
                     cell(asset.customerName()),
@@ -55,13 +58,25 @@ public class AssetCsvService {
                     cell(asset.serialNumber()),
                     asset.installedAt() == null ? "" : asset.installedAt().toString(),
                     asset.warrantyUntil() == null ? "" : asset.warrantyUntil().toString(),
-                    Boolean.toString(asset.underWarranty()),
-                    asset.status() == null ? "" : asset.status().name(),
+                    asset.underWarranty() ? "Còn bảo hành" : "Hết bảo hành",
+                    assetStatusLabel(asset.status()),
                     cell(asset.notes()),
                     asset.createdAt() == null ? "" : asset.createdAt().toString()
             ));
         }
         return csvFileService.write(rows);
+    }
+
+    private static String assetStatusLabel(com.serviceops.asset.domain.AssetStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case ACTIVE -> "Hoạt động";
+            case IN_SERVICE -> "Đang sửa chữa";
+            case OUT_OF_SERVICE -> "Tạm ngưng sử dụng";
+            case RETIRED -> "Ngừng sử dụng";
+        };
     }
 
     private static String cell(String value) {

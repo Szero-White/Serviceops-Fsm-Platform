@@ -125,7 +125,7 @@ export function WorkOrderBillingPanel({ workOrder, role }: { workOrder: WorkOrde
           >
             {({ getFieldValue }) => Number(getFieldValue('incidentalFee') ?? 0) > 0 ? (
               <Form.Item label="Lý do phí phát sinh" name="incidentalReason" rules={[{ required: true, whitespace: true, message: 'Nhập lý do phí phát sinh' }, { max: 500 }]}>
-                <Input.TextArea rows={3} maxLength={500} showCount placeholder="Nhập lý do thực tế để khách và CSKH dễ đối chiếu." />
+                <Input.TextArea rows={3} maxLength={500} showCount placeholder="Nhập lý do thực tế để khách hàng và bộ phận chăm sóc khách hàng dễ đối chiếu." />
               </Form.Item>
             ) : null}
           </Form.Item>

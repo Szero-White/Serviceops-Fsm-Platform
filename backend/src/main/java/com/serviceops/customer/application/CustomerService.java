@@ -1,7 +1,10 @@
 package com.serviceops.customer.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.asset.domain.AssetRepository;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
+import com.serviceops.common.businesscode.BusinessCodeType;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.common.web.PageRequestSupport;
 import com.serviceops.common.web.PageResponse;
@@ -23,11 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -42,6 +43,7 @@ public class CustomerService {
             Map.entry("createdAt", "createdAt")
     );
     private final CustomerRepository repository;
+    private final BusinessCodeGenerator businessCodeGenerator;
     private final AssetRepository assetRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final WorkOrderRepository workOrderRepository;
@@ -68,27 +70,20 @@ public class CustomerService {
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
         UUID tenantId = CurrentUser.tenantId();
-        String code = request.code().trim().toUpperCase(Locale.ROOT);
-        if (repository.existsByTenantIdAndCodeIgnoreCase(tenantId, code)) {
-            throw BusinessException.conflict("CUSTOMER_CODE_EXISTS", "Mã khách hàng đã tồn tại");
-        }
         Customer customer = new Customer();
         customer.setTenantId(tenantId);
-        apply(customer, request, code);
+        customer.setCode(businessCodeGenerator.next(tenantId, BusinessCodeType.CUSTOMER));
+        apply(customer, request);
         repository.save(customer);
-        auditService.record("CREATE", "CUSTOMER", customer.getId(), "Tạo khách hàng " + customer.getCode());
+        auditService.record("CREATE", "CUSTOMER", customer.getId(), "Tạo khách hàng " + AuditDetailText.namedCode(customer.getName(), customer.getCode()));
         return toResponse(customer);
     }
 
     @Transactional
     public CustomerResponse update(UUID id, CustomerRequest request) {
         Customer customer = require(id);
-        String code = request.code().trim().toUpperCase(Locale.ROOT);
-        if (!customer.getCode().equalsIgnoreCase(code) && repository.existsByTenantIdAndCodeIgnoreCase(CurrentUser.tenantId(), code)) {
-            throw BusinessException.conflict("CUSTOMER_CODE_EXISTS", "Mã khách hàng đã tồn tại");
-        }
-        apply(customer, request, code);
-        auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + customer.getCode());
+        apply(customer, request);
+        auditService.record("UPDATE", "CUSTOMER", customer.getId(), "Cập nhật khách hàng " + AuditDetailText.namedCode(customer.getName(), customer.getCode()));
         return toResponse(customer);
     }
 
@@ -103,7 +98,7 @@ public class CustomerService {
             throw BusinessException.conflict("CUSTOMER_IN_USE", "Không thể xóa khách hàng đang được sử dụng");
         }
         repository.delete(customer);
-        auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + customer.getCode());
+        auditService.record("DELETE", "CUSTOMER", customer.getId(), "Xóa khách hàng " + AuditDetailText.namedCode(customer.getName(), customer.getCode()));
     }
 
     @Transactional(readOnly = true)
@@ -124,14 +119,13 @@ public class CustomerService {
     public CustomerImportResult importCustomers(MultipartFile file, boolean commit) {
         UUID tenantId = CurrentUser.tenantId();
         List<CustomerCsvRow> rows = csvService.parseCustomers(file);
-        Set<String> seenCodes = new HashSet<>();
         List<CustomerImportCandidate> candidates = new ArrayList<>();
         List<CustomerImportRowResult> results = new ArrayList<>();
 
         for (CustomerCsvRow row : rows) {
-            CustomerImportCandidate candidate = validateImportRow(row, seenCodes, tenantId);
+            CustomerImportCandidate candidate = validateImportRow(row);
             candidates.add(candidate);
-            results.add(new CustomerImportRowResult(row.rowNumber(), row.code(), row.name(), candidate.valid(), candidate.message()));
+            results.add(new CustomerImportRowResult(row.rowNumber(), "Tự động", row.name(), candidate.valid(), candidate.message()));
         }
 
         int validRows = (int) results.stream().filter(CustomerImportRowResult::valid).count();
@@ -144,17 +138,17 @@ public class CustomerService {
             createImportedCustomer(tenantId, candidate);
         }
 
-        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Import " + validRows + " khách hàng từ CSV");
+        auditService.record("IMPORT_CUSTOMERS", "CUSTOMER", null, "Nhập " + validRows + " khách hàng từ tệp dữ liệu");
         return new CustomerImportResult(rows.size(), validRows, 0, validRows, true, results);
     }
+
 
     private Customer require(UUID id) {
         return repository.findByIdAndTenantId(id, CurrentUser.tenantId())
                 .orElseThrow(() -> BusinessException.notFound("CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng"));
     }
 
-    private static void apply(Customer customer, CustomerRequest request, String code) {
-        customer.setCode(code);
+    private static void apply(Customer customer, CustomerRequest request) {
         customer.setName(request.name().trim());
         customer.setPhone(blankToNull(request.phone()));
         customer.setEmail(blankToNull(request.email()));
@@ -167,20 +161,7 @@ public class CustomerService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private CustomerImportCandidate validateImportRow(CustomerCsvRow row, Set<String> seenCodes, UUID tenantId) {
-        String code = row.code().trim().toUpperCase(Locale.ROOT);
-        if (code.isBlank()) {
-            return CustomerImportCandidate.invalid(row, "Mã khách hàng không được để trống");
-        }
-        if (code.length() > 40) {
-            return CustomerImportCandidate.invalid(row, "Mã khách hàng tối đa 40 ký tự");
-        }
-        if (!seenCodes.add(code)) {
-            return CustomerImportCandidate.invalid(row, "Mã khách hàng bị trùng trong file import");
-        }
-        if (repository.existsByTenantIdAndCodeIgnoreCase(tenantId, code)) {
-            return CustomerImportCandidate.invalid(row, "Mã khách hàng đã tồn tại trong hệ thống");
-        }
+    private CustomerImportCandidate validateImportRow(CustomerCsvRow row) {
         if (row.name().isBlank() || row.name().length() > 180) {
             return CustomerImportCandidate.invalid(row, "Tên khách hàng bắt buộc và tối đa 180 ký tự");
         }
@@ -199,7 +180,7 @@ public class CustomerService {
 
         try {
             boolean active = parseBoolean(row.active());
-            return new CustomerImportCandidate(row, code, row.name().trim(), active, true, "Hợp lệ");
+            return new CustomerImportCandidate(row, row.name().trim(), active, true, "Hợp lệ");
         } catch (IllegalArgumentException ex) {
             return CustomerImportCandidate.invalid(row, ex.getMessage());
         }
@@ -208,7 +189,7 @@ public class CustomerService {
     private void createImportedCustomer(UUID tenantId, CustomerImportCandidate candidate) {
         Customer customer = new Customer();
         customer.setTenantId(tenantId);
-        customer.setCode(candidate.code());
+        customer.setCode(businessCodeGenerator.next(tenantId, BusinessCodeType.CUSTOMER));
         customer.setName(candidate.name());
         customer.setPhone(blankToNull(candidate.row().phone()));
         customer.setEmail(blankToNull(candidate.row().email()));
@@ -223,13 +204,13 @@ public class CustomerService {
             return true;
         }
         String normalized = value.trim().toLowerCase(Locale.ROOT);
-        if ("true".equals(normalized)) {
+        if ("true".equals(normalized) || "có".equals(normalized) || "co".equals(normalized)) {
             return true;
         }
-        if ("false".equals(normalized)) {
+        if ("false".equals(normalized) || "không".equals(normalized) || "khong".equals(normalized)) {
             return false;
         }
-        throw new IllegalArgumentException("Cột active chỉ nhận true hoặc false");
+        throw new IllegalArgumentException("Cột Hoạt động chỉ nhận Có hoặc Không");
     }
 
 
@@ -239,14 +220,13 @@ public class CustomerService {
 
     private record CustomerImportCandidate(
             CustomerCsvRow row,
-            String code,
             String name,
             boolean active,
             boolean valid,
             String message
     ) {
         static CustomerImportCandidate invalid(CustomerCsvRow row, String message) {
-            return new CustomerImportCandidate(row, row.code(), row.name(), false, false, message);
+            return new CustomerImportCandidate(row, row.name(), false, false, message);
         }
     }
 }

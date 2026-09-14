@@ -45,7 +45,7 @@ final class WorkOrderPaymentActivityMapper {
             activities.add(paymentActivity(
                     "payment:" + payment.getId() + ":reported",
                     WorkOrderActivityType.PAYMENT_REPORTED,
-                    "Khách hẹn thanh toán trực tiếp tại quầy CSKH",
+                    "Khách hẹn thanh toán trực tiếp tại quầy chăm sóc khách hàng",
                     assignedTechnicianUsername(payment),
                     assignedTechnicianDisplayName(payment),
                     "TECHNICIAN",
@@ -57,7 +57,7 @@ final class WorkOrderPaymentActivityMapper {
             activities.add(paymentActivity(
                     "payment:" + payment.getId() + ":settled",
                     WorkOrderActivityType.PAYMENT_SETTLED,
-                    "CSKH đã đối soát tiền về công ty",
+                    "Bộ phận chăm sóc khách hàng đã đối soát tiền về công ty",
                     payment.getSettledByUsername(),
                     payment.getSettledByDisplayName(),
                     "CUSTOMER_SERVICE",

@@ -6,16 +6,9 @@ import { apiErrorMessage } from '../../../api/http'
 import { MetaBadge } from '../../../components/PresentationBadge'
 import type { AttachmentItem, Payment } from '../../../types'
 import { downloadBlob } from '../../../utils/download'
+import { businessCodeLabel } from '../../../presentation/businessText'
 import { formatCurrency, formatDateTime } from '../../../utils/format'
 import { attachmentsApi } from '../../attachments/api'
-
-const PAYMENT_STATUS_LABELS = {
-  UNPAID: 'Chưa thanh toán',
-  TRANSFER_PENDING_VERIFICATION: 'Chờ xác minh chuyển khoản',
-  CASH_PENDING_HANDOVER: 'KTV đang giữ tiền mặt',
-  COUNTER_PAYMENT_PENDING: 'Chờ thanh toán tại quầy',
-  SETTLED: 'Đã đối soát',
-} as const
 
 interface PaymentSummaryProps {
   payment: Payment
@@ -64,12 +57,12 @@ export function PaymentSummary({ payment, transferEvidence }: PaymentSummaryProp
           <Typography.Title level={5} style={{ margin: 0 }}>Thanh toán dịch vụ</Typography.Title>
           <Typography.Text type="secondary">Số tiền đã được khách hàng xác nhận và được giữ cố định để đối soát thanh toán.</Typography.Text>
         </div>
-        <MetaBadge tone={payment.status === 'SETTLED' ? 'success' : 'warning'}>{PAYMENT_STATUS_LABELS[payment.status]}</MetaBadge>
+        <MetaBadge tone={payment.status === 'SETTLED' ? 'success' : 'warning'}>{businessCodeLabel(payment.status, 'Trạng thái khác')}</MetaBadge>
       </div>
 
       <Descriptions bordered size="small" column={1}>
         <Descriptions.Item label="Số tiền"><Typography.Text strong>{formatCurrency(payment.amount)}</Typography.Text></Descriptions.Item>
-        {payment.method ? <Descriptions.Item label="Phương thức">{payment.method === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt'}</Descriptions.Item> : null}
+        {payment.method ? <Descriptions.Item label="Phương thức">{businessCodeLabel(payment.method, 'Phương thức khác')}</Descriptions.Item> : null}
         {payment.collectedByDisplayName ? <Descriptions.Item label="Người đang giữ tiền">{payment.collectedByDisplayName}</Descriptions.Item> : null}
         {payment.transferReportedAt ? <Descriptions.Item label="Khách báo chuyển khoản">{formatDateTime(payment.transferReportedAt)}</Descriptions.Item> : null}
         {payment.transferEvidenceAttachmentId ? (

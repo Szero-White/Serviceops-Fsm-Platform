@@ -35,6 +35,7 @@ import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.pen
 import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.sparePart;
 import static com.serviceops.inventory.application.WorkOrderPartTestFixtures.workOrder;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -92,6 +93,12 @@ class WorkOrderPartRequestServiceTest {
                 eq("Có yêu cầu phụ tùng mới: WO-2026-001234"),
                 any()
         );
+        verify(auditService).record(
+                eq("REQUEST_PART"),
+                eq("WORK_ORDER"),
+                eq(WORK_ORDER_ID),
+                contains("Van cấp nước máy rửa chén 220V (DW-VALVE-220V-01)")
+        );
     }
 
     @Test
@@ -135,7 +142,9 @@ class WorkOrderPartRequestServiceTest {
         service.expirePendingRequests(workOrder);
 
         assertThat(request.getStatus()).isEqualTo(WorkOrderPartRequestStatus.EXPIRED);
-        assertThat(request.getResolutionReason()).contains("COMPLETED");
+        assertThat(request.getResolutionReason())
+                .contains("Đã hoàn thành")
+                .doesNotContain("COMPLETED");
         assertThat(request.getResolvedByDisplayName()).isEqualTo("Hệ thống");
         verify(requestRepository, never()).delete(any());
     }

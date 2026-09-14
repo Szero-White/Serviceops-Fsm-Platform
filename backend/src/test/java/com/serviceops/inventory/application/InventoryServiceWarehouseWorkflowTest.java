@@ -1,6 +1,7 @@
 package com.serviceops.inventory.application;
 
 import com.serviceops.audit.application.AuditService;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
 import com.serviceops.inventory.domain.InventoryTransaction;
 import com.serviceops.inventory.domain.InventoryTransactionRepository;
 import com.serviceops.inventory.domain.InventoryTransactionType;
@@ -42,6 +43,7 @@ class InventoryServiceWarehouseWorkflowTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Mock private SparePartRepository sparePartRepository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private InventoryTransactionRepository transactionRepository;
     @Mock private InventoryCsvService csvService;
     @Mock private AuditService auditService;
@@ -54,6 +56,7 @@ class InventoryServiceWarehouseWorkflowTest {
         authenticateWarehouse();
         service = new InventoryService(
                 sparePartRepository,
+                businessCodeGenerator,
                 transactionRepository,
                 csvService,
                 auditService,

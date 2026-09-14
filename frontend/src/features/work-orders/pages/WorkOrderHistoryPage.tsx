@@ -57,6 +57,11 @@ export function WorkOrderHistoryPage() {
     placeholderData: keepPreviousData,
   })
   const { data, isLoading, isFetching } = historyQuery
+  const historySummaryQuery = useQuery({
+    queryKey: ['work-order-history-summary', { search }],
+    queryFn: () => workOrdersApi.historySummary(search),
+  })
+  const historySummary = historySummaryQuery.data
 
   useEffect(() => {
     setPage(0)
@@ -88,6 +93,7 @@ export function WorkOrderHistoryPage() {
       message.success('Đã xóa phiếu khỏi lịch sử tra cứu')
       selectHistoryWorkOrder(undefined)
       queryClient.invalidateQueries({ queryKey: ['work-order-history'] })
+      queryClient.invalidateQueries({ queryKey: ['work-order-history-summary'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['audit'] })
     },
@@ -108,14 +114,21 @@ export function WorkOrderHistoryPage() {
         eyebrow="Theo dõi hồ sơ dịch vụ"
         title="Lịch sử phiếu công việc"
         description="Tra cứu hồ sơ chờ hoàn tất, phiếu đã đóng hoặc đã hủy và xem lại toàn bộ tiến trình xử lý."
-        meta={<MetaBadge>{historyQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} hồ sơ`}</MetaBadge>}
+        meta={(
+          <>
+            <MetaBadge>{historySummaryQuery.isError ? 'Lỗi tải thống kê' : `${historySummary?.total ?? 0} hồ sơ`}</MetaBadge>
+            <MetaBadge tone="warning">{historySummary?.pendingClosure ?? 0} chờ hoàn tất hồ sơ</MetaBadge>
+            <MetaBadge tone="success">{historySummary?.closed ?? 0} đã đóng</MetaBadge>
+            <MetaBadge tone="danger">{historySummary?.cancelled ?? 0} đã hủy</MetaBadge>
+          </>
+        )}
       />
 
       <div className="table-toolbar toolbar-row">
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên"
+          placeholder="Tìm mã phiếu, nội dung, khách hàng, số sê-ri hoặc kỹ thuật viên"
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
         />
@@ -209,7 +222,7 @@ export function WorkOrderHistoryPage() {
                 {canDelete && record.status !== 'CUSTOMER_ACCEPTED' && (
                   <Popconfirm
                     title="Xóa phiếu khỏi lịch sử?"
-                    description="Phiếu chỉ được ẩn khỏi danh sách tra cứu. Dữ liệu audit và liên kết nghiệp vụ vẫn được giữ trong hệ thống."
+                    description="Phiếu chỉ được ẩn khỏi danh sách tra cứu. Nhật ký thay đổi và các liên kết nghiệp vụ vẫn được giữ trong hệ thống."
                     okText="Xóa"
                     cancelText="Giữ lại"
                     okButtonProps={{ danger: true, loading: remove.isPending }}

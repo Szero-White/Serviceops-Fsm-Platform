@@ -61,7 +61,7 @@ export function ServiceChannelsPage() {
       return data
     }
     return data.filter((channel) =>
-      [channel.code, channel.name, channel.description].some((value) => value?.toLowerCase().includes(keyword)),
+      [channel.name, channel.description].some((value) => value?.toLowerCase().includes(keyword)),
     )
   }, [data, search])
 
@@ -70,8 +70,11 @@ export function ServiceChannelsPage() {
 
   const save = useMutation({
     mutationFn: (values: Record<string, unknown>) => {
-      const payload = { ...values, code: buildCode(String(values.code ?? '')) }
-      return editing ? serviceChannelsApi.update(editing.id, payload) : serviceChannelsApi.create(payload)
+      if (editing) {
+        return serviceChannelsApi.update(editing.id, values)
+      }
+      const payload = { ...values, code: buildCode(String(values.name ?? '')) }
+      return serviceChannelsApi.create(payload)
     },
     onSuccess: () => {
       message.success(editing ? 'Đã cập nhật kênh tiếp nhận' : 'Đã tạo kênh tiếp nhận')
@@ -101,7 +104,13 @@ export function ServiceChannelsPage() {
 
   const showEdit = (record: ServiceChannel) => {
     setEditing(record)
-    form.setFieldsValue(record)
+    form.setFieldsValue({
+      name: record.name,
+      description: record.description,
+      color: record.color,
+      sortOrder: record.sortOrder,
+      active: record.active,
+    })
     setOpen(true)
   }
 
@@ -117,12 +126,12 @@ export function ServiceChannelsPage() {
 
       <div className="channel-summary-grid">
         <MetricCard label="Đang dùng" value={activeCount} helper="Hiển thị trong form tiếp nhận" icon={<PlusOutlined />} tone="success" />
-        <MetricCard label="Mặc định hệ thống" value={systemCount} helper="Có sẵn khi khởi tạo tenant" icon={<SearchOutlined />} tone="primary" />
+        <MetricCard label="Mặc định hệ thống" value={systemCount} helper="Có sẵn khi khởi tạo hệ thống" icon={<SearchOutlined />} tone="primary" />
         <MetricCard label="Tạm ngưng" value={data.length - activeCount} helper="Giữ lịch sử, không cho chọn mới" icon={<DeleteOutlined />} tone="warning" />
       </div>
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên, mã hoặc mô tả" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm theo tên hoặc mô tả" value={search} onChange={(event) => setSearch(event.target.value)} />
       </div>
 
       {channelsQuery.isError && (
@@ -151,7 +160,7 @@ export function ServiceChannelsPage() {
                 <span className={`channel-color-swatch channel-color-${record.color}`} />
                 <div>
                   <Typography.Text strong>{record.name}</Typography.Text>
-                  <Typography.Text code>{record.code}</Typography.Text>
+                  <Typography.Text type="secondary">{record.systemDefined ? 'Kênh mặc định' : 'Kênh tùy chỉnh'}</Typography.Text>
                 </div>
               </div>
             ),
@@ -188,10 +197,7 @@ export function ServiceChannelsPage() {
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
             <Form.Item label="Tên kênh" name="name" rules={[{ required: true, message: 'Nhập tên kênh' }]}>
-              <Input onBlur={(event) => !editing && !form.getFieldValue('code') && form.setFieldValue('code', buildCode(event.target.value))} placeholder="Ví dụ: TikTok Lead" />
-            </Form.Item>
-            <Form.Item label="Mã kênh" name="code" rules={[{ required: !editing, message: 'Nhập mã kênh' }]}>
-              <Input disabled={Boolean(editing)} placeholder="TIKTOK_LEAD" onBlur={(event) => form.setFieldValue('code', buildCode(event.target.value))} />
+              <Input placeholder="Ví dụ: TikTok, Điện thoại, Khách đến trực tiếp" />
             </Form.Item>
             <Form.Item label="Màu hiển thị" name="color">
               <Select options={colorOptions} />

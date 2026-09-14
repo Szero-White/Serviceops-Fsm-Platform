@@ -54,7 +54,7 @@ public class WorkOrderClosureService {
         if (payment.getStatus() != PaymentStatus.SETTLED) {
             throw BusinessException.conflict(
                     "PAYMENT_NOT_SETTLED",
-                    "Chỉ được đóng phiếu sau khi CSKH xác nhận tiền đã về công ty"
+                    "Chỉ được đóng phiếu sau khi bộ phận chăm sóc khách hàng xác nhận tiền đã về công ty"
             );
         }
 

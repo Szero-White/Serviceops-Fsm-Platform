@@ -25,7 +25,6 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
 
     Optional<Customer> findByIdAndTenantId(UUID id, UUID tenantId);
     Optional<Customer> findByTenantIdAndCodeIgnoreCase(UUID tenantId, String code);
-    boolean existsByTenantIdAndCodeIgnoreCase(UUID tenantId, String code);
     long countByTenantIdAndActiveTrue(UUID tenantId);
 
     @Lock(LockModeType.PESSIMISTIC_READ)

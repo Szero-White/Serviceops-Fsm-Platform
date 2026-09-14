@@ -16,8 +16,8 @@ export function AssetPageActions({ importing, onExport, onDownloadTemplate, onIm
         trigger={['click']}
         menu={{
           items: [
-            { key: 'export', icon: <DownloadOutlined />, label: 'Xuất CSV', onClick: onExport },
-            { key: 'template', icon: <FileExcelOutlined />, label: 'Tải mẫu import', onClick: onDownloadTemplate },
+            { key: 'export', icon: <DownloadOutlined />, label: 'Xuất danh sách', onClick: onExport },
+            { key: 'template', icon: <FileExcelOutlined />, label: 'Tải mẫu nhập dữ liệu', onClick: onDownloadTemplate },
             {
               key: 'import',
               icon: <UploadOutlined />,
@@ -30,7 +30,7 @@ export function AssetPageActions({ importing, onExport, onDownloadTemplate, onIm
                     return Upload.LIST_IGNORE
                   }}
                 >
-                  <span>Nhập CSV</span>
+                  <span>Nhập danh sách</span>
                 </Upload>
               ),
             },

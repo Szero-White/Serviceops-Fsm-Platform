@@ -83,6 +83,14 @@ public final class WorkOrderDtos {
     ) {
     }
 
+    public record WorkOrderHistorySummaryResponse(
+            long total,
+            long pendingClosure,
+            long closed,
+            long cancelled
+    ) {
+    }
+
     public record WorkOrderResponse(
             UUID id,
             String code,

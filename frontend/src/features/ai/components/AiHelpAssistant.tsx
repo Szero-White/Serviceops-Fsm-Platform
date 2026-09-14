@@ -18,7 +18,7 @@ const roleSuggestions: Record<string, string[]> = {
     'Với quyền Chủ sở hữu, tôi có thể quản lý những chức năng nào?',
     'Làm sao lọc tài khoản đang hoạt động và tạm ngưng?',
     'Tôi điều phối lại kỹ thuật viên hoặc lịch trước khi công việc bắt đầu như thế nào?',
-    'Làm sao kiểm tra audit và các thông báo quan trọng?',
+    'Làm sao kiểm tra nhật ký hệ thống và các thông báo quan trọng?',
   ],
   DISPATCHER: [
     'Tôi mới làm Điều phối viên, trong vai trò này tôi được làm những gì?',
@@ -27,11 +27,11 @@ const roleSuggestions: Record<string, string[]> = {
     'Theo dõi phiếu đang xử lý như thế nào?',
   ],
   CUSTOMER_SERVICE: [
-    'Tôi mới làm CSKH, trong vai trò này tôi được làm những gì?',
+    'Tôi mới làm chăm sóc khách hàng, trong vai trò này tôi được làm những gì?',
     'Tôi tiếp nhận yêu cầu và chuyển sang điều phối như thế nào?',
     'Khi kỹ thuật viên hoàn thành nhưng khách báo còn lỗi, tôi xử lý phản hồi thế nào?',
     'Khi nào nên tạo khách hàng và thiết bị trước?',
-    'AI tiếp nhận trong form dùng ra sao?',
+    'Trợ lý gợi ý nội dung yêu cầu dịch vụ dùng ra sao?',
   ],
   TECHNICIAN: [
     'Tôi mới làm Kỹ thuật viên, trong vai trò này tôi được làm những gì?',
@@ -47,7 +47,7 @@ const roleSuggestions: Record<string, string[]> = {
     'Tôi chỉnh ngưỡng tồn tối thiểu ở đâu và khi nào có cảnh báo?',
     'Kiểm kê bị lệch tồn thì ai sẽ nhận thông báo?',
     'Tôi xem lịch sử nhập, sử dụng, hoàn trả và điều chỉnh kho ở đâu?',
-    'Kỹ thuật viên không dùng hết phụ tùng thì tôi hoàn trả theo Work Order như thế nào?',
+    'Kỹ thuật viên không dùng hết phụ tùng thì tôi hoàn trả theo phiếu công việc như thế nào?',
   ],
 }
 
@@ -108,7 +108,7 @@ export function AiHelpAssistant() {
         type="button"
         className="ai-help-launcher"
         onClick={() => setOpen(true)}
-        aria-label="Mở trợ lý hướng dẫn AI"
+        aria-label="Mở trợ lý hướng dẫn"
       >
         <span className="ai-help-mascot" aria-hidden="true">
           <span className="ai-help-mascot-antenna" />
@@ -125,7 +125,7 @@ export function AiHelpAssistant() {
       </button>
 
       <Drawer
-        title="Trợ lý AI ServiceOps"
+        title="Trợ lý hướng dẫn ServiceOps"
         open={open}
         onClose={() => setOpen(false)}
         width={440}
@@ -134,7 +134,7 @@ export function AiHelpAssistant() {
         <div className="ai-help-intro">
           <Typography.Text strong>Hỏi cách dùng ServiceOps theo vai trò của bạn</Typography.Text>
           <Typography.Text type="secondary">
-            Trợ lý giải thích quy trình và chức năng theo vai trò của bạn. Trợ lý không tự đọc dữ liệu nghiệp vụ trong database và không tự thay đổi dữ liệu.
+            Trợ lý giải thích quy trình và chức năng theo vai trò của bạn. Trợ lý không tự đọc dữ liệu nghiệp vụ thực tế và không tự thay đổi dữ liệu.
           </Typography.Text>
         </div>
 

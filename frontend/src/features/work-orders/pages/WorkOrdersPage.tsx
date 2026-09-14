@@ -302,12 +302,12 @@ export function WorkOrdersPage() {
       <PageHeader
         eyebrow="Vận hành dịch vụ"
         title="Phiếu công việc"
-        description="Theo dõi công việc đã được bàn giao từ Customer Service, từ điều phối đến hoàn thành."
+        description="Theo dõi công việc đã được bàn giao từ bộ phận chăm sóc khách hàng, từ điều phối đến hoàn thành."
         meta={<><MetaBadge>{workOrdersQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} phiếu`}</MetaBadge><MetaBadge tone={statuses.length ? 'info' : 'neutral'}>{statuses.length ? `${statuses.length} trạng thái` : 'Tất cả trạng thái'}</MetaBadge></>}
       />
 
       <div className="table-toolbar toolbar-row">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, serial hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm mã phiếu, nội dung, khách hàng, số sê-ri hoặc kỹ thuật viên" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         <CheckboxFilterSelect placeholder="Tất cả trạng thái" ariaLabel="Lọc trạng thái phiếu công việc" value={statuses} onChange={(value) => { setStatuses(value as WorkOrderStatus[]); setPage(0) }} options={ACTIVE_WORK_ORDER_STATUS_OPTIONS} minWidth={220} />
       </div>
 

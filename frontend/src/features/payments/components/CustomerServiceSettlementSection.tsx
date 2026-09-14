@@ -67,7 +67,7 @@ export function CustomerServiceSettlementSection({ payment, profile, onViewBilli
         <PaymentActionConfirmationModal
           open={action === 'TRANSFER'}
           title="Xác nhận tiền đã về công ty"
-          description="Chỉ xác nhận sau khi CSKH đã kiểm tra giao dịch thực tế trên tài khoản công ty."
+          description="Chỉ xác nhận sau khi bộ phận chăm sóc khách hàng đã kiểm tra giao dịch thực tế trên tài khoản công ty."
           workOrderCode={payment.workOrderCode}
           customerName={payment.customerName}
           amount={payment.amount}
@@ -116,7 +116,7 @@ export function CustomerServiceSettlementSection({ payment, profile, onViewBilli
       <>
         <div className="payment-company-card">
           <Typography.Title level={5}>Thu thanh toán tại quầy</Typography.Title>
-          <Typography.Text type="secondary">Khách chưa thanh toán tại hiện trường và sẽ hoàn tất trực tiếp với CSKH. Chỉ ghi nhận sau khi công ty thực nhận đủ tiền.</Typography.Text>
+          <Typography.Text type="secondary">Khách chưa thanh toán tại hiện trường và sẽ hoàn tất trực tiếp với bộ phận chăm sóc khách hàng. Chỉ ghi nhận sau khi công ty thực nhận đủ tiền.</Typography.Text>
           <div style={{ marginTop: 12 }}>
             <Space wrap>
               <Button onClick={onViewBilling}>Xem chi phí đã xác nhận</Button>
@@ -128,7 +128,7 @@ export function CustomerServiceSettlementSection({ payment, profile, onViewBilli
         <PaymentActionConfirmationModal
           open={action === 'COUNTER_TRANSFER'}
           title="Xác nhận chuyển khoản tại quầy"
-          description="Chỉ xác nhận sau khi CSKH đã kiểm tra và thấy công ty thực nhận đủ tiền chuyển khoản."
+          description="Chỉ xác nhận sau khi bộ phận chăm sóc khách hàng đã kiểm tra và thấy công ty thực nhận đủ tiền chuyển khoản."
           workOrderCode={payment.workOrderCode}
           customerName={payment.customerName}
           amount={payment.amount}
@@ -141,7 +141,7 @@ export function CustomerServiceSettlementSection({ payment, profile, onViewBilli
         <PaymentActionConfirmationModal
           open={action === 'COUNTER_CASH'}
           title="Xác nhận tiền mặt tại quầy"
-          description="Chỉ xác nhận sau khi CSKH đã trực tiếp nhận và kiểm đủ tiền mặt từ khách hàng."
+          description="Chỉ xác nhận sau khi bộ phận chăm sóc khách hàng đã trực tiếp nhận và kiểm đủ tiền mặt từ khách hàng."
           workOrderCode={payment.workOrderCode}
           customerName={payment.customerName}
           amount={payment.amount}

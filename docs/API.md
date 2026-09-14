@@ -29,6 +29,17 @@ Swagger (`http://localhost:8080/swagger-ui.html`) là nguồn request/response r
 
 Technician account không thể bị deactivate khi còn operational Work Order assignment.
 
+### Business codes
+
+Các mã hiển thị cho người dùng được backend tự sinh và không nhận từ request create/update:
+
+- Customer: `KH-YYYYMMDD-NNN`
+- Work Order: `WO-YYYYMMDD-NNN`
+- Payment Receipt: `BN-YYYYMMDD-NNN`
+- Spare Part: `PT-YYYYMMDD-NNN`
+
+UUID vẫn là khóa kỹ thuật. CSV import mới không yêu cầu mã; file CSV cũ có cột mã vẫn được chấp nhận nhưng backend cấp mã mới để tránh trùng/race condition.
+
 ## Customers
 
 Read — OWNER / CUSTOMER_SERVICE / DISPATCHER:
@@ -96,6 +107,7 @@ Read — OWNER / DISPATCHER / CUSTOMER_SERVICE / TECHNICIAN:
 
 - `GET /work-orders?search={text}&status={status1,status2}&page={n}&size={n}` — `status` hỗ trợ nhiều giá trị; danh sách vận hành tự loại hồ sơ `CUSTOMER_ACCEPTED` đã có payment `SETTLED`
 - `GET /work-orders/history?search={text}&status={CUSTOMER_ACCEPTED,CLOSED,CANCELLED}&page={n}&size={n}` — `CUSTOMER_ACCEPTED` chỉ xuất hiện tại history khi payment đã `SETTLED`, biểu diễn hồ sơ **Chờ hoàn tất hồ sơ**; dữ liệu vẫn giữ sort/pagination thông thường, không pin riêng
+- `GET /work-orders/history/summary?search={text}` — trả `total`, `pendingClosure`, `closed`, `cancelled` theo cùng tenant/role/search policy với trang Lịch sử phiếu; dùng aggregate SQL thay vì tải toàn bộ danh sách để đếm.
 - `GET /work-orders/{id}` — detail Work Order và status history tương thích.
 - `GET /work-orders/{id}/timeline` — read model business timeline hợp nhất status, điều phối, REQUEST/ISSUE/USED/RETURN, payment reconciliation và receipt theo thời gian; nguồn dữ liệu gốc vẫn nằm ở từng module, không tạo bảng timeline duplicate.
 - `GET /work-orders/{id}/billing` — OWNER / CUSTOMER_SERVICE / assigned TECHNICIAN xem billing draft/snapshot; Technician vẫn bị ownership check ở service layer.
@@ -234,3 +246,7 @@ Authenticated user chỉ thao tác notification của chính identity trong tena
 
 ### Inventory movement traceability
 Inventory transaction responses include `createdBy`, `actorDisplayName`, `actorRole`, Work Order code/summary, note, quantity, and balance-after. Workflow hiện hành ghi stock movement tại `ISSUE`/`RETURN`; Technician lưu mục đích ở part request và actual `USED` được theo dõi riêng, không tạo thêm inventory transaction.
+
+## User-facing language boundary
+
+Các mã enum, role code và technical identifier trong API/domain là contract nội bộ và không được đổi chỉ để phục vụ hiển thị. Frontend dùng presentation mapping để chuyển chúng thành ngôn ngữ nghiệp vụ. Riêng AI Help còn có server-side output guard trước public response để tránh provider trả trực tiếp enum/code kỹ thuật. Notification copy mới được tạo từ các formatter tập trung; dữ liệu notification lịch sử được frontend compatibility mapping trước khi hiển thị.

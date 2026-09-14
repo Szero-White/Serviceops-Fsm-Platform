@@ -38,8 +38,9 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.topic().answer())
                 .contains("Điều phối lại")
                 .contains("lý do")
-                .contains("ON_THE_WAY")
-                .contains("IN_PROGRESS");
+                .contains("đã di chuyển")
+                .contains("bắt đầu xử lý")
+                .doesNotContain("ON_THE_WAY", "IN_PROGRESS");
     }
 
     @Test
@@ -85,7 +86,7 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/work-orders");
         assertThat(decision.topic().answer())
-                .contains("Work Order được giao")
+                .contains("phiếu công việc được giao")
                 .contains("không nhập kho")
                 .contains("không sửa ngưỡng tồn");
     }
@@ -121,7 +122,8 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.topic().answer())
                 .contains("Yêu cầu phụ tùng")
                 .contains("không sửa số lượng kỹ thuật viên đã yêu cầu")
-                .contains("không thao tác Work Order hiện trường");
+                .contains("không thao tác công việc hiện trường")
+                .doesNotContain("Work Order");
     }
 
     @Test
@@ -132,7 +134,7 @@ class AiHelpKnowledgeBaseRoutingTest {
 
         assertThat(ownerKnowledge)
                 .contains("Người dùng")
-                .contains("Tất cả trạng thái / Hoạt động / Tạm ngưng")
+                .contains("Tất cả trạng thái, Hoạt động và Tạm ngưng")
                 .contains("Điều phối và xếp lịch")
                 .contains("Kiểm kê tồn kho")
                 .contains("Nhật ký hệ thống");
@@ -161,11 +163,12 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/part-requests");
         assertThat(decision.topic().answer())
-                .contains("REQUEST")
-                .contains("không làm giảm tồn kho")
+                .contains("Yêu cầu mới chỉ ghi nhận nhu cầu")
+                .contains("chưa làm giảm tồn kho")
                 .contains("không sửa số lượng")
-                .contains("ISSUE")
-                .contains("Không thể cấp");
+                .contains("xác nhận cấp")
+                .contains("Không thể cấp")
+                .doesNotContain("REQUEST", "ISSUE");
     }
 
     @Test
@@ -180,8 +183,9 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/work-orders");
         assertThat(decision.topic().answer())
-                .contains("không phải workspace quản lý dữ liệu chính")
-                .contains("Phiếu công việc");
+                .contains("chỉ sử dụng thông tin này để sắp xếp công việc")
+                .contains("phiếu công việc")
+                .doesNotContain("workspace");
     }
 
     @Test
@@ -226,11 +230,11 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/work-orders");
         assertThat(decision.topic().answer())
-                .contains("tài khoản/QR công ty")
+                .contains("tài khoản và mã QR của công ty")
                 .contains("chỉ đọc")
-                .contains("không SETTLED")
-                .contains("CSKH")
-                .doesNotContain("snapshot");
+                .contains("không xác minh tiền đã về công ty")
+                .contains("Chăm sóc khách hàng")
+                .doesNotContain("SETTLED", "CSKH", "snapshot");
     }
 
     @Test
@@ -246,11 +250,12 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.topic().route()).isEqualTo("/payments");
         assertThat(decision.topic().answer())
                 .contains("Đối soát thanh toán")
-                .contains("Work Order")
+                .contains("phiếu công việc")
                 .contains("chi phí khách đã xác nhận")
-                .contains("SETTLED")
+                .contains("đã được đối soát")
                 .contains("biên nhận")
-                .contains("đóng Work Order");
+                .contains("đóng phiếu")
+                .doesNotContain("Work Order", "SETTLED");
     }
 
     @Test
@@ -265,10 +270,11 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().route()).isEqualTo("/work-order-history");
         assertThat(decision.topic().answer())
-                .contains("CLOSED")
+                .contains("đã đóng")
                 .contains("Tiến trình")
                 .contains("thanh toán")
-                .contains("RETURN");
+                .contains("phụ tùng")
+                .doesNotContain("CLOSED", "RETURN");
     }
 
     @Test
@@ -284,8 +290,9 @@ class AiHelpKnowledgeBaseRoutingTest {
         assertThat(decision.topic().route()).isEqualTo("/work-order-history");
         assertThat(decision.topic().answer())
                 .contains("Chờ hoàn tất hồ sơ")
-                .contains("CUSTOMER_ACCEPTED")
-                .contains("SETTLED");
+                .contains("khách đã xác nhận")
+                .contains("tiền đã đối soát")
+                .doesNotContain("CUSTOMER_ACCEPTED", "SETTLED");
     }
 
     @Test
@@ -299,10 +306,11 @@ class AiHelpKnowledgeBaseRoutingTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().answer())
-                .contains("COMPLETED")
-                .contains("REOPENED")
+                .contains("đã hoàn thành")
+                .contains("Mở lại")
                 .contains("bắt buộc nhập lý do")
-                .contains("CUSTOMER_ACCEPTED");
+                .contains("khách đã xác nhận")
+                .doesNotContain("COMPLETED", "REOPENED", "CUSTOMER_ACCEPTED");
     }
 
 }

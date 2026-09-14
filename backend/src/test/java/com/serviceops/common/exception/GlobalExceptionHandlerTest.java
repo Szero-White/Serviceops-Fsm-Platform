@@ -64,7 +64,7 @@ class GlobalExceptionHandlerTest {
 
         assertThat(detail.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
         assertThat(detail.getTitle()).isEqualTo("RESOURCE_NOT_FOUND");
-        assertThat(detail.getDetail()).isEqualTo("Không tìm thấy tài nguyên hoặc đường dẫn được yêu cầu");
+        assertThat(detail.getDetail()).isEqualTo("Không tìm thấy dữ liệu hoặc chức năng được yêu cầu.");
         assertThat(detail.getDetail()).doesNotContain("static resource", "NoResourceFoundException");
         assertThat(detail.getProperties()).containsEntry("code", "RESOURCE_NOT_FOUND");
         assertThat(detail.getProperties()).containsEntry("requestId", "req-404");

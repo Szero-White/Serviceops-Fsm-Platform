@@ -119,7 +119,7 @@ public class WorkOrder extends TenantScopedEntity {
     public WorkOrderStatus transitionTo(WorkOrderStatus target) {
         Set<WorkOrderStatus> allowed = TRANSITIONS.getOrDefault(status, Set.of());
         if (!allowed.contains(target)) {
-            throw new IllegalStateException("Không thể chuyển trạng thái từ " + status + " sang " + target);
+            throw new IllegalStateException("Không thể chuyển trạng thái phiếu từ " + status.displayName() + " sang " + target.displayName());
         }
         WorkOrderStatus previous = status;
         status = target;

@@ -85,7 +85,7 @@ export function WorkOrderPartRequestModal({
               showSearch
               filterOption={false}
               loading={partsLoading}
-              placeholder="Tìm SKU hoặc tên phụ tùng"
+              placeholder="Tìm mã hoặc tên phụ tùng"
               notFoundContent={!partsLoading ? 'Không tìm thấy phụ tùng phù hợp' : undefined}
               onSearch={onPartSearch}
               options={parts?.content

@@ -138,7 +138,7 @@ export function AssetsPage() {
       setBulkImportResult(result)
       if (result.committed) {
         notification.success({
-          message: 'Import thiết bị hoàn tất',
+          message: 'Nhập danh sách thiết bị hoàn tất',
           description: `Đã thêm ${result.importedRows} thiết bị vào hệ thống.`,
         })
         setBulkImportOpen(false)
@@ -202,13 +202,13 @@ export function AssetsPage() {
       <PageHeader
         eyebrow="Danh mục thiết bị"
         title="Thiết bị khách hàng"
-        description="Theo dõi serial, bảo hành, vòng đời và tình trạng phục vụ của từng tài sản."
+        description="Theo dõi số sê-ri, bảo hành, vòng đời và tình trạng phục vụ của từng thiết bị."
         actions={canManage ? assetActions : undefined}
         meta={<MetaBadge>{assetsQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} thiết bị`}</MetaBadge>}
       />
 
       <div className="table-toolbar">
-        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm serial, loại, hãng, model hoặc mã/tên khách hàng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <Input allowClear prefix={<SearchOutlined />} placeholder="Tìm số sê-ri, loại, hãng, mẫu hoặc mã/tên khách hàng" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
       </div>
 
       {assetsQuery.isError && (
@@ -245,7 +245,7 @@ export function AssetsPage() {
             render: (_, record) => (
               <div className="table-primary-cell">
                 <Typography.Text strong>{[record.brand, record.model].filter(Boolean).join(' ') || record.category}</Typography.Text>
-                <Typography.Text type="secondary" code>{record.serialNumber ?? 'Chưa xác định serial'}</Typography.Text>
+                <Typography.Text type="secondary" code>{record.serialNumber ?? 'Chưa xác định số sê-ri'}</Typography.Text>
               </div>
             ),
           },
@@ -311,14 +311,14 @@ export function AssetsPage() {
       />
 
       <CsvImportPreviewModal<AssetImportRowResult>
-        title="Kiểm tra file nhập thiết bị"
+        title="Kiểm tra tệp nhập thiết bị"
         open={bulkImportOpen}
         result={bulkImportResult}
         committing={commitImport.isPending}
         onCancel={() => setBulkImportOpen(false)}
         onCommit={() => commitImport.mutate()}
         columns={[
-          { title: 'Serial', dataIndex: 'serialNumber', width: 180, sorter: (a, b) => compareText(a.serialNumber, b.serialNumber) },
+          { title: 'Số sê-ri', dataIndex: 'serialNumber', width: 180, sorter: (a, b) => compareText(a.serialNumber, b.serialNumber) },
           { title: 'Mã khách hàng', dataIndex: 'customerCode', width: 160, sorter: (a, b) => compareText(a.customerCode, b.customerCode) },
         ]}
       />

@@ -1,39 +1,26 @@
 import { ClearOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Empty, Input, Table } from 'antd'
+import { Button, DatePicker, Empty, Input, Table, Typography } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { CheckboxFilterSelect } from '../../../components/CheckboxFilterSelect'
 import { PageHeader } from '../../../components/PageHeader'
 import { QueryErrorAlert } from '../../../components/QueryErrorAlert'
 import { LIST_PAGE_SIZE } from '../../../constants/pagination'
-import { AUDIT_ACTION_LABELS, AuditActionTag, MetaBadge } from '../../../components/PresentationBadge'
-import { EMPTY_VALUE, formatDateTime } from '../../../utils/format'
+import { AuditActionTag, MetaBadge } from '../../../components/PresentationBadge'
+import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_LABELS, auditEntityLabel, auditFriendlyText } from '../../../presentation/businessText'
+import { formatDateTime } from '../../../utils/format'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { auditApi } from '../api'
 import { resolveTableSort, serverSortable, type TableSortState } from '../../../utils/tableSort'
+import { actorRoleLabel } from '../../../constants/userRoles'
 
 const { RangePicker } = DatePicker
-const auditEntityLabels: Record<string, string> = {
-  SERVICE_CHANNEL: 'Kênh tiếp nhận',
-  SERVICE_REQUEST: 'Yêu cầu dịch vụ',
-  WORK_ORDER: 'Phiếu công việc',
-  CUSTOMER: 'Khách hàng',
-  ASSET: 'Thiết bị',
-  TECHNICIAN_PROFILE: 'Hồ sơ kỹ thuật viên',
-  SPARE_PART: 'Phụ tùng',
-  INVENTORY: 'Kho phụ tùng',
-  USER_ACCOUNT: 'Tài khoản người dùng',
-  ATTACHMENT: 'File đính kèm',
-  AI: 'Trợ lý AI',
-  SYSTEM: 'Hệ thống',
-}
-
 const auditActionOptions = Object.entries(AUDIT_ACTION_LABELS)
   .map(([value, label]) => ({ value, label }))
   .sort((left, right) => left.label.localeCompare(right.label, 'vi'))
 
-const auditEntityOptions = Object.entries(auditEntityLabels)
+const auditEntityOptions = Object.entries(AUDIT_ENTITY_LABELS)
   .map(([value, label]) => ({ value, label }))
   .sort((left, right) => left.label.localeCompare(right.label, 'vi'))
 
@@ -47,13 +34,6 @@ const auditDatePresets: Array<{ label: string; value: [Dayjs, Dayjs] }> = [
   { label: '30 ngày gần nhất', value: recentDateRange(30) },
   { label: '90 ngày gần nhất', value: recentDateRange(90) },
 ]
-
-function formatAuditEntityType(value?: string) {
-  if (!value) return EMPTY_VALUE
-  if (auditEntityLabels[value]) return auditEntityLabels[value]
-  const normalized = value.toLowerCase().replaceAll('_', ' ')
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
-}
 
 export function AuditPage() {
   const [page, setPage] = useState(0)
@@ -103,7 +83,7 @@ export function AuditPage() {
       <PageHeader
         eyebrow="Quản trị & kiểm soát"
         title="Nhật ký hệ thống"
-        description="Tra cứu thao tác quan trọng theo thời gian, người thực hiện và nghiệp vụ. Có thể lọc nhanh theo khoảng ngày hoặc xem toàn bộ lịch sử theo phân trang."
+        description="Tra cứu thao tác quan trọng theo thời gian, người thực hiện và nghiệp vụ. Mã trong sự kiện lịch sử được giữ nguyên theo thời điểm phát sinh để bảo đảm khả năng truy vết."
         meta={<><MetaBadge>{auditQuery.isError ? 'Lỗi tải dữ liệu' : `${data?.totalElements ?? 0} sự kiện phù hợp`}</MetaBadge><MetaBadge tone="info">{rangeLabel}</MetaBadge></>}
       />
 
@@ -142,8 +122,8 @@ export function AuditPage() {
           value={actorInput}
           onChange={(event) => setActorInput(event.target.value)}
         />
-        <CheckboxFilterSelect searchable placeholder="Tất cả hành động" ariaLabel="Lọc hành động audit" value={actions} onChange={(value) => { setActions(value); setPage(0) }} options={auditActionOptions} minWidth={220} />
-        <CheckboxFilterSelect searchable placeholder="Tất cả đối tượng" ariaLabel="Lọc đối tượng audit" value={entityTypes} onChange={(value) => { setEntityTypes(value); setPage(0) }} options={auditEntityOptions} minWidth={210} />
+        <CheckboxFilterSelect searchable placeholder="Tất cả hành động" ariaLabel="Lọc thao tác trong nhật ký" value={actions} onChange={(value) => { setActions(value); setPage(0) }} options={auditActionOptions} minWidth={220} />
+        <CheckboxFilterSelect searchable placeholder="Tất cả đối tượng" ariaLabel="Lọc đối tượng trong nhật ký" value={entityTypes} onChange={(value) => { setEntityTypes(value); setPage(0) }} options={auditEntityOptions} minWidth={210} />
         <Button icon={<ClearOutlined />} onClick={resetFilters}>Đặt lại</Button>
       </div>
 
@@ -151,8 +131,9 @@ export function AuditPage() {
         rowKey="id"
         loading={isLoading || isFetching}
         dataSource={auditQuery.isError ? [] : (data?.content ?? [])}
-        className="content-table"
-        scroll={{ x: 1160 }}
+        className="content-table audit-table"
+        tableLayout="fixed"
+        scroll={{ x: 1280 }}
         pagination={{
           current: page + 1,
           pageSize: LIST_PAGE_SIZE,
@@ -164,14 +145,27 @@ export function AuditPage() {
           setPage(Math.max((pagination.current ?? 1) - 1, 0))
           setSort(resolveTableSort(sorter, { sortBy: 'createdAt', sortDir: 'desc' }))
         }}
-        locale={{ emptyText: <Empty description={auditQuery.isError ? 'Không thể tải dữ liệu audit' : 'Không có sự kiện phù hợp bộ lọc'} /> }}
+        locale={{ emptyText: <Empty description={auditQuery.isError ? 'Không thể tải nhật ký hệ thống' : 'Không có sự kiện phù hợp bộ lọc'} /> }}
         columns={[
-          { title: 'Thời gian', dataIndex: 'createdAt', width: 180, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
-          { title: 'Người thao tác', dataIndex: 'actorUsername', width: 160, ...serverSortable(sort, 'actorUsername'), render: (value: string) => <span className="audit-actor">{value}</span> },
-          { title: 'Hành động', dataIndex: 'action', width: 170, ...serverSortable(sort, 'action'), render: (value: string) => <AuditActionTag action={value} /> },
-          { title: 'Đối tượng', dataIndex: 'entityType', width: 190, ...serverSortable(sort, 'entityType'), render: (value: string) => <span className="audit-entity-label">{formatAuditEntityType(value)}</span> },
-          { title: 'Chi tiết', dataIndex: 'details', ellipsis: true, ...serverSortable(sort, 'details'), render: (value) => value || EMPTY_VALUE },
-          { title: 'Mã đối tượng', dataIndex: 'entityId', width: 230, ...serverSortable(sort, 'entityId'), render: (value) => value ? <span className="entity-code" title={value}>{value}</span> : EMPTY_VALUE },
+          { title: 'Thời gian', dataIndex: 'createdAt', width: 170, ...serverSortable(sort, 'createdAt'), render: formatDateTime },
+          {
+            title: 'Người thực hiện',
+            dataIndex: 'actorDisplayName',
+            width: 220,
+            ...serverSortable(sort, 'actorDisplayName'),
+            render: (_, record) => (
+              <div className="table-primary-cell">
+                <Typography.Text strong>{record.actorDisplayName?.trim() || record.actorUsername}</Typography.Text>
+                {record.actorRole ? <Typography.Text type="secondary">{actorRoleLabel(record.actorRole)}</Typography.Text> : null}
+              </div>
+            ),
+          },
+          { title: 'Hành động', dataIndex: 'action', width: 260, ...serverSortable(sort, 'action'), render: (value: string) => <AuditActionTag action={value} /> },
+          { title: 'Đối tượng', dataIndex: 'entityType', width: 180, ...serverSortable(sort, 'entityType'), render: (value: string) => {
+            const label = auditEntityLabel(value)
+            return <span className="audit-entity-label" title={label}>{label}</span>
+          } },
+          { title: 'Chi tiết nghiệp vụ', dataIndex: 'details', width: 450, ellipsis: true, ...serverSortable(sort, 'details'), render: (value) => auditFriendlyText(value) },
         ]}
       />
     </div>

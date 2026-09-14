@@ -13,7 +13,7 @@ public final class AssetDisplay {
         if (equipmentName.isBlank()) {
             equipmentName = asset.getCategory();
         }
-        String serial = asset.getSerialNumber() == null ? "Chưa xác định serial" : asset.getSerialNumber();
+        String serial = asset.getSerialNumber() == null ? "Chưa xác định số sê-ri" : asset.getSerialNumber();
         return equipmentName + " (" + serial + ")";
     }
 }

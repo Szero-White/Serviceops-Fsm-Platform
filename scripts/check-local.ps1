@@ -12,6 +12,20 @@ function Invoke-NativeChecked {
     }
 }
 
+if ($env:OS -eq "Windows_NT") {
+    try {
+        $viteProcess = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match '[\\/]vite[\\/]bin[\\/]vite\.js' } |
+            Select-Object -First 1
+        if ($viteProcess) {
+            throw "Frontend dev server is running. Stop Vite before check-local.ps1 because npm ci must replace frontend/node_modules."
+        }
+    } catch {
+        if ($_.Exception.Message -like "Frontend dev server is running.*") { throw }
+        Write-Host "Could not inspect running Vite processes; continuing with the normal checks." -ForegroundColor DarkGray
+    }
+}
+
 Write-Host "== Required environment ==" -ForegroundColor Cyan
 Invoke-NativeChecked "java" @("-version")
 Invoke-NativeChecked "$PSScriptRoot\..\backend\mvnw.cmd" @("-version")

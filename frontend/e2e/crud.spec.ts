@@ -7,13 +7,12 @@ test('Owner can create, edit and delete recruiter-created customer data through 
   await page.goto('/customers')
 
   const suffix = Date.now().toString().slice(-8)
-  const code = `E2E-C-${suffix}`
   const initialName = `Khách hàng E2E ${suffix}`
   const updatedName = `Khách hàng E2E đã sửa ${suffix}`
 
   await page.getByRole('button', { name: /Thêm khách hàng/ }).click()
   const createModal = modalByTitle(page, 'Thêm khách hàng')
-  await createModal.getByLabel('Mã khách hàng').fill(code)
+  await expect(createModal.getByLabel('Mã khách hàng')).toBeDisabled()
   await createModal.getByLabel('Tên khách hàng').fill(initialName)
   await createModal.getByLabel('Số điện thoại').fill('0909123456')
   await createModal.getByLabel('Email').fill(`e2e-${suffix}@example.com`)
@@ -21,22 +20,24 @@ test('Owner can create, edit and delete recruiter-created customer data through 
   await expect(page.getByText('Đã tạo khách hàng').last()).toBeVisible()
 
   const search = page.getByPlaceholder('Tìm tên, mã, số điện thoại hoặc email')
-  await search.fill(code)
-  let row = page.locator('tbody tr').filter({ hasText: code })
-  await expect(row).toContainText(initialName)
+  await search.fill(initialName)
+  let row = page.locator('tbody tr').filter({ hasText: initialName })
+  await expect(row).toBeVisible()
+  await expect(row).toContainText(/KH-\d{8}-\d{3,}/)
 
   await row.getByRole('button', { name: 'Sửa khách hàng' }).click()
   const editModal = modalByTitle(page, 'Cập nhật khách hàng')
   await editModal.getByLabel('Tên khách hàng').fill(updatedName)
   await submitModal(page, 'Cập nhật khách hàng')
   await expect(page.getByText('Đã cập nhật khách hàng').last()).toBeVisible()
-  row = page.locator('tbody tr').filter({ hasText: code })
+  await search.fill(updatedName)
+  row = page.locator('tbody tr').filter({ hasText: updatedName })
   await expect(row).toContainText(updatedName)
 
   await row.getByRole('button', { name: 'Xóa khách hàng' }).click()
   await page.getByRole('button', { name: 'Xóa', exact: true }).click()
   await expect(page.getByText('Đã xóa khách hàng').last()).toBeVisible()
-  await expect(page.locator('tbody tr').filter({ hasText: code })).toHaveCount(0)
+  await expect(page.locator('tbody tr').filter({ hasText: updatedName })).toHaveCount(0)
 
   assertRuntimeClean()
 })
@@ -47,21 +48,19 @@ test('Owner can CRUD a custom service channel while public-demo seeds remain sep
   await page.goto('/service-channels')
 
   const suffix = Date.now().toString().slice(-6)
-  const code = `E2E_CH_${suffix}`
   const name = `Kênh E2E ${suffix}`
   const updatedName = `Kênh E2E đã sửa ${suffix}`
 
   await page.getByRole('button', { name: /Thêm kênh/ }).click()
   const createModal = modalByTitle(page, 'Thêm kênh tiếp nhận')
   await createModal.getByLabel('Tên kênh').fill(name)
-  await createModal.getByLabel('Mã kênh').fill(code)
   await createModal.getByLabel('Mô tả').fill('Kênh được tạo bởi browser E2E')
   await submitModal(page, 'Thêm kênh tiếp nhận')
   await expect(page.getByText('Đã tạo kênh tiếp nhận').last()).toBeVisible()
 
-  const search = page.getByPlaceholder('Tìm theo tên, mã hoặc mô tả')
-  await search.fill(code)
-  let row = page.locator('tbody tr').filter({ hasText: code })
+  const search = page.getByPlaceholder('Tìm theo tên hoặc mô tả')
+  await search.fill(name)
+  let row = page.locator('tbody tr').filter({ hasText: name })
   await expect(row).toContainText(name)
 
   await row.getByRole('button', { name: 'Sửa kênh' }).click()
@@ -70,12 +69,13 @@ test('Owner can CRUD a custom service channel while public-demo seeds remain sep
   await submitModal(page, 'Cập nhật kênh tiếp nhận')
   await expect(page.getByText('Đã cập nhật kênh tiếp nhận').last()).toBeVisible()
 
-  row = page.locator('tbody tr').filter({ hasText: code })
+  await search.fill(updatedName)
+  row = page.locator('tbody tr').filter({ hasText: updatedName })
   await expect(row).toContainText(updatedName)
   await row.getByRole('button', { name: 'Xóa kênh' }).click()
   await page.getByRole('button', { name: 'Xóa', exact: true }).click()
   await expect(page.getByText('Đã xóa kênh tiếp nhận').last()).toBeVisible()
-  await expect(page.locator('tbody tr').filter({ hasText: code })).toHaveCount(0)
+  await expect(page.locator('tbody tr').filter({ hasText: updatedName })).toHaveCount(0)
 
   assertRuntimeClean()
 })
@@ -86,12 +86,12 @@ test('Warehouse can create a spare part and import stock through the UI', async 
   await page.goto('/inventory')
 
   const suffix = Date.now().toString().slice(-8)
-  const sku = `E2E-${suffix}`
+  const partName = `Phụ tùng E2E ${suffix}`
 
   await page.getByRole('button', { name: /Thêm phụ tùng/ }).click()
   const modal = modalByTitle(page, 'Thêm phụ tùng')
-  await modal.getByLabel('SKU').fill(sku)
-  await modal.getByLabel('Tên phụ tùng').fill(`Phụ tùng E2E ${suffix}`)
+  await expect(modal.getByLabel('Mã phụ tùng')).toBeDisabled()
+  await modal.getByLabel('Tên phụ tùng').fill(partName)
   await modal.getByLabel('Đơn vị').fill('cái')
   await modal.getByLabel('Tồn ban đầu').fill('2')
   await modal.getByLabel('Ngưỡng tồn tối thiểu').fill('1')
@@ -99,10 +99,12 @@ test('Warehouse can create a spare part and import stock through the UI', async 
   await submitModal(page, 'Thêm phụ tùng')
   await expect(page.getByText('Đã tạo phụ tùng').last()).toBeVisible()
 
-  const search = page.getByPlaceholder('Tìm SKU, tên hoặc đơn vị phụ tùng')
-  await search.fill(sku)
-  const row = page.locator('tbody tr').filter({ hasText: sku })
+  const search = page.getByPlaceholder('Tìm mã phụ tùng, tên hoặc đơn vị')
+  await search.fill(partName)
+  const row = page.locator('tbody tr').filter({ hasText: partName })
   await expect(row).toBeVisible()
+  const sku = (await row.locator('code').first().textContent())?.trim() ?? ''
+  expect(sku).toMatch(/^PT-\d{8}-\d{3,}$/)
   await row.getByRole('button', { name: 'Nhập kho' }).click()
 
   const importModal = modalByTitle(page, new RegExp(`Nhập kho.*${sku}`))

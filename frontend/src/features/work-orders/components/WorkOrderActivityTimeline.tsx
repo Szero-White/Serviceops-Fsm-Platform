@@ -16,6 +16,7 @@ import { Empty, Space, Timeline, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { StatusTag } from '../../../components/StatusTag'
 import { actorRoleLabel } from '../../../constants/userRoles'
+import { businessCodeLabel } from '../../../presentation/businessText'
 import type { WorkOrderActivity, WorkOrderActivityType, WorkOrderHistory } from '../../../types'
 import { formatCurrency, formatDateTime, formatQuantityWithUnit } from '../../../utils/format'
 import { workOrdersApi } from '../api'
@@ -110,7 +111,7 @@ const PART_ACTIVITY: Partial<Record<WorkOrderActivityType, { title: string; icon
   PART_REQUEST_EXPIRED: { title: 'Yêu cầu phụ tùng hết hiệu lực', icon: StopOutlined, color: '#7a7a7a' },
   PART_ISSUED: { title: 'Kho đã cấp phụ tùng', icon: InboxOutlined, color: '#47789f' },
   PART_USED: { title: 'Đã xác nhận phụ tùng thực tế sử dụng', icon: ToolOutlined, color: '#4b7968' },
-  PART_CONSUMED: { title: 'Đã sử dụng phụ tùng (legacy)', icon: ToolOutlined, color: '#47789f' },
+  PART_CONSUMED: { title: 'Đã sử dụng phụ tùng', icon: ToolOutlined, color: '#47789f' },
   PART_RETURNED: { title: 'Kho đã nhận hoàn trả phụ tùng', icon: RollbackOutlined, color: '#8a6a3f' },
 }
 
@@ -200,7 +201,7 @@ export function WorkOrderActivityTimeline({
             children: (
               <div className="timeline-entry">
                 <div className="timeline-entry-head"><Space size={6}>{settled ? <CheckCircleOutlined /> : <DollarOutlined />}<Typography.Text strong>{settled ? 'Thanh toán đã được đối soát' : 'Đã ghi nhận thanh toán tại hiện trường'}</Typography.Text></Space>{inlineActor(activity)}</div>
-                <div className="timeline-note">{activity.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt'}{activity.amount != null ? ` · ${formatCurrency(activity.amount)}` : ''}</div>
+                <div className="timeline-note">{businessCodeLabel(activity.paymentMethod, 'Phương thức khác')}{activity.amount != null ? ` · ${formatCurrency(activity.amount)}` : ''}</div>
                 {activity.note ? <div className="timeline-note">{activity.note}</div> : null}
                 <Typography.Text className="timeline-time">{formatDateTime(activity.createdAt)}</Typography.Text>
               </div>
@@ -221,7 +222,7 @@ export function WorkOrderActivityTimeline({
           }
         }
 
-        return { children: <Typography.Text>{activity.note ?? activity.type}</Typography.Text> }
+        return { children: <Typography.Text>{activity.note ?? 'Đã ghi nhận một thay đổi trên phiếu công việc'}</Typography.Text> }
       })}
     />
   )

@@ -50,8 +50,8 @@ export function LoginPanel({
     <section className="login-panel">
       <div className="login-panel-shell">
         <div className="login-panel-badges">
-          <TagLine icon={<ClockCircleOutlined />} label="Demo nhanh" value="Chọn vai trò và đăng nhập" />
-          <TagLine icon={<SafetyCertificateOutlined />} label="Bảo mật" value="JWT · RBAC · Tenant isolation" />
+          <TagLine icon={<ClockCircleOutlined />} label="Dùng thử nhanh" value="Chọn vai trò và đăng nhập" />
+          <TagLine icon={<SafetyCertificateOutlined />} label="Bảo mật" value="Phân quyền theo vai trò · Dữ liệu tách biệt" />
         </div>
 
         <Card className="login-card" variant="borderless">
@@ -88,7 +88,7 @@ export function LoginPanel({
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder={DEMO_PASSWORD ? 'Mật khẩu demo' : 'Nhập mật khẩu demo'}
+                placeholder={DEMO_PASSWORD ? 'Mật khẩu dùng thử' : 'Nhập mật khẩu dùng thử'}
                 autoComplete="current-password"
               />
             </Form.Item>

@@ -112,7 +112,7 @@ export function CustomersPage() {
       setBulkImportResult(result)
       if (result.committed) {
         notification.success({
-          message: 'Import khách hàng hoàn tất',
+          message: 'Nhập danh sách khách hàng hoàn tất',
           description: `Đã thêm ${result.importedRows} khách hàng vào hệ thống.`,
         })
         setBulkImportOpen(false)
@@ -145,7 +145,7 @@ export function CustomersPage() {
   const showCreate = () => {
     setEditing(undefined)
     form.resetFields()
-    form.setFieldsValue({ code: `KH-${Date.now().toString().slice(-5)}`, active: true })
+    form.setFieldsValue({ active: true })
     setOpen(true)
   }
 
@@ -164,13 +164,13 @@ export function CustomersPage() {
             {
               key: 'export',
               icon: <DownloadOutlined />,
-              label: 'Xuất CSV',
+              label: 'Xuất danh sách',
               onClick: exportCsv,
             },
             {
               key: 'template',
               icon: <FileExcelOutlined />,
-              label: 'Tải mẫu import',
+              label: 'Tải mẫu nhập dữ liệu',
               onClick: downloadTemplate,
             },
             {
@@ -185,7 +185,7 @@ export function CustomersPage() {
                     return Upload.LIST_IGNORE
                   }}
                 >
-                  <span>Nhập CSV</span>
+                  <span>Nhập danh sách</span>
                 </Upload>
               ),
             },
@@ -312,7 +312,7 @@ export function CustomersPage() {
       <Modal title={editing ? 'Cập nhật khách hàng' : 'Thêm khách hàng'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={save.isPending} okText={editing ? 'Lưu thay đổi' : 'Thêm khách hàng'} width={680} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)} onFinishFailed={handleFormValidationFailed} scrollToFirstError requiredMark>
           <div className="form-grid two-cols">
-            <Form.Item label="Mã khách hàng" name="code" rules={[{ required: true, message: 'Nhập mã khách hàng' }]}><Input /></Form.Item>
+            <Form.Item label="Mã khách hàng"><Input aria-label="Mã khách hàng" value={editing?.code} disabled placeholder="Tự động tạo khi lưu" /></Form.Item>
             <Form.Item label="Tên khách hàng" name="name" rules={[{ required: true, message: 'Nhập tên khách hàng' }]}><Input /></Form.Item>
             <Form.Item label="Số điện thoại" name="phone"><Input /></Form.Item>
             <Form.Item label="Email" name="email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}><Input /></Form.Item>
@@ -324,7 +324,7 @@ export function CustomersPage() {
       </Modal>
 
       <CsvImportPreviewModal<CustomerImportRowResult>
-        title="Kiểm tra file nhập khách hàng"
+        title="Kiểm tra tệp nhập khách hàng"
         open={bulkImportOpen}
         result={bulkImportResult}
         committing={commitImport.isPending}

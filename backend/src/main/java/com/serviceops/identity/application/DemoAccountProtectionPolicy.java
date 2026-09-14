@@ -39,7 +39,7 @@ public class DemoAccountProtectionPolicy {
 
         throw BusinessException.forbidden(
                 "DEMO_ACCOUNT_PROTECTED",
-                "Tài khoản demo cố định được bảo vệ để bảo đảm trải nghiệm public demo luôn hoạt động"
+                "Tài khoản mẫu cố định được bảo vệ để bảo đảm bản dùng thử công khai luôn hoạt động"
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.serviceops.customer.application;
 
 import com.serviceops.asset.domain.AssetRepository;
+import com.serviceops.common.businesscode.BusinessCodeGenerator;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.customer.domain.Customer;
 import com.serviceops.customer.domain.CustomerRepository;
@@ -36,6 +37,7 @@ class CustomerActiveFilterTest {
     private static final UUID USER_ID = UUID.randomUUID();
 
     @Mock private CustomerRepository repository;
+    @Mock private BusinessCodeGenerator businessCodeGenerator;
     @Mock private AssetRepository assetRepository;
     @Mock private ServiceRequestRepository serviceRequestRepository;
     @Mock private WorkOrderRepository workOrderRepository;
@@ -48,6 +50,7 @@ class CustomerActiveFilterTest {
     void setUp() {
         service = new CustomerService(
                 repository,
+                businessCodeGenerator,
                 assetRepository,
                 serviceRequestRepository,
                 workOrderRepository,

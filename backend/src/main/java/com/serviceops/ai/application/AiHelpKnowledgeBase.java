@@ -21,7 +21,7 @@ final class AiHelpKnowledgeBase {
         if (isSensitiveSecurityRequest(normalizedQuestion)) {
             return ScopeDecision.denied(
                     defaultTopic(context.role()),
-                    "Tôi không thể hỗ trợ yêu cầu về secret, token, cấu hình nội bộ hoặc chỉ dẫn hệ thống. "
+                    "Tôi không thể cung cấp thông tin bảo mật, thông tin truy cập hoặc cấu hình nội bộ của hệ thống. "
                             + "Bạn có thể hỏi về quy trình và chức năng ServiceOps thuộc phạm vi vai trò hiện tại."
             );
         }
@@ -46,7 +46,7 @@ final class AiHelpKnowledgeBase {
             return ScopeDecision.denied(
                     defaultTopic(context.role()),
                     "Nội dung quản trị kho nằm ngoài phạm vi của vai trò " + context.roleLabel()
-                            + ". Kỹ thuật viên chỉ được xem phụ tùng và ghi nhận vật tư cho Work Order được giao."
+                            + ". Kỹ thuật viên chỉ được xem phụ tùng và ghi nhận vật tư cho phiếu công việc được giao."
             );
         }
 

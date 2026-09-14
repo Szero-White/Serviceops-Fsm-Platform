@@ -1,5 +1,6 @@
 package com.serviceops.inventory.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.inventory.domain.SparePart;
@@ -34,7 +35,7 @@ public class WorkOrderPartFulfillmentService {
                 "PART_REQUEST_UNAVAILABLE",
                 "WORK_ORDER",
                 entity.getWorkOrder().getId(),
-                "Kho không thể cấp " + entity.getSparePart().getSku() + " x "
+                "Kho không thể cấp " + AuditDetailText.namedCode(entity.getSparePart().getName(), entity.getSparePart().getSku()) + " x "
                         + WorkOrderPartStockService.formatQuantity(entity.getRequestedQuantity()) + "; lý do: " + reason
         );
         return WorkOrderPartResponseMapper.toRequestResponse(entity);
@@ -70,7 +71,7 @@ public class WorkOrderPartFulfillmentService {
                 "WORK_ORDER",
                 workOrder.getId(),
                 "Cấp " + WorkOrderPartStockService.formatQuantity(entity.getIssuedQuantity()) + " " + part.getUnit()
-                        + " - " + part.getSku() + "; người nhận: " + entity.getReceivedByDisplayName()
+                        + " - " + AuditDetailText.namedCode(part.getName(), part.getSku()) + "; người nhận: " + entity.getReceivedByDisplayName()
         );
         return WorkOrderPartResponseMapper.toRequestResponse(entity);
     }

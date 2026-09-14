@@ -34,9 +34,9 @@ export function LandingFooter() {
         </div>
 
         <div className="lp-footer-bottom">
-          <span className="lp-footer-copy">© {new Date().getFullYear()} ServiceOps · Production-oriented portfolio project.</span>
+          <span className="lp-footer-copy">© {new Date().getFullYear()} ServiceOps · Dự án mô phỏng vận hành thực tế.</span>
           <div className="lp-footer-legal">
-            <Link to="/login" className="lp-footer-link">Demo</Link>
+            <Link to="/login" className="lp-footer-link">Dùng thử</Link>
             <a href="https://github.com/Szero-White/Serviceops-Fsm-Platform" target="_blank" rel="noreferrer" className="lp-footer-link">GitHub</a>
           </div>
         </div>

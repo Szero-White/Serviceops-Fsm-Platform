@@ -16,7 +16,7 @@ class AiHelpFormFeedbackTopicTest {
 
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.topic().name()).isEqualTo("Phản hồi biểu mẫu");
-        assertThat(decision.topic().answer()).contains("trường lỗi");
-        assertThat(decision.topic().answer()).contains("không gửi request");
+        assertThat(decision.topic().answer()).contains("trường cần bổ sung");
+        assertThat(decision.topic().answer()).contains("Thử lại");
     }
 }

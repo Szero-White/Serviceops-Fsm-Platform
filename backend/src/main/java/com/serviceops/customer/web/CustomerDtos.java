@@ -13,7 +13,6 @@ public final class CustomerDtos {
     }
 
     public record CustomerRequest(
-            @NotBlank @Size(max = 40) String code,
             @NotBlank @Size(max = 180) String name,
             @Size(max = 30) String phone,
             @Email @Size(max = 150) String email,

@@ -158,7 +158,16 @@ Public landing được phép có nhiều narrative hơn product UI nhưng vẫn
 - UI phải vẫn dễ hiểu ở browser zoom 100% trên 1366/1440/1600/1920 desktop.
 - Tablet/mobile ưu tiên task: stack toolbar/actions, một cột form, compact AI launcher.
 
-## 13. Design references
+## 13. Business language and presentation boundary
+
+- Internal enum, API route, database field and Java/TypeScript identifier stay stable for engineering compatibility; they are not rendered directly to operational users.
+- User-facing status, role, audit action, entity type and workflow copy go through shared presentation mappings. Unknown internal values must fall back to neutral business wording instead of leaking raw codes.
+- Do not show internal UUIDs when a business identifier or readable label already exists. Audit tables prioritize actor, action, business entity and readable details.
+- Use full Vietnamese role/operation names in UI copy. Avoid implementation abbreviations such as `KTV`, `CSKH`, `SKU`, `JWT`, `RBAC`, `FSM`, `API URL`, `audit trail`, `Work Order`, `Service Request` in end-user surfaces.
+- Import/export templates use Vietnamese headers and readable values. Legacy English CSV headers remain accepted on import to preserve backward compatibility.
+- `npm run lint:ui` runs both typography and business-language policy checks so common technical wording does not drift back into React user-facing surfaces.
+
+## 14. Design references
 
 Các nguyên tắc được đối chiếu với enterprise guidance, không copy UI trực tiếp:
 

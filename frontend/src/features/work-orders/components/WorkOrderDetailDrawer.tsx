@@ -183,23 +183,13 @@ export function WorkOrderDetailDrawer({
                   {TRANSITION_LABELS.CUSTOMER_ACCEPTED}
                 </Button>
               )}
-              {permissions.canTransition && transitions.includes('CLOSED') && (
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  loading={transitionPending}
-                  onClick={() => onTransition('CLOSED')}
-                >
-                  {TRANSITION_LABELS.CLOSED}
-                </Button>
-              )}
               {canUploadWorkEvidence ? (
                 <>
                   <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp" capture="environment">
                     <Button icon={<CameraOutlined />}>Chụp ảnh</Button>
                   </Upload>
                   <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp,application/pdf">
-                    <Button icon={<CloudUploadOutlined />}>Tải file lên</Button>
+                    <Button icon={<CloudUploadOutlined />}>Tải tệp lên</Button>
                   </Upload>
                 </>
               ) : null}
@@ -224,7 +214,7 @@ export function WorkOrderDetailDrawer({
                   {workOrder.status === 'ASSIGNED' ? (
                     <Descriptions.Item label="Bước tiếp theo" span={2}>
                       Đang chờ kỹ thuật viên được phân công bắt đầu di chuyển hoặc thực hiện công việc.
-                      Điều phối viên hoặc Owner có thể điều phối lại trước khi kỹ thuật viên bắt đầu.
+                      Điều phối viên hoặc Chủ sở hữu có thể điều phối lại trước khi kỹ thuật viên bắt đầu.
                     </Descriptions.Item>
                   ) : null}
                   <Descriptions.Item label="Mô tả" span={2}>{workOrder.description ?? EMPTY_VALUE}</Descriptions.Item>

@@ -42,7 +42,7 @@ final class AttachmentRules {
             if (purpose != AttachmentPurpose.WORK_EVIDENCE && purpose != AttachmentPurpose.PAYMENT_EVIDENCE) {
                 throw BusinessException.badRequest(
                         "INVALID_ATTACHMENT_PURPOSE",
-                        "File phiếu công việc phải là hồ sơ sửa chữa hoặc bằng chứng thanh toán"
+                        "Tệp của phiếu công việc phải là hồ sơ sửa chữa hoặc bằng chứng thanh toán"
                 );
             }
             return purpose;
@@ -51,7 +51,7 @@ final class AttachmentRules {
         if (purpose != AttachmentPurpose.GENERAL) {
             throw BusinessException.badRequest(
                     "INVALID_ATTACHMENT_PURPOSE",
-                    "Mục đích file không phù hợp với đối tượng đính kèm"
+                    "Mục đích tệp không phù hợp với đối tượng đính kèm"
             );
         }
         return purpose;
@@ -68,19 +68,19 @@ final class AttachmentRules {
     static String sanitizeFilename(String value) {
         String raw = value == null ? "" : value.trim();
         if (raw.isBlank()) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Tên file không được để trống");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_REQUIRED", "Tên tệp không được để trống");
         }
         final String normalized;
         try {
             normalized = Path.of(raw).getFileName().toString();
         } catch (RuntimeException ex) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không hợp lệ");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên tệp không hợp lệ");
         }
         if (normalized.length() > 255) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Tên file không được vượt quá 255 ký tự");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_TOO_LONG", "Tên tệp không được vượt quá 255 ký tự");
         }
         if (normalized.chars().anyMatch(Character::isISOControl)) {
-            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên file không được chứa ký tự điều khiển");
+            throw BusinessException.badRequest("ATTACHMENT_FILENAME_INVALID", "Tên tệp không được chứa ký tự điều khiển");
         }
         return normalized;
     }

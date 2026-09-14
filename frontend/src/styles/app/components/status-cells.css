@@ -65,8 +65,16 @@
   box-shadow: none;
 }
 .audit-action-tag {
+  max-width: 100%;
+  overflow: hidden;
   border-radius: 6px !important;
   font-family: var(--app-font);
+}
+.audit-action-tag__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entity-code,

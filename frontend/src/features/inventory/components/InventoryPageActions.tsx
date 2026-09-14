@@ -24,9 +24,9 @@ export function InventoryPageActions({
         trigger={['click']}
         menu={{
           items: [
-            { key: 'export', icon: <FileExcelOutlined />, label: 'Xuất CSV', onClick: onExport },
+            { key: 'export', icon: <FileExcelOutlined />, label: 'Xuất danh sách', onClick: onExport },
             ...(canManageStock ? [
-              { key: 'template', icon: <FileExcelOutlined />, label: 'Tải mẫu import', onClick: onDownloadTemplate },
+              { key: 'template', icon: <FileExcelOutlined />, label: 'Tải mẫu nhập dữ liệu', onClick: onDownloadTemplate },
               {
                 key: 'import',
                 icon: <UploadOutlined />,
@@ -39,7 +39,7 @@ export function InventoryPageActions({
                       return Upload.LIST_IGNORE
                     }}
                   >
-                    <span>Nhập CSV</span>
+                    <span>Nhập danh sách</span>
                   </Upload>
                 ),
               },

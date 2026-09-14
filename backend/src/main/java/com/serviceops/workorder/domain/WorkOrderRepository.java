@@ -113,8 +113,36 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, UUID> {
             """)
     Optional<WorkOrder> findForUpdate(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
-    @Query(value = "select nextval('work_order_number_seq')", nativeQuery = true)
-    long nextNumber();
+
+    @Query(value = """
+            select count(*) as total,
+                   count(*) filter (where w.status = 'CUSTOMER_ACCEPTED') as "pendingClosure",
+                   count(*) filter (where w.status = 'CLOSED') as closed,
+                   count(*) filter (where w.status = 'CANCELLED') as cancelled
+            from work_orders w
+            join customers c on c.id = w.customer_id
+            left join assets a on a.id = w.asset_id
+            left join technician_profiles t on t.id = w.technician_id
+            left join user_accounts u on u.id = t.user_id
+            where w.tenant_id = :tenantId
+              and w.deleted_at is null
+              and (:restrictToTechnician = false or u.id = :userId)
+              and (w.status in ('CLOSED', 'CANCELLED')
+                   or (w.status = 'CUSTOMER_ACCEPTED' and exists (
+                       select 1 from payments p where p.work_order_id = w.id and p.status = 'SETTLED'
+                   )))
+              and (:search = '' or lower(w.code) like lower(concat('%', :search, '%'))
+                   or lower(w.summary) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(w.description, '')) like lower(concat('%', :search, '%'))
+                   or lower(c.name) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(a.serial_number, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.display_name, '')) like lower(concat('%', :search, '%'))
+                   or lower(coalesce(u.username, '')) like lower(concat('%', :search, '%')))
+            """, nativeQuery = true)
+    WorkOrderHistorySummaryProjection summarizeHistory(@Param("tenantId") UUID tenantId,
+                                                       @Param("userId") UUID userId,
+                                                       @Param("restrictToTechnician") boolean restrictToTechnician,
+                                                       @Param("search") String search);
 
     @Query("select count(w) from WorkOrder w where w.tenantId = :tenantId and w.status = :status and w.deletedAt is null")
     long countByTenantIdAndStatus(@Param("tenantId") UUID tenantId, @Param("status") WorkOrderStatus status);

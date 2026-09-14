@@ -44,7 +44,7 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
   const reportTransfer = useMutation({
     mutationFn: () => paymentsApi.reportTransfer(workOrder.id, selectedEvidence?.id),
     onSuccess: () => {
-      notification.success({ message: 'Đã ghi nhận khách báo chuyển khoản', description: 'CSKH đã được thông báo để đối soát tiền thực tế vào tài khoản công ty.' })
+      notification.success({ message: 'Đã ghi nhận khách báo chuyển khoản', description: 'Bộ phận chăm sóc khách hàng đã được thông báo để đối soát tiền thực tế vào tài khoản công ty.' })
       setAction(undefined)
       refresh()
     },
@@ -54,7 +54,7 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
   const collectCash = useMutation({
     mutationFn: () => paymentsApi.collectCash(workOrder.id),
     onSuccess: () => {
-      notification.success({ message: 'Đã ghi nhận tiền mặt', description: 'Tiền đang do kỹ thuật viên giữ và cần bàn giao cho CSKH.' })
+      notification.success({ message: 'Đã ghi nhận tiền mặt', description: 'Tiền đang do kỹ thuật viên giữ và cần bàn giao cho bộ phận chăm sóc khách hàng.' })
       setAction(undefined)
       refresh()
     },
@@ -66,7 +66,7 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
     onSuccess: () => {
       notification.success({
         message: 'Đã chuyển thanh toán về quầy',
-        description: 'Khách sẽ thanh toán trực tiếp với CSKH tại quầy. CSKH đã được thông báo để theo dõi khoản này.',
+        description: 'Khách sẽ thanh toán trực tiếp với bộ phận chăm sóc khách hàng tại quầy. Bộ phận phụ trách đã được thông báo để theo dõi khoản này.',
       })
       setAction(undefined)
       refresh()
@@ -148,7 +148,7 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
             <div style={{ marginTop: 8 }}><img src={evidencePreview} alt="Ảnh giao dịch vừa chọn" style={{ maxWidth: 280, width: '100%', borderRadius: 10 }} /></div>
           </div>
         ) : null}
-        <Typography.Text type="secondary">Ảnh giao dịch chỉ hỗ trợ đối soát; thanh toán chỉ hoàn tất sau khi CSKH xác minh công ty đã thực nhận tiền.</Typography.Text>
+        <Typography.Text type="secondary">Ảnh giao dịch chỉ hỗ trợ đối soát; thanh toán chỉ hoàn tất sau khi bộ phận chăm sóc khách hàng xác minh công ty đã thực nhận tiền.</Typography.Text>
       </Space>
 
       <Space orientation="vertical" size={8} style={{ width: '100%' }}>
@@ -179,7 +179,7 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
       <PaymentActionConfirmationModal
         open={action === 'CASH'}
         title="Xác nhận đã nhận tiền mặt"
-        description="Sau khi ghi nhận, hệ thống sẽ xác định kỹ thuật viên đang giữ tiền và phải bàn giao đủ cho CSKH."
+        description="Sau khi ghi nhận, hệ thống sẽ xác định kỹ thuật viên đang giữ tiền và phải bàn giao đủ cho bộ phận chăm sóc khách hàng."
         workOrderCode={workOrder.code}
         customerName={payment.customerName}
         amount={payment.amount}
@@ -192,11 +192,11 @@ export function TechnicianPaymentSection({ workOrder, payment, profile, attachme
       <PaymentActionConfirmationModal
         open={action === 'COUNTER'}
         title="Xác nhận hẹn thanh toán tại quầy"
-        description="Lựa chọn này dùng khi kỹ thuật viên chưa thu tiền. Khoản thanh toán sẽ được chuyển sang hàng đợi CSKH để thu trực tiếp tại quầy."
+        description="Lựa chọn này dùng khi kỹ thuật viên chưa thu tiền. Khoản thanh toán sẽ được chuyển sang danh sách chờ của bộ phận chăm sóc khách hàng để thu trực tiếp tại quầy."
         workOrderCode={workOrder.code}
         customerName={payment.customerName}
         amount={payment.amount}
-        confirmationLabel="Tôi xác nhận chưa thu tiền từ khách và đã hướng dẫn khách đến quầy CSKH để hoàn tất thanh toán."
+        confirmationLabel="Tôi xác nhận chưa thu tiền từ khách và đã hướng dẫn khách đến quầy chăm sóc khách hàng để hoàn tất thanh toán."
         confirmText="Chuyển thanh toán về quầy"
         loading={payAtCounter.isPending}
         onCancel={() => setAction(undefined)}

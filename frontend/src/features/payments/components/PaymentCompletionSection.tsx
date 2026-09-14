@@ -61,7 +61,7 @@ export function PaymentCompletionSection({ payment, workOrder, role }: PaymentCo
           ) : workOrder.status === 'CLOSED' ? (
             <Button loading={downloadReceipt.isPending} onClick={() => downloadReceipt.mutate()}>Tải biên nhận</Button>
           ) : (
-            <Typography.Text type="secondary">Chờ CSKH hoàn tất hồ sơ thanh toán</Typography.Text>
+            <Typography.Text type="secondary">Chờ chăm sóc khách hàng hoàn tất hồ sơ thanh toán</Typography.Text>
           )}
           {role === 'CUSTOMER_SERVICE' && workOrder.status === 'CUSTOMER_ACCEPTED' ? (
             <Popconfirm

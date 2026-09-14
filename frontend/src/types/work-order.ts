@@ -63,6 +63,13 @@ export interface WorkOrderActivity {
   createdAt: string
 }
 
+export interface WorkOrderHistorySummary {
+  total: number
+  pendingClosure: number
+  closed: number
+  cancelled: number
+}
+
 export interface WorkOrder {
   id: string
   code: string

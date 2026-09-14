@@ -213,7 +213,7 @@ class AssetIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(serviceRequest.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(serviceRequest.getBody()).isNotNull();
         assertThat(serviceRequest.getBody().get("assetId")).isEqualTo(assetId.toString());
-        assertThat(String.valueOf(serviceRequest.getBody().get("assetLabel"))).contains("Chưa xác định serial");
+        assertThat(String.valueOf(serviceRequest.getBody().get("assetLabel"))).contains("Chưa xác định số sê-ri");
 
         String serviceRequestId = String.valueOf(serviceRequest.getBody().get("id"));
         ResponseEntity<Map<String, Object>> workOrder = postJsonMap(
@@ -224,7 +224,7 @@ class AssetIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(workOrder.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(workOrder.getBody()).isNotNull();
         assertThat(workOrder.getBody().get("assetId")).isEqualTo(assetId.toString());
-        assertThat(String.valueOf(workOrder.getBody().get("assetLabel"))).contains("Chưa xác định serial");
+        assertThat(String.valueOf(workOrder.getBody().get("assetLabel"))).contains("Chưa xác định số sê-ri");
 
         String verifiedSerial = "FIELD-" + shortId();
         ResponseEntity<String> addSerial = putJson(

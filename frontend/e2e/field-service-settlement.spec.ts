@@ -55,6 +55,13 @@ type PaymentQueueSummary = {
   pendingClosureCount: number
 }
 
+type WorkOrderHistorySummary = {
+  total: number
+  pendingClosure: number
+  closed: number
+  cancelled: number
+}
+
 type ReturnablePartResponse = {
   returnableQuantity: number
 }
@@ -78,12 +85,10 @@ function expectStatus(actual: number, expected: number, context: string) {
 test('field-service journey keeps parts, billing, payment, receipt, closure and post-closed return consistent', async ({ page }) => {
   const assertRuntimeClean = watchRuntime(page)
   const suffix = `${Date.now()}`.slice(-8)
-  const sku = `E2E-FLOW-${suffix}`
   const workTitle = `Luồng dịch vụ E2E ${suffix}`
 
   await login(page, 'warehouse')
   const part = await apiJson<SparePartResponse>(page, 'POST', '/spare-parts', {
-    sku,
     name: `Van kiểm thử ${suffix}`,
     unit: 'cái',
     initialStock: 5,
@@ -93,10 +98,11 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   })
   expectStatus(part.status, 200, 'Warehouse tạo phụ tùng cho isolated E2E')
   expect(part.body.stockQuantity).toBe(5)
+  const sku = part.body.sku
+  expect(sku).toMatch(/^PT-\d{8}-\d{3,}$/)
 
   await login(page, 'customer-service')
   const customer = await apiJson<{ id: string }>(page, 'POST', '/customers', {
-    code: `E2E-FLOW-${suffix}`,
     name: `Khách workflow E2E ${suffix}`,
     phone: '0909888666',
     active: true,
@@ -283,7 +289,7 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   await expect(page.getByText(`Chưa đóng phiếu: ${summaryBeforeSettlement.body.pendingClosureCount}`, { exact: true })).toBeVisible()
   await page.getByPlaceholder('Tìm mã phiếu, khách hàng hoặc kỹ thuật viên').fill(workOrderCode)
   const paymentRow = page.locator('tr').filter({ hasText: workOrderCode }).last()
-  await expect(paymentRow).toContainText('KTV đang giữ tiền mặt')
+  await expect(paymentRow).toContainText('Chờ bàn giao tiền mặt')
   await paymentRow.getByRole('button', { name: 'Đối soát thanh toán' }).click()
   await expect(page).toHaveURL(new RegExp(`/work-orders\\?open=${workOrderId}&tab=payment&from=payments`))
   await expect(page.getByRole('tab', { name: 'Thanh toán' })).toHaveAttribute('aria-selected', 'true')
@@ -328,6 +334,14 @@ test('field-service journey keeps parts, billing, payment, receipt, closure and 
   expect(summaryAfterClosure.body.pendingClosureCount).toBe(summaryAfterSettlement.body.pendingClosureCount - 1)
   await expect(page.getByText(`Chưa đối soát thanh toán: ${summaryAfterClosure.body.pendingReconciliationCount}`, { exact: true })).toBeVisible()
   await expect(page.getByText(`Chưa đóng phiếu: ${summaryAfterClosure.body.pendingClosureCount}`, { exact: true })).toBeVisible()
+
+  const historySummary = await apiJson<WorkOrderHistorySummary>(page, 'GET', '/work-orders/history/summary')
+  expectStatus(historySummary.status, 200, 'Lịch sử phiếu trả đúng bộ đếm theo trạng thái')
+  await page.goto('/work-order-history')
+  await expect(page.getByText(`${historySummary.body.total} hồ sơ`, { exact: true })).toBeVisible()
+  await expect(page.getByText(`${historySummary.body.pendingClosure} chờ hoàn tất hồ sơ`, { exact: true })).toBeVisible()
+  await expect(page.getByText(`${historySummary.body.closed} đã đóng`, { exact: true })).toBeVisible()
+  await expect(page.getByText(`${historySummary.body.cancelled} đã hủy`, { exact: true })).toBeVisible()
 
   await login(page, 'technician')
   const technicianReceipt = await apiJson(page, 'GET', `/work-orders/${workOrderId}/receipt`)

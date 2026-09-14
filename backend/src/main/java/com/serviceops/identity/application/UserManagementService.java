@@ -1,5 +1,6 @@
 package com.serviceops.identity.application;
 
+import com.serviceops.audit.application.AuditDetailText;
 import com.serviceops.audit.application.AuditService;
 import com.serviceops.common.exception.BusinessException;
 import com.serviceops.identity.domain.UserAccount;
@@ -71,8 +72,8 @@ public class UserManagementService {
                 "CREATE",
                 "USER_ACCOUNT",
                 user.getId(),
-                "Tạo người dùng " + user.getUsername()
-                        + " với vai trò " + user.getRole()
+                "Tạo người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
+                        + " với vai trò " + roleLabel(user.getRole())
                         + " · trạng thái " + accountStatusLabel(user.isActive())
         );
         return toResponse(user, technician);
@@ -100,7 +101,7 @@ public class UserManagementService {
                 "UPDATE",
                 "USER_ACCOUNT",
                 user.getId(),
-                "Cập nhật người dùng " + user.getUsername()
+                "Cập nhật người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername())
                         + " · " + accountStatusAudit(previousActive, user.isActive())
         );
         return toResponse(user, technician);
@@ -132,7 +133,7 @@ public class UserManagementService {
         }
 
         repository.delete(user);
-        auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + user.getUsername());
+        auditService.record("DELETE", "USER_ACCOUNT", id, "Xóa người dùng " + AuditDetailText.account(user.getDisplayName(), user.getUsername()));
     }
 
     private UserAccount require(UUID id) {
@@ -241,6 +242,16 @@ public class UserManagementService {
         }
     }
 
+    private static String roleLabel(UserRole role) {
+        return switch (role) {
+            case OWNER -> "Chủ sở hữu";
+            case DISPATCHER -> "Điều phối viên";
+            case CUSTOMER_SERVICE -> "Chăm sóc khách hàng";
+            case TECHNICIAN -> "Kỹ thuật viên";
+            case WAREHOUSE_STAFF -> "Nhân viên kho";
+        };
+    }
+
     private static String accountStatusLabel(boolean active) {
         return active ? "Hoạt động" : "Tạm ngưng";
     }
@@ -250,7 +261,7 @@ public class UserManagementService {
             return "trạng thái " + accountStatusLabel(currentActive);
         }
         return "trạng thái " + accountStatusLabel(previousActive)
-                + " -> " + accountStatusLabel(currentActive);
+                + " → " + accountStatusLabel(currentActive);
     }
 
     private static String normalizeUsername(String username) {
