@@ -1,34 +1,34 @@
-# Frontend Style Structure
+# Cấu trúc style của frontend
 
-`main.tsx` imports the app style modules directly in cascade order.
+`main.tsx` import các module style theo thứ tự cascade.
 
-- `app/base.css`: browser reset, root text color, app background.
-- `app/layout.css`: authenticated app shell, sidebar, header, user menu, notifications, route fallback.
-- `app/components.css`: cascade entrypoint for shared app primitives.
-- `app/components/`: focused shared modules for shell spacing, page headers, cards, controls, tables, status/cell patterns, and forms.
-- `app/dashboard.css`: dashboard-specific health/recent-work and offline state.
-- `app/login.css`: unauthenticated login and demo entry screen.
-- `app/responsive.css`: responsive overrides for app and login views.
+- `app/base.css`: reset, màu chữ gốc và nền ứng dụng.
+- `app/layout.css`: app shell, sidebar, header, user menu, notification và route fallback.
+- `app/components.css`: entrypoint import cho shared component styles.
+- `app/components/`: spacing, page header, card, control, table, status/cell và form.
+- `app/dashboard.css`: style riêng của dashboard.
+- `app/login.css`: màn hình đăng nhập và demo entry.
+- `app/responsive.css`: responsive override.
 
-Landing page styles are intentionally separate under `pages/landing/styles` for public-page composition and the `lp-` namespace, while sharing the same restrained product palette, typography and radius principles.
+Landing page giữ style riêng trong `pages/landing/styles` và namespace `lp-`.
 
-Maintenance rules:
+Quy ước bảo trì:
 
-- Keep `app/components.css` as imports only; place shared UI styles in the matching file under `app/components/`.
-- Keep page-specific styles in the matching page style file.
-- Do not add new page-specific CSS to `main.tsx`; create or update the matching module instead.
-- Remove a selector when its class is no longer referenced by a component, unless it targets Ant Design internals under a referenced wrapper class.
-- Prefer a short comment only when a selector group exists to protect layout behavior that is not obvious.
+- `app/components.css` chỉ chứa import; shared UI style đặt trong file tương ứng dưới `app/components/`.
+- Style riêng của page đặt trong module style của page đó.
+- Không thêm page-specific CSS trực tiếp vào `main.tsx`.
+- Xóa selector khi component không còn tham chiếu, trừ selector cần thiết để override Ant Design dưới wrapper đang được sử dụng.
+- Chỉ thêm comment khi cần giải thích một ràng buộc layout không hiển nhiên.
 
-## Typography governance
+## Typography
 
-Authenticated product UI uses the productive type tokens declared in `app/base.css`. New component CSS should use those tokens instead of inventing intermediate values such as `11.5px`, `12.75px` or `13.5px`.
+Authenticated UI dùng các typography token khai báo tại `app/base.css`. Không tự tạo kích thước trung gian như `11.5px`, `12.75px` hoặc `13.5px`.
 
-- `caption` / `meta`: 11px — code, timestamp and technical metadata.
-- `label` / `body`: 12px — table, form, menu, control and normal product copy.
-- `body-lg` / `section-title`: 13px — supporting copy and local headings.
-- `panel-title`: 15px — drawer/modal hierarchy.
-- `auth-title` / `metric`: 20px — login title and KPI value.
-- `page-title`: 22px — one page heading per authenticated route.
+- `caption` / `meta`: 11px.
+- `label` / `body`: 12px.
+- `body-lg` / `section-title`: 13px.
+- `panel-title`: 15px.
+- `auth-title` / `metric`: 20px.
+- `page-title`: 22px.
 
-`npm run lint` also executes `scripts/check-ui-typography.mjs`, which rejects fractional pixel font sizes, 700+ font weights and forced uppercase in authenticated app styles. Authenticated app CSS also routes icon sizes through `--app-icon-*`; raw pixel `font-size` declarations are rejected so typography cannot drift back page-by-page.
+`npm run lint` chạy thêm `scripts/check-ui-typography.mjs` để chặn fractional font size, font weight từ 700 trở lên và forced uppercase trong authenticated UI. Icon size dùng các token `--app-icon-*` để tránh typography/style drift giữa các page.
