@@ -14,8 +14,8 @@ class DemoPropertiesTest {
 
     @Test
     void acceptsExplicitStrongEnoughPublicDemoPassword() {
-        assertThat(new DemoProperties(true, "Recruiter-Demo-2026!").requireSeedPassword())
-                .isEqualTo("Recruiter-Demo-2026!");
+        assertThat(new DemoProperties(true, "Public-Demo-2026!").requireSeedPassword())
+                .isEqualTo("Public-Demo-2026!");
     }
 
     @Test

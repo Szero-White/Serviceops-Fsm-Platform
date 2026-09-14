@@ -176,9 +176,9 @@ export const MOCK_METRICS: MockMetric[] = [
 ]
 
 export const MOCK_ROWS: MockRow[] = [
-  { id: 'WO-0041', client: 'Điện Minh Quang', status: 'Đang xử lý', statusBg: '#faf6ee' },
-  { id: 'WO-0040', client: 'Điện lạnh TechCool', status: 'Hoàn thành', statusBg: '#eef6f4' },
-  { id: 'WO-0039', client: 'Thang máy Lan Anh', status: 'Chờ phân công', statusBg: '#f1f5f9' },
+  { id: 'WO-20260914-041', client: 'Điện Minh Quang', status: 'Đang xử lý', statusBg: '#faf6ee' },
+  { id: 'WO-20260914-040', client: 'Điện lạnh TechCool', status: 'Hoàn thành', statusBg: '#eef6f4' },
+  { id: 'WO-20260914-039', client: 'Thang máy Lan Anh', status: 'Chờ phân công', statusBg: '#f1f5f9' },
 ]
 
 export const MOCK_NAV_ITEMS = ['Tổng quan', 'Phiếu công việc', 'Kỹ thuật viên', 'Kho phụ tùng', 'Báo cáo']

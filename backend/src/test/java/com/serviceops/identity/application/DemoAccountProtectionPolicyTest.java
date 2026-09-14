@@ -42,7 +42,7 @@ class DemoAccountProtectionPolicyTest {
         DemoAccountProtectionPolicy policy =
                 new DemoAccountProtectionPolicy(new DemoProperties(true, "Demo@2026"));
 
-        assertThatCode(() -> policy.guardMutation(user("recruiter-test")))
+        assertThatCode(() -> policy.guardMutation(user("operator-test")))
                 .doesNotThrowAnyException();
     }
 

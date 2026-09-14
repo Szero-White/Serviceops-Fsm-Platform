@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { login, modalByTitle, submitModal, watchRuntime } from './support/serviceops'
 
-test('Owner can create, edit and delete recruiter-created customer data through the UI', async ({ page }) => {
+test('Owner can create, edit and delete customer data through the UI', async ({ page }) => {
   const assertRuntimeClean = watchRuntime(page)
   await login(page, 'owner')
   await page.goto('/customers')
