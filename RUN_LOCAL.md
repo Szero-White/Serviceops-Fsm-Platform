@@ -1,13 +1,15 @@
 # Chạy ServiceOps trên máy local
 
+Tài liệu này hướng dẫn chạy ServiceOps trên máy cá nhân để phát triển và kiểm thử.
+
 ## 1. Yêu cầu
 
 - Java JDK 21
 - Node.js 22+ và npm
 - Git
-- PostgreSQL 17 (native hoặc Docker Desktop)
+- PostgreSQL 17 (cài trực tiếp hoặc Docker Desktop)
 
-Repository có Maven Wrapper.
+Kiểm tra nhanh:
 
 ```powershell
 java -version
@@ -16,31 +18,35 @@ node -v
 npm -v
 ```
 
-## 2. Cấu hình
+Repository đã có Maven Wrapper nên không bắt buộc cài Maven riêng.
+
+## 2. Tạo file cấu hình local
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-`.env.example` đã có cấu hình local mặc định (`serviceops/serviceops`, port 5432, `Demo@2026`, timezone `Asia/Ho_Chi_Minh`). Nếu máy dùng credential khác, chỉ sửa `.env` local. Không commit `.env`.
+`.env.example` đã có giá trị phù hợp để chạy local, gồm database `serviceops`, tài khoản database `serviceops`, timezone `Asia/Ho_Chi_Minh` và mật khẩu demo `Demo@2026`.
 
-Nếu cần Gemini local:
+Nếu máy của bạn dùng thông tin PostgreSQL khác, chỉ sửa file `.env` trên máy. Không commit `.env` lên Git.
+
+Nếu muốn dùng Gemini khi chạy local:
 
 ```powershell
 .\scripts\configure-gemini-local.ps1
 ```
 
-Không có Gemini key thì AI dùng fallback nội bộ.
+Không có Gemini key thì chức năng AI vẫn dùng phần hướng dẫn nội bộ.
 
-## 3. PostgreSQL
+## 3. Khởi động PostgreSQL
 
-Docker:
+Nếu dùng Docker:
 
 ```powershell
 .\scripts\start-postgres.ps1
 ```
 
-PostgreSQL native, tạo database/user một lần nếu chưa có:
+Nếu dùng PostgreSQL cài trực tiếp, tạo user/database một lần nếu chưa có:
 
 ```sql
 CREATE USER serviceops WITH PASSWORD 'serviceops';
@@ -50,25 +56,30 @@ GRANT ALL PRIVILEGES ON DATABASE serviceops TO serviceops;
 
 ## 4. Chạy ứng dụng
 
-PostgreSQL đã chạy:
+Nếu PostgreSQL đã chạy:
 
 ```powershell
 .\scripts\dev-start.ps1
 ```
 
-Hoặc để script bật PostgreSQL container:
+Nếu muốn script tự bật PostgreSQL container:
 
 ```powershell
 .\scripts\dev-start.ps1 -StartPostgres
 ```
 
-Backend tự chạy Flyway. Demo seeder tạo dữ liệu mẫu khi database chưa có account `owner`.
+Backend tự chạy Flyway khi khởi động. Nếu database mới và chưa có tài khoản `owner`, dữ liệu demo sẽ được tạo.
+
+Sau khi chạy thành công:
 
 - Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
 - Swagger: `http://localhost:8080/swagger-ui.html`
 - Health: `http://localhost:8080/actuator/health`
 
-## 5. Chạy thủ công khi troubleshoot
+## 5. Chạy backend và frontend riêng
+
+Chỉ dùng phần này khi cần kiểm tra lỗi hoặc muốn chạy từng phần riêng.
 
 Backend:
 
@@ -91,35 +102,35 @@ npm ci
 npm run dev
 ```
 
-Vite proxy `/api` sang `http://localhost:8080`.
+Khi chạy local, Vite chuyển các request `/api` sang backend tại `http://localhost:8080`.
 
 ## 6. Reset database local
 
-Chỉ dùng cho database local/disposable:
+Chỉ dùng với database local hoặc database dùng riêng cho test:
 
 ```powershell
 .\scripts\reset-local-db.ps1
 ```
 
-Script từ chối host không phải loopback, backup theo mặc định, yêu cầu xác nhận tên database và tạo lại database đúng owner. Sau reset, chạy `dev-start.ps1` để Flyway migrate lại.
+Script chỉ cho phép host local, tạo backup theo mặc định và yêu cầu xác nhận trước khi tạo lại database.
 
-Nếu cần role quản trị PostgreSQL:
+Nếu cần dùng user quản trị PostgreSQL:
 
 ```powershell
 .\scripts\reset-local-db.ps1 -AdminUser postgres
 ```
 
-Không dùng script này cho production.
+Không dùng script reset này cho production.
 
-## 7. Local verification
+## 7. Chạy test và build
 
-Dừng Vite trước vì `check-local.ps1` chạy `npm ci`.
+Dừng Vite trước khi chạy `check-local.ps1` vì script có chạy `npm ci`.
 
 ```powershell
 .\scripts\check-local.ps1
 ```
 
-Hoặc chạy riêng:
+Hoặc chạy từng phần:
 
 ```powershell
 cd backend
@@ -131,11 +142,11 @@ npm run lint
 npm run build
 ```
 
-Nếu Docker không khả dụng, Testcontainers integration tests có thể bị skip; đọc đúng test summary.
+Nếu Docker không chạy, các integration test dùng Testcontainers có thể bị skip. Khi đó cần xem phần tổng kết test để biết số test đã chạy, fail và skip.
 
-## 8. Playwright E2E
+## 8. Chạy Playwright E2E
 
-E2E có mutation nên chỉ chạy trên dữ liệu disposable/isolated:
+E2E có thao tác làm thay đổi dữ liệu, vì vậy chỉ chạy trên môi trường test/local có thể tạo lại dữ liệu.
 
 ```powershell
 cd frontend
@@ -145,10 +156,18 @@ $env:E2E_ALLOW_MUTATIONS="true"
 npm run e2e
 ```
 
-`E2E_ALLOW_MUTATIONS=true` là guard bắt buộc trong `playwright.config.ts`.
+`E2E_ALLOW_MUTATIONS=true` là điều kiện bắt buộc để tránh chạy nhầm E2E trên môi trường không phù hợp.
 
 ## 9. Lỗi thường gặp
 
-- Frontend không gọi backend: kiểm backend port 8080 và Vite proxy.
-- Quick login sai mật khẩu: database đã seed không tự đổi password khi sửa `DEMO_PASSWORD`; dùng password cũ hoặc reset local DB nếu dữ liệu không cần giữ.
-- `npm ci` lỗi file bị giữ trên Windows: dừng Vite/Node dev server rồi chạy lại.
+### Frontend không gọi được backend
+
+Kiểm tra backend có đang chạy ở port `8080` và Vite proxy có hoạt động hay không.
+
+### Tài khoản demo không đăng nhập được sau khi đổi mật khẩu
+
+Dữ liệu demo đã tạo trước đó không tự đổi mật khẩu khi sửa `DEMO_PASSWORD`. Dùng mật khẩu cũ hoặc reset database local nếu không cần giữ dữ liệu.
+
+### `npm ci` lỗi vì file đang được sử dụng trên Windows
+
+Dừng Vite hoặc Node dev server rồi chạy lại.

@@ -1,123 +1,127 @@
 # UAT Checklist
 
-Checklist này dùng cho local release candidate hoặc production smoke. Không dùng để thay automated test.
+Checklist này dùng để kiểm tra nhanh trước khi release hoặc sau khi deploy. Nó không thay thế automated test.
 
-## 1. Authentication và role
+## 1. Đăng nhập và phân quyền
 
-- [ ] Login được với tài khoản hợp lệ.
-- [ ] Tài khoản inactive không dùng JWT cũ để tiếp tục truy cập.
-- [ ] `OWNER` thấy khu vực quản trị/audit.
-- [ ] `CUSTOMER_SERVICE` thấy customer/asset/service request/payment.
-- [ ] `DISPATCHER` thấy work order/schedule/technician, không có intake/payment settlement.
-- [ ] `TECHNICIAN` chỉ thấy công việc/lịch của mình.
-- [ ] `WAREHOUSE_STAFF` vào part requests/inventory, không vào operational dashboard/work order.
-- [ ] Truy cập URL trái quyền bị backend từ chối, không chỉ bị frontend ẩn menu.
+- [ ] Đăng nhập được bằng tài khoản hợp lệ.
+- [ ] Tài khoản đã bị khóa không thể tiếp tục dùng JWT cũ.
+- [ ] `OWNER` xem được khu vực quản trị và Audit Log.
+- [ ] `CUSTOMER_SERVICE` xem được Khách hàng, Thiết bị, Yêu cầu dịch vụ và Thanh toán.
+- [ ] `DISPATCHER` xem được Phiếu công việc, Lịch và Kỹ thuật viên.
+- [ ] `TECHNICIAN` chỉ xem/thao tác công việc được giao cho mình.
+- [ ] `WAREHOUSE_STAFF` xem được Yêu cầu phụ tùng và các màn quản lý kho.
+- [ ] Mở URL không đúng quyền bị backend từ chối, không chỉ bị frontend ẩn menu.
 
-## 2. Customer / Asset / Service Request
+## 2. Khách hàng, thiết bị và Yêu cầu dịch vụ
 
-- [ ] Tạo Customer; code tự sinh dạng `KH-YYYYMMDD-NNN` và không cho user tự nhập.
-- [ ] Tạo Asset đúng Customer; serial number vẫn là field riêng, không bị đổi thành business code.
-- [ ] Không tạo Asset mới cho Customer inactive.
-- [ ] Tạo Service Request ở `OPEN`.
-- [ ] AI draft nếu dùng chỉ thay `title`/`description`, không tự đổi priority/channel.
-- [ ] Convert Service Request tạo đúng một Work Order, Service Request chuyển `CONVERTED`.
-- [ ] Cancel Service Request giữ record lịch sử, không hard delete.
+- [ ] Tạo Khách hàng mới; mã dạng `KH-YYYYMMDD-NNN` được hệ thống tự sinh.
+- [ ] Tạo Thiết bị đúng Khách hàng.
+- [ ] Không tạo Thiết bị mới cho Khách hàng đã inactive.
+- [ ] Tạo Yêu cầu dịch vụ mới ở trạng thái `OPEN`.
+- [ ] Nếu dùng AI gợi ý, AI chỉ thay tiêu đề/mô tả; không tự đổi mức ưu tiên hoặc kênh tiếp nhận.
+- [ ] Chuyển Yêu cầu dịch vụ thành đúng một Phiếu công việc; Yêu cầu chuyển sang `CONVERTED`.
+- [ ] Hủy Yêu cầu dịch vụ vẫn giữ record lịch sử.
 
-## 3. Điều phối Work Order
+## 3. Phân công và lịch làm việc
 
-- [ ] Work Order có code `WO-YYYYMMDD-NNN`.
-- [ ] Dispatcher assign Technician và lịch hợp lệ.
-- [ ] Không xếp hai lịch overlap cho cùng Technician.
-- [ ] Reschedule/redispatch hiển thị lý do/thông tin mới đúng.
-- [ ] Sau khi field work bắt đầu, action điều phối bị giới hạn theo policy.
-- [ ] Technician khác không thao tác được Work Order không thuộc mình.
+- [ ] Phiếu công việc có mã `WO-YYYYMMDD-NNN`.
+- [ ] Điều phối viên phân công được kỹ thuật viên và lịch hợp lệ.
+- [ ] Không thể xếp hai lịch bị trùng cho cùng một kỹ thuật viên.
+- [ ] Đổi lịch/đổi người hiển thị đúng thông tin mới.
+- [ ] Khi kỹ thuật viên đã bắt đầu làm việc, các thao tác điều phối bị giới hạn đúng quy tắc.
+- [ ] Kỹ thuật viên khác không thao tác được Phiếu công việc không thuộc mình.
 
-## 4. Technician và phụ tùng
+## 4. Kỹ thuật viên và phụ tùng
 
-- [ ] Technician chuyển `ON_THE_WAY → IN_PROGRESS`.
-- [ ] Tạo part request không làm thay đổi stock.
-- [ ] Warehouse `ISSUE` đúng số lượng làm stock giảm đúng một lần.
-- [ ] Không ISSUE vượt stock hoặc double issue.
-- [ ] Technician ghi `USED` không làm stock giảm lần hai.
-- [ ] `RETURN` phần dư làm stock tăng và không vượt outstanding.
-- [ ] Low-stock notification chỉ phát theo threshold/event phù hợp, không spam lặp vô nghĩa.
+- [ ] Kỹ thuật viên chuyển được `ON_THE_WAY → IN_PROGRESS` khi đúng điều kiện.
+- [ ] Tạo yêu cầu phụ tùng không làm giảm tồn kho.
+- [ ] Kho `ISSUE` làm giảm đúng số lượng tồn kho một lần.
+- [ ] Không thể `ISSUE` vượt số lượng tồn hoặc cấp trùng.
+- [ ] Kỹ thuật viên ghi `USED` không làm giảm tồn kho lần thứ hai.
+- [ ] `RETURN` phần còn dư làm tăng tồn kho và không vượt số lượng có thể trả.
+- [ ] Thông báo tồn kho thấp chỉ gửi khi đúng điều kiện, không lặp vô nghĩa.
 
-## 5. Hoàn thành và customer acceptance
+## 5. Hoàn thành công việc và khách hàng xác nhận
 
-- [ ] Technician nhập diagnosis/resolution và complete Work Order.
-- [ ] Billing hiển thị đúng labor/part/fee hiện tại.
-- [ ] Customer acceptance chuyển sang `CUSTOMER_ACCEPTED` và tạo snapshot.
-- [ ] Thay catalog/return part sau acceptance không làm thay đổi snapshot đã xác nhận.
-- [ ] Reopen (nếu test) yêu cầu đúng role/lý do và history giữ được repair cycle trước.
+- [ ] Kỹ thuật viên nhập chẩn đoán/kết quả và hoàn thành Phiếu công việc.
+- [ ] Chi phí hiển thị đúng công, phụ tùng và các khoản phí hiện có.
+- [ ] Khách hàng xác nhận làm Phiếu công việc chuyển sang `CUSTOMER_ACCEPTED`.
+- [ ] Hệ thống lưu bản chốt chi phí tại thời điểm xác nhận.
+- [ ] Thay đổi giá danh mục hoặc trả phụ tùng sau đó không làm thay đổi số tiền đã chốt.
+- [ ] Nếu mở lại Phiếu công việc, lịch sử lần xử lý trước vẫn còn.
 
-## 6. Payment / Receipt / Closure
+## 6. Thanh toán, biên nhận và đóng Phiếu công việc
 
-Chọn ít nhất một flow để smoke; trước release lớn nên kiểm cả ba.
+Nên kiểm tra ít nhất một cách thanh toán trong smoke test. Trước release lớn nên kiểm cả ba.
 
-### Transfer
+### Chuyển khoản
 
-- [ ] Technician báo chuyển khoản → `TRANSFER_PENDING_VERIFICATION`.
-- [ ] Customer Service verify → `SETTLED`.
+- [ ] Ghi nhận chuyển khoản → `TRANSFER_PENDING_VERIFICATION`.
+- [ ] Chăm sóc khách hàng xác nhận → `SETTLED`.
 
-### Cash
+### Tiền mặt
 
-- [ ] Technician ghi nhận tiền mặt → `CASH_PENDING_HANDOVER`.
-- [ ] Customer Service xác nhận nhận tiền → `SETTLED`.
+- [ ] Kỹ thuật viên ghi nhận đã nhận tiền → `CASH_PENDING_HANDOVER`.
+- [ ] Chăm sóc khách hàng xác nhận đã nhận tiền → `SETTLED`.
 
-### Counter
+### Thanh toán tại quầy
 
 - [ ] Ghi nhận thanh toán tại quầy → `COUNTER_PAYMENT_PENDING`.
-- [ ] Customer Service xác nhận thực thu → `SETTLED`.
+- [ ] Chăm sóc khách hàng xác nhận đã thu tiền → `SETTLED`.
 
-Sau settlement:
+Sau khi thanh toán hoàn tất:
 
-- [ ] Receipt chỉ phát hành khi `SETTLED` và có code `BN-YYYYMMDD-NNN`.
-- [ ] Gửi lại action không tạo duplicate receipt/settlement.
-- [ ] Closure chỉ thành công khi Work Order `CUSTOMER_ACCEPTED` và payment `SETTLED`.
-- [ ] Work Order chuyển `CLOSED`; phần return vật tư còn dư vẫn có thể xử lý theo policy.
+- [ ] Chỉ phát hành biên nhận khi payment là `SETTLED`.
+- [ ] Biên nhận có mã `BN-YYYYMMDD-NNN`.
+- [ ] Gửi lại cùng thao tác không tạo thêm biên nhận hoặc thanh toán trùng.
+- [ ] Chỉ đóng Phiếu công việc khi trạng thái là `CUSTOMER_ACCEPTED` và payment là `SETTLED`.
+- [ ] Phiếu công việc chuyển sang `CLOSED`.
 
-## 7. Inventory catalog
+## 7. Danh mục và tồn kho
 
-- [ ] Tạo Spare Part có code `PT-YYYYMMDD-NNN`.
-- [ ] Không nhập business code bằng tay.
-- [ ] Import CSV validate row và không commit partial data ngoài behavior đã thiết kế.
-- [ ] Active/inactive hoạt động; record lịch sử không bị mất.
-- [ ] Stocktake tạo đúng movement/audit khi có chênh lệch.
+- [ ] Tạo Phụ tùng mới có mã `PT-YYYYMMDD-NNN`.
+- [ ] Người dùng không nhập mã nghiệp vụ bằng tay.
+- [ ] Import CSV báo rõ dòng lỗi và không lưu dữ liệu nửa chừng ngoài hành vi đã thiết kế.
+- [ ] Active/inactive hoạt động đúng và không làm mất lịch sử.
+- [ ] Kiểm kê tạo đúng lịch sử biến động và Audit Log khi có chênh lệch.
 
-## 8. History, Audit, Notification
+## 8. Lịch sử, Audit Log và thông báo
 
-- [ ] History summary lấy đúng số `CUSTOMER_ACCEPTED`, `CLOSED`, `CANCELLED` theo scope/filter.
-- [ ] Timeline hiển thị actor/status/note đúng.
-- [ ] Audit hiển thị tên nghiệp vụ + business code khi có thể; không chỉ UUID/raw enum.
-- [ ] Attachment purpose được hiển thị bằng wording người dùng.
-- [ ] Notification đến đúng role/người nhận và unread state cập nhật đúng.
-- [ ] CRUD thông thường không tạo notification noise ngoài policy.
+- [ ] Màn lịch sử đếm đúng `CUSTOMER_ACCEPTED`, `CLOSED`, `CANCELLED` theo bộ lọc.
+- [ ] Timeline hiển thị đúng người thao tác, trạng thái và ghi chú.
+- [ ] Audit Log ưu tiên hiển thị tên/mã nghiệp vụ thay vì chỉ UUID hoặc enum.
+- [ ] File đính kèm hiển thị mục đích bằng nội dung dễ hiểu.
+- [ ] Thông báo đến đúng người/đúng vai trò.
+- [ ] Trạng thái đã đọc/chưa đọc cập nhật đúng.
+- [ ] Các thao tác CRUD thông thường không tạo quá nhiều thông báo không cần thiết.
 
 ## 9. AI Help
 
-- [ ] Câu hỏi trong scope trả hướng dẫn đúng role.
-- [ ] Câu hỏi ngoài scope bị từ chối/hướng dẫn an toàn.
-- [ ] Không trả system prompt, API key, JWT, secret, env hoặc dữ liệu live không có trong context.
-- [ ] Khi Gemini không cấu hình/lỗi, fallback nội bộ vẫn hoạt động.
-- [ ] UI phân biệt nguồn `Gemini` và `Nội bộ`.
+- [ ] Câu hỏi thuộc phạm vi hệ thống trả hướng dẫn phù hợp với vai trò đang đăng nhập.
+- [ ] Câu hỏi ngoài phạm vi được từ chối hoặc hướng dẫn an toàn.
+- [ ] AI không trả system prompt, API key, JWT, secret, biến môi trường hoặc dữ liệu live không có trong context.
+- [ ] Khi Gemini không cấu hình hoặc bị lỗi, hướng dẫn nội bộ vẫn hoạt động.
+- [ ] Giao diện cho biết câu trả lời đến từ Gemini hay nội bộ nếu chức năng hiện tại có hiển thị nguồn.
 
-## 10. Error và UI
+## 10. Lỗi và giao diện
 
-- [ ] Validation form chỉ rõ field lỗi.
-- [ ] 403/409 business error hiển thị message phù hợp, không lộ SQL/stack trace.
-- [ ] Endpoint không tồn tại trả 404 hợp lý.
-- [ ] Mutation success/error có feedback; loading/empty/error state không gây hiểu nhầm.
-- [ ] Table chính không overlap text ở kích thước desktop thông thường.
-- [ ] Search/filter/pagination vẫn giữ logic đúng sau create/update.
+- [ ] Form chỉ rõ trường nào nhập sai.
+- [ ] Lỗi 403/409 hiển thị thông báo dễ hiểu, không lộ SQL hoặc stack trace.
+- [ ] URL/API không tồn tại trả 404 phù hợp.
+- [ ] Sau thao tác thành công/thất bại có thông báo rõ ràng.
+- [ ] Trạng thái loading/empty/error không gây hiểu nhầm.
+- [ ] Bảng dữ liệu không bị chồng chữ ở kích thước desktop thông thường.
+- [ ] Search/filter/pagination vẫn đúng sau khi thêm hoặc cập nhật dữ liệu.
 
-## 11. Production smoke sau deploy
+## 11. Kiểm tra sau deploy production
 
-- [ ] `/actuator/health/readiness` trả healthy.
-- [ ] Frontend tải qua public HTTPS.
-- [ ] Login đủ các role cần dùng.
-- [ ] Tạo một Customer/Service Request/Work Order mới để xác nhận Flyway + business code trên DB production.
-- [ ] Chạy một flow ngắn đến ít nhất `IN_PROGRESS` và kiểm audit/notification.
-- [ ] Nếu release có thay payment/inventory, chạy full end-to-end đến `CLOSED`.
-- [ ] Kiểm log không có migration error, repeated exception hoặc secret.
+- [ ] Health endpoint trả trạng thái tốt.
+- [ ] Frontend tải được qua HTTPS.
+- [ ] Đăng nhập được bằng các vai trò cần kiểm tra.
+- [ ] Tạo một Khách hàng/Yêu cầu dịch vụ/Phiếu công việc mới để kiểm tra database và mã nghiệp vụ.
+- [ ] Chạy một luồng ngắn đến ít nhất `IN_PROGRESS` và kiểm tra Audit Log/Notification.
+- [ ] Nếu release có thay kho hoặc thanh toán, chạy đầy đủ luồng đến `CLOSED`.
+- [ ] Kiểm tra log không có lỗi migration, lỗi lặp liên tục hoặc secret bị ghi ra log.
 
-Khi checklist production smoke đạt và CI xanh, release được xem là ổn định; không tiếp tục refactor nếu không có bug/yêu cầu mới.
+Khi CI xanh và checklist cho phần chức năng thay đổi đã đạt, release có thể được xem là ổn định. Không tiếp tục sửa/refactor nếu không có bug hoặc yêu cầu mới.

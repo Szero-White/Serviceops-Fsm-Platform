@@ -1,172 +1,225 @@
 # Quy trình nghiệp vụ ServiceOps
 
-Tài liệu này tóm tắt business rule đang được thực thi trong backend/frontend hiện tại.
+Tài liệu này mô tả cách các bộ phận sử dụng ServiceOps và các quy tắc chính mà backend đang kiểm soát.
 
-## 1. Ownership theo vai trò
+## 1. Vai trò trong hệ thống
 
-### OWNER
+### Chủ hệ thống (`OWNER`)
 
-Quản trị người dùng, cấu hình thanh toán, giám sát dashboard, customer/asset, Service Request, Work Order, scheduling, inventory, history và audit. Owner có quyền quản trị rộng nhưng không thay role hiện trường để ghi tiến độ/actual-used/settlement routine.
+- Theo dõi Dashboard và hoạt động chung.
+- Quản lý người dùng.
+- Xem khách hàng, thiết bị, Yêu cầu dịch vụ, Phiếu công việc, kho và lịch sử.
+- Xem Audit Log và cấu hình thanh toán.
 
-### CUSTOMER_SERVICE
+`OWNER` có quyền quản trị rộng nhưng không thay kỹ thuật viên để ghi tiến độ công việc hoặc thay nhân viên chăm sóc khách hàng để xác nhận các bước thanh toán thường ngày.
 
-Quản lý customer/asset, tiếp nhận Service Request, chuyển Service Request thành Work Order, theo dõi sau dịch vụ, xử lý payment reconciliation, phát hành receipt và đóng hồ sơ khi đủ điều kiện.
+### Chăm sóc khách hàng (`CUSTOMER_SERVICE`)
 
-### DISPATCHER
+- Quản lý khách hàng và thiết bị.
+- Tiếp nhận Yêu cầu dịch vụ.
+- Chuyển Yêu cầu dịch vụ thành Phiếu công việc.
+- Theo dõi công việc sau khi kỹ thuật viên hoàn thành.
+- Xác nhận thanh toán, phát hành biên nhận và đóng hồ sơ khi đủ điều kiện.
 
-Xem ngữ cảnh customer/asset cần cho điều phối, xem Work Order/Technician, assign/schedule/reschedule và hủy theo policy. Không tiếp nhận Service Request hoặc settlement payment.
+### Điều phối viên (`DISPATCHER`)
 
-### TECHNICIAN
+- Xem Phiếu công việc và danh sách kỹ thuật viên.
+- Phân công kỹ thuật viên.
+- Sắp xếp hoặc thay đổi lịch làm việc.
+- Theo dõi các công việc cần điều phối.
 
-Chỉ thao tác Work Order được giao: xem lịch cá nhân, cập nhật field progress, request part, ghi actual-used, diagnosis/resolution, hoàn thành công việc, xác nhận khách và tạo payment handoff phù hợp.
+Điều phối viên không tiếp nhận Yêu cầu dịch vụ và không xác nhận thanh toán.
 
-### WAREHOUSE_STAFF
+### Kỹ thuật viên (`TECHNICIAN`)
 
-Xử lý yêu cầu phụ tùng, danh mục/tồn kho, stocktake, inventory movement, ISSUE/RETURN. Không tham gia operational Work Order dashboard.
+- Chỉ thao tác trên Phiếu công việc được giao cho mình.
+- Xem lịch cá nhân.
+- Cập nhật tiến độ.
+- Yêu cầu phụ tùng.
+- Ghi số lượng phụ tùng thực tế đã dùng.
+- Ghi chẩn đoán và kết quả sửa chữa.
+- Hoàn thành công việc và ghi nhận thông tin liên quan đến việc khách hàng xác nhận/thanh toán theo luồng được phép.
 
-## 2. Service Request → Work Order
+### Nhân viên kho (`WAREHOUSE_STAFF`)
 
-1. Customer Service chọn/tạo Customer và Asset phù hợp.
-2. Tạo Service Request với nội dung, priority và channel.
-3. Service Request ở `OPEN`; không tự sinh Work Order.
-4. Khi hồ sơ đủ điều kiện, Customer Service thực hiện convert.
-5. Backend tạo Work Order và chuyển Service Request sang `CONVERTED`.
-6. Nếu không tiếp tục xử lý, Service Request chuyển `CANCELLED` thay vì hard delete.
+- Xem và xử lý yêu cầu phụ tùng.
+- Cấp phụ tùng.
+- Nhận phụ tùng trả lại.
+- Quản lý danh mục, tồn kho, kiểm kê và lịch sử biến động.
 
-Asset phải thuộc đúng Customer; backend kiểm invariant này, không chỉ dựa UI.
+Nhân viên kho không xử lý các bước điều phối Phiếu công việc.
 
-Customer inactive vẫn được giữ để bảo toàn lịch sử nhưng không được dùng cho yêu cầu/asset mới.
+## 2. Từ Yêu cầu dịch vụ đến Phiếu công việc
 
-## 3. Điều phối và thực hiện Work Order
+Quy trình:
 
-Luồng vận hành thông thường:
+1. Nhân viên chăm sóc khách hàng chọn hoặc tạo Khách hàng.
+2. Chọn hoặc tạo Thiết bị thuộc đúng khách hàng đó.
+3. Tạo Yêu cầu dịch vụ với nội dung, mức ưu tiên và kênh tiếp nhận.
+4. Yêu cầu mới có trạng thái `OPEN`.
+5. Khi thông tin đã đầy đủ, nhân viên chăm sóc khách hàng thực hiện chuyển đổi.
+6. Backend tạo Phiếu công việc và chuyển Yêu cầu dịch vụ sang `CONVERTED`.
+7. Nếu không tiếp tục xử lý, Yêu cầu dịch vụ chuyển sang `CANCELLED` và vẫn được giữ trong lịch sử.
+
+Yêu cầu dịch vụ không tự tạo Phiếu công việc. Backend cũng kiểm tra Thiết bị có thật sự thuộc Khách hàng đã chọn hay không.
+
+Khách hàng không còn hoạt động vẫn được giữ để xem lịch sử, nhưng không được dùng để tạo Thiết bị hoặc Yêu cầu dịch vụ mới.
+
+## 3. Phân công và thực hiện Phiếu công việc
+
+Luồng trạng thái thường dùng:
 
 ```text
 OPEN
  → SCHEDULED / ASSIGNED
  → ON_THE_WAY
  → IN_PROGRESS
- → WAITING_FOR_PARTS (khi cần)
+ → WAITING_FOR_PARTS (nếu cần phụ tùng)
  → IN_PROGRESS
  → COMPLETED
  → CUSTOMER_ACCEPTED
  → CLOSED
 ```
 
-`REOPENED` và `CANCELLED` là nhánh ngoại lệ có policy riêng.
+`REOPENED` và `CANCELLED` dùng cho các trường hợp đặc biệt.
 
-- Dispatcher assign/schedule Technician và khoảng thời gian thực hiện.
-- Hệ thống kiểm overlap để tránh double-book Technician.
-- Khi field work đã bắt đầu, redispatch/reschedule bị giới hạn theo business rule.
-- Technician chỉ được chuyển sang các field status: `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS`, `COMPLETED`.
-- Reopen/cancel yêu cầu role đúng và lý do khi policy bắt buộc.
-- `CLOSED` không dùng generic transition button; closure đi qua use case riêng sau settlement.
+Quy tắc chính:
 
-## 4. Phụ tùng
+- Điều phối viên chọn kỹ thuật viên và thời gian thực hiện.
+- Hệ thống không cho xếp hai lịch bị trùng cho cùng một kỹ thuật viên.
+- Khi kỹ thuật viên đã bắt đầu làm việc, việc đổi người hoặc đổi lịch bị hạn chế theo trạng thái hiện tại.
+- Kỹ thuật viên chỉ cập nhật các trạng thái thuộc quá trình thực hiện công việc của mình.
+- Kỹ thuật viên khác không được thao tác Phiếu công việc không được giao cho họ.
+- Việc mở lại hoặc hủy Phiếu công việc phải đúng vai trò và đúng điều kiện.
+- Không đóng Phiếu công việc chỉ bằng cách đổi trạng thái trực tiếp; hệ thống kiểm tra thanh toán trước khi đóng.
 
-Flow hiện tại:
+## 4. Yêu cầu, cấp, sử dụng và trả phụ tùng
+
+Quy trình:
 
 ```text
-Technician REQUESTED
+Kỹ thuật viên yêu cầu phụ tùng
         ↓
-Warehouse ISSUE
+Kho cấp phụ tùng
         ↓
-Technician USED
+Kỹ thuật viên ghi số lượng đã dùng
         ↓
-Warehouse RETURN phần dư (nếu có)
+Kho nhận phần còn dư (nếu có)
 ```
 
-Quy tắc:
+Các trạng thái kỹ thuật tương ứng:
 
-- `REQUESTED` không thay đổi stock.
-- `ISSUE` là stock-out thực tế.
-- `USED` chỉ ghi lượng dùng cho công việc, không trừ stock lần nữa.
-- `RETURN` là stock-in và không được vượt lượng còn outstanding.
-- Không cho stock âm, double issue hoặc dùng part chưa được cấp.
-- Part catalog dùng active/inactive; không hard delete record đang cần cho lịch sử.
-- `CONSUME` chỉ còn để đọc dữ liệu lịch sử, UI/API hiện hành không tạo transaction này.
+```text
+REQUESTED → ISSUE → USED → RETURN
+```
 
-## 5. Hoàn thành, billing và xác nhận khách
+Quy tắc chính:
 
-Trước `COMPLETED`, Technician phải hoàn thiện thông tin kết quả theo form hiện tại (diagnosis/resolution và dữ liệu liên quan).
+- `REQUESTED`: chỉ ghi nhu cầu, chưa làm thay đổi tồn kho.
+- `ISSUE`: kho thực sự xuất hàng, tồn kho giảm tại bước này.
+- `USED`: ghi số lượng đã dùng cho công việc, không trừ tồn kho lần thứ hai.
+- `RETURN`: trả phần chưa dùng về kho, tồn kho tăng lại.
+- Không được xuất nhiều hơn số lượng đang có trong kho.
+- Không được trả nhiều hơn số lượng còn có thể trả.
+- Danh mục phụ tùng dùng trạng thái active/inactive thay vì xóa dữ liệu đang cần cho lịch sử.
 
-Billing được tính từ labor/part/fee theo dữ liệu đã ghi cho Work Order. Khi thực hiện customer acceptance:
+## 5. Hoàn thành công việc và khách hàng xác nhận
 
-1. hệ thống kiểm billing hiện tại;
-2. tạo snapshot số tiền và dòng chi tiết;
-3. chuyển Work Order sang `CUSTOMER_ACCEPTED`;
-4. các thay đổi catalog hoặc return vật tư sau đó không làm thay đổi snapshot đã chấp nhận.
+Trước khi chuyển sang `COMPLETED`, kỹ thuật viên phải nhập các thông tin kết quả mà form hiện tại yêu cầu, gồm chẩn đoán và cách xử lý.
 
-Nếu Work Order được reopen và hoàn thành lại, history giữ snapshot các repair cycle thay vì ghi đè lịch sử cũ.
+Chi phí của Phiếu công việc được tính từ công lao động, phụ tùng và các khoản phí đã ghi nhận.
 
-## 6. Payment, receipt và closure
+Khi khách hàng xác nhận hoàn thành:
 
-Ba flow payment:
+1. Hệ thống kiểm tra chi phí hiện tại.
+2. Lưu một bản chốt chi phí và các dòng chi tiết.
+3. Chuyển Phiếu công việc sang `CUSTOMER_ACCEPTED`.
+4. Những thay đổi giá hoặc việc trả phụ tùng về sau không làm thay đổi số tiền đã chốt.
+
+Nếu Phiếu công việc được mở lại và sửa tiếp, lịch sử các lần xử lý trước vẫn được giữ.
+
+## 6. Thanh toán, biên nhận và đóng hồ sơ
+
+Hệ thống hỗ trợ ba cách thanh toán.
+
+### Chuyển khoản
 
 ```text
 TRANSFER_PENDING_VERIFICATION
-  → Customer Service verify
-  → SETTLED
-
-CASH_PENDING_HANDOVER
-  → Customer Service xác nhận nhận tiền
-  → SETTLED
-
-COUNTER_PAYMENT_PENDING
-  → Customer Service xác nhận thu tiền tại quầy
-  → SETTLED
+ → Chăm sóc khách hàng xác nhận
+ → SETTLED
 ```
 
-Quy tắc:
+### Tiền mặt do kỹ thuật viên nhận
 
-- Payment chỉ được tạo trong đúng lifecycle Work Order.
-- Settlement action kiểm đúng pending state tương ứng.
-- Receipt chỉ phát hành khi payment `SETTLED` và có settlement data hợp lệ.
-- Closure yêu cầu Work Order `CUSTOMER_ACCEPTED` và payment `SETTLED`.
-- Receipt issuance/closure được thiết kế idempotent để tránh phát hành lặp khi request được gửi lại.
+```text
+CASH_PENDING_HANDOVER
+ → Chăm sóc khách hàng xác nhận đã nhận tiền
+ → SETTLED
+```
 
-Business code receipt có dạng `BN-YYYYMMDD-NNN`.
+### Thanh toán tại quầy
 
-## 7. History và audit
+```text
+COUNTER_PAYMENT_PENDING
+ → Chăm sóc khách hàng xác nhận đã thu tiền
+ → SETTLED
+```
 
-Work Order history tách nhóm hồ sơ:
+Quy tắc chính:
 
-- Chờ hoàn tất hồ sơ: `CUSTOMER_ACCEPTED`;
-- Đã đóng: `CLOSED`;
-- Đã hủy: `CANCELLED`.
+- Chỉ tạo hoặc xác nhận thanh toán ở đúng bước của Phiếu công việc.
+- Mỗi cách thanh toán phải đi qua đúng trạng thái chờ tương ứng.
+- Chỉ phát hành biên nhận khi thanh toán đã ở trạng thái `SETTLED`.
+- Chỉ đóng Phiếu công việc khi khách hàng đã xác nhận và thanh toán đã hoàn tất.
+- Nếu cùng một request được gửi lại, hệ thống không được tạo thêm biên nhận hoặc xác nhận thanh toán trùng.
 
-Summary count lấy từ backend query, không hard-code ở frontend. Technician chỉ thấy scope được phân công theo policy backend.
+Mã biên nhận có dạng `BN-YYYYMMDD-NNN`.
 
-Audit giữ actor, role, action, entity và detail. UI ưu tiên tên nghiệp vụ + code; raw UUID/enum chỉ là fallback kỹ thuật khi không còn dữ liệu presentation phù hợp.
+## 7. Lịch sử và Audit Log
 
-## 8. Notification
+Hệ thống giữ lịch sử trạng thái và thao tác để có thể trả lời các câu hỏi như:
 
-Notification được gửi theo hành động cần chú ý, không phải mọi CRUD:
+- Ai đã phân công kỹ thuật viên?
+- Khi nào lịch làm việc được thay đổi?
+- Ai đã cấp hoặc trả phụ tùng?
+- Ai đã xác nhận thanh toán?
+- Phiếu công việc đã đi qua những trạng thái nào?
 
-- Dispatcher: cần phân công, chờ phụ tùng, reopen, overdue điều phối;
-- Technician: assignment, schedule change, reopen/cancel/close liên quan công việc của mình;
-- Customer Service: completed follow-up, payment handoff, overdue kéo dài cần liên hệ khách;
-- Warehouse: part request và low-stock/stocktake event;
-- Owner: một số kết quả cuối hoặc ngoại lệ quản trị, không nhận toàn bộ noise vận hành.
+Giao diện ưu tiên hiển thị tên, mã nghiệp vụ và nội dung dễ hiểu. UUID hoặc enum chỉ dùng khi cần cho mục đích kỹ thuật.
 
-Copy runtime được tạo tập trung bởi `NotificationCopy`; frontend tiếp tục normalize một số legacy notification còn tồn tại.
+## 8. Thông báo
 
-## 9. AI boundary
+Hệ thống chỉ gửi thông báo khi có việc cần người khác chú ý hoặc xử lý, ví dụ:
 
-- Service Request AI chỉ gợi ý `title` và `description`.
-- AI Help chỉ hướng dẫn theo role đã xác thực; không đọc dữ liệu live và không mutation.
-- Gemini lỗi hoặc chưa cấu hình thì fallback nội bộ.
-- AI không được thay quyết định của business service, không được bypass RBAC/state machine.
+- Điều phối viên nhận thông báo khi có công việc cần phân công hoặc có thay đổi cần xử lý.
+- Kỹ thuật viên nhận thông báo khi được giao việc hoặc lịch thay đổi.
+- Chăm sóc khách hàng nhận thông báo khi công việc đã hoàn thành hoặc có thanh toán cần xác nhận.
+- Nhân viên kho nhận thông báo khi có yêu cầu phụ tùng hoặc tồn kho thấp.
 
-## 10. Business code
+Không phải mọi thao tác thêm/sửa dữ liệu đều tạo thông báo.
 
-Các mã do backend sinh, client không tự nhập:
+## 9. AI trong hệ thống
 
-- Customer: `KH-YYYYMMDD-NNN`
-- Work Order: `WO-YYYYMMDD-NNN`
-- Spare Part: `PT-YYYYMMDD-NNN`
-- Payment Receipt: `BN-YYYYMMDD-NNN`
+AI chỉ đóng vai trò hỗ trợ:
 
-Sequence độc lập theo tenant + loại mã + business date và được cấp bằng counter atomic trong PostgreSQL.
+- Có thể gợi ý tiêu đề và mô tả cho Yêu cầu dịch vụ.
+- Có thể hướng dẫn người dùng dựa trên vai trò đã đăng nhập.
+- Không tự đổi mức ưu tiên hoặc kênh tiếp nhận.
+- Không tự thay đổi dữ liệu nghiệp vụ.
+- Không được bỏ qua phân quyền hoặc quy tắc trạng thái.
+- Không được trả về secret, token hoặc cấu hình nội bộ.
+- Nếu Gemini không hoạt động, hệ thống dùng phần hướng dẫn nội bộ.
 
-Các field như serial number, `ServiceChannel.code`, tenant code, UUID, role/status enum không được chuẩn hóa theo convention business code này.
+## 10. Mã nghiệp vụ
+
+Các mã sau do backend/database tự sinh; người dùng không nhập bằng tay:
+
+- Khách hàng: `KH-YYYYMMDD-NNN`
+- Phiếu công việc: `WO-YYYYMMDD-NNN`
+- Phụ tùng: `PT-YYYYMMDD-NNN`
+- Biên nhận: `BN-YYYYMMDD-NNN`
+
+Mỗi tenant có bộ đếm riêng theo loại mã và ngày nghiệp vụ. Backend dùng counter trong PostgreSQL để tránh sinh trùng mã khi có nhiều request chạy cùng lúc.
+
+Các giá trị như serial number, mã kênh tiếp nhận, tenant code, UUID và enum trạng thái không dùng quy tắc mã nghiệp vụ trên.
