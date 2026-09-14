@@ -37,7 +37,6 @@ export const TRANSITION_LABELS: Partial<Record<WorkOrderStatus, string>> = {
   WAITING_FOR_PARTS: 'Chờ phụ tùng',
   COMPLETED: 'Hoàn thành',
   CUSTOMER_ACCEPTED: 'Ghi nhận khách xác nhận',
-  CLOSED: 'Đóng phiếu',
   REOPENED: 'Khách yêu cầu xử lý lại',
   CANCELLED: 'Hủy phiếu',
 }

@@ -42,7 +42,7 @@ public class AssetCsvService {
     public byte[] assetTemplate() {
         return csvFileService.write(List.of(
                 ASSET_HEADERS,
-                List.of("KH-0001", "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "Hoạt động", "Lắp đặt tại phòng họp")
+                List.of("KH-20260115-001", "Máy lạnh", "Daikin", "FTKC35", "DK-FTKC35-0001", "2026-01-15", "2028-01-15", "Hoạt động", "Lắp đặt tại phòng họp")
         ));
     }
 

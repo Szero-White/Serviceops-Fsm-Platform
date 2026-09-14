@@ -183,16 +183,6 @@ export function WorkOrderDetailDrawer({
                   {TRANSITION_LABELS.CUSTOMER_ACCEPTED}
                 </Button>
               )}
-              {permissions.canTransition && transitions.includes('CLOSED') && (
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  loading={transitionPending}
-                  onClick={() => onTransition('CLOSED')}
-                >
-                  {TRANSITION_LABELS.CLOSED}
-                </Button>
-              )}
               {canUploadWorkEvidence ? (
                 <>
                   <Upload customRequest={onUpload} showUploadList={false} accept="image/jpeg,image/png,image/webp" capture="environment">

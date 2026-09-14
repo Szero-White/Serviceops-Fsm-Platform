@@ -1,5 +1,6 @@
 package com.serviceops.payment.application;
 
+import com.serviceops.common.businesscode.BusinessCodeProperties;
 import com.serviceops.payment.domain.PaymentMethod;
 import com.serviceops.payment.domain.PaymentReceipt;
 import com.serviceops.workorder.domain.WorkOrderBillingItem;
@@ -14,7 +15,6 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -22,10 +22,15 @@ import java.util.Locale;
 @Component
 public class PaymentReceiptHtmlRenderer {
     private static final Locale VIETNAM = Locale.forLanguageTag("vi-VN");
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-            .withZone(ZoneId.systemDefault());
     private static final String TEMPLATE_PATH = "templates/payment-receipt.html";
-    private final String template = loadTemplate();
+    private final DateTimeFormatter dateTimeFormatter;
+    private final String template;
+
+    public PaymentReceiptHtmlRenderer(BusinessCodeProperties businessCodeProperties) {
+        this.dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                .withZone(businessCodeProperties.zoneId());
+        this.template = loadTemplate();
+    }
 
     public String render(
             PaymentReceipt receipt,
@@ -95,8 +100,8 @@ public class PaymentReceiptHtmlRenderer {
         return method == PaymentMethod.BANK_TRANSFER ? "Chuyển khoản" : "Tiền mặt";
     }
 
-    private static String formatDateTime(Instant value) {
-        return value == null ? "Không có dữ liệu" : DATE_TIME.format(value);
+    String formatDateTime(Instant value) {
+        return value == null ? "Không có dữ liệu" : dateTimeFormatter.format(value);
     }
 
     private static String formatMoney(BigDecimal value) {
