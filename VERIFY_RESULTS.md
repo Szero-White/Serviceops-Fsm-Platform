@@ -1,20 +1,20 @@
-### User-facing language hardening release candidate (commit `d862e14`, 2026-09-13)
+### Business-code / audit hardening RC baseline (commit `245d38a`, 2026-09-14)
 
-Final local release gate after the user-facing language hardening change:
+Release-candidate evidence recorded before the final senior source audit:
 
-- Backend: 272 tests, 0 failures, 0 errors; 24 Docker/Testcontainers integration tests skipped locally because Docker was unavailable.
-- Frontend type/lint checks: PASS.
+- Working tree: clean; `git diff --check`: PASS.
+- Backend: **276 tests, 0 failures, 0 errors, 24 skipped**. The skipped suites require Docker/Testcontainers and are not counted as passes.
+- Frontend clean install: **0 npm vulnerabilities** in the recorded local run.
+- Frontend TypeScript/lint: PASS.
 - UI typography policy: PASS.
 - UI business-language policy: PASS.
-- Production build: PASS (`3289` modules transformed).
-- `git diff --check`: PASS.
-- `scripts/check-local.ps1`: PASS (`All executable local checks completed`).
-- Branch pushed: `fix/user-facing-language-hardening`.
-- Database schema: no Flyway migration added by this release candidate; current migration line remains through `V19`.
+- Production frontend build: PASS (`3289` modules transformed).
+- Clean local database rebuild: PASS. Flyway validated and applied **V1 → V20** from an empty PostgreSQL schema, then Spring Boot started successfully.
+- Existing-database upgrade path to V20 had already been exercised before the clean reset; historical audit/notification free text remains immutable by design.
 
-Scope of this release candidate: centralize business-facing vocabulary, align Audit/Notification/AI/UI/error/CSV/documentation wording, preserve technical enum/API/database semantics, keep legacy CSV compatibility, and update regression tests to assert business-facing language instead of raw internal codes.
+Scope covered by this RC: concurrency-safe business identifiers, V20 identifier migration/backfill, Work Order history server-side counters, readable Audit details, UI table overflow hardening, E2E contract updates, and documentation synchronization.
 
-**Release note:** local unit/build gates are green. The pull-request CI pipeline remains the authoritative pre-merge gate because it runs Docker/Testcontainers, production-like Compose startup, and Playwright end-to-end checks that were not executable locally without Docker.
+**Release note:** local executable gates are green, but the Pull Request CI remains the authoritative pre-merge gate because it runs Docker/Testcontainers, production-like Compose startup and Playwright Chromium E2E. The senior source-audit patch applied after this baseline must be re-run through the same gates before merge/deploy.
 
 ---
 

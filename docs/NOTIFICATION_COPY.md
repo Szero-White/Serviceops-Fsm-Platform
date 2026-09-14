@@ -10,7 +10,7 @@ Mỗi thông báo hiển thị cho người dùng phải trả lời được ba
 
 ## 1. Quy tắc nội dung hiển thị
 
-- Tiêu đề ngắn, bắt đầu bằng hành động hoặc tình trạng cần chú ý và kèm mã nghiệp vụ khi có, ví dụ: **Cần phân công kỹ thuật viên: WO-2026-001245**.
+- Tiêu đề ngắn, bắt đầu bằng hành động hoặc tình trạng cần chú ý và kèm mã nghiệp vụ khi có, ví dụ: **Cần phân công kỹ thuật viên: WO-20260914-001**.
 - Nội dung nêu người liên quan, khách hàng/công việc/phụ tùng và bước tiếp theo. Không lặp lại nguyên tiêu đề.
 - Dùng đúng tên trên giao diện: **Phiếu công việc**, **Lịch điều phối**, **Lịch của tôi**, **Yêu cầu phụ tùng**, **Kho phụ tùng**, **Xử lý thanh toán**, **Lịch sử biến động**.
 - Không hiển thị mã trạng thái nội bộ, tên lớp, đường dẫn kỹ thuật, mã định danh dài, thời gian máy hoặc thông báo lỗi dành cho lập trình viên.
