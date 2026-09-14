@@ -1,35 +1,50 @@
 # ServiceOps FSM
 
-ServiceOps FSM là hệ thống quản lý vận hành dịch vụ hiện trường cho doanh nghiệp bảo trì/sửa chữa. Hệ thống quản lý một hồ sơ xuyên suốt từ tiếp nhận yêu cầu đến điều phối, thực hiện công việc, phụ tùng, thanh toán, biên nhận và lịch sử truy vết.
+ServiceOps FSM là hệ thống quản lý vận hành dịch vụ hiện trường dành cho doanh nghiệp bảo trì và sửa chữa.
+
+Hệ thống quản lý xuyên suốt một hồ sơ dịch vụ từ khi tiếp nhận yêu cầu, lập phiếu công việc, phân công kỹ thuật viên, sử dụng phụ tùng, hoàn thành công việc, xác nhận khách hàng, thanh toán, phát hành biên nhận đến lưu lịch sử truy vết.
 
 [![CI](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml)
 
-## 🚀 Live demo
+## Live demo
 
-**Open ServiceOps:** https://serviceops-fsm.centralindia.cloudapp.azure.com
+**ServiceOps:**  
+https://serviceops-fsm.centralindia.cloudapp.azure.com
 
-No local setup is required. The hosted portfolio demo includes seeded accounts for all five business roles and is intended for recruiter/reviewer walkthroughs.
+Bản demo có sẵn tài khoản cho năm vai trò nghiệp vụ chính.
 
-| Role | Username | Password | Good first area to review |
+| Vai trò | Tài khoản | Mật khẩu | Chức năng chính |
 | --- | --- | --- | --- |
-| Owner | `owner` | `Demo@2026` | Dashboard, users, audit and overall operations |
-| Dispatcher | `dispatcher` | `Demo@2026` | Work orders, assignment and weekly scheduling |
-| Customer Service | `customer-service` | `Demo@2026` | Customers, assets, service requests and conversion to Work Orders |
-| Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
-| Warehouse | `warehouse` | `Demo@2026` | Part requests, ISSUE/RETURN, stocktake and inventory history |
+| Chủ hệ thống | `owner` | `Demo@2026` | Dashboard, người dùng, nhật ký hệ thống và giám sát vận hành |
+| Điều phối viên | `dispatcher` | `Demo@2026` | Phiếu công việc, phân công kỹ thuật viên và xếp lịch |
+| Chăm sóc khách hàng | `customer-service` | `Demo@2026` | Khách hàng, thiết bị, yêu cầu dịch vụ và tạo Work Order |
+| Kỹ thuật viên | `technician` | `Demo@2026` | Lịch cá nhân, công việc được giao và thực hiện công việc hiện trường |
+| Nhân viên kho | `warehouse` | `Demo@2026` | Yêu cầu phụ tùng, xuất/trả kho, kiểm kê và lịch sử tồn kho |
 
-## Luồng chính
+## Luồng nghiệp vụ chính
 
 ```text
 Khách hàng / Thiết bị
-  → Yêu cầu dịch vụ
-  → Phiếu công việc
-  → Phân công / Xếp lịch
-  → Kỹ thuật viên thực hiện
-  → Phụ tùng
-  → Hoàn thành / Khách xác nhận
-  → Thanh toán / Biên nhận / Đóng phiếu
-  → Lịch sử / Audit / Notification
+        ↓
+Yêu cầu dịch vụ
+        ↓
+Phiếu công việc
+        ↓
+Phân công / Xếp lịch
+        ↓
+Kỹ thuật viên thực hiện
+        ↓
+Phụ tùng
+        ↓
+Hoàn thành công việc
+        ↓
+Khách hàng xác nhận
+        ↓
+Thanh toán
+        ↓
+Biên nhận / Đóng phiếu
+        ↓
+Lịch sử / Audit / Notification
 ```
 
 Service Request không tự tạo Work Order. `CUSTOMER_SERVICE` tiếp nhận và chuyển đổi khi hồ sơ đủ điều kiện; `DISPATCHER` phân công/xếp lịch; `TECHNICIAN` thực hiện công việc; `WAREHOUSE_STAFF` xử lý vật tư; `OWNER` quản trị và giám sát.
