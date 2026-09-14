@@ -8,8 +8,8 @@ Hệ thống quản lý xuyên suốt một hồ sơ dịch vụ từ khi tiếp
 
 ## Live demo
 
-**ServiceOps:**  
-https://serviceops-fsm.centralindia.cloudapp.azure.com
+**ServiceOps:** https://serviceops-fsm.centralindia.cloudapp.azure.com
+
 
 Bản demo có sẵn tài khoản cho năm vai trò nghiệp vụ chính.
 
