@@ -20,7 +20,7 @@ export function CreateSparePartModal({ open, form, loading, onCancel, onSubmit }
     <Modal title="Thêm phụ tùng" open={open} onCancel={onCancel} onOk={() => form.submit()} confirmLoading={loading} okText="Thêm phụ tùng" width={680} destroyOnHidden>
       <Form form={form} layout="vertical" onFinish={onSubmit} onFinishFailed={onFinishFailed} scrollToFirstError requiredMark>
         <div className="form-grid two-cols">
-          <Form.Item label="Mã phụ tùng"><Input disabled placeholder="Tự động tạo khi lưu" /></Form.Item>
+          <Form.Item label="Mã phụ tùng"><Input aria-label="Mã phụ tùng" disabled placeholder="Tự động tạo khi lưu" /></Form.Item>
           <Form.Item label="Tên phụ tùng" name="name" rules={[{ required: true, message: 'Nhập tên phụ tùng' }]}><Input /></Form.Item>
           <Form.Item label="Đơn vị" name="unit" rules={[{ required: true, message: 'Nhập đơn vị' }]}><Input /></Form.Item>
           <Form.Item label="Tồn ban đầu" name="initialStock" rules={[{ required: true, message: 'Nhập tồn ban đầu' }]}><InputNumber min={0} precision={3} formatter={formatCompactDecimalInput} style={{ width: '100%' }} /></Form.Item>
