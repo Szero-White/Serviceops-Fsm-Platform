@@ -1,120 +1,113 @@
-# Production / Public Demo Deployment
+# Triển khai ServiceOps
 
-This deployment keeps the existing ServiceOps/FSM modular monolith and hardens it for a single-node public demo. No business module is removed, and Kubernetes/Kafka/microservices are intentionally not introduced without a concrete requirement.
+Tài liệu này mô tả **production-like topology được lưu trong repository và được CI kiểm tra**: PostgreSQL + Spring Boot + Nginx frontend qua Docker Compose.
 
-> **Deployment topology note:** `README.md` documents the currently hosted portfolio VM path (Nginx + Spring Boot managed by `systemd`). This runbook is the repository-supported Docker Compose production-like/reference path and the topology exercised by CI. Do not mix commands from the two operating models in one release; choose the target host topology explicitly before redeploying.
+## 1. Chuẩn bị cấu hình
 
-## 1. Environment
+Tạo file server-only:
 
-Copy `.env.production.example` to a server-only `.env.production` file and replace every `CHANGE_ME` value.
+```bash
+cp .env.production.example .env.production
+```
 
-Public demo defaults:
+Phải thay toàn bộ placeholder/secret trước khi chạy. Các biến quan trọng:
 
-- `SPRING_PROFILES_ACTIVE=prod,demo`
-- `DEMO_MODE=true`
-- `JWT_SECRET` is mandatory, Base64 encoded, and must decode to at least 32 bytes.
-- `DEMO_PASSWORD` must be at least 8 characters and cannot be `123456` or a shipped placeholder value; startup fails instead of silently exposing a known demo password.
-- `JWT_ACCESS_TOKEN_MINUTES=30` affects production/demo only; local development keeps its existing behavior.
-- `BUSINESS_TIME_ZONE=Asia/Ho_Chi_Minh` is the shared business timezone for generated identifier dates and receipt timestamps. Keep it stable for an existing deployment unless a dedicated identifier migration is planned.
-- `AI_ENABLED=false` in production unless a server-side Gemini key is intentionally configured. When enabled, `GEMINI_MODEL` defaults to the stable `gemini-3.6-flash`; the gateway leaves Gemini 3.x sampling controls at provider defaults rather than forcing custom temperature/top-p/top-k. `AI_CONNECT_TIMEOUT` (default `4s`), `AI_SUGGESTION_TIMEOUT` (default `12s`) and `AI_HELP_TIMEOUT` (default `18s`) use Gemini-first latency budgets while remaining bounded; the frontend budgets are intentionally longer so the backend can complete Gemini or fallback before the browser aborts the request. Public AI responses intentionally expose only `source=GEMINI|LOCAL` for the **Gemini/Nội bộ** badge; credential state, upstream HTTP status and provider/API failure details stay in server logs.
-- `SWAGGER_ENABLED=false` by default. Enable it only for an intentional API-review environment; the recruiter demo does not require public Swagger.
-- `MAX_TENANT_STORAGE_BYTES=104857600` limits each tenant to 100 MiB on the local storage adapter in the public demo. Use `0` for unlimited storage in a controlled environment.
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `JWT_SECRET`: Base64, sau decode ít nhất 32 bytes
+- `JWT_ISSUER`
+- `CORS_ALLOWED_ORIGINS`
+- `DEMO_MODE`, `DEMO_PASSWORD` nếu bật demo profile
+- `BUSINESS_TIME_ZONE` (mặc định `Asia/Ho_Chi_Minh`)
+- `MAX_TENANT_STORAGE_BYTES`
+- `AI_ENABLED`, `GEMINI_API_KEY` nếu bật Gemini
+- `SWAGGER_ENABLED=false` cho public deployment thông thường
 
-Generate a JWT secret on Linux:
+Không commit `.env.production`.
+
+Tạo JWT secret ví dụ:
 
 ```bash
 openssl rand -base64 48
 ```
 
-For a private non-demo production deployment, use:
+## 2. Backup trước deploy
 
-```dotenv
-SPRING_PROFILES_ACTIVE=prod
-DEMO_MODE=false
-SWAGGER_ENABLED=false
-```
-
-If API documentation is temporarily required in a controlled review environment, set `SWAGGER_ENABLED=true` explicitly and disable it again afterward.
-
-## 2. Build and start
-
-```bash
-cp .env.production.example .env.production
-# edit .env.production
-
-docker compose --env-file .env.production -f docker-compose.prod.yml build
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-```
-
-Verify container health:
-
-```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml ps
-curl -f http://127.0.0.1:8088/actuator/health/readiness
-```
-
-The compose stack deliberately does **not** publish PostgreSQL. The frontend container is bound only to `127.0.0.1:${HTTP_PORT:-8088}` so a host TLS reverse proxy can own public ports 80/443.
-
-## 3. HTTPS and host firewall
-
-Do not expose a recruiter demo over plain HTTP on the public Internet. Recommended layout:
-
-```text
-Internet
-  -> HTTPS host reverse proxy
-  -> 127.0.0.1:8088 frontend Nginx
-  -> Spring Boot
-  -> PostgreSQL private Docker network
-```
-
-The frontend Nginx preserves the original forwarded HTTPS scheme when proxying to Spring Boot.
-
-On a single VM, expose only what is required (normally SSH and HTTP/HTTPS), use SSH key authentication, and never publish PostgreSQL port 5432.
-
-## 4. Demo-mode behavior
-
-`DEMO_MODE=true` keeps normal application workflows usable while protecting only the seeded data required to keep the public demo recoverable:
-
-- recruiter-created customers, assets, work orders, inventory records, attachments and custom service channels keep their normal role-based mutations; Service Requests remain editable/cancellable by role but are never hard-deleted;
-- seeded demo identities are protected by service-level policy from deletion, deactivation, credential changes and destructive role changes;
-- technician profile updates remain usable, while profiles backed by the protected seeded identities cannot be used to bypass that identity protection;
-- system-defined service channels are protected from update/delete, while custom channels created during the demo support normal CRUD.
-
-Authorization and business invariants remain enforced exactly as in non-demo mode. Set `DEMO_MODE=false` for a private deployment that does not need seeded-data protection.
-
-Known seeded demo accounts are re-synchronized to the configured `DEMO_PASSWORD` when the demo profile starts. This prevents a reused demo volume from silently retaining a password from an earlier local/demo run.
-
-Set `DEMO_MODE=false` and omit the `demo` profile to restore normal production behavior.
-
-## 5. Attachment safety
-
-The local storage adapter now enforces:
-
-- MIME allowlist for JPG/PNG/WEBP/PDF;
-- magic-byte signature verification;
-- normalized tenant-scoped paths with traversal rejection;
-- optional per-tenant storage quota;
-- rollback cleanup when DB persistence fails after a file write;
-- physical deletion only after the DB delete commits.
-
-For horizontal scaling, move the existing storage abstraction to S3-compatible object storage rather than sharing local container disks.
-
-## 6. Backup
-
-Load server environment variables and run:
+Nếu đang chạy stack Compose hiện tại:
 
 ```bash
 set -a
 . ./.env.production
 set +a
-./scripts/production/backup-postgres.sh
+BACKUP_DIR=./backups ./scripts/production/backup-postgres.sh
 ```
 
-The script writes a private temporary SQL dump first, checks `pg_dump` success, then compresses it. Default retention is seven days. Override with `RETENTION_DAYS` and `BACKUP_DIR`.
+Script dùng `pg_dump`, gzip archive và mặc định giữ 7 ngày. Xác nhận file backup tồn tại trước migration mới.
 
-## 7. Restore drill
+Không reset/drop production database để deploy.
 
-A restore is intentionally protected from accidental execution. Confirm the target DB, then run:
+## 3. Validate và build
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml config
+docker compose --env-file .env.production -f docker-compose.prod.yml build
+```
+
+Compose hiện có ba service:
+
+- `postgres`: PostgreSQL 17 + persistent volume;
+- `backend`: Spring Boot Java 21 + upload volume;
+- `frontend`: Nginx phục vụ SPA và proxy `/api` sang backend.
+
+Backend tự chạy Flyway khi start. JPA chỉ `validate` schema, không tự sửa cấu trúc database.
+
+## 4. Deploy
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
+```
+
+Frontend được bind mặc định vào `127.0.0.1:${HTTP_PORT:-8088}`. Với Internet-facing deployment, đặt reverse proxy/TLS ở host phía trước port này; không expose plain HTTP trực tiếp ra Internet.
+
+## 5. Health check
+
+```bash
+curl -fsS http://127.0.0.1:8088/actuator/health/readiness
+curl -fsS http://127.0.0.1:8088/ > /dev/null
+```
+
+Sau đó kiểm login và một workflow ngắn theo [UAT_CHECKLIST.md](UAT_CHECKLIST.md).
+
+Nếu startup lỗi:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
+docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 backend
+docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 postgres
+```
+
+Không tiếp tục mở traffic nếu Flyway/health check lỗi.
+
+## 6. File upload
+
+Container backend dùng `/app/data/uploads` và volume `uploads_data`. `MAX_TENANT_STORAGE_BYTES` giới hạn quota tenant; `0` nghĩa là không giới hạn.
+
+Local filesystem phù hợp single-node. Nếu chạy nhiều backend instance, phải chuyển storage sang shared/object storage trước.
+
+## 7. AI
+
+Production mặc định `AI_ENABLED=false`. Khi bật Gemini:
+
+- key chỉ cấu hình server-side;
+- không đưa key vào frontend build args;
+- giữ timeout có giới hạn;
+- kiểm cả response Gemini và fallback nội bộ.
+
+AI failure không được làm hỏng core workflow.
+
+## 8. Restore
+
+Restore là thao tác phá dữ liệu hiện tại, chỉ thực hiện khi đã xác nhận đúng target:
 
 ```bash
 set -a
@@ -124,27 +117,19 @@ RESTORE_CONFIRM=serviceops-restore \
   ./scripts/production/restore-postgres.sh ./backups/serviceops_YYYYMMDDTHHMMSSZ.sql.gz
 ```
 
-The script validates gzip integrity, temporarily stops the backend, restores with `psql -v ON_ERROR_STOP=1`, and restarts the backend. Run application smoke tests after every restore drill.
+Script dừng backend trong lúc restore và khởi động lại sau khi hoàn tất. Sau restore phải chạy health check + UAT smoke trước khi mở traffic.
 
-## 8. Deployment acceptance gate
+## 9. Release gate
 
-Before publishing a new revision:
+Một release chỉ được coi là deploy xong khi:
 
-```bash
-cd backend
-./mvnw --batch-mode clean test
+- Compose config/build thành công;
+- Flyway start không lỗi;
+- readiness health xanh;
+- frontend tải được;
+- login đúng role;
+- business code mới sinh đúng;
+- Service Request → Work Order → field execution → payment/closure smoke chạy được;
+- Audit/Notification không lộ raw exception/secret.
 
-cd ../frontend
-npm ci
-npm run lint
-VITE_API_URL=/api/v1 npm run build
-
-cd ..
-docker compose --env-file .env.production -f docker-compose.prod.yml build
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-curl -f http://127.0.0.1:8088/actuator/health/readiness
-```
-
-Then smoke-test login, cross-tenant access rejection, work-order workflow, concurrent scheduling, part REQUEST/ISSUE/USED/RETURN inventory behavior and attachment upload/download.
-
-Use Flyway migrations through application startup. Never run schema recreation, destructive reset, or local fresh-seed commands against a persistent production database.
+CI cũng dựng chính production-like stack này và chạy Playwright trước khi merge.

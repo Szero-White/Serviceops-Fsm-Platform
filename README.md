@@ -1,4 +1,6 @@
-# ServiceOps — Field Service Operations Platform
+# ServiceOps FSM
+
+ServiceOps FSM là hệ thống quản lý vận hành dịch vụ hiện trường cho doanh nghiệp bảo trì/sửa chữa. Hệ thống quản lý một hồ sơ xuyên suốt từ tiếp nhận yêu cầu đến điều phối, thực hiện công việc, phụ tùng, thanh toán, biên nhận và lịch sử truy vết.
 
 [![CI](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Szero-White/Serviceops-Fsm-Platform/actions/workflows/ci.yml)
 
@@ -16,483 +18,135 @@ No local setup is required. The hosted portfolio demo includes seeded accounts f
 | Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
 | Warehouse | `warehouse` | `Demo@2026` | Part requests, ISSUE/RETURN, stocktake and inventory history |
 
-> Recommended first login: use **Owner** for a quick system overview, or follow the [Recruiter walkthrough](#recruiter-walkthrough) to trace one service case across all five roles.
->
-> The public demo uses disposable seeded credentials. Do not enter real personal, confidential or production data.
-
-## What ServiceOps is
-
-ServiceOps is a full-stack operations platform for a **field-service maintenance and repair business**. It coordinates the departments that receive customer issues, manage customer equipment, plan field visits, perform technical work, control spare-parts stock and oversee the service lifecycle.
-
-The project is intentionally modeled as a connected business process rather than a collection of isolated CRUD screens. A customer issue becomes a Service Request, then a Work Order, then a scheduled Technician job; field execution coordinates requested/issued/used/returned spare parts, and the completed job remains traceable through billing acceptance, payment reconciliation, receipt, closure, history, notifications, inventory ledger and audit records.
+## Luồng chính
 
 ```text
-Customer → Equipment → Service Request → Work Order → Scheduling
-         → Field Execution → Parts → Billing → Payment → Receipt
-         → Closure → History / Audit
+Khách hàng / Thiết bị
+  → Yêu cầu dịch vụ
+  → Phiếu công việc
+  → Phân công / Xếp lịch
+  → Kỹ thuật viên thực hiện
+  → Phụ tùng
+  → Hoàn thành / Khách xác nhận
+  → Thanh toán / Biên nhận / Đóng phiếu
+  → Lịch sử / Audit / Notification
 ```
 
-## At a glance
+Service Request không tự tạo Work Order. `CUSTOMER_SERVICE` tiếp nhận và chuyển đổi khi hồ sơ đủ điều kiện; `DISPATCHER` phân công/xếp lịch; `TECHNICIAN` thực hiện công việc; `WAREHOUSE_STAFF` xử lý vật tư; `OWNER` quản trị và giám sát.
 
-- **Backend:** Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway, PostgreSQL.
-- **Frontend:** React 19, TypeScript, Vite, Ant Design, TanStack Query, React Router and Axios.
-- **Architecture:** modular monolith with explicit business-module boundaries and server-side authorization.
-- **Security:** stateless JWT authentication, BCrypt, role/ownership checks, tenant scoping, login throttling and request correlation IDs.
-- **Business correctness:** transaction boundaries, pessimistic/optimistic locking, schedule-overlap protection, stock invariants and immutable billing snapshots.
-- **Testing:** JUnit 5, Mockito, Testcontainers and Playwright Chromium end-to-end coverage.
-- **CI:** GitHub Actions verifies backend, frontend and a production-like Nginx → Spring Boot → PostgreSQL runtime.
-- **Hosted demo:** Azure VM, Nginx, HTTPS with Let's Encrypt, Spring Boot managed by systemd and Gemini API integration on the server side.
+## Quy tắc nghiệp vụ cốt lõi
 
-## Recruiter walkthrough
+- Service Request: `OPEN → CONVERTED/CANCELLED`, không hard delete.
+- Technician chỉ thao tác Work Order được gán cho mình.
+- Dispatcher bị giới hạn redispatch/reschedule sau khi field work đã bắt đầu.
+- Inventory: `REQUESTED → ISSUE → USED → RETURN`; `ISSUE` mới giảm stock, `USED` không giảm lần hai.
+- Customer acceptance tạo billing snapshot; thay đổi catalog/return về sau không sửa số tiền đã xác nhận.
+- Payment phải đi qua đúng pending state trước `SETTLED`; receipt chỉ phát hành sau settlement hợp lệ.
+- Closure là use case riêng, không phải generic status transition.
+- Business code do backend/database sinh theo tenant + loại + ngày:
+  - `KH-YYYYMMDD-NNN`
+  - `WO-YYYYMMDD-NNN`
+  - `PT-YYYYMMDD-NNN`
+  - `BN-YYYYMMDD-NNN`
 
-For a review, use **one service case across every role** instead of demonstrating unrelated CRUD records:
+Chi tiết: [docs/BUSINESS_FLOW.md](docs/BUSINESS_FLOW.md).
 
-1. Sign in as **Customer Service**, create or inspect a customer and equipment record, then create a Service Request.
-2. Convert that exact request into a Work Order and keep its generated code as the trace identifier for the rest of the demo.
-3. Sign in as **Dispatcher**, assign a Technician and demonstrate schedule/reschedule behavior.
-4. Sign in as **Technician**, confirm the same Work Order appears in the personal schedule, start field execution and create a part request if material is needed.
-5. Sign in as **Warehouse**, open **Yêu cầu phụ tùng**, verify the Technician's requested quantity and record `ISSUE` only when the physical part is handed over. Return to **Technician** to record actual `USED`, diagnosis/resolution, complete the job, enter the real service charges and record **Khách xác nhận**.
-6. Still as **Technician**, demonstrate the payment handoff: show the company bank/QR read-only and report a customer transfer (with optional evidence), record cash custody, or route the unpaid customer to Customer Service for payment at the counter. Sign in as **Customer Service**, reconcile the actual payment, move it to `SETTLED`, issue the official receipt and close the Work Order.
-7. If the Technician still holds an unused issued part, sign in as **Warehouse** after `CLOSED` and record the physical `RETURN`; verify stock/outstanding change while the Work Order remains closed.
-8. Finish as **Owner** by reviewing payment settings, history, timeline, dashboard and audit data for the same operational story, then switch roles/open protected routes directly to verify frontend and backend role ownership remain aligned.
+## Kiến trúc
 
-## Business problem
-
-A field-service company has to keep several departments synchronized around the same service case. Customer Service needs accurate customer and equipment context. Dispatchers need assignable Technicians and conflict-free schedules. Technicians need only the jobs assigned to them and a clear execution workflow. Warehouse staff need reliable stock balances and spare-part lifecycle controls. Management needs visibility, accountability and a durable history of what happened.
-
-ServiceOps provides one operational record that follows the work across those handoffs so the organization does not have to coordinate the same job through disconnected spreadsheets, chat messages or department-specific records.
-
-## Who uses the system
-
-| Real-world responsibility | ServiceOps role | Main responsibilities in the system |
-| --- | --- | --- |
-| Business owner / operations management | `OWNER` | User administration, overall operations, dashboard, audit, Work Order management and oversight |
-| Dispatch / service coordination | `DISPATCHER` | Work Orders, Technician resources, assignment, scheduling/rescheduling and operational history |
-| Customer service / service desk | `CUSTOMER_SERVICE` | Customers, customer equipment, intake channels, Service Requests and Service Request → Work Order handoff |
-| Field technician | `TECHNICIAN` | Personal schedule, assigned work, field progress, diagnosis/resolution, evidence, part requests and actual-used reporting |
-| Warehouse / spare-parts staff | `WAREHOUSE_STAFF` | Spare-parts catalog, stock receiving, stocktake/reconciliation, returns and movement traceability |
-
-The frontend hides routes and actions outside a role's responsibility, while the backend remains the authoritative authorization boundary.
-
-## End-to-end operating story
-
-Consider a customer reporting that an air conditioner is no longer cooling properly. The same case moves through ServiceOps as it would through a real service organization:
-
-1. **Customer Service receives the issue.** The agent finds or creates the customer, records the customer's equipment and selects the configured intake channel such as phone or email. If a technical identifier such as the serial number is not available during the first call, the equipment can still be registered and the serial can be completed later after verification.
-2. **A Service Request is opened.** The request keeps the customer, optional equipment, issue description, priority and intake channel together. Asset selection is scoped to the selected customer, and the backend rejects a mismatched customer/asset relationship.
-3. **The request becomes a Work Order.** The operational job is created from the request while preserving the source customer and equipment relationship.
-4. **Dispatch plans the visit.** A Dispatcher selects a Technician and schedules or reschedules the work. Scheduling uses overlap detection and locking so the same Technician is not silently double-booked.
-5. **The Technician receives the assignment.** The Technician sees the job through the personal schedule derived from the authenticated account, not from a client-supplied Technician identifier.
-6. **Field execution begins.** The Technician progresses the assigned job through field states such as `ON_THE_WAY`, `IN_PROGRESS`, `WAITING_FOR_PARTS` and `COMPLETED`. Management-only transitions remain unavailable to the Technician.
-7. **Spare parts participate in the same job.** The assigned Technician creates a `REQUEST` without changing stock. Warehouse either marks the request unavailable or physically hands over the exact requested quantity and records `ISSUE`, which is the stock-out event. The Technician later records actual `USED` quantity without reducing stock again. Any unused issued quantity can be physically received back by Warehouse as `RETURN`, including after the Work Order is closed; the inventory ledger remains the stock authority. Legacy `CONSUME` rows remain readable for historical compatibility, but the active API/UI no longer creates them.
-8. **The service result and customer charge are frozen.** Diagnosis, resolution notes and evidence stay attached to the job. Through `COMPLETED`, the assigned Technician records actual used parts, labor and any explained incidental fee. Customer acceptance then freezes an immutable billing snapshot so later catalog-price changes or part returns cannot silently rewrite what the customer accepted.
-9. **Payment is reconciled before closure.** After `CUSTOMER_ACCEPTED`, the Technician can show the Owner-configured company bank/QR in read-only form and record that the customer reported a transfer, optionally with evidence, that cash is being held for handover, or that the customer will pay directly at the Customer Service counter. Customer Service verifies/collects the actual payment and moves the separate payment state to `SETTLED`. Only then can Customer Service issue the official service-payment receipt and close the Work Order.
-10. **The organization can trace the result.** Work Order history and the unified timeline tell the business story from request/issue/used through completion, acceptance, payment, receipt, closure and any post-closure return. Inventory Movements remains the stock ledger and distinguishes the Warehouse actor from the Technician recipient on `ISSUE`; Audit keeps detailed system traceability; notifications remain attention-only rather than duplicating those histories.
-
-This produces one continuous business chain instead of separate records for each department:
+Backend là modular monolith Spring Boot, tách theo module nghiệp vụ và các lớp `web` / `application` / `domain`. Frontend tổ chức theo feature và dùng TanStack Query cho server state.
 
 ```text
-Customer reports an issue
-        ↓
-Customer Service
-Customer → Asset → Service Request
-        ↓
-Work Order
-        ↓
-Dispatcher
-Technician assignment → Schedule / Reschedule
-        ↓
-Technician
-ON_THE_WAY → IN_PROGRESS
-        ↓
-        ├── REQUEST part ─────→ Warehouse request queue (no stock movement)
-        │       ↓
-        │     ISSUE ───────────→ stock decreases exactly once
-        │       ↓
-        │     USED ────────────→ actual customer usage (no stock movement)
-        ↓
-Diagnosis → Resolution → Evidence → COMPLETED
-        ↓
-Billing draft → Customer Acceptance → frozen billing snapshot
-        ↓
-Customer payment action / counter handoff → CSKH reconciliation or collection → SETTLED
-        ↓
-Official receipt → CSKH CLOSED
-        ↓
-Warehouse may RETURN unused outstanding parts → stock increases
-        ↓
-History / Timeline / Inventory Ledger / Notifications / Audit
+React + TypeScript
+      ↓ /api/v1
+Spring Boot REST API
+      ↓
+Application / Domain
+      ↓
+JPA / JdbcTemplate
+      ↓
+PostgreSQL
 ```
 
-## Core workflow and business rules
+- JWT + RBAC + tenant scope bảo vệ truy cập.
+- Flyway quản lý schema; JPA chỉ `validate`.
+- Transaction/locking bảo vệ các workflow schedule, inventory, payment và business code.
+- Audit và notification tách khỏi presentation logic của UI.
+- AI chỉ hỗ trợ thao tác/hướng dẫn, không thay business rule.
 
-The primary lifecycle is:
+Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-```text
-Customer
-  → Asset
-  → Service Request
-  → Work Order
-  → Technician Scheduling
-  → Service Execution
-  → Part Request / Issue / Actual Used / Return
-  → Completion
-  → Customer Acceptance + Billing Snapshot
-  → Payment Reconciliation
-  → Receipt
-  → Closure
-```
+## Công nghệ
 
-The Work Order state machine also supports controlled branches such as `WAITING_FOR_PARTS`, `REOPENED` and `CANCELLED`. Invalid or unauthorized transitions are rejected by the backend. Customer/asset consistency, Technician ownership, schedule conflicts, inventory balance and tenant scope are also enforced server-side rather than relying only on frontend visibility.
+**Backend:** Java 21, Spring Boot 3.5.16, Spring Security, Spring Data JPA, PostgreSQL, Flyway, Springdoc OpenAPI, Maven, Testcontainers.
 
-## Demo accounts
+**Frontend:** React 19, TypeScript 5.9, Vite 8, Ant Design 6, TanStack Query 5, React Router 7, Axios, Playwright.
 
-The login screen exposes **five quick-login cards**, one for each business role.
+**Vận hành:** Docker Compose, Nginx, GitHub Actions, Actuator.
 
-| Role | Username | Password | Main area to review |
-| --- | --- | --- | --- |
-| Owner | `owner` | `Demo@2026` | User administration, dashboard, audit and overall operations |
-| Dispatcher | `dispatcher` | `Demo@2026` | Work Orders, Technician assignment and weekly scheduling |
-| Customer Service | `customer-service` | `Demo@2026` | Customers/assets, Service Requests, payment reconciliation and Work Order closure |
-| Technician | `technician` | `Demo@2026` | Personal schedule, assigned work and field execution |
-| Warehouse | `warehouse` | `Demo@2026` | Part-request queue, spare parts, ISSUE/RETURN, stocktake and inventory movement history |
+## Chạy local
 
-`technician-2` is an additional seeded Technician account and also uses `Demo@2026` in the current demo environment. It is intentionally **not** a sixth quick-login card. It is used to verify isolation between two individual Technicians who share the `TECHNICIAN` role, especially for `/my-schedule` and assigned work.
-
-> `Demo@2026` is a disposable credential used only by the seeded public/local demo accounts. Database credentials, JWT secrets, infrastructure secrets and AI credentials are configured separately and must never be committed.
-
-## Product capabilities
-
-- Customer and customer-equipment management, including equipment whose serial is not yet known at service intake.
-- Configurable Service Request intake channels.
-- Service Request → Work Order conversion with customer/asset consistency checks.
-- Work Order lifecycle with controlled role-aware transitions and history.
-- Technician assignment, overlap-safe scheduling and weekly Dispatcher schedule board.
-- Personal Technician schedule derived from the authenticated account.
-- Spare-parts catalog, configurable minimum-stock thresholds, stock transactions, discontinue/reactivate lifecycle and negative-stock protection.
-- Spare-part catalog uses deactivate/reactivate instead of hard delete so stock movements, Work Orders and audit history remain traceable.
-- Technician part requests, Warehouse `ISSUE`/`RETURN`, actual-used tracking and an actionable outstanding-material queue; inventory movement history remains a read-only stock ledger.
-- Warehouse stocktake/reconciliation and editable minimum-stock thresholds; threshold changes are audited and can raise low-stock alerts when current stock becomes newly low.
-- Customer-accepted immutable billing snapshots based on actual `USED` quantities, catalog unit-price snapshots, labor and explained incidental fees.
-- Separate payment reconciliation for transfer/cash/counter collection, server-side queue counters for pending reconciliation/closure, Owner-managed company bank/QR, optional transfer evidence, official receipt after `SETTLED`, and Customer Service closure.
-- CSV import/export for customers, assets and spare parts; bulk asset import keeps serial as a stable required identifier.
-- Backend-generated, concurrency-safe business codes for customers, Work Orders, payment receipts and spare parts (`KH/WO/BN/PT-YYYYMMDD-NNN`); UUID remains the internal key and legacy CSV formats remain import-compatible.
-- Work Order evidence attachments with MIME/signature/path validation and tenant-scoped storage.
-- Official service-payment receipt derived from the frozen billing/payment snapshot after settlement.
-- Persistent notifications, audit trail and operational dashboard.
-- Shared-schema multi-tenancy with tenant-scoped data access.
-- Five business roles: `OWNER`, `DISPATCHER`, `CUSTOMER_SERVICE`, `TECHNICIAN`, `WAREHOUSE_STAFF`.
-- AI-assisted Service Request drafting and a role-aware in-app help assistant. Intake AI only normalizes the request title and description; priority and intake channel remain explicit user-owned fields. Both AI flows use one backend AI gateway with bounded per-use-case timeouts and a built-in fallback when the external provider is unavailable. The UI intentionally shows only the non-sensitive source badge **Gemini** or **Nội bộ**; credentials, upstream status and failure details remain server-side.
-
-## Architecture
-
-### Application architecture
-
-```text
-Browser
-  │
-  ▼
-React 19 + TypeScript + Ant Design
-  │  /api/v1
-  ▼
-Vite proxy (development) / Nginx (hosted demo and production-like runtime)
-  │
-  ▼
-Spring Boot 3.5 modular monolith
-  ├── identity / security / tenant
-  ├── customer / asset
-  ├── service request / channel
-  ├── work order
-  ├── technician / scheduling
-  ├── inventory
-  ├── attachment
-  ├── notification
-  ├── audit / dashboard
-  └── AI assistance
-        │
-        ├── PostgreSQL 17
-        ├── filesystem-backed attachment storage
-        └── Gemini API (server-side when enabled)
-```
-
-ServiceOps intentionally remains a **modular monolith**. The current requirements benefit from explicit business-module boundaries and transactional use cases without the operational overhead of a distributed architecture.
-
-The role-aware AI help assistant is constrained to product guidance and does not receive raw customer, Work Order or inventory runtime records. Spring Security and the application backend remain the authorization boundary.
-
-### Hosted portfolio demo
-
-```text
-Internet
-   │
-   │ HTTPS
-   ▼
-Azure VM — Central India
-   │
-   ▼
-Nginx
-   ├── /                 → React static build
-   ├── /api/v1/*         → Spring Boot :8080
-   └── /actuator/health  → Spring Boot health endpoint
-                              │
-                              ├── PostgreSQL
-                              ├── filesystem upload storage
-                              └── Gemini API
-```
-
-The hosted demo runs the backend as a `systemd` service and serves the frontend through Nginx. Public traffic is terminated over HTTPS with a Let's Encrypt certificate and automatic Certbot renewal. Application secrets are stored server-side and are not committed to the repository.
-
-The repository also keeps a separate **production-like Docker Compose validation path** so CI/local verification can exercise the same Nginx → Spring Boot → PostgreSQL topology without depending on the public demo infrastructure.
-
-## Technology stack
-
-### Backend
-
-- Java **21**
-- Spring Boot **3.5.16**
-- Spring MVC and Bean Validation
-- Spring Data JPA / Hibernate
-- PostgreSQL **17**
-- Spring Security with JWT authentication and method-level authorization
-- Flyway database migrations
-- JUnit 5, Mockito and Testcontainers
-
-### Frontend
-
-- React **19.2.7**
-- TypeScript **5.9.3**
-- Vite **8.1.5**
-- Ant Design **6.5.1**
-- TanStack Query **5.101.3**
-- React Router **7.18.2**
-- Axios
-- Playwright Chromium E2E
-
-### Operations
-
-- Public Azure VM portfolio deployment.
-- Nginx static frontend hosting and reverse proxy for `/api/v1`.
-- HTTPS/TLS with Let's Encrypt and scheduled Certbot renewal.
-- Spring Boot backend managed by `systemd`.
-- Server-side environment configuration for database, JWT and Gemini credentials.
-- Multi-stage backend/frontend Docker builds.
-- Production-like Docker Compose topology: **Nginx → Spring Boot → PostgreSQL**.
-- PostgreSQL private to the production Compose network.
-- Health/readiness checks.
-- Persistent database/upload volumes in the Docker validation path.
-- PostgreSQL backup and guarded restore scripts.
-- GitHub Actions quality gates and production-like runtime validation.
-
-## Security and business correctness
-
-- BCrypt password hashing and stateless JWT authentication.
-- Backend authorization is authoritative; frontend action hiding is only a UX layer.
-- Shared-schema tenant isolation with tenant-scoped repositories and request context.
-- Server-side search and pagination for operational lists.
-- Pessimistic locking for scheduling, inventory updates and selected owner invariants.
-- Optimistic concurrency conflicts mapped to HTTP `409 CONCURRENT_MODIFICATION`.
-- Technician `/my-schedule` is resolved from the authenticated user rather than a client-supplied Technician ID.
-- Technician field transitions remain assignment-scoped; through `COMPLETED`, the assigned Technician owns actual field results/used parts/billing draft, then records customer acceptance and the customer's payment action. Technician cannot settle payment, issue the official receipt or close the Work Order.
-- Customer Service owns payment reconciliation and normal closure: `CUSTOMER_ACCEPTED` stays open until payment is `SETTLED`; receipt issuance/closure then remain Customer Service responsibilities. Owner supervises and configures company bank/QR instead of impersonating those operational actions.
-- Scheduling conflicts use locking plus overlap detection.
-- Part `REQUEST` does not move stock; Warehouse `ISSUE` is transactionally/idempotently stock-out, Technician `USED` records actual customer usage without a second stock movement, and Warehouse `RETURN` is the physical stock-in.
-- Attachment uploads enforce size limits, MIME allowlists, signature checks, normalized paths and configurable tenant quota.
-- Login throttling and request correlation IDs are enabled.
-- Public-demo mode protects required seeded identities and system-defined service channels while recruiter-created data remains editable according to RBAC.
-- AI provider credentials remain server-side; the frontend never receives API keys or raw provider failure details. Unexpected infrastructure errors are logged server-side and returned to users only as sanitized messages with a correlation ID when appropriate.
-
-## Verification and CI
-
-GitHub Actions runs three major verification gates:
-
-1. **Backend** — Maven tests and package build.
-2. **Frontend** — TypeScript/UI-policy lint and production build.
-3. **Production-like runtime** — Docker Compose starts **Nginx → Spring Boot → PostgreSQL**, verifies readiness/frontend/demo login and runs Playwright Chromium against the Nginx-fronted application.
-
-The current Playwright suite expands to **17 browser tests across 4 spec files** (including per-role route/sidebar checks) and covers:
-
-- route-access policy for all five demo roles;
-- Customer CRUD;
-- custom Service Channel CRUD;
-- Warehouse spare-part creation and stock import;
-- Customer Service request intake and Service Request → Work Order conversion;
-- Technician UI transition restrictions;
-- backend rejection of unauthorized Technician and Dispatcher transitions;
-- Warehouse frontend route isolation from Work Order and operational dashboard data;
-- the current full field-service settlement journey: `REQUEST → ISSUE → USED → COMPLETED → CUSTOMER_ACCEPTED → payment → SETTLED → receipt → CLOSED → post-CLOSED RETURN`, including stock/idempotency/freeze/role assertions.
-
-Backend security/integration tests separately exercise Warehouse direct-API denial for Work Order and operational dashboard endpoints.
-
-See [VERIFY_RESULTS.md](VERIFY_RESULTS.md) for the latest recorded baseline and remaining CI/UAT gates.
-
-## Run locally
-
-### Prerequisites
-
-Required:
-
-- Java JDK 21
-- Node.js 22 LTS + npm
-- Git
-
-Choose one PostgreSQL option:
-
-- PostgreSQL 17 installed locally; or
-- Docker Desktop for the repository-managed PostgreSQL 17 container.
-
-### First-time setup
-
-From the repository root, create your local environment file:
+Yêu cầu: Java 21, Node.js 22+, npm, Git và PostgreSQL 17 (native hoặc Docker).
 
 ```powershell
 Copy-Item .env.example .env
-```
-
-The committed example uses disposable local values:
-
-```text
-POSTGRES_DB=serviceops
-POSTGRES_USER=serviceops
-POSTGRES_PASSWORD=serviceops
-DEMO_PASSWORD=Demo@2026
-```
-
-If your existing native PostgreSQL uses different credentials, edit only your local `.env` file. `.env` is ignored by Git.
-
-For the shortest first run with Docker Desktop, the next command creates/starts PostgreSQL and launches both application terminals:
-
-```powershell
 .\scripts\dev-start.ps1 -StartPostgres
 ```
 
-If you use native PostgreSQL, create the `serviceops` database/user once (or point `.env` at your existing database); the exact SQL is in [RUN_LOCAL.md](RUN_LOCAL.md).
-
-### Daily quick start — backend + frontend together
-
-If PostgreSQL is already running:
+Nếu PostgreSQL đã chạy:
 
 ```powershell
 .\scripts\dev-start.ps1
 ```
 
-If you use Docker Desktop and want the script to start the repository PostgreSQL container first:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
+- Swagger local: `http://localhost:8080/swagger-ui.html`
+- Health: `http://localhost:8080/actuator/health`
+
+Xem [RUN_LOCAL.md](RUN_LOCAL.md) khi cần setup hoặc troubleshoot chi tiết.
+
+## Kiểm thử
+
+Local gate:
 
 ```powershell
-.\scripts\dev-start.ps1 -StartPostgres
+.\scripts\check-local.ps1
 ```
 
-`dev-start.ps1` is repository-relative: it works regardless of where the repository was cloned. It opens separate backend and frontend terminals, passes runtime settings through inherited child-process environment variables rather than embedding secrets in command-line arguments, and runs `npm ci` automatically when `frontend/node_modules` does not exist.
+GitHub Actions kiểm tra backend test/package, frontend lint/build, production-like Docker stack, health/login smoke và Playwright E2E.
 
-To exercise Gemini locally, configure the ignored `.env` without echoing the key to the console:
+Playwright có mutation guard; chỉ chạy trên dữ liệu disposable/isolated.
 
-```powershell
-.\scripts\configure-gemini-local.ps1
-```
+Checklist release: [docs/UAT_CHECKLIST.md](docs/UAT_CHECKLIST.md).
 
-If no Gemini key is configured, local development remains usable through the built-in fallback and the developer console prints a warning. End users may see the non-sensitive **Nội bộ** source badge, but never API-key state, provider error details or infrastructure exceptions.
+## Database và migration
 
-Wait for the backend log to contain `Started ServiceOpsApplication`, then open:
+Flyway là nguồn quản lý schema. Repository hiện có migration `V1` đến `V20`; migration mới phải append-only.
 
-| Service | URL |
-| --- | --- |
-| Frontend | `http://localhost:3000` |
-| Swagger UI | `http://localhost:8080/swagger-ui.html` |
-| Health | `http://localhost:8080/actuator/health` |
+`V20__standardize_business_codes.sql` chuẩn hóa business code và counter cho generator concurrency-safe. Không dùng `MAX()+1` và không để client tự cấp các mã `KH/WO/PT/BN`.
 
-For manual backend/frontend startup, native PostgreSQL setup and troubleshooting, see [RUN_LOCAL.md](RUN_LOCAL.md).
+Production phải backup database trước migration mới.
 
-When local UAT data needs a clean rebuild, use the guarded reset script instead of ad-hoc `DROP DATABASE` commands:
-
-```powershell
-.\scripts\reset-local-db.ps1
-```
-
-It refuses non-local hosts, verifies the admin can safely recreate the database and that the configured application role can log in, creates and validates a local backup by default, asks for explicit database-name confirmation, force-closes local connections during drop, and recreates the database with the configured owner. If the application role is not a database administrator, run it with `-AdminUser postgres`. Start ServiceOps normally afterward so Flyway migrates V1 → latest and the local seeder recreates demo data.
-
-### Playwright against the local development stack
-
-The E2E suite mutates business data, so every target requires an explicit mutation opt-in. For local development, point ServiceOps at a **disposable PostgreSQL database** (not data you want to keep), start backend/frontend normally, then opt in explicitly:
-
-```powershell
-cd frontend
-$env:E2E_BASE_URL = "http://localhost:3000"
-$env:E2E_DEMO_PASSWORD = "Demo@2026"
-$env:E2E_ALLOW_MUTATIONS = "true"
-npm run e2e
-```
-
-No Docker is required for this local E2E path. Remove the environment variables after the run if you do not want them reused in the current terminal.
-
-## Production-like validation
-
-Create `.env.production` from the provided example and replace every placeholder before starting the stack:
-
-```powershell
-Copy-Item .env.production.example .env.production
-
-docker compose --env-file .env.production -f docker-compose.prod.yml config
-docker compose --env-file .env.production -f docker-compose.prod.yml build
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-docker compose --env-file .env.production -f docker-compose.prod.yml ps
-```
-
-Default local production-like entry point:
+## Cấu trúc repository
 
 ```text
-http://localhost:8088
+backend/                  Spring Boot application + tests
+frontend/                 React application + Playwright E2E
+scripts/                  Local/production helper scripts
+docs/                     Kiến trúc, nghiệp vụ, deploy, UAT
+.github/workflows/        CI
 ```
 
-Use `docker compose ... down` when finished. Do **not** add `-v` unless persistent PostgreSQL/upload volumes are intentionally being deleted.
+## Tài liệu
 
-The hosted public demo is separate from this Docker validation path. For Internet-facing deployment and operational notes, see [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md).
+- [RUN_LOCAL.md](RUN_LOCAL.md) — chạy local
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — kiến trúc, database, security, runtime
+- [docs/BUSINESS_FLOW.md](docs/BUSINESS_FLOW.md) — workflow và role ownership
+- [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) — deploy production-like
+- [docs/UAT_CHECKLIST.md](docs/UAT_CHECKLIST.md) — smoke/UAT
 
-## Repository structure
+## Giới hạn hiện tại
 
-```text
-backend/                  Spring Boot modular monolith
-  src/main/java/          Application and business modules
-  src/main/resources/     Configuration and Flyway migrations
-  src/test/java/          Unit and PostgreSQL integration tests
+Phiên bản hiện tại ưu tiên một flow field-service end-to-end trên single-node deployment. Local file storage, in-memory login throttling và một số query chưa được benchmark ở tải lớn; chưa có load-test benchmark nên không tuyên bố khả năng chịu tải ở quy mô lớn.
 
-frontend/                 React operations console
-  src/features/           Feature-oriented frontend modules
-  e2e/                    Playwright browser E2E
-
-scripts/                  Local developer helpers
-  dev-start.ps1           One-command backend + frontend startup
-  configure-gemini-local.ps1  Hidden-input local Gemini key setup
-  start-postgres.ps1      Optional local PostgreSQL container startup
-  reset-local-db.ps1      Guarded backup + local database recreation
-  check-local.ps1         Local backend/frontend verification
-  production/             Backup and guarded restore utilities
-
-docs/                     Architecture, security, business and operations docs
-.github/workflows/        CI pipeline
-docker-compose.local.yml  Optional local PostgreSQL container
-docker-compose.prod.yml   Production-like Nginx → backend → PostgreSQL stack
-```
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Business flow](docs/BUSINESS_FLOW.md)
-- [Security model](docs/SECURITY.md)
-- [Database design](docs/DATABASE.md)
-- [API reference](docs/API.md)
-- [Production deployment](docs/PRODUCTION_DEPLOYMENT.md)
-- [User guide](docs/USER_GUIDE.md)
-- [UAT checklist](docs/UAT_CHECKLIST.md)
-- [Verification results](VERIFY_RESULTS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Codebase standards](docs/CODEBASE_STANDARDS.md)
-- [UI design system](docs/UI_DESIGN_SYSTEM.md)
-- [Development process](docs/DEVELOPMENT_PROCESS.md)
-
-## Scope and design decisions
-
-The current portfolio baseline is intentionally **feature-frozen around the end-to-end field-service workflow**.
-
-Further work should prioritize verified bugs, security/business correctness, automated coverage, documentation accuracy, deployment reliability and recruiter/demo usability.
-
-Microservices, Kafka, Redis, Kubernetes, Elasticsearch and similar infrastructure are intentionally not added merely to make the portfolio appear more complex. They should be introduced only when a concrete scaling, availability or integration requirement justifies their operational cost.
-
-Possible future additions such as SLA/service windows, preventive-maintenance agreements and Technician mobile/PWA support remain optional roadmap items rather than unfinished requirements of the current portfolio baseline.
+Chỉ thêm cache, object storage hoặc kiến trúc phân tán khi có yêu cầu tải/topology cụ thể.

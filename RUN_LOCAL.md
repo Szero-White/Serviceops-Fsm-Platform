@@ -1,19 +1,13 @@
-# Hướng dẫn chạy ServiceOps trên Windows
+# Chạy ServiceOps trên máy local
 
-## 1. Yêu cầu môi trường
-
-Bắt buộc:
+## 1. Yêu cầu
 
 - Java JDK 21
-- Node.js 22 LTS và npm
+- Node.js 22+ và npm
 - Git
-- PostgreSQL 17, theo **một** trong hai cách:
-  - PostgreSQL cài trực tiếp trên Windows; hoặc
-  - Docker Desktop chạy PostgreSQL container của repository.
+- PostgreSQL 17 (native hoặc Docker Desktop)
 
-Maven cài toàn cục không bắt buộc vì repository có Maven Wrapper.
-
-Kiểm tra phần bắt buộc:
+Repository có Maven Wrapper.
 
 ```powershell
 java -version
@@ -22,57 +16,31 @@ node -v
 npm -v
 ```
 
-Chỉ khi chọn Docker Desktop:
-
-```powershell
-docker version
-```
-
-## 2. Tạo cấu hình local một lần
-
-Từ thư mục gốc repository:
+## 2. Cấu hình
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Mặc định `.env.example` dùng:
+`.env.example` đã có cấu hình local mặc định (`serviceops/serviceops`, port 5432, `Demo@2026`, timezone `Asia/Ho_Chi_Minh`). Nếu máy dùng credential khác, chỉ sửa `.env` local. Không commit `.env`.
 
-```env
-POSTGRES_DB=serviceops
-POSTGRES_USER=serviceops
-POSTGRES_PASSWORD=serviceops
-POSTGRES_PORT=5432
-DEMO_PASSWORD=Demo@2026
-```
-
-Nếu PostgreSQL native trên máy bạn dùng tài khoản khác, chỉ sửa file `.env` local. Không commit `.env`.
-
-`DEMO_PASSWORD` được `scripts/dev-start.ps1` truyền đồng thời cho backend và frontend để quick-login không lệch mật khẩu. Secret runtime được truyền qua environment kế thừa của process con, không được nhúng vào command line.
-
-Nếu cần kiểm thử Gemini thật ở local, cấu hình key một lần bằng:
+Nếu cần Gemini local:
 
 ```powershell
 .\scripts\configure-gemini-local.ps1
 ```
 
-Script nhập key ở chế độ ẩn và lưu vào `.env` local đã được `.gitignore` loại khỏi Git. Không paste API key vào source, command line, tài liệu hoặc chat/log. Nếu key chưa được cấu hình, hai chức năng AI vẫn dùng fallback nội bộ để local development không bị chặn.
+Không có Gemini key thì AI dùng fallback nội bộ.
 
-## 3. Chuẩn bị PostgreSQL
+## 3. PostgreSQL
 
-### Cách A — Docker Desktop
-
-Bạn có thể khởi động riêng PostgreSQL:
+Docker:
 
 ```powershell
 .\scripts\start-postgres.ps1
 ```
 
-hoặc dùng quick start ở bước 4 với `-StartPostgres`.
-
-### Cách B — PostgreSQL đã cài trên Windows
-
-Nếu dùng đúng bộ mặc định `serviceops/serviceops`, chạy bằng tài khoản quản trị PostgreSQL:
+PostgreSQL native, tạo database/user một lần nếu chưa có:
 
 ```sql
 CREATE USER serviceops WITH PASSWORD 'serviceops';
@@ -80,9 +48,7 @@ CREATE DATABASE serviceops OWNER serviceops;
 GRANT ALL PRIVILEGES ON DATABASE serviceops TO serviceops;
 ```
 
-Nếu database/user đã tồn tại hoặc bạn dùng credential khác, chỉ cần cập nhật `.env` cho khớp. Không cần Docker.
-
-## 4. Cách chạy hằng ngày — khuyến nghị
+## 4. Chạy ứng dụng
 
 PostgreSQL đã chạy:
 
@@ -90,25 +56,21 @@ PostgreSQL đã chạy:
 .\scripts\dev-start.ps1
 ```
 
-Nếu dùng Docker và muốn bật PostgreSQL trước:
+Hoặc để script bật PostgreSQL container:
 
 ```powershell
 .\scripts\dev-start.ps1 -StartPostgres
 ```
 
-Script tự xác định repository root nên không phụ thuộc đường dẫn kiểu `D:\Study\...`. Nó mở hai cửa sổ CMD riêng cho Spring Boot và Vite. Nếu frontend chưa có `node_modules`, script chạy `npm ci` trước `npm run dev`.
+Backend tự chạy Flyway. Demo seeder tạo dữ liệu mẫu khi database chưa có account `owner`.
 
-Mở:
+- Frontend: `http://localhost:3000`
+- Swagger: `http://localhost:8080/swagger-ui.html`
+- Health: `http://localhost:8080/actuator/health`
 
-- Frontend: http://localhost:3000
-- Swagger: http://localhost:8080/swagger-ui.html
-- Health: http://localhost:8080/actuator/health
+## 5. Chạy thủ công khi troubleshoot
 
-## 5. Chạy thủ công khi cần troubleshoot
-
-### Backend
-
-Mở PowerShell tại repository root. Đọc giá trị từ `.env` của bạn và đặt cùng bộ `POSTGRES_*` + `DEMO_PASSWORD`, ví dụ với credential mặc định:
+Backend:
 
 ```powershell
 cd backend
@@ -121,100 +83,43 @@ $env:DEMO_PASSWORD="Demo@2026"
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-Flyway tự migrate schema. Seeder tạo bộ dữ liệu demo khi database chưa có account `owner`.
-
-> Local profile không tự đổi mật khẩu của demo accounts đã tồn tại. Nếu bạn đổi `DEMO_PASSWORD` sau lần seed đầu tiên, hãy dùng mật khẩu hiện có của database hoặc chủ động reset database local nếu dữ liệu đó không cần giữ.
-
-### Frontend
-
-Mở terminal khác:
+Frontend ở terminal khác:
 
 ```powershell
 cd frontend
-Copy-Item .env.example .env -ErrorAction SilentlyContinue
 npm ci
 npm run dev
 ```
 
-`frontend/.env.example` dùng cùng quick-login password `Demo@2026`.
+Vite proxy `/api` sang `http://localhost:8080`.
 
-## 6. Dừng hệ thống
+## 6. Reset database local
 
-Dừng backend/frontend bằng `Ctrl + C` trong hai terminal.
-
-Nếu dùng Docker PostgreSQL và muốn dừng container nhưng giữ dữ liệu:
-
-```powershell
-docker compose -f docker-compose.local.yml stop
-```
-
-Chỉ khi **thật sự muốn xóa toàn bộ database local**:
-
-```powershell
-docker compose -f docker-compose.local.yml down -v
-```
-
-Không dùng `down -v` chỉ để dọn vài record test.
-
-## 7. Reset database local an toàn
-
-Khi dữ liệu UAT/manual test đã quá rối và bạn muốn tạo lại database local từ đầu, dùng script có backup guard:
+Chỉ dùng cho database local/disposable:
 
 ```powershell
 .\scripts\reset-local-db.ps1
 ```
 
-Script:
+Script từ chối host không phải loopback, backup theo mặc định, yêu cầu xác nhận tên database và tạo lại database đúng owner. Sau reset, chạy `dev-start.ps1` để Flyway migrate lại.
 
-- đọc `POSTGRES_HOST/PORT/DB/USER/PASSWORD` từ process environment hoặc `.env`;
-- từ chối chạy nếu `POSTGRES_HOST` không phải `localhost`, `127.0.0.1` hoặc `::1`;
-- kiểm tra role ứng dụng tồn tại/có quyền `LOGIN`, đồng thời admin là `SUPERUSER` hoặc có `CREATEDB` và đủ quyền sở hữu **trước** khi drop database;
-- mặc định tạo custom-format backup vào `db-backups/` và kiểm tra archive bằng `pg_restore -l`;
-- yêu cầu gõ lại đúng tên database trước khi `DROP DATABASE ... WITH (FORCE)` để đóng các connection local còn giữ database;
-- tạo lại database với owner đúng theo `POSTGRES_USER`;
-- không tự chạy Flyway: sau khi reset thành công, chạy `.\scripts\dev-start.ps1`; backend sẽ migrate V1 → latest và seeder local sẽ tạo lại dữ liệu demo.
-
-Nếu PostgreSQL binaries chưa nằm trong `PATH`, chỉ rõ thư mục `bin`:
-
-```powershell
-.\scripts\reset-local-db.ps1 -PostgresBin "D:\PostgreSQL\bin"
-```
-
-Nếu account ứng dụng không có quyền `CREATEDB`/drop database (trường hợp thường gặp với PostgreSQL cài native), truyền role quản trị và nhập password khi script hỏi:
+Nếu cần role quản trị PostgreSQL:
 
 ```powershell
 .\scripts\reset-local-db.ps1 -AdminUser postgres
 ```
 
-`db-backups/` là dữ liệu local và đã được Git ignore. Chỉ dùng `-SkipBackup` khi bạn **chủ động chấp nhận** không giữ snapshot trước reset.
+Không dùng script này cho production.
 
-## 8. E2E và dữ liệu local
+## 7. Local verification
 
-Không chạy mutating Playwright E2E vào frontend/backend developer local hoặc database `serviceops` đang dùng để UAT.
+Dừng Vite trước vì `check-local.ps1` chạy `npm ci`.
 
-Playwright yêu cầu `E2E_BASE_URL` rõ ràng và **luôn yêu cầu opt-in `E2E_ALLOW_MUTATIONS=true`** vì suite có thay đổi dữ liệu. GitHub Actions chỉ đặt opt-in này cho stack Docker cô lập của CI; khi chạy local, chỉ bật nó nếu endpoint đang dùng database disposable. Dữ liệu `E2E-*` được tạo bởi browser workflow là stateful test data; không nên dùng script xóa hàng loạt trên database local nếu chưa kiểm tra quan hệ Work Order, appointment, history, inventory và attachment.
+```powershell
+.\scripts\check-local.ps1
+```
 
-## 9. Lỗi thường gặp
-
-### Cổng 5432 đã được dùng
-
-Sửa `POSTGRES_PORT` trong `.env` và bảo đảm backend dùng cùng giá trị.
-
-### Frontend không gọi được backend
-
-Mặc định frontend dùng `VITE_API_URL=/api/v1` và Vite proxy `/api` sang `http://localhost:8080`.
-
-### Quick-login báo sai mật khẩu
-
-Kiểm tra ba giá trị có đồng bộ không:
-
-- `DEMO_PASSWORD` trong `.env`/backend startup;
-- `VITE_DEMO_PASSWORD` được frontend nhận;
-- mật khẩu thực tế của demo accounts trong database đã seed trước đó.
-
-Với database mới theo tài liệu này, giá trị thống nhất là `Demo@2026`.
-
-## 10. Kiểm tra trước khi commit
+Hoặc chạy riêng:
 
 ```powershell
 cd backend
@@ -224,10 +129,26 @@ cd ..\frontend
 npm ci
 npm run lint
 npm run build
-
-git status
 ```
 
-Docker/Testcontainers có thể được skip khi Docker không khả dụng; đọc đúng summary test và không gọi skipped tests là passed.
+Nếu Docker không khả dụng, Testcontainers integration tests có thể bị skip; đọc đúng test summary.
 
-Không commit `.env`, `node_modules`, `dist`, `target` hoặc thư mục upload local.
+## 8. Playwright E2E
+
+E2E có mutation nên chỉ chạy trên dữ liệu disposable/isolated:
+
+```powershell
+cd frontend
+$env:E2E_BASE_URL="http://localhost:3000"
+$env:E2E_DEMO_PASSWORD="Demo@2026"
+$env:E2E_ALLOW_MUTATIONS="true"
+npm run e2e
+```
+
+`E2E_ALLOW_MUTATIONS=true` là guard bắt buộc trong `playwright.config.ts`.
+
+## 9. Lỗi thường gặp
+
+- Frontend không gọi backend: kiểm backend port 8080 và Vite proxy.
+- Quick login sai mật khẩu: database đã seed không tự đổi password khi sửa `DEMO_PASSWORD`; dùng password cũ hoặc reset local DB nếu dữ liệu không cần giữ.
+- `npm ci` lỗi file bị giữ trên Windows: dừng Vite/Node dev server rồi chạy lại.
