@@ -102,7 +102,7 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Run recruiter browser E2E
+      - name: Run browser E2E
         working-directory: frontend
         run: |
           set -a
