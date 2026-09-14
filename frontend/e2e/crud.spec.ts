@@ -30,6 +30,7 @@ test('Owner can create, edit and delete recruiter-created customer data through 
   await editModal.getByLabel('Tên khách hàng').fill(updatedName)
   await submitModal(page, 'Cập nhật khách hàng')
   await expect(page.getByText('Đã cập nhật khách hàng').last()).toBeVisible()
+  await search.fill(updatedName)
   row = page.locator('tbody tr').filter({ hasText: updatedName })
   await expect(row).toContainText(updatedName)
 
